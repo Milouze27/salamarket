@@ -222,6 +222,35 @@ function formatHeure(iso: string) {
   });
 }
 
+// Tier urgence basé sur le délai avant retrait (creneau_retrait).
+// urgent: <30min · normal: 30min-2h · late: >2h.
+type UrgencyTier = "urgent" | "normal" | "late";
+
+function getUrgencyTier(creneauIso: string): UrgencyTier {
+  const diffMs = new Date(creneauIso).getTime() - Date.now();
+  const diffMin = diffMs / 60000;
+  if (diffMin < 30) return "urgent";
+  if (diffMin <= 120) return "normal";
+  return "late";
+}
+
+// Label relatif court : "Dans 18min", "Dans 1h25", "Dans 3h", "En retard".
+function formatRelativeToCreneau(creneauIso: string): string {
+  const diffMs = new Date(creneauIso).getTime() - Date.now();
+  const diffMin = Math.round(diffMs / 60000);
+  if (diffMin < 0) {
+    const lateMin = Math.abs(diffMin);
+    if (lateMin < 60) return `Retard ${lateMin}min`;
+    const h = Math.floor(lateMin / 60);
+    const m = lateMin % 60;
+    return m === 0 ? `Retard ${h}h` : `Retard ${h}h${String(m).padStart(2, "0")}`;
+  }
+  if (diffMin < 60) return `Dans ${diffMin}min`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return m === 0 ? `Dans ${h}h` : `Dans ${h}h${String(m).padStart(2, "0")}`;
+}
+
 export default function V2PreparationKanbanPage() {
   const [commandes, setCommandes] = useState<CommandeWithLignes[]>([]);
   const [loading, setLoading] = useState(true);
@@ -321,9 +350,25 @@ export default function V2PreparationKanbanPage() {
         map.get(c.statut)!.push(c);
       }
     }
-    // Sort each column by créneau ascendant
-    for (const list of map.values()) {
-      list.sort((a, b) => a.creneau_retrait.localeCompare(b.creneau_retrait));
+    // Default: sort by créneau ascendant.
+    for (const [key, list] of map.entries()) {
+      if (key === "a_preparer") {
+        // Tri urgent → normal → late, puis créneau ascendant à l'intérieur
+        // de chaque tier. Garantit que les imminents remontent visuellement.
+        const tierWeight: Record<UrgencyTier, number> = {
+          urgent: 0,
+          normal: 1,
+          late: 2,
+        };
+        list.sort((a, b) => {
+          const ta = tierWeight[getUrgencyTier(a.creneau_retrait)];
+          const tb = tierWeight[getUrgencyTier(b.creneau_retrait)];
+          if (ta !== tb) return ta - tb;
+          return a.creneau_retrait.localeCompare(b.creneau_retrait);
+        });
+      } else {
+        list.sort((a, b) => a.creneau_retrait.localeCompare(b.creneau_retrait));
+      }
     }
     return map;
   }, [commandes]);
@@ -512,6 +557,27 @@ export default function V2PreparationKanbanPage() {
                       ).length;
                       const isPreAutorise = cmd.statut_paiement === "autorise";
                       const isCapture = cmd.statut_paiement === "capture";
+
+                      // Urgency tier appliqué uniquement sur la colonne
+                      // À préparer — sur les autres colonnes (en cours,
+                      // prête, retirée) la priorité visuelle n'a plus de
+                      // sens, on garde le style de colonne d'origine.
+                      const tier =
+                        col.key === "a_preparer"
+                          ? getUrgencyTier(cmd.creneau_retrait)
+                          : null;
+                      const cardClass =
+                        tier === "urgent"
+                          ? "border-[#C9A227] ring-1 ring-[#C9A227]/40 shadow-[0_0_0_3px_rgba(201,162,39,0.08)]"
+                          : tier === "late"
+                            ? "border-[#E8E4D8] opacity-75"
+                            : col.accent.split(" ")[1];
+                      const chipClass =
+                        tier === "urgent"
+                          ? "bg-[#C9A227] text-[#082A20]"
+                          : tier === "late"
+                            ? "bg-[#E8E4D8] text-text-tertiary"
+                            : "bg-cream text-text-primary";
                       return (
                         <motion.div
                           key={cmd.id}
@@ -519,8 +585,19 @@ export default function V2PreparationKanbanPage() {
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.18 }}
-                          className={`bg-white border rounded-2xl p-3.5 shadow-card ${col.accent.split(" ")[1]}`}
+                          className={`bg-white border rounded-2xl p-3.5 shadow-card ${cardClass}`}
                         >
+                          {tier === "urgent" && (
+                            <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#C9A227] mb-2">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C9A227] animate-pulse" />
+                              Urgent
+                            </span>
+                          )}
+                          {tier === "late" && (
+                            <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.18em] text-text-tertiary mb-2">
+                              Plus tard
+                            </span>
+                          )}
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-[14px] font-extrabold text-text-primary">
@@ -531,10 +608,13 @@ export default function V2PreparationKanbanPage() {
                               </p>
                             </div>
                             <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide bg-cream text-text-primary px-2 py-1 rounded-full`}
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${chipClass}`}
+                              title={`Créneau : ${formatHeure(cmd.creneau_retrait)}`}
                             >
                               <Clock className="w-3 h-3" />
-                              {formatHeure(cmd.creneau_retrait)}
+                              {tier
+                                ? formatRelativeToCreneau(cmd.creneau_retrait)
+                                : formatHeure(cmd.creneau_retrait)}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-2.5 flex-wrap">

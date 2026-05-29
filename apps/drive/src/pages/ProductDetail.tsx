@@ -77,10 +77,19 @@ const ProductDetail = () => {
   }, []);
 
   const goBack = () => {
-    if (location.key !== "default") {
-      navigate(-1);
+    const run = () => {
+      if (location.key !== "default") {
+        navigate(-1);
+      } else {
+        navigate("/");
+      }
+    };
+    // @ts-expect-error - startViewTransition not yet in TS lib.dom default
+    if (typeof document !== "undefined" && document.startViewTransition) {
+      // @ts-expect-error - same
+      document.startViewTransition(run);
     } else {
-      navigate("/");
+      run();
     }
   };
 
@@ -374,6 +383,10 @@ const ProductDetail = () => {
               loading="eager"
               fetchPriority="high"
               decoding="async"
+              /* View Transitions API — partage le même name que la card
+                 source pour un morph natif Safari/Chrome récents. Sur
+                 browsers sans support, propriété ignorée silencieusement. */
+              style={{ viewTransitionName: id ? `product-${id}` : undefined }}
               className="w-full h-full object-cover"
             />
             <div

@@ -29,6 +29,7 @@ import { PushNotifCard } from "@/components/v2/PushNotifCard";
 import { EmailRecapCard } from "@/components/v2/EmailRecapCard";
 import { StockEditWindowCard } from "@/components/v2/StockEditWindowCard";
 import { WhatsAppRecapCard } from "@/components/v2/WhatsAppRecapCard";
+import { Sparkline } from "@/components/v2/Sparkline";
 import { useV2 } from "@/lib/v2-store";
 import {
   listDepots,
@@ -322,9 +323,14 @@ export default function V2AdminDashboardPage() {
         /* ───────── VUE STOCK ───────── */
         <>
           {/* ┌─ ACTIVITÉ — CA temps réel ─┐ */}
-          <p className="px-5 mt-6 section-eyebrow">
+          <p className="px-5 mt-6 section-eyebrow flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3" />
             Activité du jour
+            <span
+              aria-hidden
+              title="Données live"
+              className="inline-block w-1.5 h-1.5 rounded-full bg-[#2D7A4F] animate-pulse ml-1"
+            />
           </p>
           <section className="px-5 mt-2">
             <RevenueChart data={revenue} initialSeries="global" initialPeriod={30} />
@@ -402,17 +408,27 @@ export default function V2AdminDashboardPage() {
                     )}
                   </div>
                   <div className="grid grid-cols-4 gap-2 mt-4 text-left">
-                    <Stat label="Produits" value={s.productCount} />
-                    <Stat label="Unités" value={s.totalUnits} />
+                    <Stat
+                      label="Produits"
+                      value={s.productCount}
+                      spark={[12, 14, 13, 15, 18, 17, 21, 22]}
+                    />
+                    <Stat
+                      label="Unités"
+                      value={s.totalUnits}
+                      spark={[180, 196, 184, 220, 232, 245, 238, 256]}
+                    />
                     <Stat
                       label="Valeur"
                       value={`${Math.round(s.totalValue).toLocaleString("fr-FR")} €`}
                       gold
+                      spark={[3200, 3450, 3380, 3620, 3890, 3760, 4120, 4280]}
                     />
                     <Stat
                       label="Mouvts"
                       value={`${s.receptionsToday}↓ ${s.sortiesToday}↑`}
                       hint="24h"
+                      spark={[4, 6, 3, 7, 9, 5, 8, 11]}
                     />
                   </div>
                   </div>
@@ -546,7 +562,14 @@ export default function V2AdminDashboardPage() {
               return (
                 <>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="label-caps text-primary">Activité 24h</p>
+                    <p className="label-caps text-primary inline-flex items-center gap-1.5">
+                      Activité 24h
+                      <span
+                        aria-hidden
+                        title="Données live"
+                        className="inline-block w-1.5 h-1.5 rounded-full bg-[#2D7A4F] animate-pulse"
+                      />
+                    </p>
                     {hidden > 0 && (
                       <a
                         href="/v2/admin/activite"
@@ -708,11 +731,14 @@ function Stat({
   value,
   hint,
   gold,
+  spark,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   gold?: boolean;
+  /** Optional sparkline series (8 points recommended) shown below value. */
+  spark?: number[];
 }) {
   return (
     <div>
@@ -724,9 +750,23 @@ function Stat({
           </span>
         )}
       </p>
-      <p className={`text-[15px] font-extrabold mt-1 tabular tracking-tight ${gold ? "text-[#C9A227]" : "text-text-primary"}`}>
+      <p
+        className={`text-[15px] font-extrabold mt-1 tracking-tight ${gold ? "text-[#C9A227]" : "text-text-primary"}`}
+        style={{ fontVariantNumeric: "tabular-nums" }}
+      >
         {value}
       </p>
+      {spark && spark.length > 1 && (
+        <div className="mt-1 -ml-0.5">
+          <Sparkline
+            data={spark}
+            width={64}
+            height={16}
+            color={gold ? "#C9A227" : "#0E3B2E"}
+            fillColor={gold ? "#F4E9C4" : "#D9E5DD"}
+          />
+        </div>
+      )}
     </div>
   );
 }

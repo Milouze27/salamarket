@@ -82,7 +82,7 @@ export const EditorialIntro = () => {
                 <div className="relative w-[88px] h-[88px] md:w-[110px] md:h-[110px] rounded-full bg-[#FAF7EE] shadow-xl shadow-[#082A20]/30 flex flex-col items-center justify-center text-center">
                   <span
                     aria-hidden
-                    className="absolute inset-[6px] rounded-full border-[1.5px] border-[#C9A227]/45"
+                    className="halal-seal-ring absolute inset-[6px] rounded-full border-[1.5px] border-[#C9A227]/55"
                   />
                   <span className="relative text-[9px] md:text-[10px] uppercase tracking-[0.18em] font-bold text-[#C9A227] leading-tight">
                     Halal

@@ -205,11 +205,15 @@ const Index = () => {
         )}
       </main>
 
-      {/* Footer — bandeau sapin sombre, pagination "05 / Salamarket"
-          pour clôturer le rythme catalogue raisonné. */}
-      <footer className="bg-[#0E3B2E] text-[#FAF7EE]">
-        <div className="max-w-7xl mx-auto px-6 md:px-8 py-14 md:py-24">
-          <div className="hidden md:flex items-end gap-4 mb-12">
+      {/* Footer éditorial — poster sapin nuit + affirmation display
+          massive "Indépendant. De Toulouse. Halal." Le mot "Halal" passe
+          en or solide. Microcopy adresse/horaires/copyright en hairline
+          discret. Pas de social, pas de newsletter, pas de bullshit —
+          juste la marque qui termine la lecture. */}
+      <footer className="bg-[#082A20] text-[#FAF7EE]">
+        <div className="max-w-7xl mx-auto px-6 md:px-8 py-16 md:py-28">
+          {/* Pagination "05 / Salamarket" — rythme magazine conservé */}
+          <div className="hidden md:flex items-end gap-4 mb-16">
             <span className="text-[26px] font-extrabold text-[#C9A227] tabular-nums leading-none tracking-[-0.04em]">
               05
             </span>
@@ -220,56 +224,40 @@ const Index = () => {
             <span aria-hidden className="flex-1 h-px bg-[#FAF7EE]/12 mb-2" />
           </div>
 
-          <div className="grid gap-12 md:gap-16 md:grid-cols-12 items-start">
-            <div className="md:col-span-7">
-              <p className="md:hidden text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-4">
-                Salamarket Toulouse
-              </p>
-              <p className="text-[26px] sm:text-[30px] md:text-[40px] lg:text-[48px] leading-[1.05] text-[#FAF7EE] max-w-[18ch] font-extrabold tracking-[-0.035em]">
-                Le supermarché halal{" "}
-                <span className="text-[#C9A227]">indépendant</span> de Toulouse.
-              </p>
-              <p className="mt-6 text-[14px] md:text-[15px] text-[#FAF7EE]/70 leading-relaxed max-w-[44ch]">
-                Sélection halal certifiée, retrait en magasin sans abonnement,
-                créneaux du matin au soir.
-              </p>
-            </div>
+          {/* Display poster — taille fluide clamp(48, 12vw, 180). Plus
+              Jakarta extrabold uniquement, pas de serif décoratif (règle
+              mémoire user). Le mot "Halal" tombe en or, le reste en cream. */}
+          <h2
+            className="font-extrabold text-[#FAF7EE]"
+            style={{
+              fontSize: "clamp(48px, 12vw, 180px)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            Indépendant.
+            <br />
+            De Toulouse.
+            <br />
+            <span style={{ color: "#C9A227" }}>Halal.</span>
+          </h2>
 
-            <div className="md:col-span-5 grid grid-cols-2 gap-8 md:gap-10 text-[13px]">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-[#C9A227] mb-3">
-                  Adresse
-                </p>
-                <p className="text-[#FAF7EE]/85 leading-[1.55]">
-                  {BRAND.store.address}
-                  <br />
-                  {BRAND.store.postalCode} {BRAND.store.city}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-[#C9A227] mb-3">
-                  Horaires
-                </p>
-                <ul className="space-y-2 text-[#FAF7EE]/85">
-                  {BRAND.store.hours.map((h) => (
-                    <li key={h.days} className="flex flex-col leading-[1.4]">
-                      <span className="text-[11px] text-[#FAF7EE]/55">
-                        {h.days}
-                      </span>
-                      <span className="font-semibold">{h.time}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          {/* Microcopy — adresse + horaires + copyright en hairline discret */}
+          <div className="mt-12 md:mt-16 pt-6 border-t border-[#FAF7EE]/15 flex flex-wrap justify-between gap-x-8 gap-y-3 text-[12px] text-[#FAF7EE]/65">
+            <div>
+              {BRAND.store.address}, {BRAND.store.postalCode} {BRAND.store.city}
             </div>
-          </div>
-
-          {/* Bandeau bas — copyright + service, hairline pour séparer */}
-          <div className="mt-14 md:mt-20 pt-6 border-t border-[#FAF7EE]/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] text-[#FAF7EE]/55 tracking-[0.02em]">
-            <p>
+            <div>
+              {BRAND.store.hours.map((h, i) => (
+                <span key={h.days}>
+                  {i > 0 && <span aria-hidden className="px-2 text-[#FAF7EE]/35">·</span>}
+                  {h.days} {h.time}
+                </span>
+              ))}
+            </div>
+            <div>
               © {new Date().getFullYear()} {BRAND.name} · {formatStoreLocation(BRAND.store)}
-            </p>
-            <p>Click &amp; collect uniquement · Sans abonnement</p>
+            </div>
           </div>
         </div>
       </footer>

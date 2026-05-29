@@ -1,18 +1,33 @@
+import { useRef } from "react";
 import { BadgeCheck, Plus, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
+import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { formatPriceWithUnit } from "@salamarket/shared";
 
 interface Props {
   product: Product;
 }
 
+// View Transitions API — feature detection sans throw côté TS.
+function startTransition(fn: () => void) {
+  // @ts-expect-error - startViewTransition not yet in TS lib.dom default
+  if (typeof document !== "undefined" && document.startViewTransition) {
+    // @ts-expect-error - same
+    document.startViewTransition(fn);
+  } else {
+    fn();
+  }
+}
+
 // Card produit Chronodrive-density × Salamarket-warmth
 export const ProductCard = ({ product }: Props) => {
   const navigate = useNavigate();
   const addItem = useCartStore((s) => s.addItem);
+  const { triggerFly } = useFlyingChip();
+  const addBtnRef = useRef<HTMLButtonElement>(null);
 
   const unitType = product.unitType ?? "unit";
   // Pour weight & weight_bracket on n'ajoute pas directement depuis la
@@ -25,11 +40,21 @@ export const ProductCard = ({ product }: Props) => {
       navigate(`/produit/${product.id}`);
       return;
     }
+    // Fly the chip BEFORE state update — chip captures the source position
+    // and is independent of the React re-render that follows addItem().
+    triggerFly(addBtnRef.current, {
+      imageUrl: product.imageUrl,
+      name: product.name,
+    });
     addItem(product);
   };
 
   const handleOpen = () => {
-    navigate(`/produit/${product.id}`);
+    // Wrap navigation in startViewTransition so the shared view-transition-name
+    // on the image enables a smooth morph to ProductDetail hero.
+    startTransition(() => {
+      navigate(`/produit/${product.id}`);
+    });
   };
 
   const showHalalBadge =
@@ -63,6 +88,10 @@ export const ProductCard = ({ product }: Props) => {
           decoding="async"
           width={600}
           height={600}
+          /* View Transitions API — shared element morph vers ProductDetail
+             hero. La même CSS view-transition-name est posée sur l'image
+             du detail. Browsers sans support : la prop CSS est ignorée. */
+          style={{ viewTransitionName: `product-${product.id}` }}
           className="w-full h-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.05]"
         />
 
@@ -88,6 +117,7 @@ export const ProductCard = ({ product }: Props) => {
         )}
 
         <button
+          ref={addBtnRef}
           onClick={handleAdd}
           aria-label={
             isVariable

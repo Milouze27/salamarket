@@ -25,16 +25,18 @@
   --border-light: #E8E4D8;
   --border-medium: #D1CCB8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  /* Nav bottom flottant : pill effective ~78px (icon 36 + label 14 +
-     paddings 16 + py-2 outer). Le token doit refléter la hauteur
-     visuelle réelle pour que pb-nav-stack laisse une vraie clearance. */
-  --nav-height: 96px;
-  --cta-height: 80px;
-  /* Espace de respiration au-dessus du nav. Règle UX : le contenu
-     ne doit jamais être collé contre le pill nav. 48px = un peu plus
-     que la moitié de la hauteur du pill, lisible visuellement sans
-     créer un trou inutile. */
-  --nav-breathing: 48px;
+  /* Nav bottom flottant : pill effective ~86px (icon 36 + label 14 +
+     paddings 16 + py-2 outer + halo top). Audit 2026-05-30 : pill
+     chevauchait "Transfert" sur home et "Glace Magnum" sur prep detail
+     → bump explicite des trois tokens pour vraie clearance. */
+  --nav-height: 100px;
+  /* CTA bandeau ("Finaliser & capturer") : button 60-66px + wrapper
+     px/py 16+12 + pb-safe. 96px couvre la hauteur réelle visible. */
+  --cta-height: 96px;
+  /* Respiration au-dessus du nav/CTA. Règle UX (mémoire user) : la nav
+     bottom ne doit JAMAIS cacher du contenu utile. 64px = clearance
+     qui laisse voir le dernier item + son shadow card. */
+  --nav-breathing: 64px;
   --header-height: 56px;
   /* Elevation */
   --shadow-card: 0 2px 12px rgba(14, 59, 46, 0.06);

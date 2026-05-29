@@ -19,26 +19,51 @@ interface ProductThumbnailProps {
   rounded?: "lg" | "xl" | "2xl" | "full";
 }
 
-const CATEGORY_COLOR: Record<string, string> = {
-  // Palette Salam C2-E : couleurs vives, pas pastel.
-  Boucherie: "#A8231A",       // bordeaux
-  Frais: "#5BC85B",           // vert frais
-  Charcuterie: "#5BC85B",     // vert frais (catégorie froide claire)
-  Épicerie: "#C9A227",        // or
-  "Épicerie sèche": "#C9A227",
-  "Produits du Maghreb": "#0E3B2E", // sapin
-  Maghreb: "#0E3B2E",
-  Conserves: "#0E3B2E",
-  Surgelés: "#4A90E2",        // bleu froid
-  Traiteur: "#0A2A20",        // sapin foncé pour la zone traiteur
-  "Fruits & Légumes": "#6CAB44",
-  "F&L": "#6CAB44",
-  Boissons: "#525252",
-  Hygiène: "#525252",
-  Autre: "#525252",
+/**
+ * Palette désaturée sapin/or — 4 tons, plus aucun arc-en-ciel.
+ * Le mur de tiles doit ressembler à "un mur de livres reliés", uniforme
+ * et lisible, plutôt qu'à un kaléidoscope. Catégories froides (viande,
+ * frais, surgelés, traiteur) en sapin plein avec initiale or. Épicerie/
+ * boissons en sapin légèrement plus pâle (toujours initiale or). Maison/
+ * hygiène/bazar en cream avec initiale sapin. Fallback = nuit + or.
+ */
+type TileTone = "sapin" | "sapin-soft" | "cream" | "night";
+
+const CATEGORY_TONE: Record<string, TileTone> = {
+  // Froid + boucherie + frais → sapin plein
+  Boucherie: "sapin",
+  Charcuterie: "sapin",
+  Surgelés: "sapin",
+  Frais: "sapin",
+  Traiteur: "sapin",
+  // Épicerie + boissons → sapin légèrement plus pâle
+  Épicerie: "sapin-soft",
+  "Épicerie sèche": "sapin-soft",
+  Boissons: "sapin-soft",
+  "Produits du Maghreb": "sapin-soft",
+  Maghreb: "sapin-soft",
+  Conserves: "sapin-soft",
+  "Fruits & Légumes": "sapin-soft",
+  "F&L": "sapin-soft",
+  // Maison + hygiène + bazar → cream avec initiale sapin
+  Hygiène: "cream",
+  Maison: "cream",
+  Bazar: "cream",
 };
 
-const FALLBACK = "#525252";
+const TONE_BG: Record<TileTone, string> = {
+  sapin: "#0E3B2E",
+  "sapin-soft": "#2A4F40", // sapin + 15% lightness — lisible, calme
+  cream: "#FAF7EE",
+  night: "#082A20",
+};
+
+const TONE_FG: Record<TileTone, string> = {
+  sapin: "#C9A227",
+  "sapin-soft": "#C9A227",
+  cream: "#0E3B2E",
+  night: "#C9A227",
+};
 
 const ROUND_CLS: Record<NonNullable<ProductThumbnailProps["rounded"]>, string> = {
   lg: "rounded-lg",
@@ -65,13 +90,15 @@ export function ProductThumbnail({
   className,
   rounded = "lg",
 }: ProductThumbnailProps) {
-  const bg = (categorie && CATEGORY_COLOR[categorie]) || FALLBACK;
+  const tone: TileTone = (categorie && CATEGORY_TONE[categorie]) || "night";
+  const bg = TONE_BG[tone];
+  const fg = TONE_FG[tone];
   const initials = getInitials(nom);
   // Font size scales with tile size — but caps so big tiles don't over-blow.
   const fontPx = Math.max(10, Math.min(28, Math.round(size * 0.4)));
   const style = className
-    ? { backgroundColor: bg }
-    : { backgroundColor: bg, width: size, height: size, fontSize: fontPx };
+    ? { backgroundColor: bg, color: fg }
+    : { backgroundColor: bg, color: fg, width: size, height: size, fontSize: fontPx };
 
   return (
     <div
@@ -79,8 +106,8 @@ export function ProductThumbnail({
       aria-label={`Vignette ${nom}`}
       className={
         className
-          ? `${className} ${ROUND_CLS[rounded]} shrink-0 inline-flex items-center justify-center text-white font-bold tracking-tight select-none`
-          : `${ROUND_CLS[rounded]} shrink-0 inline-flex items-center justify-center text-white font-bold tracking-tight select-none`
+          ? `${className} ${ROUND_CLS[rounded]} shrink-0 inline-flex items-center justify-center font-extrabold tracking-[-0.04em] select-none`
+          : `${ROUND_CLS[rounded]} shrink-0 inline-flex items-center justify-center font-extrabold tracking-[-0.04em] select-none`
       }
       style={style}
     >

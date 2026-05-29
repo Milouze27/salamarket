@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Receipt, ShoppingCart, User } from "lucide-react";
 import { useCartCount } from "@/hooks/useCartSummary";
@@ -37,10 +38,32 @@ const NAV_ITEMS = [
 export const BottomNav = () => {
   const location = useLocation();
   const cartCount = useCartCount();
+  const cartLinkRef = useRef<HTMLAnchorElement>(null);
 
   const isHidden = HIDDEN_PREFIXES.some((prefix) =>
     location.pathname.startsWith(prefix),
   );
+
+  // Bump animation handler — when the flying chip lands, the hook sets
+  // data-cart-bump on the target element. We watch it and toggle a class
+  // to retrigger the cart-bump keyframe.
+  useEffect(() => {
+    const el = cartLinkRef.current;
+    if (!el) return;
+    const obs = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === "data-cart-bump") {
+          el.classList.remove("animate-cart-bump");
+          // Force reflow before re-adding the class.
+          void el.offsetWidth;
+          el.classList.add("animate-cart-bump");
+        }
+      }
+    });
+    obs.observe(el, { attributes: true });
+    return () => obs.disconnect();
+  }, []);
+
   if (isHidden) return null;
 
   return (
@@ -52,11 +75,14 @@ export const BottomNav = () => {
       <ul className="grid grid-cols-4">
         {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {
           const showBadge = to === "/panier" && cartCount > 0;
+          const isCart = to === "/panier";
           return (
             <li key={to}>
               <NavLink
                 to={to}
                 end={exact}
+                ref={isCart ? cartLinkRef : undefined}
+                data-cart-target={isCart ? "" : undefined}
                 className={({ isActive }) =>
                   cn(
                     "relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 transition-colors",

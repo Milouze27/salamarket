@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { EditorialIntro } from "@/components/EditorialIntro";
 import { WeeklyPicks } from "@/components/WeeklyPicks";
 import { CategoryTabs } from "@/components/CategoryTabs";
+import { CourteDateBanner } from "@/components/CourteDateBanner";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { useProducts } from "@/hooks/useProducts";
@@ -100,6 +101,11 @@ const Index = () => {
       <Header searchValue={searchInput} onSearchChange={setSearchInput} />
 
       {showVitrine && <EditorialIntro />}
+      {showVitrine && (
+        <div className="max-w-7xl mx-auto px-6 md:px-8 mt-6">
+          <CourteDateBanner />
+        </div>
+      )}
       {showVitrine && allProducts && allProducts.length > 0 && (
         <WeeklyPicks products={allProducts} />
       )}

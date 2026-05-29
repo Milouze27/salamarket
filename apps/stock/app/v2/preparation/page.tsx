@@ -22,6 +22,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { PriceTag } from "@/components/v2/PriceTag";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { DlcBanner } from "@/components/v2/DlcBanner";
 import {
   ClientTypeBadgeGroup,
   type ClientType,
@@ -436,6 +437,10 @@ export default function V2PreparationKanbanPage() {
             />
             {isLive ? "Temps réel" : "Polling 12s"}
           </span>
+        </div>
+
+        <div className="mt-4">
+          <DlcBanner />
         </div>
 
         {/* View mode toggle */}

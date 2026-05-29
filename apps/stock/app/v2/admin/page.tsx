@@ -21,6 +21,8 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
+import { CounterPreview } from "@/components/v2/CounterPreview";
+import { DlcBanner } from "@/components/v2/DlcBanner";
 import { RevenueChart, type RevenueDataPoint } from "@/components/v2/RevenueChart";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
@@ -189,6 +191,16 @@ export default function V2AdminDashboardPage() {
           />
         </div>
 
+        {/* DLC alerts bandeau */}
+        <div className="mt-4">
+          <DlcBanner />
+        </div>
+
+        {/* Counter screen preview */}
+        <div className="mt-4">
+          <CounterPreview />
+        </div>
+
         {/* Raccourcis comptables */}
         <div className="flex flex-wrap gap-2 mt-4">
           <a
@@ -225,6 +237,22 @@ export default function V2AdminDashboardPage() {
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             Alertes IA
+          </a>
+          <a
+            href="/v2/admin/alertes-dlc"
+            className="inline-flex items-center gap-2 bg-warning text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            Alertes DLC
+          </a>
+          <a
+            href="/v2/counter"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
+            Counter retrait
           </a>
           <a
             href="/v2/admin/assistant-ia"

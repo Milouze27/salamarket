@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"\\n──────── Salamarket monorepo ────────\"; echo -n \"Vercel : \"; vercel whoami 2>/dev/null || echo \"NOT LOGGED IN — run: vercel login (dadibelhamiti7@gmail.com)\"; echo -n \"GitHub : \"; gh auth status 2>&1 | grep 'Active account' | head -1 | sed 's/.*account //; s/ .*//' || echo \"check gh auth status\"; echo \"────────────────────────────────────\\n\"",
+            "timeout": 10,
+            "statusMessage": "Vérif comptes Vercel/GitHub"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; [ -n \"$f\" ] && [[ \"$f\" == /Users/mac/salamarket/* ]] && [[ \"$f\" =~ \\.(ts|tsx|js|jsx|json|css|md)$ ]] && /Users/mac/salamarket/node_modules/.bin/prettier --write --ignore-unknown \"$f\" 2>/dev/null || true; }",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/mac/salamarket 2>/dev/null && [ -n \"$(git status --porcelain 2>/dev/null)\" ] && echo '{\"systemMessage\":\"⚠ Salamarket : du code non commit. git status / git add / git commit -m \\\"...\\\"\"}' || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

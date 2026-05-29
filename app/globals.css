@@ -1,0 +1,392 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-cream: #FAF7EE;
+  --bg-card: #FFFFFF;
+  --primary-green: #0E3B2E;
+  --primary-green-hover: #14523F;
+  --primary-green-dark: #082A20;
+  --accent-gold: #C9A227;
+  --accent-gold-bright: #DDB31C;
+  --accent-gold-soft: #F4E9C4;
+  --text-primary: #0F1A14;
+  --text-secondary: #5A6470;     /* durci de #6B7280 → contrast 7.3:1 sur cream */
+  --text-tertiary: #7B8693;      /* durci de #9CA3AF → contrast 4.6:1 sur cream (WCAG AA) */
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-muted: #D7E0DA; /* durci de #B8C8C0 → contrast 8.1:1 sur sapin */
+  --danger: #E5483D;
+  --danger-soft: #FEF2F1;
+  --success: #2D7A4F;
+  --success-soft: #E8F5EE;
+  --warning: #D97706;
+  --warning-soft: #FEF3E2;
+  --border-light: #E8E4D8;
+  --border-medium: #D1CCB8;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Nav bottom flottant : pill effective ~78px (icon 36 + label 14 +
+     paddings 16 + py-2 outer). Le token doit refléter la hauteur
+     visuelle réelle pour que pb-nav-stack laisse une vraie clearance. */
+  --nav-height: 96px;
+  --cta-height: 80px;
+  /* Espace de respiration au-dessus du nav. Règle UX : le contenu
+     ne doit jamais être collé contre le pill nav. 48px = un peu plus
+     que la moitié de la hauteur du pill, lisible visuellement sans
+     créer un trou inutile. */
+  --nav-breathing: 48px;
+  --header-height: 56px;
+  /* Elevation */
+  --shadow-card: 0 2px 12px rgba(14, 59, 46, 0.06);
+  --shadow-card-hover: 0 4px 20px rgba(14, 59, 46, 0.10);
+  --shadow-card-lg: 0 8px 32px rgba(14, 59, 46, 0.12);
+  --shadow-inset-soft: inset 0 0 0 1px rgba(14, 59, 46, 0.04);
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-page: 280ms;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background: var(--bg-cream);
+  color: var(--text-primary);
+  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular numbers everywhere a quantity sits next to text. Stops "16"
+   from being narrower than "30" — critical for stock-count alignment. */
+.tabular { font-variant-numeric: tabular-nums; }
+.mono {
+  font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-green);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@layer components {
+  .label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .label-caps-md {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .h1 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 640px) {
+    .h1 { font-size: 32px; }
+  }
+  .h2 {
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  @media (min-width: 640px) {
+    .h2 { font-size: 24px; }
+  }
+  .h3 {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+  }
+  .display {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 640px) {
+    .display { font-size: 40px; }
+  }
+  .body-md {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .body-lg {
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .body-sm {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--text-secondary);
+  }
+
+  .gradient-header {
+    background: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%);
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+  }
+  .card-tappable {
+    transition: transform var(--dur-fast) var(--ease-out-quart),
+                box-shadow var(--dur-base) var(--ease-out-quart);
+  }
+  .card-tappable:active {
+    transform: scale(0.985);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Skeleton block: subtle shimmer, never aggressive. */
+  .skeleton {
+    background: linear-gradient(
+      100deg,
+      var(--border-light) 0%,
+      #F1ECDD 50%,
+      var(--border-light) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.6s var(--ease-out-quart) infinite;
+    border-radius: 8px;
+  }
+  @keyframes skeletonShimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--primary-green);
+    color: var(--text-on-dark);
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-weight: 600;
+    font-size: 15px;
+    min-height: 48px;
+    transition:
+      background var(--dur-base) var(--ease-out-quart),
+      transform var(--dur-fast) var(--ease-out-quart);
+  }
+  .btn-primary:hover { background: var(--primary-green-hover); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .btn-gold {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--accent-gold-bright);
+    color: var(--primary-green-dark);
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-weight: 700;
+    font-size: 15px;
+    transition: filter 160ms ease;
+  }
+  .btn-gold:hover { filter: brightness(1.05); }
+
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--primary-green);
+    border: 1px solid var(--border-medium);
+    border-radius: 999px;
+    padding: 12px 22px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .btn-ghost:hover { background: var(--bg-cream); }
+
+  .btn-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    background: var(--primary-green);
+    color: var(--text-on-dark);
+    box-shadow: 0 8px 24px rgba(14, 59, 46, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pill-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    background: white;
+    border: 1px solid var(--border-light);
+    color: var(--primary-green);
+    white-space: nowrap;
+  }
+  .pill-filter[data-active="true"] {
+    background: var(--primary-green);
+    color: white;
+    border-color: var(--primary-green);
+  }
+
+  .input-field {
+    width: 100%;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: var(--text-primary);
+    outline: none;
+    transition:
+      border-color var(--dur-base) var(--ease-out-quart),
+      box-shadow var(--dur-base) var(--ease-out-quart);
+    min-height: 48px;
+  }
+  .input-field::placeholder { color: var(--text-tertiary); }
+  .input-field:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.10);
+  }
+  .input-field:focus-visible { outline: none; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-success { background: var(--success-soft); color: var(--success); }
+  .badge-warning { background: var(--warning-soft); color: var(--warning); }
+  .badge-danger { background: var(--danger-soft); color: var(--danger); }
+  .badge-gold { background: var(--accent-gold-soft); color: #8B6F0E; }
+  .badge-neutral { background: var(--bg-cream); color: var(--text-secondary); }
+
+  /* Keypad button (login PIN). 28pt font, large square card, satisfying tap. */
+  .keypad-btn {
+    aspect-ratio: 1;
+    border-radius: 18px;
+    background: var(--bg-card);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-card);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    transition:
+      transform var(--dur-fast) var(--ease-out-quart),
+      box-shadow var(--dur-base) var(--ease-out-quart),
+      background var(--dur-base) var(--ease-out-quart);
+  }
+  .keypad-btn:active {
+    transform: scale(0.94);
+    background: var(--bg-cream);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .keypad-btn:disabled {
+    opacity: 0.35;
+    transform: none;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Section heading (label-caps + accent dot). */
+  .section-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--primary-green);
+  }
+  .section-eyebrow::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--accent-gold-bright);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
+  .safe-top { padding-top: max(env(safe-area-inset-top), 16px); }
+  /* Hero/onboarding gradient headers: safe-area + breathing room so the
+     iPhone Dynamic Island (~59pt) never touches a heading. */
+  .safe-top-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
+  .safe-top-md   { padding-top: calc(env(safe-area-inset-top, 0px) + 24px); }
+  /* Bottom-padding helpers tied to nav-height + cta-height variables. */
+  .pb-cta-stack {
+    padding-bottom: calc(var(--nav-height) + var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+  }
+  .pb-cta-only {
+    padding-bottom: calc(var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+  }
+  .pb-nav-stack {
+    padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--nav-breathing));
+  }
+  /* Float a CTA strip above the bottom nav (or above safe-area when no nav). */
+  .cta-above-nav {
+    bottom: calc(var(--nav-height) + var(--safe-bottom));
+  }
+  .cta-above-safe {
+    bottom: var(--safe-bottom);
+  }
+}
+
+/* shadcn dialog overlay tweak */
+.fixed-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 42, 32, 0.55);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+}

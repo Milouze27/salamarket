@@ -17,6 +17,7 @@ import { useV2 } from "@/lib/v2-store";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
+import { WeeklyPicksRail } from "@/components/v2/WeeklyPicksRail";
 
 /** Hero action — promoted card sapin plein en tête du hub. */
 const HERO_ACTION = {
@@ -135,6 +136,9 @@ export default function V2HomePage() {
           icon={HERO_ACTION.icon}
         />
       </motion.section>
+
+      {/* WEEKLY PICKS — rail horizontal "Cette semaine" */}
+      <WeeklyPicksRail />
 
       {/* SECONDARY ACTIONS — surfaces blanches, eyebrow numéroté */}
       <section className="px-5 mt-8">

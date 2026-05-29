@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDownToLine,
@@ -25,6 +25,9 @@ import { DepotSwitcher } from "./DepotSwitcher";
 import { V2Logo } from "./V2Logo";
 import { AdminMenu } from "./AdminMenu";
 import { AssistantFab } from "./AssistantFab";
+import { CommandPalette } from "./CommandPalette";
+import { ThemeToggle } from "./ThemeToggle";
+import { DensityToggle } from "./DensityToggle";
 
 interface NavItem {
   label: string;
@@ -133,6 +136,24 @@ export function V2Shell({
     return () => document.removeEventListener("keydown", onKey);
   }, [sheetOpen]);
 
+  // Long-press sur le logo → ouvre la palette ⌘K (fallback mobile).
+  const longPressTimer = useRef<number | null>(null);
+  const startLongPress = () => {
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      window.dispatchEvent(new Event("salam-stock-cmdk:open"));
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        try { (navigator as Navigator).vibrate?.(12); } catch { /* noop */ }
+      }
+    }, 450);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   if (!hydrated) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -152,12 +173,19 @@ export function V2Shell({
         {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
         <header className="sticky top-0 z-30 bg-gradient-to-b from-[#0E3B2E] to-[#082A20] backdrop-blur-xl">
-          <div className="flex items-center gap-2.5 px-4 pt-3 pb-3 safe-top">
-            {/* Bloc identité — clickable vers accueil */}
+          <div className="flex items-center gap-2 px-4 pt-3 pb-3 safe-top">
+            {/* Bloc identité — clickable vers accueil, long-press → ⌘K (fallback mobile) */}
             <Link
               href="/v2"
-              className="flex items-center gap-2.5 min-w-0 flex-1 active:opacity-70 transition-opacity"
-              aria-label="Accueil Salam Stock"
+              className="flex items-center gap-2.5 min-w-0 flex-1 active:opacity-70 transition-opacity select-none"
+              aria-label="Accueil Salam Stock — appui long pour ouvrir la palette ⌘K"
+              onTouchStart={startLongPress}
+              onTouchEnd={cancelLongPress}
+              onTouchCancel={cancelLongPress}
+              onTouchMove={cancelLongPress}
+              onMouseDown={startLongPress}
+              onMouseUp={cancelLongPress}
+              onMouseLeave={cancelLongPress}
             >
               <V2Logo size={32} />
               <div className="min-w-0 leading-tight">
@@ -174,6 +202,21 @@ export function V2Shell({
                 </p>
               </div>
             </Link>
+
+            {/* Discreet ⌘K hint — desktop uniquement, mobile a le long-press logo */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("salam-stock-cmdk:open"))}
+              aria-label="Ouvrir la palette de commandes (Cmd+K)"
+              className="hidden sm:inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
+            >
+              <span className="opacity-80">Rechercher</span>
+              <kbd className="font-bold bg-white/20 rounded px-1 py-px tracking-wider">⌘K</kbd>
+            </button>
+
+            {/* Toggles atelier nuit + densité */}
+            <ThemeToggle />
+            <DensityToggle />
 
             {/* Actions à droite — DepotSwitcher en discret, hamburger admin proéminent, logout neutre */}
             <DepotSwitcher />
@@ -291,6 +334,9 @@ export function V2Shell({
 
         {/* FAB Assistant IA — admin only, sticky au-dessus du nav */}
         <AssistantFab role={employe.role} hideOnNoNav={hideNav} />
+
+        {/* ⌘K Command Palette — global, monté une fois ici, dispo partout */}
+        <CommandPalette />
 
         {/* PLUS SHEET */}
         <AnimatePresence>

@@ -1,4 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+  "buildCommand": "cd ../.. && npm run build -w apps/drive",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/((?!api/|assets/|brand/|hero/|icons/|products/|sounds/|splash/|.*\\.(?:js|css|png|jpg|jpeg|svg|webp|ico|json|webmanifest|html|txt|map|woff2?)).*)",

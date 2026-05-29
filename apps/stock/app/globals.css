@@ -504,3 +504,160 @@ body {
   backdrop-filter: blur(6px);
   z-index: 50;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+   MOVE 2 — Mode atelier nuit
+   Active via body.theme-nuit (hook useTheme). Override des CSS variables
+   pour pousser l'app en sapin abyssal + or boosté. Contraste WCAG AA :
+   text-primary (#F4E9C4) sur bg #0A1F18 = 11.9:1, text-secondary
+   (#C9A227) sur bg #0A1F18 = 5.8:1. Transition douce 240ms.
+   ────────────────────────────────────────────────────────────────────── */
+html, body {
+  transition: background-color 240ms var(--ease-out-quart),
+              color 240ms var(--ease-out-quart);
+}
+
+body.theme-nuit {
+  --bg-cream: #0A1F18;
+  --bg-card: #0E2A20;
+  --primary-green: #DDB31C; /* en mode nuit l'or DEVIENT la primary */
+  --primary-green-hover: #E8C13A;
+  --primary-green-dark: #C9A227;
+  --accent-gold: #DDB31C;
+  --accent-gold-bright: #EFC840;
+  --accent-gold-soft: #2A2310;
+  --text-primary: #F4E9C4;
+  --text-secondary: #C9C2A8;
+  --text-tertiary: #8A8674;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-muted: #D7E0DA;
+  --border-light: #1A3A2E;
+  --border-medium: #2A4F40;
+  --danger: #FF6B5E;
+  --danger-soft: #2A1310;
+  --success: #5BCC8E;
+  --success-soft: #102A1B;
+  --warning: #F3A93C;
+  --warning-soft: #2A1F0E;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --shadow-card-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-inset-soft: inset 0 0 0 1px rgba(221, 179, 28, 0.08);
+}
+
+/* Réajustements visuels spécifiques mode nuit */
+body.theme-nuit .skeleton {
+  background: linear-gradient(
+    100deg,
+    #14302A 0%,
+    #1C3D34 50%,
+    #14302A 100%
+  );
+  background-size: 200% 100%;
+}
+
+body.theme-nuit .pill-filter {
+  background: #14302A;
+  border-color: #1A3A2E;
+  color: #F4E9C4;
+}
+body.theme-nuit .pill-filter[data-active="true"] {
+  background: #DDB31C;
+  color: #0A1F18;
+  border-color: #DDB31C;
+}
+
+body.theme-nuit .input-field {
+  background: #0E2A20;
+  border-color: #1A3A2E;
+  color: #F4E9C4;
+}
+body.theme-nuit .input-field::placeholder { color: #6A6655; }
+
+/* ──────────────────────────────────────────────────────────────────────
+   MOVE 4 — Density compact
+   Active via body.density-compact (hook useDensity). Override des tokens
+   internes : paddings, gaps, taille typo des "body-md", rayons. Garde
+   les hits 44×44 minimum pour mobile (on serre le padding visuel, pas
+   la touch target — celles-ci passent par min-h sur .btn-primary).
+   ────────────────────────────────────────────────────────────────────── */
+body.density-compact {
+  --card-padding: 12px;
+  --card-gap: 10px;
+}
+
+body.density-compact .card {
+  padding: 12px;
+  border-radius: 14px;
+}
+
+body.density-compact .body-md {
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+body.density-compact .h1 { font-size: 24px; }
+body.density-compact .h2 { font-size: 19px; }
+body.density-compact .h3 { font-size: 16px; }
+
+body.density-compact .pill-filter {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+body.density-compact .btn-ghost {
+  padding: 10px 18px;
+  font-size: 13px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   MOVE 1 — Command palette ⌘K
+   Styles cmdk minimaux. Linear-grade : item haut 40px, focus or doux,
+   group heading label-caps or, séparateur subtle.
+   ────────────────────────────────────────────────────────────────────── */
+.cmdk-root { display: flex; flex-direction: column; }
+
+.cmdk-group {
+  padding: 6px 6px 8px;
+}
+.cmdk-group [cmdk-group-heading] {
+  padding: 8px 12px 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13.5px;
+  transition: background var(--dur-fast) var(--ease-out-quart);
+}
+.cmdk-item[data-selected="true"] {
+  background: var(--accent-gold-soft);
+}
+.cmdk-item[data-selected="true"] .text-text-primary {
+  color: var(--primary-green-dark);
+}
+.cmdk-item:active {
+  background: var(--bg-cream);
+}
+
+/* Mode nuit : palette s'adapte au thème ambient */
+body.theme-nuit .cmdk-root-wrap {
+  background: #0E2A20;
+  border-color: #1A3A2E;
+}
+body.theme-nuit .cmdk-item[data-selected="true"] {
+  background: rgba(221, 179, 28, 0.12);
+}
+body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
+  color: #F4E9C4;
+}

@@ -2,6 +2,20 @@
 
 Monorepo Salamarket — Drive (B2C/B2B Pro) + Stock (staff POS) sur Supabase partagé. Plateforme halal multi-canal pour K & A FOOD (SIRET 802 773 812, Toulouse).
 
+## ⚠️ Comptes obligatoires AVANT toute action infra
+
+Tout agent qui touche à `vercel`, `gh`, `supabase` doit checker le compte actif AVANT d'exécuter une commande. Sinon les commandes échouent silencieusement avec des 403/404 obscurs (incident récurrent qui a fait perdre des heures sur ce projet).
+
+| Service | Compte à utiliser | Comment vérifier |
+|---------|-------------------|------------------|
+| **Vercel** (tous projets `*-mono`, drive, stock) | `dadibelhamiti7@gmail.com` → username `abumeryem` (org `abumeryems-projects`) | `vercel whoami` doit retourner `abumeryem`. Si non : `vercel login` puis choisir cet email. |
+| **GitHub** monorepo `Milouze27/salamarket` | `Milouze27` | `gh auth status` puis `gh auth switch --user Milouze27` si besoin |
+| **GitHub** legacy `AbuMeryem/salam-stock` | `AbuMeryem` | `gh auth switch --user AbuMeryem` |
+| **GitHub** legacy `Milouze27/salamarket-drive` | `Milouze27` | `gh auth switch --user Milouze27` |
+| **Supabase** projet `tltmermqodelorthtbre` | (CLI déjà loggé) | `supabase projects list` doit lister `salamarket-drive` |
+
+**Règle absolue** : ne JAMAIS supposer que le compte actif est le bon. Toujours vérifier d'abord.
+
 ## Workspaces
 
 - `apps/drive` — PWA client (Vite + React 18) → `salamarket-drive.vercel.app`

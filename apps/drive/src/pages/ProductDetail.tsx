@@ -23,7 +23,7 @@ import {
   formatPriceWithUnit,
   getBrackets,
   unitHint,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
 import { cn } from "@/lib/utils";
 

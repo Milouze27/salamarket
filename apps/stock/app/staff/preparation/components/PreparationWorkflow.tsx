@@ -37,7 +37,7 @@ import {
   computeEcartPct,
   determineEcartAction,
   type EcartAction,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 import {
   finalizePreparation,
   markLineWeighed,

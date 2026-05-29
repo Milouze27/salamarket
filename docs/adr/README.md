@@ -44,3 +44,4 @@ What becomes easier, harder, or different as a result? What did we trade away?
 - Reference `CONTEXT.md` terms when discussing domain concepts; don't redefine them inline.
 - When an ADR is superseded, update its status header — don't delete the file.
 - If an agent's output contradicts an existing ADR, the agent must surface the conflict explicitly rather than silently overriding (per `docs/agents/domain.md`).
+- ADRs apply to the **whole monorepo** by default. If a decision is scoped to one app, say so explicitly in the title or context (e.g. `0007-drive-stripe-manual-capture.md`).

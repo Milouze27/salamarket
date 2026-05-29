@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Le package workspace `@salamarket/shared` est livré en TS source
+  // (pas pré-compilé). Next 14 doit le passer dans son pipeline SWC
+  // sinon les imports échouent en runtime.
+  transpilePackages: ["@salamarket/shared"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos" },

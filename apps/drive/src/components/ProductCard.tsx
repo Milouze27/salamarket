@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
-import { formatPriceWithUnit } from "@/lib/drive-pesee";
+import { formatPriceWithUnit } from "@salamarket/shared";
 
 interface Props {
   product: Product;

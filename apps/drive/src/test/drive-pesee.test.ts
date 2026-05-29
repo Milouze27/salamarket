@@ -7,7 +7,7 @@ import {
   formatKg,
   unitHint,
   type CartLineLike,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 import type { Product } from "@/types/product";
 
 // ─────────────────────────────────────────────────────────────────────

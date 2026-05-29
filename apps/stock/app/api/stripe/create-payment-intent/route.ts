@@ -23,7 +23,7 @@ import { z } from "zod";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase-server";
-import { computeMontantAutorise } from "@/lib/drive-pesee";
+import { computeMontantAutorise } from "@salamarket/shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

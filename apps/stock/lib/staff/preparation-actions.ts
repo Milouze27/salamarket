@@ -19,7 +19,7 @@ import {
   computeEcartPct,
   determineEcartAction,
   type EcartAction,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 
 export interface MarkLineWeighedInput {
   line_id: string;

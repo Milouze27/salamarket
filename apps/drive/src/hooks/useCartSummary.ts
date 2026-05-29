@@ -1,5 +1,5 @@
 import { useCartStore } from "@/stores/cartStore";
-import { computeCartTotalsCents } from "@/lib/drive-pesee";
+import { computeCartTotalsCents } from "@salamarket/shared";
 
 // Selectors avec primitive equality — évite les re-renders inutiles que
 // `useCartStore((s) => s.getCount())` causerait (la fonction renvoie une

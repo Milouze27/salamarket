@@ -17,7 +17,7 @@ import {
   computePrixEstime,
   formatKg,
   getBrackets,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 
 const MIN_ORDER_CENTS = 1500;
 

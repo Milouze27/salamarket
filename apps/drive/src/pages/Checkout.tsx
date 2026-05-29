@@ -16,7 +16,7 @@ import {
   computeCartTotalsCents,
   computePrixEstime,
   formatKg,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 import { Scale } from "lucide-react";
 import { DriveStripePayment } from "@/components/DriveStripePayment";
 

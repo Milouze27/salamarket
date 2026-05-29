@@ -5,7 +5,7 @@ import {
   computeCartTotalsCents,
   computePrixEstime,
   getBrackets,
-} from "@/lib/drive-pesee";
+} from "@salamarket/shared";
 
 // ─────────────────────────────────────────────────────────────────
 // CartItem — modèle unifié, supporte 3 unit_types.

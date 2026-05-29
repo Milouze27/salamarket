@@ -9,14 +9,20 @@ import {
   ArrowUpRight,
   ChevronRight,
   ClipboardList,
+  Compass,
+  Gauge,
   Home,
   LayoutDashboard,
+  LineChart,
   LogOut,
+  MonitorPlay,
   MoreHorizontal,
   PackageSearch,
+  QrCode,
   Repeat2,
   ShoppingBag,
   Tag,
+  Truck,
   X,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
@@ -48,6 +54,14 @@ const ITEMS: Record<string, NavItem> = {
   inventaire: { label: "Invent.", fullLabel: "Inventaire tournant", href: "/v2/inventaire", icon: ClipboardList, desc: "5–10 produits du jour" },
   etiquettes: { label: "Étiq.", fullLabel: "Étiquettes EAN-13", href: "/v2/etiquettes", icon: Tag, desc: "Imprimer codes-barres internes" },
   admin: { label: "Admin", fullLabel: "Dashboard admin", href: "/v2/admin", icon: LayoutDashboard, desc: "Vue 3 dépôts + alertes IA" },
+  // Nouveaux hubs sprint démo Otmane
+  cockpit: { label: "Cockpit", fullLabel: "Cockpit Otmane", href: "/v2/cockpit", icon: Gauge, desc: "Vue 30 sec : ventes, alertes, staff" },
+  forecast: { label: "Prévis.", fullLabel: "Prévisions ruptures", href: "/v2/forecast", icon: LineChart, desc: "Stockouts prévus (hijri-aware)" },
+  po: { label: "Cmd. fourn.", fullLabel: "Commandes fournisseurs", href: "/v2/po", icon: ClipboardList, desc: "PO auto-générés + suivi" },
+  fournisseurs: { label: "Fourn.", fullLabel: "Fournisseurs", href: "/v2/fournisseurs", icon: Truck, desc: "Fiches + certif halal" },
+  lots: { label: "Lots", fullLabel: "Traçabilité lots halal", href: "/v2/lots", icon: QrCode, desc: "QR public + certif AVS/ARGML" },
+  counter: { label: "Comptoir", fullLabel: "Écran comptoir retrait", href: "/v2/counter", icon: MonitorPlay, desc: "TV/iPad - commandes prêtes" },
+  alertesDlc: { label: "Alertes DLC", fullLabel: "Alertes DLC + démarque", href: "/v2/admin/alertes-dlc", icon: Compass, desc: "Lots courte date + remises auto" },
 };
 
 /** Choose primary nav items shown directly on the bar (max 4) per role. */
@@ -63,6 +77,13 @@ function primaryFor(role: string): NavItem[] {
 function secondaryFor(role: string): NavItem[] {
   if (role === "admin") {
     return [
+      ITEMS.cockpit,
+      ITEMS.forecast,
+      ITEMS.alertesDlc,
+      ITEMS.po,
+      ITEMS.fournisseurs,
+      ITEMS.lots,
+      ITEMS.counter,
       ITEMS.reception,
       ITEMS.sortie,
       ITEMS.transfert,
@@ -72,6 +93,13 @@ function secondaryFor(role: string): NavItem[] {
   }
   if (role === "manager") {
     return [
+      ITEMS.cockpit,
+      ITEMS.forecast,
+      ITEMS.alertesDlc,
+      ITEMS.po,
+      ITEMS.fournisseurs,
+      ITEMS.lots,
+      ITEMS.counter,
       ITEMS.transfert,
       ITEMS.preparation,
       ITEMS.inventaire,
@@ -81,6 +109,8 @@ function secondaryFor(role: string): NavItem[] {
   }
   // reception / preparation
   return [
+    ITEMS.lots,
+    ITEMS.counter,
     ITEMS.transfert,
     ITEMS.preparation,
     ITEMS.inventaire,

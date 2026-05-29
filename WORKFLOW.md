@@ -516,7 +516,93 @@ Schema complet : voir `salam-stock/SCHEMA.md` (36 tables, 2 views, 7+ triggers).
 
 ---
 
-## 16. Idees & roadmap future
+## 16. Features ajoutees (2026-05-30) — Sprint demo Otmane
+
+### 16.1 Halal QR lot traceability (moat unique marché halal FR)
+- Migration `0031_lots_traceability.sql` : table `produits_lots` (certifier_id AVS/ARGML, abattoir, date_abattage, certifier_valid_until, dlc, qr_url généré)
+- Drive `/lot/:id` : page publique scannable depuis le ticket (mobile-first)
+- Stock `/v2/lots/[id]` : vue staff avec QR inline + print étiquette
+- Composant `LotBadge.tsx` pill gold pour insertion future dans commandes
+- Demo URL : `https://salamarket-drive.vercel.app/lot/L2026-05-A23`
+
+### 16.2 DLC engine + dynamic pricing -30/-50%
+- Migration `0032_dlc_engine.sql` : `dlc_pricing_rules` + view `v_dlc_alerts`
+- Edge function `dlc-scan` : GET retourne alertes formatées
+- Composant `DlcBanner.tsx` : auto-fetch, 3 niveaux visuels, lien `/v2/admin/alertes-dlc`
+- Stock `/v2/admin/alertes-dlc` : KPI cards + liste lots triés par jours_restants
+- Drive `CourteDateBanner.tsx` : section anti-gaspi homepage
+- ROI : -70 k€/an démarme récupérée (1.4% → 0.9% du CA)
+
+### 16.3 Pickup screen + bay label
+- Migration `0033_bay_label.sql` : bay_label + pret_at + retired_at sur commandes_drive + function `assign_next_bay()` SECURITY DEFINER (A1..A6, B1..B6)
+- Stock `/v2/counter` : fullscreen TV/iPad, realtime subscribe + slide-in/fade-out
+- `BayPicker.tsx` modal RPC + `CounterPreview.tsx` admin iframe scaled
+- NO halal grocery FR competitor n'a ça
+
+### 16.4 Cockpit Otmane (vue manager 30 sec)
+- Migration `0034_cockpit_views.sql` : views agrégées multi-source
+- API routes `/api/cockpit/*` (consolidated dashboard data)
+- Stock `/v2/cockpit` : ventes hier vs target, alertes critiques, backlog Drive, staff présent, météo + hijri
+- Edge function `refresh-cockpit-cache` (cron horaire)
+
+### 16.5 Predictive stockout engine
+- Migration `0035_predictive_stockout.sql` : velocity formulas + coverage calc multi-depot
+- Edge function `forecast-stockouts` (daily cron)
+- Composant `RupturesImminentesCard.tsx` dashboard
+- Stock `/v2/forecast` : vue forecast par SKU avec seuils J-4 / J-2 / J-1
+- Lib `hijri.ts` : calendrier hijri natif pour multiplicateurs Ramadan/Aïd
+
+### 16.6 Purchase Orders fournisseurs
+- Migration `0036_purchase_orders.sql` : `purchase_orders` + lignes + state machine
+- API routes `/api/po/*` + token magic-link `lib/po-token.ts`
+- Edge function `auto-generate-pos` (cron quotidien, déclenche depuis predictions)
+- Stock `/v2/po` + `/v2/fournisseurs` : gestion PO + fiches fournisseurs
+- Composants `components/po/*` (création, validation, suivi état)
+
+### 16.7 BDL scan-first workflow
+- Migration `0037_bdl_scan_first.sql` : extensions BDL pour scan workflow
+- Stock `/v2/reception/[id]/scan-first` : scanner-first auto-rec
+- Composants `scanner-overlay.tsx` + `sign-off-modal.tsx` + `temperature-input.tsx`
+- API `/api/bdl/finalize` pour signature électronique
+
+### 16.8 Staff pointage + heures
+- Migration `0038_staff_pointage.sql` : pointages employes + calcul heures
+- Lib `lib/staff/pointage-data.ts` + types
+- Hook préparation à intégration HR/payroll (Phase 2)
+
+### 16.9 Casse intelligence + weekly digest
+- Migration `0039_casse_baseline.sql` : baseline rates par catégorie + z-score detection
+- Edge function `casse-weekly-digest` (cron lundi matin)
+- API `/api/casse-weekly-digest` + lib `casse-digest/`
+- Email/push admin si anomalie statistique
+
+### 16.10 Design DA — sprint editorial (5 P0 + 5 moves)
+**Jour 1-2 shipped** :
+- Stock V2Shell header green gradient (DONE phase précédente)
+- `EditorialEyebrow.tsx` (01 — / 02 — gold numbered)
+- `HeroActionCard.tsx` (sapin plein + halo or)
+- ProductThumbnail désaturation 4 tons sapin/or only (mur de livres reliés)
+- Nav overlap fix universel (--nav-height 100, --cta-height 96, --nav-breathing 64)
+- Halal seal pulse 4.5s opacity loop
+- Footer Drive éditorial clamp(48-180px) "Indépendant. De Toulouse. Halal."
+- Onboarding Drive : 3 slides → 1 poster sapin gradient
+
+**Jour 3-5 shipped** :
+- CategoryTabs rail éditorial numéroté avec View Transitions API
+- Flying chip add-to-cart (WAAPI 420ms arc + haptic vibrate)
+- View Transitions API product card → detail (Safari 18 / Chrome 111)
+- `Sparkline.tsx` pure SVG dans KPI cards admin
+- Kanban prioritisé urgence (3 tiers : <30min or pulse / 30min-2h normal / >2h grisé)
+
+**Jour 6-8 in-flight** (agent en cours) :
+- ⌘K Command Palette Linear-grade (cmdk lib)
+- Mode atelier nuit auto (19h-7h) + toggle 🌙/☀️
+- WeeklyPicksRail horizontal scroll snap
+- Density toggle compact/comfortable
+
+---
+
+## 17. Idees & roadmap future
 
 > Ajouter ici toute nouvelle idee pour Salamarket.
 

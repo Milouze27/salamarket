@@ -1,0 +1,22 @@
+{
+  "name": "salamarket",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Monorepo Salamarket — Drive (B2C/B2B Pro) + Stock (staff POS) + Supabase",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "drive:dev": "npm run dev -w apps/drive",
+    "drive:build": "npm run build -w apps/drive",
+    "stock:dev": "npm run dev -w apps/stock",
+    "stock:build": "npm run build -w apps/stock",
+    "build:all": "npm run build:all -ws --if-present",
+    "lint:all": "npm run lint -ws --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

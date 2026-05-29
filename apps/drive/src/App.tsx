@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound.tsx";
 // auth tant qu'il n'y va pas.
 const Slots = lazy(() => import("./pages/Slots.tsx"));
 const DriveAuPoids = lazy(() => import("./pages/DriveAuPoids.tsx"));
+const LotPublic = lazy(() => import("./pages/LotPublic.tsx"));
 const Checkout = lazy(() => import("./pages/Checkout.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
@@ -88,6 +89,7 @@ const App = () => (
                 <Route path="/panier" element={<Cart />} />
                 <Route path="/creneaux" element={<Slots />} />
                 <Route path="/drive-au-poids" element={<DriveAuPoids />} />
+                <Route path="/lot/:id" element={<LotPublic />} />
                 <Route
                   path="/paiement"
                   element={

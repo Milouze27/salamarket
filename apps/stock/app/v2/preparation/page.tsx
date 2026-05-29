@@ -21,6 +21,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { PriceTag } from "@/components/v2/PriceTag";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import {
   ClientTypeBadgeGroup,
   type ClientType,
@@ -415,10 +416,10 @@ export default function V2PreparationKanbanPage() {
       <header className="px-5 pt-7">
         <BackButton />
         <div className="flex items-end justify-between gap-3 mt-3">
-          <div>
-            <p className="label-caps text-primary">Préparation drive</p>
-            <h1 className="h1 text-text-primary mt-1">
-              Kanban des commandes
+          <div className="min-w-0">
+            <EditorialEyebrow num="01" label="Préparation" />
+            <h1 className="h1-display mt-3">
+              Préparation <span className="gold">Drive</span>.
             </h1>
           </div>
           <span
@@ -597,8 +598,10 @@ export default function V2PreparationKanbanPage() {
           })}
         </div>
       ) : (
-        /* ────────────────── BATCH PICK VIEW ────────────────── */
-        <div className="px-5 mt-5 pb-28">
+        /* ────────────────── BATCH PICK VIEW ──────────────────
+           CTA fixe en bas → padding cumulant CTA + nav + safe + breathing
+           pour que le scroll révèle TOUT le contenu (règle UX user). */
+        <div className="px-5 mt-5 pb-cta-stack">
           {/* Progress bar */}
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">

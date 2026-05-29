@@ -17,6 +17,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { useV2 } from "@/lib/v2-store";
 import { BarcodeScanner } from "@/components/reception/BarcodeScanner";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
@@ -199,8 +200,10 @@ export default function V2TransfertPage() {
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-gold mt-3">Transfert inter-dépôt</p>
-        <h1 className="h1 text-text-primary mt-1">Bouger du stock</h1>
+        <EditorialEyebrow num="01" label="Transfert inter-dépôt" className="mt-3" />
+        <h1 className="h1-display mt-3">
+          Bouger du <span className="gold">stock</span>.
+        </h1>
       </header>
 
       {/* SOURCE → DESTINATION (destination lockée au dépôt de l'employé

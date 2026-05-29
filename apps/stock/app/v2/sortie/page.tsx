@@ -22,6 +22,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { useV2 } from "@/lib/v2-store";
 import { BarcodeScanner } from "@/components/reception/BarcodeScanner";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
@@ -225,9 +226,11 @@ export default function V2SortiePage() {
       <PageAccentStripe accent="bordeaux" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-danger mt-3">Déclarer une sortie</p>
-        <h1 className="h1 text-text-primary mt-1">Sortie de stock</h1>
-        <p className="body-md text-text-secondary mt-1">
+        <EditorialEyebrow num="01" label="Déclarer une sortie" className="mt-3" />
+        <h1 className="h1-display mt-3">
+          Sortie de <span className="gold">stock</span>.
+        </h1>
+        <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           L&apos;IA Claude analyse la cohérence photo/déclaration pour Otmane.
         </p>
       </header>

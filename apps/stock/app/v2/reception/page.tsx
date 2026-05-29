@@ -26,6 +26,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { supabase } from "@/lib/supabase";
 import {
   ProductRecognitionModal,
@@ -450,13 +451,21 @@ export default function V2ReceptionPage() {
       <PageAccentStripe accent="sapin" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-primary mt-3">Réception fournisseur</p>
-        <h1 className="h1 text-text-primary mt-1">
-          {step === "intake"
-            ? "Nouvelle réception"
-            : step === "scanning"
-              ? "Scanner les produits"
-              : "Valider la réception"}
+        <EditorialEyebrow num="01" label="Réception fournisseur" className="mt-3" />
+        <h1 className="h1-display mt-3">
+          {step === "intake" ? (
+            <>
+              Nouvelle <span className="gold">réception</span>.
+            </>
+          ) : step === "scanning" ? (
+            <>
+              <span className="gold">Scanner</span> les produits.
+            </>
+          ) : (
+            <>
+              Valider la <span className="gold">réception</span>.
+            </>
+          )}
         </h1>
       </header>
 

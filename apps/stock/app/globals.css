@@ -351,6 +351,73 @@ body {
     border-radius: 999px;
     background: var(--accent-gold-bright);
   }
+
+  /* ─── P0-1 — Hero h1 display scale, mot or accentué ─────────
+     Échelle éditoriale Drive (40→56px) appliquée sur les hubs
+     V2 (accueil, prépa, stock, admin, reception, sortie,
+     transfert, inventaire). Garder .h1 28→32px pour les écrans
+     transactionnels (détails, listes). */
+  .h1-display {
+    font-size: clamp(40px, 7vw, 56px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    text-wrap: balance;
+  }
+  .h1-display .gold,
+  .h1-display em {
+    font-style: normal;
+    color: var(--accent-gold);
+    font-weight: 700;
+  }
+
+  /* ─── P0-2 — Eyebrow numéroté "01 — / 02 —" ───────────────
+     Style magazine : numéro tabulaire + tiret + label caps,
+     tout en or saturé. Composant React = EditorialEyebrow. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent-gold);
+    line-height: 1.2;
+  }
+  .eyebrow .num {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-gold);
+  }
+
+  /* ─── P0-4 — Hero action card sapin plein ─────────────────
+     Card promotion sur les hubs : sapin plein avec icône or et
+     gros titre blanc. Composant React = HeroActionCard. */
+  .hero-action-card {
+    background: var(--primary-green);
+    color: var(--text-on-dark);
+    border-radius: 24px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 10px 32px rgba(14, 59, 46, 0.18);
+    border: 1px solid rgba(201, 162, 39, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-action-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at 100% 0%,
+      rgba(201, 162, 39, 0.18) 0%,
+      transparent 55%
+    );
+    pointer-events: none;
+  }
 }
 
 @layer utilities {
@@ -379,6 +446,51 @@ body {
   }
   .cta-above-safe {
     bottom: var(--safe-bottom);
+  }
+
+  /* ─── P0-5 — Scroll-x filter pills with gradient fade ─────
+     Container scrollable horizontalement avec fade or-cream à
+     droite (et gauche) qui suggère le débordement. Snap pour
+     un swipe précis. */
+  .scroll-x-fade {
+    position: relative;
+  }
+  .scroll-x-fade::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 36px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      var(--bg-cream) 100%
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+  .scroll-x-fade::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    background: linear-gradient(
+      to left,
+      transparent 0%,
+      var(--bg-cream) 100%
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+  .scroll-x-snap {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-x-snap > * {
+    scroll-snap-align: start;
   }
 }
 

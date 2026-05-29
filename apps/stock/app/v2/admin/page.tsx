@@ -19,6 +19,8 @@ import {
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { HeroActionCard } from "@/components/v2/HeroActionCard";
 import { RevenueChart, type RevenueDataPoint } from "@/components/v2/RevenueChart";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
@@ -165,13 +167,27 @@ export default function V2AdminDashboardPage() {
       <PageAccentStripe accent="or-sapin" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-primary mt-3">Dashboard global</p>
-        <h1 className="h1 text-text-primary mt-1">Bonjour {employe?.prenom}</h1>
-        <p className="body-md text-text-secondary mt-1">
+        <EditorialEyebrow num="01" label="Dashboard" className="mt-3" />
+        <h1 className="h1-display mt-3">
+          Dashboard <span className="gold">global</span>.
+        </h1>
+        <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           {view === "stock"
             ? "Vision unifiée des 3 dépôts en temps réel."
             : "Activité drive client : commandes, créneaux, top produits."}
         </p>
+
+        {/* Hero — assistant IA (action principale admin) */}
+        <div className="mt-5">
+          <HeroActionCard
+            href="/v2/admin/assistant-ia"
+            eyebrow="Pilote"
+            title="Assistant IA Salam"
+            desc="Pose une question sur les stocks, ventes, écarts — réponse instantanée."
+            icon={Sparkles}
+            badge="Nouveau"
+          />
+        </div>
 
         {/* Raccourcis comptables */}
         <div className="flex flex-wrap gap-2 mt-4">

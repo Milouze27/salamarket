@@ -9,6 +9,7 @@ import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { StockEditModal } from "@/components/v2/StockEditModal";
 import { PriceTag } from "@/components/v2/PriceTag";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot, listDepots } from "@/lib/db";
 import type { Depot } from "@/lib/types/db";
@@ -159,16 +160,32 @@ export default function V2StockPage() {
       <PageAccentStripe accent="fonce" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-primary mt-3">Stock</p>
-        <h1 className="h1 text-text-primary mt-1">
-          {view === "regroupe"
-            ? `${aggregated.length} produit${aggregated.length > 1 ? "s" : ""} (3 dépôts)`
-            : `${items.length} produit${items.length > 1 ? "s" : ""}`}
+        <EditorialEyebrow
+          num="01"
+          label={
+            view === "regroupe"
+              ? "Catalogue · 3 dépôts"
+              : `Catalogue · ${depot?.nom ?? "—"}`
+          }
+          className="mt-3"
+        />
+        <h1 className="h1-display mt-3">
+          {view === "regroupe" ? (
+            <>
+              <span className="gold">{aggregated.length}</span> produit
+              {aggregated.length > 1 ? "s" : ""}
+            </>
+          ) : (
+            <>
+              Stock <span className="gold">{depot?.nom ?? "dépôt"}</span>
+            </>
+          )}
+          .
         </h1>
-        <p className="body-md text-text-secondary mt-1">
+        <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           {view === "regroupe"
-            ? "Vue regroupée Particulier + Pro + Sodrune."
-            : `Catalogue du dépôt ${depot?.nom}.`}
+            ? `Vue regroupée — ${aggregated.length} produit${aggregated.length > 1 ? "s" : ""} sur les 3 dépôts.`
+            : `${items.length} produit${items.length > 1 ? "s" : ""} référencé${items.length > 1 ? "s" : ""} dans ce dépôt.`}
         </p>
 
         {/* Toggle vue dépôt unique / regroupée */}
@@ -238,18 +255,21 @@ export default function V2StockPage() {
         </div>
       </section>
 
-      <div className="mt-3 px-5 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-2 pb-2">
-          {cats.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCat(c)}
-              data-active={cat === c}
-              className="pill-filter"
-            >
-              {c}
-            </button>
-          ))}
+      {/* P0-5 — pills scroll-x avec gradient fade or-cream gauche/droite */}
+      <div className="mt-3 scroll-x-fade">
+        <div className="px-5 overflow-x-auto scrollbar-none scroll-x-snap">
+          <div className="flex items-center gap-2 pb-2 pr-4">
+            {cats.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                data-active={cat === c}
+                className="pill-filter shrink-0"
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

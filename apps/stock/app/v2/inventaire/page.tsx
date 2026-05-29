@@ -15,6 +15,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { useV2 } from "@/lib/v2-store";
 import {
   assignInventairesPourDepot,
@@ -178,11 +179,12 @@ export default function V2InventairePage() {
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />
-        <p className="label-caps text-primary mt-3">Inventaire tournant</p>
-        <h1 className="h1 text-text-primary mt-1">
-          {rows.length} produit{rows.length > 1 ? "s" : ""} à compter
+        <EditorialEyebrow num="01" label="Inventaire tournant" className="mt-3" />
+        <h1 className="h1-display mt-3">
+          <span className="gold">{rows.length}</span> produit
+          {rows.length > 1 ? "s" : ""} à compter.
         </h1>
-        <p className="body-md text-text-secondary mt-1">
+        <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           Tirage automatique chaque matin à 7h dans le dépôt actif.
         </p>
       </header>

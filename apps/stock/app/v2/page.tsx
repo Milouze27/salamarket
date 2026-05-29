@@ -15,15 +15,20 @@ import {
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
 import { V2Shell } from "@/components/v2/V2Shell";
+import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { HeroActionCard } from "@/components/v2/HeroActionCard";
 
+/** Hero action — promoted card sapin plein en tête du hub. */
+const HERO_ACTION = {
+  href: "/v2/reception",
+  title: "Nouvelle réception",
+  desc: "Scan carton, unité, photo, validation BDL.",
+  icon: ArrowDownToLine,
+  eyebrow: "Action principale",
+} as const;
+
+/** Actions secondaires — surfaces blanches en grille. */
 const ACTIONS = [
-  {
-    href: "/v2/reception",
-    title: "Nouvelle réception",
-    desc: "Scan carton, unité, photo, validation",
-    icon: ArrowDownToLine,
-    accent: "primary",
-  },
   {
     href: "/v2/sortie",
     title: "Déclarer une sortie",
@@ -74,10 +79,8 @@ const ADMIN_ACTIONS = [
   },
 ] as const;
 
-/** C2-A — palette Salam strictement appliquée sur les cards principales. */
+/** C2-A — palette Salam strictement appliquée sur les cards secondaires. */
 const accentClass: Record<string, string> = {
-  // Nouvelle réception → sapin plein, icône blanche
-  primary: "bg-[#0E3B2E] text-white",
   // Transfert inter-dépôt → or plein, icône blanche
   gold: "bg-[#C9A227] text-white",
   // Déclarer une sortie → rouge bordeaux plein, icône blanche
@@ -105,58 +108,79 @@ export default function V2HomePage() {
   return (
     <V2Shell>
       <header className="px-5 pt-7">
-        <p className="section-eyebrow">
-          {depot ? `Dépôt actif · ${depot.nom}` : "Dépôt non sélectionné"}
-        </p>
-        <h1 className="h1 text-text-primary mt-2">
-          {greet} <span className="text-primary">{firstName}</span>
+        <EditorialEyebrow
+          num="01"
+          label={depot ? `Dépôt · ${depot.nom}` : "Dépôt non sélectionné"}
+        />
+        <h1 className="h1-display mt-3">
+          {greet} <span className="gold">{firstName}</span>.
         </h1>
-        <p className="body-md text-text-secondary mt-1.5">
+        <p className="body-md text-text-secondary mt-3 max-w-[36ch]">
           Choisis une action pour démarrer.
         </p>
       </header>
 
-      <section className="px-5 mt-7 space-y-3">
-        {ACTIONS.map((a, i) => {
-          const Icon = a.icon;
-          return (
-            <motion.div
-              key={a.href}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.22,
-                ease: [0.22, 0.61, 0.36, 1],
-                delay: i * 0.04,
-              }}
-            >
-              <Link
-                href={a.href}
-                className="bg-white rounded-[20px] shadow-card border border-rule p-4 flex items-center gap-4 card-tappable focus-visible:outline-2 focus-visible:outline-primary block"
+      {/* HERO ACTION — sapin plein, promotion de l'action principale */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+        className="px-5 mt-6"
+      >
+        <HeroActionCard
+          href={HERO_ACTION.href}
+          eyebrow={HERO_ACTION.eyebrow}
+          title={HERO_ACTION.title}
+          desc={HERO_ACTION.desc}
+          icon={HERO_ACTION.icon}
+        />
+      </motion.section>
+
+      {/* SECONDARY ACTIONS — surfaces blanches, eyebrow numéroté */}
+      <section className="px-5 mt-8">
+        <EditorialEyebrow num="02" label="Autres opérations" />
+        <div className="space-y-3 mt-3">
+          {ACTIONS.map((a, i) => {
+            const Icon = a.icon;
+            return (
+              <motion.div
+                key={a.href}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.22,
+                  ease: [0.22, 0.61, 0.36, 1],
+                  delay: i * 0.04,
+                }}
               >
-                <span
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${accentClass[a.accent]}`}
+                <Link
+                  href={a.href}
+                  className="bg-white rounded-[20px] shadow-card border border-rule p-4 flex items-center gap-4 card-tappable focus-visible:outline-2 focus-visible:outline-primary block"
                 >
-                  <Icon className="w-5 h-5" strokeWidth={2.2} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-text-primary leading-tight">
-                    {a.title}
-                  </p>
-                  <p className="text-[12.5px] text-text-secondary mt-1 leading-snug">
-                    {a.desc}
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-text-tertiary shrink-0" />
-              </Link>
-            </motion.div>
-          );
-        })}
+                  <span
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${accentClass[a.accent]}`}
+                  >
+                    <Icon className="w-5 h-5" strokeWidth={2.2} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-bold text-text-primary leading-tight">
+                      {a.title}
+                    </p>
+                    <p className="text-[12.5px] text-text-secondary mt-1 leading-snug">
+                      {a.desc}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-text-tertiary shrink-0" />
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
       </section>
 
       {isManager && (
         <section className="px-5 mt-9">
-          <p className="section-eyebrow mb-3">Espace manager</p>
+          <EditorialEyebrow num="03" label="Espace manager" className="mb-3" />
           <div className="grid grid-cols-2 gap-3">
             {ADMIN_ACTIONS.map((a, i) => {
               const Icon = a.icon;

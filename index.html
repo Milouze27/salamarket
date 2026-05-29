@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F4C3A" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <style>
+      /* Bg sapin pour la transition splash natif iOS → mount React.
+         Sans ça, il y a un flash blanc d'~1s : entre l'instant où le
+         bundle Tailwind charge (qui applique `bg-bg` = #FAFAF7 sur
+         html/body) et l'instant où React injecte enfin du contenu
+         dans #root.
+
+         Le sélecteur #root:empty est la clé : il garantit que tant que
+         React n'a rien rendu, on voit du sapin. Dès que React mount,
+         #root n'est plus :empty → la règle se désactive et l'app
+         reprend la main avec son propre bg. */
+      html, body {
+        background-color: #0F4C3A;
+        min-height: 100vh;
+        min-height: 100dvh;
+        margin: 0;
+      }
+      #root:empty {
+        position: fixed;
+        inset: 0;
+        background-color: #0F4C3A;
+      }
+
+      /* Splash HTML — opacité 1 dès le mount pour bloquer la visibilité
+         de l'app qui se monte derrière (sinon flash de l'onboarding).
+         Hide géré par Web Animations API (CSS transitions pas fiables
+         sur iOS PWA standalone).
+         Responsive : sur mobile portrait, image splash WOW (sapin +
+         arabesques + logo intégré). Sur desktop/tablette/landscape,
+         l'image portrait 9:19.5 serait déformée → on bascule sur sapin
+         uni + logo doré centré proportionné. */
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background-color: #0F4C3A;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transform-origin: center center;
+        animation: splash-mount 0.4s ease-out;
+        will-change: transform;
+      }
+      #app-splash .splash-logo {
+        width: min(60%, 400px);
+        height: auto;
+        max-height: 50%;
+        object-fit: contain;
+      }
+      /* Mobile portrait : image splash WOW (logo déjà intégré au centre) */
+      @media (max-width: 767px) and (orientation: portrait) {
+        #app-splash {
+          background-image: url('/splash/iphone-1170x2532.png');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        #app-splash .splash-logo {
+          display: none;
+        }
+      }
+      @keyframes splash-mount {
+        from { transform: scale(1.03); }
+        to { transform: scale(1); }
+      }
+    </style>
+    <meta name="apple-mobile-web-app-title" content="Salamarket" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- apple-touch-startup-image RETIRÉS volontairement.
+         iOS gère mal le cache de ces images (versions buguées qui
+         persistent même après update). Conflit visuel constaté entre
+         le splash natif iOS bugué et le splash HTML inline.
+         Solution : laisser iOS afficher juste le theme-color (sapin
+         #0F4C3A) au boot, puis le splash HTML prend le relais
+         immédiatement avec le bon design. Plus de conflit.
+         PNG sources préservés dans /public/splash/ pour le splash HTML
+         et un éventuel re-enable futur. -->
+
+    <title>Salamarket Drive — Supermarché halal en click &amp; collect</title>
+    <meta name="description" content="Salamarket Drive : votre supermarché halal en click &amp; collect à Toulouse. Commandez en ligne, retirez en magasin.">
+    <meta name="author" content="Salamarket Drive" />
+
+    <!-- Preload du splash HTML (priorité absolue, c'est le 1er truc affiché) -->
+    <link rel="preload" as="image" href="/splash/iphone-1170x2532.png" fetchpriority="high" />
+    <link rel="preload" as="image" href="/brand/logo-horizontal-transparent.png" fetchpriority="high" />
+    <!-- Preload du LCP (1ère slide hero) — gain ~100-200ms sur le first paint -->
+    <link rel="preload" as="image" href="/hero/slide-1-boucherie.webp" fetchpriority="high" />
+
+    
+    
+    <meta property="og:type" content="website" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Plus Jakarta Sans = corps + displays. Brand Salamarket : un seul
+         typeface, déclinaisons via poids (800 pour les titres) et
+         tracking (tight ~ -0.03em sur les gros titres). Une famille
+         unique = lecture cohérente sur toutes les surfaces. -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <meta property="og:title" content="Salamarket Drive — Supermarché halal en click &amp; collect">
+  <meta name="twitter:title" content="Salamarket Drive — Supermarché halal en click &amp; collect">
+  <meta property="og:description" content="Salamarket Drive : votre supermarché halal en click &amp; collect à Toulouse. Commandez en ligne, retirez en magasin.">
+  <meta name="twitter:description" content="Salamarket Drive : votre supermarché halal en click &amp; collect à Toulouse. Commandez en ligne, retirez en magasin.">
+  <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/70b960b0-eec7-4a4f-9bec-bc389d2a8fdc/id-preview-c72a26dd--e2df2797-1f5f-4892-8b36-9dab8982acdd.lovable.app-1777414112297.png">
+  <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/70b960b0-eec7-4a4f-9bec-bc389d2a8fdc/id-preview-c72a26dd--e2df2797-1f5f-4892-8b36-9dab8982acdd.lovable.app-1777414112297.png">
+</head>
+
+  <body>
+    <div id="app-splash" aria-hidden="true">
+      <img class="splash-logo" src="/brand/logo-horizontal-transparent.png" alt="" />
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Hide splash via Web Animations API (WAAPI). Plus fiable que les
+      // CSS transitions qui peuvent être skippées par iOS PWA standalone
+      // sur les éléments position:fixed full-screen. WAAPI est supporté
+      // partout depuis iOS Safari 13.1 (2020).
+      (function () {
+        var splash = document.getElementById('app-splash');
+        if (!splash) return;
+        var hidden = false;
+        var removed = false;
+
+        var doRemove = function () {
+          if (removed) return;
+          removed = true;
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        };
+
+        var hide = function () {
+          if (hidden) return;
+          hidden = true;
+
+          // Web Animations API — animation JS-driven, ignore les bugs
+          // iOS de CSS transitions sur position:fixed.
+          if (typeof splash.animate === 'function') {
+            var anim = splash.animate(
+              [
+                { opacity: 1, transform: 'scale(1)' },
+                { opacity: 0, transform: 'scale(1.08)' }
+              ],
+              {
+                duration: 700,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                fill: 'forwards'
+              }
+            );
+            anim.onfinish = doRemove;
+            anim.oncancel = doRemove;
+          } else {
+            // Fallback ultra-old browsers (très rare, iOS < 13.1)
+            splash.style.transition = 'opacity 0.5s ease-out';
+            splash.style.opacity = '0';
+            setTimeout(doRemove, 500);
+          }
+
+          // Safety net contre WAAPI qui ne fire pas onfinish
+          setTimeout(doRemove, 1500);
+        };
+
+        var checkReact = function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            hide();
+          } else {
+            requestAnimationFrame(checkReact);
+          }
+        };
+
+        setTimeout(checkReact, 800);
+        setTimeout(hide, 5000);
+      })();
+    </script>
+  </body>
+</html>

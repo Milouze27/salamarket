@@ -28,7 +28,7 @@ export function stripe(): Stripe {
   _stripe = new Stripe(key, {
     // Version pinned sur celle livrée par stripe-node v22 installé en
     // dépendance. Si on remonte le package, ajuster ici (LatestApiVersion).
-    apiVersion: "2026-04-22.dahlia",
+    apiVersion: "2026-05-27.dahlia",
     typescript: true,
   });
   return _stripe;

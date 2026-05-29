@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!api/|assets/|brand/|hero/|icons/|products/|sounds/|splash/|.*\\.(?:js|css|png|jpg|jpeg|svg|webp|ico|json|webmanifest|html|txt|map|woff2?)).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

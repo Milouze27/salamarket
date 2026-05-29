@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Tokens shadcn remappés sur la palette BRAND Salamarket
+       (sapin #0E3B2E, or #C9A227, crème #FAF7EE). Toute primitive
+       shadcn (Button, Badge, Alert…) qui consomme hsl(var(--primary))
+       affichera du sapin, plus le bleu marine du thème de base.
+       Les composants custom continuent d'utiliser les hex BRAND
+       directement. */
+    --background: 47 47% 96%;            /* #FAF7EE crème */
+    --foreground: 150 16% 8%;            /* #0F1A14 quasi-noir tinté sapin */
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 16% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 16% 8%;
+
+    --primary: 152 62% 14%;              /* #0E3B2E sapin */
+    --primary-foreground: 47 47% 96%;    /* crème sur sapin */
+
+    --secondary: 47 38% 94%;             /* crème légèrement plus foncée */
+    --secondary-foreground: 152 62% 14%;
+
+    --muted: 47 38% 94%;
+    --muted-foreground: 220 9% 46%;      /* gris neutre #6B7280 */
+
+    --accent: 45 70% 47%;                /* #C9A227 or */
+    --accent-foreground: 152 62% 14%;
+
+    --destructive: 3 76% 57%;            /* #E5483D */
+    --destructive-foreground: 47 47% 96%;
+
+    --border: 47 24% 88%;                /* #E8E4D8 */
+    --input: 47 24% 88%;
+    --ring: 152 62% 14%;                 /* sapin pour les focus rings */
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /* PAS de bg sur html/body : on laisse le bg sapin (#0E3B2E) défini en
+     inline dans index.html persister. Sinon il y a un flash blanc cassé
+     dans la zone home indicator iOS pendant la fraction de seconde où
+     l'app monte mais où la page n'est pas encore peinte. Les pages
+     définissent leur propre bg explicite (ex. bg-[#FAFAFA] sur l'Index).
+
+     user-select: none + -webkit-touch-callout: none désactivent la
+     sélection de texte iOS au long-press. Donne le feel d'une app
+     native (pas un site web), et évite que le press-and-hold sur une
+     card Kanban déclenche la sélection plutôt que le drag DnD. */
+  html, body {
+    @apply text-text;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Permet la sélection sur les inputs et zones d'édition (le user doit
+     pouvoir copier-coller son email, son adresse, son code Stripe, etc.). */
+  input,
+  textarea,
+  [contenteditable="true"],
+  [contenteditable=""] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* Classe utilitaire pour ré-autoriser la sélection sur des éléments
+     précis (ex. numéro de commande qu'on peut vouloir copier). */
+  .select-allow {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

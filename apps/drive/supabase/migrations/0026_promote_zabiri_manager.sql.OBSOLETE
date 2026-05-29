@@ -1,0 +1,34 @@
+-- =====================================================================
+-- 0026_promote_zabiri_manager.sql
+-- Promotion de Mohamed ZABIRI au rôle 'manager'
+-- =====================================================================
+--
+-- Le rôle 'manager' est utilisé par les RLS de 0025_drive_pro.sql pour
+-- donner accès complet (ALL) au module B2B (comptes_pro, commandes_pro,
+-- commandes_pro_lignes, produits_pro_prix).
+--
+-- ⚠ AVANT exécution dans le SQL Editor Supabase :
+--   1) Lancer la requête de vérification ci-dessous pour confirmer
+--      qu'une seule ligne correspond.
+--   2) Si plusieurs lignes matchent (homonymie) ou zéro ligne (orthographe
+--      différente), remplacer le WHERE par un ciblage par id ou email
+--      exact.
+--
+-- Requête de vérification (à lancer manuellement) :
+--   select id, email, full_name, role
+--   from public.profiles
+--   where full_name ilike '%zabiri%';
+--
+-- Si OK, exécuter le UPDATE ci-dessous.
+-- =====================================================================
+
+update public.profiles
+   set role = 'manager',
+       updated_at = now()
+ where full_name ilike '%zabiri%'
+   and (full_name ilike 'mohamed%' or full_name ilike '%mohamed%');
+
+-- Vérification post-update (à lancer manuellement) :
+--   select id, email, full_name, role
+--   from public.profiles
+--   where role = 'manager';

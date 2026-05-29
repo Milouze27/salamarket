@@ -1,0 +1,19 @@
+{
+  "name": "Salamarket Drive",
+  "short_name": "Salamarket",
+  "description": "Drive halal — commandez en ligne, retirez en magasin",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0F4C3A",
+  "background_color": "#0F4C3A",
+  "lang": "fr",
+  "dir": "ltr",
+  "scope": "/",
+  "categories": ["food", "shopping", "lifestyle"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

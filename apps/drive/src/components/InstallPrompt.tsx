@@ -26,6 +26,14 @@ const isStandalone = (): boolean => {
   return window.matchMedia?.("(display-mode: standalone)").matches ?? false;
 };
 
+const isOnboardingDone = (): boolean => {
+  try {
+    return localStorage.getItem("onboarding_completed") === "true";
+  } catch {
+    return true;
+  }
+};
+
 const isIOS = (): boolean => {
   if (typeof navigator === "undefined") return false;
   const nav = navigator as Navigator & { standalone?: boolean };
@@ -58,7 +66,7 @@ export const InstallPrompt = () => {
   const [platform, setPlatform] = useState<"android" | "ios" | null>(null);
 
   useEffect(() => {
-    if (isStandalone() || wasRecentlyDismissed()) return;
+    if (isStandalone() || wasRecentlyDismissed() || !isOnboardingDone()) return;
 
     const handleBeforeInstall = (event: Event) => {
       event.preventDefault();

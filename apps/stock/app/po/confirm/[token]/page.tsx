@@ -121,7 +121,10 @@ export default function PoPublicConfirmPage() {
         </div>
       </header>
 
-      <div className="max-w-xl mx-auto px-5 py-6">
+      <div
+        className="max-w-xl mx-auto px-4 md:px-5 py-6"
+        style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+      >
         {loading && (
           <div className="card flex items-center gap-3" style={{ padding: 20 }}>
             <Loader2 className="animate-spin" color="var(--primary-green)" />

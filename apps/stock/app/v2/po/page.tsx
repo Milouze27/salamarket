@@ -389,7 +389,7 @@ function TabBtn({
       onClick={onClick}
       className="pill-filter"
       data-active={active}
-      style={{ minHeight: 36 }}
+      style={{ minHeight: 44 }}
     >
       {label}
       <span

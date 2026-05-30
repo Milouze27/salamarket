@@ -71,7 +71,7 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
           <button
             type="button"
             onClick={onAddRelevé}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-[#0E3B2E] text-white text-[12px] font-bold active:scale-[0.97] transition-transform shrink-0"
+            className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[#0E3B2E] text-white text-[13px] md:text-[12px] font-bold active:scale-[0.97] transition-transform shrink-0"
             aria-label="Ajouter un relevé"
           >
             <Camera className="w-3.5 h-3.5" strokeWidth={2.4} />

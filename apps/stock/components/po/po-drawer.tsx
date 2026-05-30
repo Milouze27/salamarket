@@ -101,11 +101,16 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-4 top-3 p-2 rounded-full"
-                style={{ background: "var(--bg-card)", border: "1px solid var(--border-light)" }}
+                className="absolute right-4 top-2 rounded-full flex items-center justify-center"
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-light)",
+                  width: 44,
+                  height: 44,
+                }}
                 aria-label="Fermer"
               >
-                <X size={18} color="var(--text-secondary)" />
+                <X size={20} color="var(--text-secondary)" />
               </button>
             </div>
 

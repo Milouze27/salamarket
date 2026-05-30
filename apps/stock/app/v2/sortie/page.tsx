@@ -260,7 +260,7 @@ export default function V2SortiePage() {
                 setShowSearch(false);
                 setSearchQuery("");
               }}
-              className="text-xs font-bold text-text-secondary"
+              className="text-xs font-bold text-text-secondary min-h-[44px] min-w-[44px] px-3 -mr-2 shrink-0"
             >
               Changer
             </button>
@@ -277,7 +277,7 @@ export default function V2SortiePage() {
             {!showSearch ? (
               <button
                 onClick={() => setShowSearch(true)}
-                className="w-full bg-cream text-primary rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-bold border border-rule"
+                className="w-full bg-cream text-primary rounded-2xl py-3 min-h-[44px] flex items-center justify-center gap-2 text-sm font-bold border border-rule"
               >
                 <Search className="w-4 h-4" />
                 Rechercher par nom
@@ -290,7 +290,9 @@ export default function V2SortiePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nom, marque, code…"
-                    className="input-field !pl-10"
+                    inputMode="search"
+                    autoComplete="off"
+                    className="input-field !pl-10 !text-base"
                     autoFocus
                   />
                 </div>
@@ -302,7 +304,7 @@ export default function V2SortiePage() {
                         setProduit(p);
                         setShowSearch(false);
                       }}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-cream text-left"
+                      className="w-full flex items-center gap-3 p-2 min-h-[56px] rounded-xl active:bg-cream text-left"
                     >
                       <ProductThumbnail
                         nom={p.nom}
@@ -390,7 +392,8 @@ export default function V2SortiePage() {
               value={motifLibre}
               onChange={(e) => setMotifLibre(e.target.value)}
               placeholder="Détaillez le motif…"
-              className="input-field mt-3"
+              autoComplete="off"
+              className="input-field mt-3 !text-base"
               autoFocus
             />
           )}
@@ -408,7 +411,8 @@ export default function V2SortiePage() {
               value={quantite}
               onChange={(e) => setQuantite(parseInt(e.target.value || "1", 10))}
               inputMode="numeric"
-              className="input-field text-2xl font-bold text-center"
+              pattern="[0-9]*"
+              className="input-field text-2xl font-bold text-center min-h-[56px]"
             />
           </div>
 
@@ -426,7 +430,7 @@ export default function V2SortiePage() {
                 />
                 <button
                   onClick={() => setPhotoOpen(true)}
-                  className="absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-3 py-1.5 shadow"
+                  className="absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-4 py-2 min-h-[36px] shadow"
                 >
                   Reprendre
                 </button>

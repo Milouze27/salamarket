@@ -218,7 +218,7 @@ export default function ReceptionTunnel() {
         <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => router.back()}
-            className="w-10 h-10 -ml-2 rounded-full flex items-center justify-center"
+            className="w-11 h-11 -ml-2 rounded-full flex items-center justify-center active:bg-white/10"
             aria-label="Retour"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -337,10 +337,10 @@ export default function ReceptionTunnel() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => increment(line.product_id, -1)}
-                    className="w-9 h-9 rounded-full bg-cream flex items-center justify-center text-primary"
+                    className="w-11 h-11 rounded-full bg-cream flex items-center justify-center text-primary active:scale-95"
                     aria-label="Diminuer"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-5 h-5" />
                   </button>
                   <input
                     inputMode="numeric"
@@ -350,14 +350,14 @@ export default function ReceptionTunnel() {
                       updateLine(line.product_id, { quantite_recue: isNaN(v) ? 0 : v });
                     }}
                     placeholder="0"
-                    className="w-14 text-center text-lg font-bold rounded-xl border border-line-light bg-cream py-1.5 outline-none focus:border-primary"
+                    className="w-16 h-11 text-center text-base font-bold rounded-xl border border-line-light bg-cream py-1.5 outline-none focus:border-primary"
                   />
                   <button
                     onClick={() => increment(line.product_id, 1)}
-                    className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center"
+                    className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center active:scale-95"
                     aria-label="Augmenter"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-5 h-5" />
                   </button>
                 </div>
               </div>
@@ -365,16 +365,16 @@ export default function ReceptionTunnel() {
               <div className="flex items-center gap-2 mt-3">
                 <button
                   onClick={() => openPhoto(line.product_id)}
-                  className="flex-1 py-2.5 px-3 rounded-full bg-cream text-primary text-xs font-semibold flex items-center justify-center gap-1.5"
+                  className="flex-1 min-h-[44px] py-2.5 px-3 rounded-full bg-cream text-primary text-[13px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
-                  <Camera className="w-3.5 h-3.5" />
+                  <Camera className="w-4 h-4" />
                   Photo carton
                 </button>
                 <button
                   onClick={() => generateBarcode(line.product_id)}
-                  className="flex-1 py-2.5 px-3 rounded-full bg-cream text-primary text-xs font-semibold flex items-center justify-center gap-1.5"
+                  className="flex-1 min-h-[44px] py-2.5 px-3 rounded-full bg-cream text-primary text-[13px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
-                  <ScanBarcode className="w-3.5 h-3.5" />
+                  <ScanBarcode className="w-4 h-4" />
                   EAN interne
                 </button>
               </div>
@@ -431,7 +431,10 @@ export default function ReceptionTunnel() {
 
       {unknownBarcode && (
         <div className="fixed inset-0 z-[70] fixed-overlay flex items-end justify-center">
-          <div className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-10 animate-slide-up">
+          <div
+            className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 animate-slide-up max-h-[92vh] overflow-y-auto"
+            style={{ paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
+          >
             <div className="w-14 h-14 mx-auto rounded-2xl bg-warning-soft flex items-center justify-center mb-3">
               <ImageIcon className="w-6 h-6 text-warning" />
             </div>
@@ -463,7 +466,10 @@ export default function ReceptionTunnel() {
 
       {showJustifyModal && (
         <div className="fixed inset-0 z-[70] fixed-overlay flex items-end justify-center">
-          <div className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-10 animate-slide-up">
+          <div
+            className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 animate-slide-up max-h-[92vh] overflow-y-auto"
+            style={{ paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
+          >
             <div className="w-14 h-14 mx-auto rounded-2xl bg-danger-soft flex items-center justify-center mb-3">
               <AlertTriangle className="w-6 h-6 text-danger" />
             </div>

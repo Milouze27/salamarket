@@ -168,7 +168,7 @@ export default function V2AdminDashboardPage() {
   return (
     <V2Shell>
       <PageAccentStripe accent="or-sapin" />
-      <header className="px-5 pt-7">
+      <header className="px-4 sm:px-5 pt-7">
         <BackButton />
         <EditorialEyebrow num="01" label="Dashboard" className="mt-3" />
         <h1 className="h1-display mt-3">
@@ -206,42 +206,42 @@ export default function V2AdminDashboardPage() {
         <div className="flex flex-wrap gap-2 mt-4">
           <a
             href="/v2/admin/recap-fiscal"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-3.5 py-1.5 text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-gold-bright" />
             Récap fiscal du jour
           </a>
           <a
             href="/v2/admin/rapport-mensuel"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-3.5 py-1.5 text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary" />
             Rapport mensuel
           </a>
           <a
             href="/v2/admin/import-cashmag"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-3.5 py-1.5 text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-warning" />
             Import Cashmag
           </a>
           <a
             href="/v2/admin/bons-reception"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-3.5 py-1.5 text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-success" />
             BR émis
           </a>
           <a
             href="/v2/admin/alertes"
-            className="inline-flex items-center gap-2 bg-danger text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-danger text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             Alertes IA
           </a>
           <a
             href="/v2/admin/alertes-dlc"
-            className="inline-flex items-center gap-2 bg-warning text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-warning text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             Alertes DLC
@@ -250,14 +250,14 @@ export default function V2AdminDashboardPage() {
             href="/v2/counter"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
             Counter retrait
           </a>
           <a
             href="/v2/admin/assistant-ia"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-gold rounded-full px-3.5 py-1.5 text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
+            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-gold rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             Assistant IA
@@ -278,7 +278,7 @@ export default function V2AdminDashboardPage() {
                 role="tab"
                 aria-selected={active}
                 onClick={() => setView(v)}
-                className={`px-4 py-1.5 rounded-full text-[12.5px] font-bold transition-colors min-w-[88px] ${
+                className={`px-5 min-h-[44px] md:min-h-0 md:py-1.5 py-2 rounded-full text-[13px] md:text-[12.5px] font-bold transition-colors min-w-[96px] ${
                   active
                     ? "bg-primary text-white"
                     : "text-text-secondary"
@@ -292,7 +292,7 @@ export default function V2AdminDashboardPage() {
       </header>
 
       {loading ? (
-        <section className="px-5 mt-5 space-y-3">
+        <section className="px-4 sm:px-5 mt-5 space-y-3">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -323,7 +323,7 @@ export default function V2AdminDashboardPage() {
         /* ───────── VUE STOCK ───────── */
         <>
           {/* ┌─ ACTIVITÉ — CA temps réel ─┐ */}
-          <p className="px-5 mt-6 section-eyebrow flex items-center gap-1.5">
+          <p className="px-4 sm:px-5 mt-6 section-eyebrow flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3" />
             Activité du jour
             <span
@@ -332,16 +332,16 @@ export default function V2AdminDashboardPage() {
               className="inline-block w-1.5 h-1.5 rounded-full bg-[#2D7A4F] animate-pulse ml-1"
             />
           </p>
-          <section className="px-5 mt-2">
+          <section className="px-4 sm:px-5 mt-2">
             <RevenueChart data={revenue} initialSeries="global" initialPeriod={30} />
           </section>
 
           {/* ┌─ DÉPÔTS — état multi-dépôts ─┐ */}
-          <p className="px-5 mt-7 section-eyebrow">
+          <p className="px-4 sm:px-5 mt-7 section-eyebrow">
             <Boxes className="w-3 h-3" />
             État des dépôts
           </p>
-          <section className="px-5 mt-2 space-y-3">
+          <section className="px-4 sm:px-5 mt-2 space-y-3">
             {(showAllDepots ? stats : stats.slice(0, 3)).map((s, idx) => {
               const isEntrepot = s.depot.type === "entrepot";
               return (
@@ -455,7 +455,7 @@ export default function V2AdminDashboardPage() {
 
           {/* EMPTY RECEPTIONS — workflow safety net */}
           {emptyReceptions.length > 0 && (
-            <section className="px-5 mt-7">
+            <section className="px-4 sm:px-5 mt-7">
               <p className="label-caps text-warning mb-3 inline-flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />
                 Réceptions vides à vérifier
@@ -487,7 +487,7 @@ export default function V2AdminDashboardPage() {
 
           {/* IA FLAGS — top 4, le reste sur /v2/admin/alertes */}
           {flaggedSorties.length > 0 && (
-            <section className="px-5 mt-7">
+            <section className="px-4 sm:px-5 mt-7">
               <div className="flex items-center justify-between mb-3">
                 <p className="label-caps text-danger inline-flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
@@ -538,7 +538,7 @@ export default function V2AdminDashboardPage() {
           )}
 
           {/* RECENT — top 4, le reste sur /v2/admin/activite */}
-          <section className="px-5 mt-7">
+          <section className="px-4 sm:px-5 mt-7">
             {(() => {
               const merged = [
                 ...recentReceptions.map((r) => ({
@@ -624,7 +624,7 @@ export default function V2AdminDashboardPage() {
 
           {/* INVENTAIRES TOURNANTS — top 4, le reste sur historique */}
           {recentInventaires.length > 0 && (
-            <section className="px-5 mt-7">
+            <section className="px-4 sm:px-5 mt-7">
               <div className="flex items-center justify-between mb-3">
                 <p className="label-caps text-primary inline-flex items-center gap-1">
                   <ClipboardCheck className="w-3 h-3" />
@@ -633,14 +633,14 @@ export default function V2AdminDashboardPage() {
                 {recentInventaires.length > 4 ? (
                   <a
                     href="/v2/inventaire/historique"
-                    className="text-[11px] font-bold text-primary inline-flex items-center gap-0.5"
+                    className="text-[12px] font-bold text-primary inline-flex items-center gap-0.5 min-h-[44px] md:min-h-0 px-2 -mr-2"
                   >
                     Voir tout ({recentInventaires.length}) →
                   </a>
                 ) : (
                   <a
                     href="/v2/inventaire/historique"
-                    className="text-[11px] font-bold text-primary inline-flex items-center gap-0.5"
+                    className="text-[12px] font-bold text-primary inline-flex items-center gap-0.5 min-h-[44px] md:min-h-0 px-2 -mr-2"
                   >
                     Historique →
                   </a>
@@ -703,11 +703,11 @@ export default function V2AdminDashboardPage() {
           )}
 
           {/* ┌─ COMMUNICATION — notifs, emails, accès édition ─┐ */}
-          <p className="px-5 mt-8 section-eyebrow">
+          <p className="px-4 sm:px-5 mt-8 section-eyebrow">
             <Bell className="w-3 h-3" />
             Communication & notifs
           </p>
-          <section className="px-5 mt-2 grid grid-cols-1 gap-3">
+          <section className="px-4 sm:px-5 mt-2 grid grid-cols-1 gap-3">
             <PushNotifCard employeId={employe?.id ?? null} />
             <EmailRecapCard defaultTo="ceo@hamy.studio" />
             <StockEditWindowCard
@@ -717,7 +717,7 @@ export default function V2AdminDashboardPage() {
           </section>
 
           {/* Recap WhatsApp 19h — mockup pour la démo */}
-          <section className="px-5 mt-3 mb-8">
+          <section className="px-4 sm:px-5 mt-3 mb-[max(2rem,env(safe-area-inset-bottom))]">
             <WhatsAppRecapCard />
           </section>
         </>

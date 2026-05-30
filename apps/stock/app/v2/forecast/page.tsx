@@ -255,7 +255,7 @@ export default function ForecastPage() {
   return (
     <V2Shell hideNav>
       <PageAccentStripe accent="sapin-or" />
-      <header className="px-5 pt-7">
+      <header className="px-4 sm:px-5 pt-7">
         <BackButton />
         <EditorialEyebrow num="01" label="Forecast" className="mt-3" />
         <h1 className="h1-display mt-1">
@@ -269,7 +269,7 @@ export default function ForecastPage() {
       </header>
 
       {/* Bandeau contexte hijri — c'est LE moment "wow" du pitch */}
-      <section className="px-5 mt-5">
+      <section className="px-4 sm:px-5 mt-5">
         <div
           className="relative overflow-hidden rounded-[22px] p-5 text-white"
           style={{
@@ -311,7 +311,7 @@ export default function ForecastPage() {
       </section>
 
       {/* KPI grid */}
-      <section className="px-5 mt-4 grid grid-cols-2 gap-2.5">
+      <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 gap-2.5">
         <KpiCard
           variant="danger"
           icon={<AlertOctagon className="w-4 h-4" />}
@@ -343,12 +343,12 @@ export default function ForecastPage() {
       </section>
 
       {/* Toolbar : filter pills + scope toggle + recompute */}
-      <section className="px-5 mt-5">
+      <section className="px-4 sm:px-5 mt-5">
         <div className="flex items-center gap-2 mb-3">
           <button
             type="button"
             onClick={() => setAllDepots((v) => !v)}
-            className="pill-filter"
+            className="pill-filter min-h-[44px] md:min-h-0"
             data-active={allDepots}
           >
             {allDepots ? "Tous dépôts" : depot?.nom ?? "Dépôt courant"}
@@ -357,12 +357,12 @@ export default function ForecastPage() {
             type="button"
             onClick={() => void handleRecompute()}
             disabled={recomputing}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-[12px] font-bold active:scale-[0.97] disabled:opacity-60"
+            className="ml-auto inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 px-4 py-2 rounded-full bg-primary text-white text-[13px] md:text-[12px] font-bold active:scale-[0.97] disabled:opacity-60"
           >
             {recomputing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-4 h-4" />
             )}
             Recompute
           </button>
@@ -378,7 +378,7 @@ export default function ForecastPage() {
                   type="button"
                   onClick={() => setFilter(f.key)}
                   data-active={filter === f.key}
-                  className="pill-filter shrink-0"
+                  className="pill-filter shrink-0 min-h-[44px] md:min-h-0"
                 >
                   {f.label}
                   <span className="ml-1 tabular text-[11px] opacity-80">
@@ -392,7 +392,7 @@ export default function ForecastPage() {
       </section>
 
       {/* Liste */}
-      <section className="px-5 mt-5 pb-12">
+      <section className="px-4 sm:px-5 mt-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {loading ? (
           <div className="bg-white border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -461,7 +461,7 @@ export default function ForecastPage() {
                   <button
                     type="button"
                     onClick={() => void handleDraftPO(r)}
-                    className="w-full mt-3 bg-primary text-white rounded-[14px] py-2.5 text-[13px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+                    className="w-full mt-3 bg-primary text-white rounded-[14px] min-h-[44px] py-3 md:py-2.5 text-[14px] md:text-[13px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Préparer commande · {rec.qty} {rec.unit}
@@ -514,7 +514,7 @@ function EmptyState({
         type="button"
         onClick={onRecompute}
         disabled={recomputing}
-        className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white text-[13px] font-bold active:scale-[0.97] disabled:opacity-60"
+        className="mt-4 inline-flex items-center gap-1.5 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-white text-[14px] font-bold active:scale-[0.97] disabled:opacity-60"
       >
         {recomputing ? (
           <Loader2 className="w-4 h-4 animate-spin" />

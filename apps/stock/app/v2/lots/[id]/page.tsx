@@ -268,7 +268,7 @@ export default function V2LotDetailPage() {
               <button
                 type="button"
                 onClick={copyUrl}
-                className="w-full inline-flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-cream border border-rule text-[12px] font-semibold text-text-primary active:opacity-80"
+                className="w-full min-h-[44px] inline-flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-cream border border-rule text-[13px] font-semibold text-text-primary active:opacity-80"
               >
                 <span className="truncate tabular-nums">{publicUrl}</span>
                 <Copy className="w-4 h-4 text-text-secondary shrink-0" />
@@ -277,7 +277,7 @@ export default function V2LotDetailPage() {
                 <button
                   type="button"
                   onClick={printLabel}
-                  className="btn-gold inline-flex items-center justify-center gap-2 py-3 rounded-xl text-[13px]"
+                  className="btn-gold inline-flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-xl text-[13px]"
                 >
                   <Printer className="w-4 h-4" />
                   Imprimer
@@ -286,7 +286,7 @@ export default function V2LotDetailPage() {
                   href={publicUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white text-[13px] font-bold active:opacity-90"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-xl bg-primary text-white text-[13px] font-bold active:opacity-90"
                 >
                   Page publique
                   <ArrowUpRight className="w-4 h-4" />

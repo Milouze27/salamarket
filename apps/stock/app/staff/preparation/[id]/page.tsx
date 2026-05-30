@@ -95,7 +95,7 @@ export default function StaffPreparationDetailPage() {
       <div className="space-y-4">
         <Link
           href="/staff/preparation"
-          className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-1 min-h-[44px] -ml-1 px-1 text-sm font-medium text-slate-600 active:text-slate-900 hover:text-slate-900"
         >
           <ArrowLeft className="h-4 w-4" />
           Retour à la liste

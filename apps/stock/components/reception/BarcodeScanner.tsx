@@ -391,7 +391,7 @@ export function BarcodeScanner({
         </div>
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center"
+          className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center active:scale-95"
           aria-label="Fermer"
         >
           <X className="w-5 h-5" />

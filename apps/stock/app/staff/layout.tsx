@@ -50,17 +50,17 @@ export default function StaffLayout({
 
   return (
     <div className="min-h-screen bg-[#FAF7EE]">
-      <header className="sticky top-0 z-30 border-b border-[#E8E4D8] bg-[#FAF7EE]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0E3B2E] text-white">
+      <header className="sticky top-0 z-30 border-b border-[#E8E4D8] bg-[#FAF7EE]/95 backdrop-blur pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0E3B2E] text-white">
               <ScanLine className="h-5 w-5" />
             </div>
-            <div className="leading-tight">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 Salam Drive · Staff
               </p>
-              <p className="text-sm font-bold text-[#0F1A14]">
+              <p className="truncate text-sm font-bold text-[#0F1A14]">
                 Préparation commandes
               </p>
             </div>
@@ -95,7 +95,7 @@ export default function StaffLayout({
                 logout();
                 router.replace("/login");
               }}
-              className="rounded-lg border border-[#E8E4D8] bg-white p-2 text-[#6B7280] hover:bg-[#FAF7EE] hover:text-[#0F1A14]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E8E4D8] bg-white text-[#6B7280] active:bg-[#FAF7EE] active:text-[#0F1A14] hover:bg-[#FAF7EE] hover:text-[#0F1A14]"
               aria-label="Déconnexion"
             >
               <LogOut className="h-4 w-4" />
@@ -104,7 +104,7 @@ export default function StaffLayout({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6">{children}</main>
     </div>
   );
 }

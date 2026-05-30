@@ -112,10 +112,10 @@ export default function ActivitePage() {
   return (
     <V2Shell>
       <PageAccentStripe accent="or-sapin" />
-      <header className="px-5 pt-7">
+      <header className="px-4 sm:px-5 pt-7">
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary"
+          className="inline-flex items-center gap-1.5 min-h-[44px] -ml-1 px-2 text-[13px] font-bold text-primary active:scale-[0.98]"
         >
           <ArrowLeft className="w-4 h-4" /> Retour
         </button>
@@ -131,8 +131,8 @@ export default function ActivitePage() {
         </p>
       </header>
 
-      <section className="px-5 mt-5">
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <section className="px-4 sm:px-5 mt-5">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:-mx-5 sm:px-5 scrollbar-none">
           <FilterPill
             active={filter === "all"}
             onClick={() => setFilter("all")}
@@ -160,18 +160,18 @@ export default function ActivitePage() {
       </section>
 
       {loading ? (
-        <div className="px-5 py-10 text-center text-text-secondary">
+        <div className="px-4 sm:px-5 py-10 text-center text-text-secondary">
           Chargement…
         </div>
       ) : merged.length === 0 ? (
-        <div className="px-5 py-10 text-center">
+        <div className="px-4 sm:px-5 py-10 text-center">
           <Sparkles className="w-10 h-10 text-text-tertiary mx-auto mb-3" />
           <p className="text-sm text-text-secondary">
             Aucun mouvement à afficher.
           </p>
         </div>
       ) : (
-        <section className="px-5 mt-5 pb-nav-stack space-y-5">
+        <section className="px-4 sm:px-5 mt-5 pb-nav-stack space-y-5">
           {grouped.map(([day, rows]) => (
             <div key={day}>
               <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-tertiary mb-2 sticky top-[var(--header-height,56px)] bg-cream py-1">
@@ -204,7 +204,7 @@ function FilterPill({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-bold whitespace-nowrap border transition-colors ${
+      className={`inline-flex items-center gap-1.5 px-4 py-2.5 min-h-[40px] rounded-full text-[12.5px] font-bold whitespace-nowrap border transition-colors active:scale-[0.98] ${
         active
           ? "bg-primary text-white border-primary"
           : "bg-white text-text-primary border-rule"
@@ -232,7 +232,7 @@ function Row({
     return (
       <a
         href="/v2/reception"
-        className="px-3 py-2.5 flex items-center gap-3 active:bg-cream transition-colors"
+        className="px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
       >
         <span className="w-9 h-9 rounded-xl bg-success-soft text-success flex items-center justify-center shrink-0">
           <ArrowDownToLine className="w-4 h-4" />
@@ -258,7 +258,7 @@ function Row({
     return (
       <a
         href={lowScore ? `/v2/admin/alertes?sortie=${s.id}` : "/v2/admin/alertes"}
-        className="px-3 py-2.5 flex items-center gap-3 active:bg-cream transition-colors"
+        className="px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
       >
         <span
           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${

@@ -157,7 +157,7 @@ export default function CockpitPage() {
           type="button"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full bg-white border border-[#E8E4D8] text-[12px] font-bold text-[#0E3B2E] active:scale-[0.97] transition disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-white border border-[#E8E4D8] text-[13px] md:text-[12px] font-bold text-[#0E3B2E] active:scale-[0.97] transition disabled:opacity-50"
           aria-label="Actualiser le cockpit"
         >
           <RefreshCw
@@ -349,8 +349,8 @@ export default function CockpitPage() {
           </div>
         )}
 
-        {/* Spacer pour le nav-stack */}
-        <div className="h-2" />
+        {/* Spacer pour le nav-stack + safe-area iOS */}
+        <div className="h-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
       </motion.div>
     </V2Shell>
   );

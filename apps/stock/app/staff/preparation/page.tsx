@@ -200,8 +200,8 @@ export default function StaffPreparationListPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
             Commandes à préparer
           </h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -211,20 +211,20 @@ export default function StaffPreparationListPage() {
         <button
           type="button"
           onClick={() => void fetchData()}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="inline-flex items-center gap-2 min-h-[44px] rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm active:bg-slate-50 hover:bg-slate-50"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Rafraîchir
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {FILTRES.map((f) => (
           <button
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`shrink-0 rounded-full px-4 py-2.5 min-h-[40px] text-sm font-medium whitespace-nowrap transition active:scale-[0.98] ${
               creneau === f.key
                 ? "bg-slate-900 text-white"
                 : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -251,12 +251,12 @@ export default function StaffPreparationListPage() {
           </p>
         </div>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((c) => (
             <li key={c.id}>
               <Link
                 href={`/staff/preparation/${c.id}`}
-                className="group block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
+                className="group block rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition active:scale-[0.99] hover:border-emerald-300 hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>

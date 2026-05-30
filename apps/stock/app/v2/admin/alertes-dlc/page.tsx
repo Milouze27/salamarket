@@ -185,7 +185,7 @@ export default function AlertesDlcPage() {
   return (
     <V2Shell hideNav>
       <PageAccentStripe accent="bordeaux" />
-      <header className="px-5 pt-7">
+      <header className="px-4 sm:px-5 pt-7">
         <BackButton />
         <EditorialEyebrow num="01" label="DLC" className="mt-3" />
         <h1 className="h1-display mt-1">
@@ -198,7 +198,7 @@ export default function AlertesDlcPage() {
       </header>
 
       {/* KPI */}
-      <section className="px-5 mt-5 grid grid-cols-2 gap-2.5">
+      <section className="px-4 sm:px-5 mt-5 grid grid-cols-2 gap-2.5">
         <KpiCard
           variant="danger"
           icon={<AlertOctagon className="w-4 h-4" />}
@@ -231,11 +231,11 @@ export default function AlertesDlcPage() {
 
       {/* Bulk action */}
       {forceCount > 0 && (
-        <section className="px-5 mt-5">
+        <section className="px-4 sm:px-5 mt-5">
           <button
             onClick={() => void forceAllDemarque()}
             disabled={acting === "__bulk__"}
-            className="w-full bg-[#A8231A] text-white rounded-[18px] py-3.5 font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+            className="w-full min-h-[48px] bg-[#A8231A] text-white rounded-[18px] py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
           >
             {acting === "__bulk__" ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -248,7 +248,7 @@ export default function AlertesDlcPage() {
       )}
 
       {/* Liste */}
-      <section className="px-5 mt-6 pb-12">
+      <section className="px-4 sm:px-5 mt-6 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {loading ? (
           <div className="bg-white border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -325,7 +325,7 @@ export default function AlertesDlcPage() {
                     <button
                       onClick={() => void applyRemise(a)}
                       disabled={isActing}
-                      className="w-full mt-3 bg-primary text-white rounded-[14px] py-2.5 text-[13px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+                      className="w-full min-h-[44px] mt-3 bg-primary text-white rounded-[14px] py-3 text-[14px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
                     >
                       {isActing ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

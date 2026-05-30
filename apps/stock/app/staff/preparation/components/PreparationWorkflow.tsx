@@ -320,8 +320,8 @@ export function PreparationWorkflow({
       </ul>
 
       {/* Footer sticky */}
-      <div className="sticky bottom-0 -mx-4 border-t border-[#E8E4D8] bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky bottom-0 -mx-4 border-t border-[#E8E4D8] bg-white/95 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="text-sm text-[#6B7280]">
             {allReady ? (
               <span className="inline-flex items-center gap-1 font-semibold text-[#0E3B2E]">
@@ -340,7 +340,7 @@ export function PreparationWorkflow({
             type="button"
             disabled={!allReady || submitting || overAutorise}
             onClick={handleFinalize}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#0E3B2E] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#082A20] disabled:cursor-not-allowed disabled:bg-[#6B7280]"
+            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto min-h-[52px] rounded-xl bg-[#0E3B2E] px-5 py-3.5 text-base font-bold text-white shadow-sm transition active:scale-[0.99] hover:bg-[#082A20] disabled:cursor-not-allowed disabled:bg-[#6B7280]"
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -459,19 +459,19 @@ function LigneCard({
 
       <div className="mt-4">
         {ut === "unit" && (
-          <label className="flex items-center gap-3 rounded-xl bg-[#FAF7EE] px-4 py-3 cursor-pointer">
+          <label className="flex items-center gap-3 min-h-[56px] rounded-xl bg-[#FAF7EE] px-4 py-3 cursor-pointer">
             <input
               type="checkbox"
               checked={ligne.unit_done}
               onChange={(e) => {
                 onChange({ unit_done: e.target.checked });
               }}
-              className="h-5 w-5 rounded border-[#E8E4D8] text-[#0E3B2E] focus:ring-[#0E3B2E]"
+              className="h-6 w-6 rounded border-[#E8E4D8] text-[#0E3B2E] focus:ring-[#0E3B2E]"
             />
-            <span className="text-sm font-medium text-[#0F1A14]">
+            <span className="text-base font-medium text-[#0F1A14]">
               {ligne.unit_done ? "Article prêt" : "Marquer comme préparé"}
             </span>
-            <span className="ml-auto text-sm font-bold text-[#0F1A14]">
+            <span className="ml-auto text-base font-bold text-[#0F1A14]">
               {formatCurrency(liveMontant)}
             </span>
           </label>
@@ -482,7 +482,7 @@ function LigneCard({
             <label className="block text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
               Poids réel pesé (kg)
             </label>
-            <div className="mt-2 flex items-center gap-3">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
               <input
                 type="number"
                 inputMode="decimal"
@@ -494,7 +494,7 @@ function LigneCard({
                   const v = e.target.value;
                   onChange({ poids_kg: v === "" ? null : parseFloat(v) });
                 }}
-                className="w-32 rounded-lg border border-[#E8E4D8] bg-white px-3 py-2 text-lg font-semibold text-[#0F1A14] focus:border-[#0E3B2E] focus:outline-none focus:ring-1 focus:ring-[#0E3B2E]"
+                className="w-28 min-h-[48px] rounded-lg border border-[#E8E4D8] bg-white px-3 py-2 text-lg font-semibold text-[#0F1A14] focus:border-[#0E3B2E] focus:outline-none focus:ring-1 focus:ring-[#0E3B2E]"
               />
               <span className="text-sm text-[#6B7280]">
                 × {formatCurrency(Number(ligne.produit?.price_per_kg ?? 0))}/kg
@@ -524,7 +524,7 @@ function LigneCard({
                   key={i}
                   type="button"
                   onClick={() => onChange({ bracket_index: i })}
-                  className={`rounded-lg border px-3 py-2 text-left transition ${
+                  className={`rounded-lg border min-h-[64px] px-3 py-3 text-left transition active:scale-[0.99] ${
                     ligne.bracket_index === i
                       ? "border-[#0E3B2E] bg-[#F4E9C4] ring-2 ring-[#0E3B2E]/20"
                       : "border-[#E8E4D8] bg-white hover:border-[#0E3B2E]/30"
@@ -574,7 +574,7 @@ function LigneCard({
           type="button"
           disabled={!hasSaisie || ligne.saving}
           onClick={() => void onPersist()}
-          className="inline-flex items-center gap-1 rounded-lg border border-[#0E3B2E]/20 bg-[#F4E9C4] px-3 py-1.5 text-xs font-semibold text-[#0E3B2E] transition hover:bg-[#F4E9C4]/80 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 min-h-[40px] rounded-lg border border-[#0E3B2E]/20 bg-[#F4E9C4] px-4 py-2 text-[13px] font-semibold text-[#0E3B2E] transition active:scale-[0.98] hover:bg-[#F4E9C4]/80 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {ligne.saving ? (
             <Loader2 className="h-3 w-3 animate-spin" />

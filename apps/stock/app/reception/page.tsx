@@ -55,7 +55,7 @@ export default function ReceptionPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 rounded-full text-[13px] font-semibold transition-colors ${
+              className={`flex-1 min-h-[44px] py-2 rounded-full text-[14px] md:text-[13px] font-semibold transition-colors ${
                 t === tab ? "bg-primary text-white" : "text-text-secondary"
               }`}
             >
@@ -112,7 +112,7 @@ export default function ReceptionPage() {
                       {formatCurrency(o.total_ht)}
                     </p>
                   </div>
-                  <button className="btn-gold !py-2.5 !px-5 text-[13px]">
+                  <button className="btn-gold !py-2.5 !px-5 text-[13px] min-h-[44px]">
                     <Truck className="w-4 h-4" />
                     Démarrer
                   </button>

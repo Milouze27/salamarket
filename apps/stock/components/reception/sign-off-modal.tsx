@@ -127,7 +127,7 @@ export function SignOffModal({
                 </div>
                 <button
                   onClick={onClose}
-                  className="text-text-tertiary p-1 active:scale-95"
+                  className="text-text-tertiary w-11 h-11 -mr-2 flex items-center justify-center rounded-full active:scale-95 active:bg-cream shrink-0"
                   aria-label="Fermer"
                 >
                   <X className="w-5 h-5" />
@@ -267,7 +267,10 @@ export function SignOffModal({
             </div>
 
             {/* Footer actions */}
-            <div className="px-6 pb-8 pt-2 sticky bottom-0 bg-white border-t border-rule space-y-2">
+            <div
+              className="px-6 pt-2 sticky bottom-0 bg-white border-t border-rule space-y-2"
+              style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+            >
               <button
                 onClick={() => void onConfirm()}
                 disabled={!canSubmit}
@@ -287,7 +290,7 @@ export function SignOffModal({
               <button
                 onClick={onClose}
                 disabled={submitting}
-                className="w-full text-text-secondary text-[13px] font-semibold py-2 disabled:opacity-40"
+                className="w-full min-h-[44px] text-text-secondary text-[14px] font-semibold py-2 disabled:opacity-40 active:bg-cream rounded-xl"
               >
                 Revenir au scan
               </button>

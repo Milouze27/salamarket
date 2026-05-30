@@ -49,30 +49,32 @@ export const StickyCartCTA = () => {
       <button
         type="button"
         onClick={() => navigate("/panier")}
-        className="pointer-events-auto group w-full max-w-2xl mx-auto flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white shadow-xl shadow-[#0E3B2E]/30 active:scale-[0.99] transition-all animate-in slide-in-from-bottom-2 fade-in duration-300"
+        className="pointer-events-auto group w-full max-w-2xl mx-auto flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white shadow-xl shadow-[#0E3B2E]/30 active:scale-[0.98] transition-all motion-safe:animate-in motion-safe:slide-in-from-bottom-2 motion-safe:fade-in motion-safe:duration-300"
         aria-label={`Voir le panier — ${cartCount} article${cartCount > 1 ? "s" : ""}, total ${formatPrice(totalCents)}`}
       >
-        <span className="flex items-center gap-3">
+        {/* min-w-0 sur le wrapper gauche pour permettre la troncation du
+            prix sur très petits viewports / paniers à 4 chiffres */}
+        <span className="flex items-center gap-3 min-w-0 flex-1">
           <span className="relative w-9 h-9 rounded-full bg-[#C9A227] flex items-center justify-center shrink-0">
             <ShoppingCart size={18} className="text-[#0E3B2E]" strokeWidth={2.5} aria-hidden />
             <span className="absolute -top-1 -right-1 bg-white text-[#0E3B2E] text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-[#0E3B2E]">
               {cartCount > 9 ? "9+" : cartCount}
             </span>
           </span>
-          <span className="text-left">
+          <span className="text-left min-w-0">
             <span className="block text-xs text-white/70 leading-none">
               Mon panier
             </span>
-            <span className="block text-base font-bold tabular-nums leading-tight mt-0.5">
+            <span className="block text-base font-bold tabular-nums leading-tight mt-0.5 truncate">
               {formatPrice(totalCents)}
             </span>
           </span>
         </span>
-        <span className="flex items-center gap-1 text-sm font-semibold text-[#C9A227]">
+        <span className="flex items-center gap-1 text-sm font-semibold text-[#C9A227] shrink-0">
           Voir
           <ArrowRight
             size={16}
-            className="transition-transform group-hover:translate-x-0.5"
+            className="transition-transform motion-safe:group-hover:translate-x-0.5"
             aria-hidden
           />
         </span>

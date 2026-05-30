@@ -171,7 +171,7 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
       // Collect unique product IDs
       const productIds = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
       if (productIds.length === 0) {
-        toast.error("Aucun produit a ajouter");
+        toast.error("Aucun produit à ajouter");
         return;
       }
 
@@ -271,44 +271,47 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
         )}
       </p>
 
-      {/* Footer : créneau + payment + reorder + arrow */}
-      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 text-xs text-muted min-w-0">
-          <span className="inline-flex items-center gap-1 truncate">
-            <Clock size={12} className="text-[#0E3B2E] shrink-0" aria-hidden />
-            <span className="truncate">{formatSlot(order.pickup_slot)}</span>
-          </span>
-          <span className="inline-flex items-center gap-1 shrink-0">
-            {order.payment_method === "online" ? (
-              <CreditCard size={12} className="text-[#0E3B2E]" aria-hidden />
-            ) : (
-              <Banknote size={12} className="text-[#0E3B2E]" aria-hidden />
-            )}
-            <span className="hidden sm:inline">
-              {itemCount} article{itemCount > 1 ? "s" : ""}
-            </span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            disabled={reordering || items.length === 0}
-            onClick={handleReorder}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#0E3B2E]/30 text-[#0E3B2E] text-xs font-semibold hover:bg-[#0E3B2E]/5 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none transition-all"
-          >
-            {reordering ? (
-              <Loader2 size={13} className="animate-spin" aria-hidden />
-            ) : (
-              <RotateCcw size={13} aria-hidden />
-            )}
-            <span className="hidden xs:inline">Commander</span> à nouveau
-          </button>
+      {/* Footer : créneau + payment + item count */}
+      <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
+          <Clock size={12} className="text-[#0E3B2E] shrink-0" aria-hidden />
+          <span className="truncate">{formatSlot(order.pickup_slot)}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 shrink-0">
+          {order.payment_method === "online" ? (
+            <CreditCard size={12} className="text-[#0E3B2E]" aria-hidden />
+          ) : (
+            <Banknote size={12} className="text-[#0E3B2E]" aria-hidden />
+          )}
+          <span>{itemCount} article{itemCount > 1 ? "s" : ""}</span>
+        </span>
+      </div>
+
+      {/* Actions row : reorder (44×44 tap) + voir détail */}
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={reordering || items.length === 0}
+          onClick={handleReorder}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 px-3 rounded-xl border border-[#0E3B2E]/30 text-[#0E3B2E] text-sm font-semibold hover:bg-[#0E3B2E]/5 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none transition-all"
+          aria-label="Commander à nouveau"
+        >
+          {reordering ? (
+            <Loader2 size={15} className="animate-spin" aria-hidden />
+          ) : (
+            <RotateCcw size={15} aria-hidden />
+          )}
+          Commander à nouveau
+        </button>
+        <span
+          className="inline-flex items-center justify-center h-11 w-11 rounded-xl bg-[#0E3B2E]/5 text-[#0E3B2E] shrink-0 group-hover:bg-[#0E3B2E] group-hover:text-white transition-colors"
+          aria-hidden
+        >
           <ArrowRight
             size={16}
-            className="text-muted group-hover:text-[#0E3B2E] group-hover:translate-x-0.5 transition-all shrink-0"
-            aria-hidden
+            className="group-hover:translate-x-0.5 transition-transform"
           />
-        </div>
+        </span>
       </div>
     </Link>
   );

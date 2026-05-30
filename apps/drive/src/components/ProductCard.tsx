@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { BadgeCheck, Plus, Scale } from "lucide-react";
+import { useRef, useState } from "react";
+import { BadgeCheck, ImageOff, Plus, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
@@ -28,6 +28,7 @@ export const ProductCard = ({ product }: Props) => {
   const addItem = useCartStore((s) => s.addItem);
   const { triggerFly } = useFlyingChip();
   const addBtnRef = useRef<HTMLButtonElement>(null);
+  const [imgFailed, setImgFailed] = useState(false);
 
   const unitType = product.unitType ?? "unit";
   // Pour weight & weight_bracket on n'ajoute pas directement depuis la
@@ -81,19 +82,34 @@ export const ProductCard = ({ product }: Props) => {
       className="group flex flex-col cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7EE] rounded-3xl"
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_28px_-16px_rgba(8,42,32,0.18)]">
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          loading="lazy"
-          decoding="async"
-          width={600}
-          height={600}
-          /* View Transitions API — shared element morph vers ProductDetail
-             hero. La même CSS view-transition-name est posée sur l'image
-             du detail. Browsers sans support : la prop CSS est ignorée. */
-          style={{ viewTransitionName: `product-${product.id}` }}
-          className="w-full h-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.05]"
-        />
+        {imgFailed ? (
+          /* Fallback graceful : tile sapin + initiale produit. Évite
+             l'affichage de l'icône brisée du navigateur si l'asset 404. */
+          <div
+            className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#0E3B2E] to-[#082A20] text-[#C9A227]"
+            aria-hidden
+          >
+            <ImageOff size={28} strokeWidth={1.6} aria-hidden />
+            <span className="text-[11px] uppercase tracking-[0.18em] font-bold opacity-80">
+              {product.name.slice(0, 14)}
+            </span>
+          </div>
+        ) : (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            width={600}
+            height={600}
+            onError={() => setImgFailed(true)}
+            /* View Transitions API — shared element morph vers ProductDetail
+               hero. La même CSS view-transition-name est posée sur l'image
+               du detail. Browsers sans support : la prop CSS est ignorée. */
+            style={{ viewTransitionName: `product-${product.id}` }}
+            className="w-full h-full object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.05]"
+          />
+        )}
 
         {showHalalBadge && (
           <span
@@ -130,18 +146,24 @@ export const ProductCard = ({ product }: Props) => {
         </button>
       </div>
 
+      {/* Bloc info — hauteur stable entre unit / weight / bracket.
+          Variantes précédentes : "VENTE AU POIDS · TAILLES AU CHOIX"
+          wrappait sur 2 lignes alors que "AU KG" tenait sur 1, créant
+          un delta de ~37px qui désalignait la grille. Solution : prix
+          sur sa propre ligne (h-stable) et meta tronquée single-line
+          dessous. */}
       <div className="flex flex-col gap-1 px-1 pt-3.5 pb-1">
         <h3 className="text-[13.5px] md:text-[14px] leading-[1.25] text-[#0F1A14] font-semibold line-clamp-2 min-h-[2.5em] group-hover:text-[#0E3B2E] transition-colors">
           {product.name}
         </h3>
-        <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
-          <span className="text-[15.5px] md:text-[16px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.01em]">
+        <div className="mt-1 flex flex-col gap-0.5">
+          <span className="text-[15.5px] md:text-[16px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.01em] leading-tight">
             {unitType === "weight" && product.pricePerKg != null
               ? `${product.pricePerKg.toFixed(2).replace(".", ",")} €/kg`
               : formatPrice(product.priceCents)}
           </span>
-          <span className="text-[10.5px] uppercase tracking-[0.12em] text-[#0F1A14]/55 font-semibold">
-            · {unitMeta}
+          <span className="text-[10.5px] uppercase tracking-[0.12em] text-[#0F1A14]/55 font-semibold truncate">
+            {unitMeta}
           </span>
         </div>
       </div>

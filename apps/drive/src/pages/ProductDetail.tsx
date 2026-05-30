@@ -172,7 +172,10 @@ const ProductDetail = () => {
 
   const hint = unitHint(product);
 
-  // Composant Stepper kg réutilisé desktop + mobile
+  // Composant Stepper kg réutilisé desktop + mobile.
+  // Boutons 44×44 pour respecter Apple HIG (≥44pt). Input en
+  // inputMode="decimal" pour faire surgir le clavier numérique iOS et
+  // text-base (16px) pour éviter le zoom auto Safari sur focus.
   const KgStepper = () => (
     <div className="flex items-center gap-2 bg-[#FAF7EE] rounded-2xl p-2 border border-[#0E3B2E]/15">
       <button
@@ -180,13 +183,14 @@ const ProductDetail = () => {
         onClick={() => setKg((v) => Math.max(MIN_KG, Math.round((v - STEP_KG) * 10) / 10))}
         disabled={kg <= MIN_KG}
         aria-label="Diminuer le poids estimé"
-        className="w-10 h-10 rounded-full bg-white border border-[#0E3B2E]/12 flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform shadow-sm disabled:opacity-30"
+        className="w-11 h-11 rounded-full bg-white border border-[#0E3B2E]/12 flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform shadow-sm disabled:opacity-30"
       >
-        <Minus size={14} strokeWidth={2.5} aria-hidden />
+        <Minus size={16} strokeWidth={2.5} aria-hidden />
       </button>
       <div className="flex flex-col items-center min-w-[5.5rem]">
         <input
           type="number"
+          inputMode="decimal"
           min={MIN_KG}
           max={MAX_KG}
           step={STEP_KG}
@@ -208,9 +212,9 @@ const ProductDetail = () => {
         onClick={() => setKg((v) => Math.min(MAX_KG, Math.round((v + STEP_KG) * 10) / 10))}
         disabled={kg >= MAX_KG}
         aria-label="Augmenter le poids estimé"
-        className="w-10 h-10 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm disabled:opacity-40"
+        className="w-11 h-11 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm disabled:opacity-40"
       >
-        <Plus size={14} strokeWidth={2.5} aria-hidden />
+        <Plus size={16} strokeWidth={2.5} aria-hidden />
       </button>
     </div>
   );

@@ -58,7 +58,7 @@ export default function Signup() {
   };
 
   const fieldClass = (key: string) =>
-    `h-12 px-4 rounded-xl border bg-white text-text focus:outline-none ${
+    `min-h-[44px] h-12 px-4 rounded-xl border bg-white text-base text-text focus:outline-none ${
       touched[key] && errors[key]
         ? "border-red-400 focus:border-red-500"
         : "border-border focus:border-primary"
@@ -97,6 +97,7 @@ export default function Signup() {
             <input
               id="phone"
               type="tel"
+              inputMode="tel"
               autoComplete="tel"
               placeholder="0612345678"
               value={phone}
@@ -114,7 +115,10 @@ export default function Signup() {
             <input
               id="email"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
@@ -164,7 +168,7 @@ export default function Signup() {
           <button
             type="submit"
             disabled={loading || !valid}
-            className="h-12 rounded-xl bg-[#0E3B2E] hover:bg-[#082A20] text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
+            className="min-h-[44px] h-12 rounded-xl bg-[#0E3B2E] hover:bg-[#082A20] text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
           >
             {loading ? "Création…" : "Créer mon compte"}
           </button>

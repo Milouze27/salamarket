@@ -42,11 +42,14 @@ export default function Login() {
             <input
               id="email"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 px-4 rounded-xl border border-border bg-white text-text focus:outline-none focus:border-primary"
+              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
             />
           </div>
 
@@ -61,7 +64,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 px-4 rounded-xl border border-border bg-white text-text focus:outline-none focus:border-primary"
+              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
             />
           </div>
 
@@ -74,14 +77,14 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="h-12 rounded-xl bg-[#0E3B2E] hover:bg-[#082A20] text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
+            className="min-h-[44px] h-12 rounded-xl bg-[#0E3B2E] hover:bg-[#082A20] text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
           >
             {loading ? "Connexion…" : "Se connecter"}
           </button>
 
           <Link
             to={`/inscription${location.search}`}
-            className="text-center text-sm text-primary underline underline-offset-4"
+            className="min-h-[44px] flex items-center justify-center text-center text-sm text-primary underline underline-offset-4"
           >
             Pas de compte ? Créer un compte
           </Link>

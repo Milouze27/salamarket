@@ -180,19 +180,20 @@ const LotPublic = () => {
   if (notFound || !lot) {
     return (
       <div
-        className="min-h-dvh flex items-center justify-center px-6"
+        className="min-h-dvh flex flex-col px-6 pt-24 pb-12"
         style={{
           background: BRAND.colors.bg,
           fontFamily: `'${BRAND.font}', system-ui, sans-serif`,
+          paddingTop: "calc(env(safe-area-inset-top) + 6rem)",
         }}
       >
-        <div className="text-center max-w-sm">
+        <div className="text-center max-w-sm mx-auto">
           <div
-            className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5"
+            className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-6"
             style={{ background: BRAND.colors.accentSoft }}
           >
             <PackageCheck
-              className="w-7 h-7"
+              className="w-8 h-8"
               style={{ color: BRAND.colors.primary }}
             />
           </div>
@@ -203,21 +204,28 @@ const LotPublic = () => {
             Traçabilité halal
           </p>
           <h1
-            className="text-2xl font-extrabold tracking-tight mb-2"
+            className="text-2xl font-extrabold tracking-tight mb-3"
             style={{ color: BRAND.colors.text }}
           >
             Lot introuvable
           </h1>
           <p
-            className="text-sm leading-relaxed mb-6"
+            className="text-sm leading-relaxed mb-8"
             style={{ color: BRAND.colors.muted }}
           >
-            Le lot <span className="font-bold">{id}</span> n&apos;existe pas
-            dans notre registre. Vérifiez le QR ou contactez le magasin.
+            Le lot{" "}
+            <span
+              className="font-bold tabular-nums"
+              style={{ color: BRAND.colors.text }}
+            >
+              {id}
+            </span>{" "}
+            n&apos;existe pas dans notre registre. Vérifiez le QR ou contactez
+            le magasin.
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center px-5 py-3 rounded-full font-bold text-sm transition-opacity active:opacity-80"
+            className="inline-flex items-center justify-center min-h-[48px] px-6 rounded-full font-bold text-sm transition-opacity active:opacity-80"
             style={{
               background: BRAND.colors.primary,
               color: BRAND.colors.bg,
@@ -353,7 +361,7 @@ const LotPublic = () => {
           title="Chaîne d'approvisionnement"
           icon={<MapPin className="w-5 h-5" />}
         >
-          <DataRow label="Fournisseur" value={fournisseur?.nom ?? null} />
+          <DataRow label="Fournisseur" value={fournisseur?.nom ?? "Non renseigné"} />
           {fournisseur?.siret && (
             <DataRow label="SIRET" value={fournisseur.siret} mono />
           )}
@@ -435,7 +443,7 @@ const LotPublic = () => {
         <footer className="text-center pt-4">
           <Link
             to="/"
-            className="inline-flex items-center text-[12px] font-semibold underline underline-offset-4"
+            className="inline-flex items-center justify-center min-h-[44px] px-4 text-[13px] font-semibold underline underline-offset-4"
             style={{ color: BRAND.colors.primary }}
           >
             {BRAND.name} · {BRAND.store.name}

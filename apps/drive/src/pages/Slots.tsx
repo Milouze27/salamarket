@@ -75,7 +75,7 @@ const Slots = () => {
     <div className="min-h-dvh bg-bg text-text flex flex-col">
       <AppHeader showBack title="Choisir mon créneau" />
 
-      <main className="flex-1 max-w-2xl w-full mx-auto px-6 pt-4 pb-36 flex flex-col gap-3">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-36 flex flex-col gap-3">
         <p className="text-sm text-muted">
           Retrait à {BRAND.store.name}
         </p>
@@ -129,7 +129,7 @@ const Slots = () => {
 
         {/* Grille des créneaux */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <SlotCardSkeleton key={i} />
             ))}
@@ -141,7 +141,7 @@ const Slots = () => {
             </p>
             <button
               onClick={refetch}
-              className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold"
+              className="min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold"
             >
               Réessayer
             </button>
@@ -153,14 +153,14 @@ const Slots = () => {
             </p>
             <button
               onClick={refetch}
-              className="px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold"
+              className="min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-white text-sm font-semibold"
             >
               Réessayer
             </button>
           </div>
         ) : activeGroup ? (
           activeGroup.slots.some((s) => isSlotSelectable(s, now)) ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {activeGroup.slots.map((slot) => {
                 const state = slotState(slot, now);
                 const selectable = state === "selectable";
@@ -189,7 +189,7 @@ const Slots = () => {
                       }
                     }}
                     className={cn(
-                      "rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all",
+                      "min-h-[64px] rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all",
                       selectable
                         ? isSelected
                           ? "bg-[#0E3B2E] border-[#0E3B2E] text-white active:scale-[0.98]"
@@ -221,7 +221,12 @@ const Slots = () => {
       </main>
 
       {selectedSlot && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-bg/95 backdrop-blur border-t border-border">
+        <div
+          className="fixed bottom-0 left-0 right-0 z-30 bg-bg/95 backdrop-blur border-t border-border"
+          style={{
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
+        >
           <div className="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
             <p className="text-sm text-text text-center">
               Retrait {formatSlotDayHuman(selectedSlot)} à{" "}

@@ -66,7 +66,9 @@ export const InstallPrompt = () => {
   const [platform, setPlatform] = useState<"android" | "ios" | null>(null);
 
   useEffect(() => {
-    if (isStandalone() || wasRecentlyDismissed() || !isOnboardingDone()) return;
+    // Si l'app est déjà installée OU que le user a dismiss récemment, on
+    // ne fait rien. Pas de prompt PWA dans ces cas.
+    if (isStandalone() || wasRecentlyDismissed()) return;
 
     const handleBeforeInstall = (event: Event) => {
       event.preventDefault();
@@ -80,16 +82,47 @@ export const InstallPrompt = () => {
       setPlatform("ios");
     }
 
-    const timer = window.setTimeout(() => {
-      setOpen((prev) => {
-        if (prev) return prev;
-        return true;
-      });
-    }, SHOW_DELAY_MS);
+    // Cas typique : InstallPrompt monte AVANT que l'onboarding soit
+    // terminé (les deux sont siblings dans App.tsx). Si on lit le flag
+    // une seule fois au mount, on le rate pour un nouveau user qui
+    // finit l'onboarding pendant cette session — il ne verra JAMAIS
+    // le prompt d'install tant qu'il ne reload pas.
+    //
+    // On poll le flag ; dès qu'il devient true, on arme le timer 30s
+    // qui ouvre la sheet. Si l'onboarding était déjà fait à la 1re
+    // évaluation (user qui revient), on arme directement.
+    let openTimer: number | null = null;
+    let pollInterval: number | null = null;
+
+    const armOpenTimer = () => {
+      if (openTimer !== null) return;
+      openTimer = window.setTimeout(() => {
+        // Re-check les conditions au tir : standalone peut avoir changé
+        // (user a installé l'app via le menu navigateur entre-temps), et
+        // un dismiss peut être venu d'un autre onglet.
+        if (isStandalone() || wasRecentlyDismissed()) return;
+        setOpen((prev) => (prev ? prev : true));
+      }, SHOW_DELAY_MS);
+    };
+
+    if (isOnboardingDone()) {
+      armOpenTimer();
+    } else {
+      pollInterval = window.setInterval(() => {
+        if (isOnboardingDone()) {
+          if (pollInterval !== null) {
+            window.clearInterval(pollInterval);
+            pollInterval = null;
+          }
+          armOpenTimer();
+        }
+      }, 1000);
+    }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-      window.clearTimeout(timer);
+      if (openTimer !== null) window.clearTimeout(openTimer);
+      if (pollInterval !== null) window.clearInterval(pollInterval);
     };
   }, []);
 

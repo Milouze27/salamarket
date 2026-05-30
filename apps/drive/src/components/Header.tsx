@@ -94,12 +94,14 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
           </div>
         </div>
 
-        {/* Greeting hero — blanc sur sapin */}
-        <h1 className="relative text-[28px] font-bold text-white leading-tight tracking-tight">
+        {/* Greeting hero — blanc sur sapin. Tracking-[-0.02em] resserre le
+            titre pour densité éditoriale; subtitle 15px (vs 16px) garde
+            la hiérarchie h1 > p sans casser la lisibilité mobile. */}
+        <h1 className="relative text-[28px] font-bold text-white leading-[1.1] tracking-[-0.02em]">
           {greet}
           {firstName ? `, ${firstName}` : ""}
         </h1>
-        <p className="relative text-base text-white/75 mt-1">
+        <p className="relative text-[15px] leading-[1.4] text-white/80 mt-1.5">
           {user
             ? "Que voulez-vous commander ?"
             : "Bienvenue sur votre supermarché halal"}

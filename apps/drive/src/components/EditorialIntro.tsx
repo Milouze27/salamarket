@@ -181,10 +181,11 @@ export const EditorialIntro = () => {
 
               {/* Process strip — 01 → 02 → 03 — explique le drive en
                   une lecture. Pas un CTA, un value prop typographique.
-                  Compact pour tenir sur 1 ligne en 390px. */}
+                  Compact pour tenir sur 1 ligne en 375-390px. Tracking
+                  resserré sur mobile pour gagner ~6px et éviter le wrap. */}
               <ol
                 aria-label="Le Drive Salamarket en 3 étapes"
-                className="mt-5 md:mt-6 flex items-center gap-2 md:gap-3 text-[10px] uppercase tracking-[0.16em] font-bold text-[#0E3B2E]"
+                className="mt-5 md:mt-6 flex items-center gap-2 md:gap-3 text-[10px] md:text-[11px] uppercase tracking-[0.12em] md:tracking-[0.16em] font-bold text-[#0E3B2E]"
               >
                 <li className="flex items-center gap-1.5">
                   <span

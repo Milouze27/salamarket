@@ -153,6 +153,28 @@ All colors MUST be HSL.
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Safe-area utilities — réservent l'espace iOS notch / home indicator
+     même quand `env(safe-area-inset-*)` retourne 0 (Android, navigateur
+     desktop). On garde au moins 16px de respiration en bas pour les CTAs
+     fixed (sticky cart, "Ajouter au panier" ProductDetail). */
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  /* Body scroll lock — utilisé par les overlays modaux (onboarding,
+     sheets bottom). Posé sur <body> via .body-scroll-locked, retiré au
+     close du modal. Compense le rubber-band iOS qui scroll le body en
+     dessous d'une sheet ouverte. */
+  .body-scroll-locked {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
 }
 
 /* Halal seal — micro-pulse sur le ring or, 4.5s ease-in-out infinite.

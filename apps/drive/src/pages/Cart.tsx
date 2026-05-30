@@ -104,7 +104,7 @@ const Cart = () => {
               </span>
               <button
                 onClick={handleClear}
-                className="inline-flex items-center gap-1.5 bg-destructive/10 text-destructive font-bold text-[12px] px-3 py-2 rounded-full border border-destructive/20 active:scale-95 transition-transform"
+                className="inline-flex items-center gap-1.5 min-h-11 bg-destructive/10 text-destructive font-bold text-[12px] px-3.5 py-2.5 rounded-full border border-destructive/20 active:scale-95 transition-transform"
               >
                 <Trash2 size={12} strokeWidth={2.4} />
                 Vider le panier
@@ -193,7 +193,10 @@ const Cart = () => {
                         </p>
                       )}
 
-                      {/* Ligne weight — poids estimé éditable */}
+                      {/* Ligne weight — poids estimé éditable.
+                          font-size 16px sur l'input pour éviter le zoom
+                          auto iOS Safari sur focus (<16px déclenche un
+                          zoom puis re-blur, casse l'UX mobile). */}
                       {isWeight && (
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] font-bold text-[#C9A227]">
@@ -203,6 +206,7 @@ const Cart = () => {
                             <span className="sr-only">Poids estimé</span>
                             <input
                               type="number"
+                              inputMode="decimal"
                               min={0.1}
                               max={5}
                               step={0.1}
@@ -213,7 +217,7 @@ const Cart = () => {
                                   Number(e.target.value),
                                 )
                               }
-                              className="w-16 px-2 py-1 text-sm font-semibold text-[#0E3B2E] tabular-nums bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
+                              className="w-16 px-2 py-1.5 text-base font-semibold text-[#0E3B2E] tabular-nums bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
                               aria-label={`Poids estimé de ${item.product.name} en kg`}
                             />
                             <span className="text-xs text-muted">kg estimés</span>
@@ -269,8 +273,12 @@ const Cart = () => {
                             </p>
                           )}
                         </div>
-                        {/* Stepper compact intégré sous le prix */}
-                        <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-0.5 border border-border">
+                        {/* Stepper — tap targets 44×44 (Apple HIG). On
+                            ne réduit pas la taille des cercles internes
+                            visuels (w-8 = 32px) mais on étend la zone
+                            tactile via padding parent + hit-area pseudo
+                            sur les boutons. */}
+                        <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-1 border border-border">
                           <button
                             onClick={() =>
                               item.quantity === 1
@@ -282,24 +290,24 @@ const Cart = () => {
                                 ? `Retirer ${item.product.name}`
                                 : `Diminuer ${item.product.name}`
                             }
-                            className="w-7 h-7 rounded-full bg-white border border-border flex items-center justify-center text-text active:scale-90 transition-transform shadow-sm"
+                            className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center text-text active:scale-90 transition-transform shadow-sm"
                           >
                             {item.quantity === 1 ? (
-                              <Trash2 size={12} className="text-destructive" />
+                              <Trash2 size={14} className="text-destructive" strokeWidth={2.4} />
                             ) : (
-                              <Minus size={12} strokeWidth={2.5} />
+                              <Minus size={14} strokeWidth={2.5} />
                             )}
                           </button>
-                          <span className="w-6 text-center text-sm font-bold tabular-nums">
+                          <span className="min-w-[1.75rem] w-7 text-center text-sm font-bold tabular-nums">
                             {item.quantity}
                           </span>
                           <button
                             onClick={() => increment(item.lineId)}
                             disabled={item.quantity >= 99}
                             aria-label={`Augmenter ${item.product.name}`}
-                            className="w-7 h-7 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
+                            className="w-9 h-9 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
                           >
-                            <Plus size={12} strokeWidth={2.5} />
+                            <Plus size={14} strokeWidth={2.5} />
                           </button>
                         </div>
                       </div>

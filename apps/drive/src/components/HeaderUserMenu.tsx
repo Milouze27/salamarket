@@ -128,7 +128,7 @@ export const HeaderUserMenu = () => {
         {/* Accueil — accès rapide depuis n'importe quelle page */}
         <DropdownMenuItem
           onClick={() => navigate("/")}
-          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+          className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
         >
           <Home className="h-4 w-4 text-muted" aria-hidden />
           Accueil
@@ -137,14 +137,14 @@ export const HeaderUserMenu = () => {
         {/* Section client (toujours visible) */}
         <DropdownMenuItem
           onClick={() => navigate("/compte")}
-          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+          className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
         >
           <User className="h-4 w-4 text-muted" aria-hidden />
           Mon compte
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => navigate("/commandes")}
-          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+          className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
         >
           <Package className="h-4 w-4 text-muted" aria-hidden />
           Mes commandes
@@ -159,7 +159,7 @@ export const HeaderUserMenu = () => {
             </DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => navigate("/employe")}
-              className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+              className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
             >
               <ClipboardList className="h-4 w-4 text-[#0E3B2E]" aria-hidden />
               Préparation commandes
@@ -168,7 +168,7 @@ export const HeaderUserMenu = () => {
               <>
                 <DropdownMenuItem
                   onClick={() => navigate("/admin")}
-                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+                  className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
                 >
                   <LayoutDashboard
                     className="h-4 w-4 text-[#0E3B2E]"
@@ -178,7 +178,7 @@ export const HeaderUserMenu = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => navigate("/admin/reglages")}
-                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
+                  className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
                 >
                   <Settings className="h-4 w-4 text-[#0E3B2E]" aria-hidden />
                   Réglages admin
@@ -191,7 +191,7 @@ export const HeaderUserMenu = () => {
         <DropdownMenuSeparator className="bg-border my-1" />
         <DropdownMenuItem
           onClick={handleSignOut}
-          className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-destructive focus:text-destructive hover:bg-red-50 focus:bg-red-50 gap-2.5"
+          className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium text-destructive focus:text-destructive hover:bg-red-50 focus:bg-red-50 gap-2.5"
         >
           <LogOut className="h-4 w-4" aria-hidden />
           Se déconnecter

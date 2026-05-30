@@ -89,7 +89,11 @@ export const BottomNav = () => {
                 data-cart-target={isCart ? "" : undefined}
                 className={({ isActive }) =>
                   cn(
-                    "relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 transition-colors",
+                    // min-h 56px = tap target Apple HIG (44pt) + 12px de
+                    // confort + safe-area géré au niveau du <nav>.
+                    // active:scale-[0.96] = micro-feedback tactile, désactivé
+                    // si prefers-reduced-motion via motion-safe.
+                    "relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1.5 transition-colors motion-safe:active:scale-[0.96]",
                     isActive
                       ? "text-[#0E3B2E]"
                       : "text-muted hover:text-[#0E3B2E]",

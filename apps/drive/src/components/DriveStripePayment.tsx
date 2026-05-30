@@ -152,6 +152,18 @@ export const DriveStripePayment = ({
             colorText: "#0F1A14",
             fontFamily: "system-ui, -apple-system, sans-serif",
             borderRadius: "12px",
+            fontSizeBase: "16px",
+            spacingUnit: "4px",
+          },
+          rules: {
+            ".Input": {
+              fontSize: "16px",
+              padding: "12px",
+            },
+            ".Label": {
+              fontSize: "14px",
+              fontWeight: "500",
+            },
           },
         },
       }}
@@ -220,7 +232,9 @@ const PaymentForm = ({
         </div>
       </div>
 
-      <PaymentElement options={{ layout: "tabs" }} />
+      <div className="w-full min-h-[200px]">
+        <PaymentElement options={{ layout: "tabs" }} />
+      </div>
 
       {errorMsg && (
         <p className="text-sm text-destructive" role="alert">

@@ -266,7 +266,7 @@ export default function Checkout() {
     <div className="min-h-dvh bg-background pb-24">
       {/* Header sticky — respecte safe-area-inset-top (Dynamic Island) */}
       <header
-        className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background px-6 pb-3"
+        className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background px-4 sm:px-6 pb-3"
         style={{
           paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)",
         }}
@@ -274,14 +274,14 @@ export default function Checkout() {
         <button
           onClick={() => navigate("/creneaux")}
           aria-label="Retour"
-          className="rounded-full p-1 hover:bg-muted"
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-muted"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-semibold">Paiement</h1>
       </header>
 
-      <div className="space-y-5 px-6 py-5 max-w-2xl mx-auto">
+      <div className="space-y-5 px-4 sm:px-6 py-5 max-w-2xl mx-auto">
         {/* Récapitulatif */}
         <section className="rounded-2xl bg-card p-5 shadow-sm border border-border/50">
           <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
@@ -368,7 +368,7 @@ export default function Checkout() {
             </div>
             <button
               onClick={() => navigate("/creneaux")}
-              className="text-sm font-medium text-primary hover:underline"
+              className="min-h-[44px] px-3 -mr-3 text-sm font-medium text-primary hover:underline"
             >
               Modifier
             </button>
@@ -423,7 +423,7 @@ export default function Checkout() {
             maxLength={NOTES_MAX}
             placeholder="Ex : bananes pas trop mûres, merci !"
             rows={3}
-            className="resize-none"
+            className="resize-none text-base md:text-sm"
           />
           <p className="mt-1 text-right text-xs text-muted-foreground">
             {notes.length}/{NOTES_MAX}
@@ -438,7 +438,7 @@ export default function Checkout() {
           className="fixed bottom-0 left-0 right-0 border-t bg-background p-4"
           style={{
             boxShadow: "0 -4px 16px rgba(15, 76, 58, 0.06)",
-            paddingBottom: "calc(1rem + env(safe-area-inset-bottom))",
+            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
           }}
         >
           <div className="max-w-2xl mx-auto">

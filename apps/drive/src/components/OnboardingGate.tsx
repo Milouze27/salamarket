@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
+
+const PUBLIC_PATHS_SKIP_ONBOARDING = ["/lot/"];
 
 // Lecture synchrone du flag "déjà onboardé". Si on lit localStorage dans
 // un useEffect, le 1er render renvoie null et la homepage s'affiche
@@ -17,6 +20,7 @@ const readOnboardingCompleted = (): boolean => {
 
 export const OnboardingGate = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [completed, setCompleted] = useState<boolean>(readOnboardingCompleted);
 
   const handleDismiss = useCallback(() => {
@@ -28,7 +32,11 @@ export const OnboardingGate = () => {
     setCompleted(true);
   }, []);
 
-  if (completed || user) return null;
+  const isPublicTracePage = PUBLIC_PATHS_SKIP_ONBOARDING.some((p) =>
+    location.pathname.startsWith(p),
+  );
+
+  if (completed || user || isPublicTracePage) return null;
   return <OnboardingFlow onDismiss={handleDismiss} />;
 };
 

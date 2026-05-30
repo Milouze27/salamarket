@@ -107,26 +107,27 @@ export const ProductCard = ({ product }: Props) => {
           />
         )}
 
-        {/* Pastilles icon-only haut-gauche — laisse l'image respirer. Le
-            tooltip aria-label porte la sémantique pour lecteurs d'écran. */}
+        {/* Badges compacts haut-gauche, côte à côte. Labels conservés
+            pour la lisibilité. Hauteur ~20px, ils tiennent largement sur
+            une card 187px (somme ~120px avec gap) sans chevauchement. */}
         {(showHalalBadge || isVariable) && (
           <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
             {showHalalBadge && (
               <span
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#FAF7EE]/95 backdrop-blur shadow-sm ring-1 ring-black/5"
+                className="inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
                 aria-label="Produit halal certifié"
-                title="Halal certifié"
               >
-                <BadgeCheck size={13} className="text-[#C9A227]" aria-hidden />
+                <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
+                Halal
               </span>
             )}
             {isVariable && (
               <span
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#FBF6E2]/95 backdrop-blur shadow-sm ring-1 ring-black/5"
+                className="inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
                 aria-label="Vente au poids variable"
-                title="Vente au poids"
               >
-                <Scale size={13} className="text-[#C9A227]" aria-hidden />
+                <Scale size={11} className="text-[#C9A227]" aria-hidden />
+                Au poids
               </span>
             )}
           </div>

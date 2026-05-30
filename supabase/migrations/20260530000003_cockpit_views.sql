@@ -99,28 +99,33 @@ insert into public.hijri_events (evenement, date_debut, date_fin, annee_hijri, l
   ('aid_adha',        '2030-04-14','2030-04-16',1451,'Aïd al-Adha 1451',             'critique')
 on conflict (evenement, annee_hijri) do nothing;
 
--- ─── Vue matérialisée : ventes quotidiennes par dépôt ──────────────
--- Source : ventes_cashmag_import (migré 0011) — colonnes existantes :
---   date_vente (date), depot_id (uuid), montant_ttc (numeric), nb_tickets (int)
--- On agrège pour le cockpit. REFRESH manuel (cron edge function 06h).
+-- ─── Vue matérialisée : ventes quotidiennes ────────────────────────
+-- Source : ventes_cashmag_import (migré 0011) — schéma RÉEL (cf 0011) :
+--   date_vente (date), numero_ticket (text), quantite (numeric),
+--   prix_ttc (numeric), prix_ht, tva_taux, mode_paiement, ...
+-- PAS de depot_id ni montant_ttc/nb_tickets → on calcule à la volée :
+--   ca_ttc      = sum(prix_ttc * quantite)
+--   nb_tickets  = count(distinct numero_ticket)
+--   panier_moy  = ca_ttc / nb_tickets
+-- Le breakdown par dépôt sera ajouté quand 0011 aura une colonne depot_id
+-- (TODO future migration : alter table ventes_cashmag_import add depot_id).
+-- REFRESH manuel (cron edge function 06h).
 drop materialized view if exists public.mv_ventes_quotidiennes;
 create materialized view public.mv_ventes_quotidiennes as
 select
-  v.depot_id,
-  d.nom                          as depot_nom,
-  v.date_vente                   as jour,
-  sum(v.montant_ttc)::numeric(12,2) as ca_ttc,
-  sum(coalesce(v.nb_tickets,0))  as nb_tickets,
-  case when sum(coalesce(v.nb_tickets,0)) > 0
-       then (sum(v.montant_ttc) / sum(v.nb_tickets))::numeric(10,2)
-       else null end             as panier_moyen,
-  count(*)                       as nb_lignes_import
+  v.date_vente                                          as jour,
+  sum(v.prix_ttc * coalesce(v.quantite, 1))::numeric(12,2) as ca_ttc,
+  count(distinct v.numero_ticket)                       as nb_tickets,
+  case when count(distinct v.numero_ticket) > 0
+       then (sum(v.prix_ttc * coalesce(v.quantite, 1))
+             / count(distinct v.numero_ticket))::numeric(10,2)
+       else null end                                    as panier_moyen,
+  count(*)                                              as nb_lignes_import
 from public.ventes_cashmag_import v
-left join public.depots d on d.id = v.depot_id
-group by v.depot_id, d.nom, v.date_vente;
+group by v.date_vente;
 
 create unique index if not exists idx_mv_ventes_quot_unique
-  on public.mv_ventes_quotidiennes(depot_id, jour);
+  on public.mv_ventes_quotidiennes(jour);
 create index if not exists idx_mv_ventes_quot_jour
   on public.mv_ventes_quotidiennes(jour desc);
 

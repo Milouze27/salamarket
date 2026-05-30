@@ -107,28 +107,26 @@ export const ProductCard = ({ product }: Props) => {
           />
         )}
 
-        {/* Badges stack vertical haut-gauche — évite tout chevauchement
-            HALAL × AU POIDS sur cards étroites mobile (~187px à 390px /
-            grid-cols-2). Précédemment : un badge à gauche + un à droite
-            qui se touchaient au centre sur produit weight halal. */}
+        {/* Pastilles icon-only haut-gauche — laisse l'image respirer. Le
+            tooltip aria-label porte la sémantique pour lecteurs d'écran. */}
         {(showHalalBadge || isVariable) && (
-          <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1 z-10 max-w-[calc(100%-1.25rem)]">
+          <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
             {showHalalBadge && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#FAF7EE]/95 backdrop-blur shadow-sm ring-1 ring-black/5"
                 aria-label="Produit halal certifié"
+                title="Halal certifié"
               >
-                <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
-                Halal
+                <BadgeCheck size={13} className="text-[#C9A227]" aria-hidden />
               </span>
             )}
             {isVariable && (
               <span
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#FBF6E2]/95 backdrop-blur shadow-sm ring-1 ring-black/5"
                 aria-label="Vente au poids variable"
+                title="Vente au poids"
               >
-                <Scale size={11} className="text-[#C9A227]" aria-hidden />
-                Au poids
+                <Scale size={13} className="text-[#C9A227]" aria-hidden />
               </span>
             )}
           </div>

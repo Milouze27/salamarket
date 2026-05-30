@@ -107,30 +107,26 @@ export const ProductCard = ({ product }: Props) => {
           />
         )}
 
-        {/* Badges compacts haut-gauche, côte à côte. Labels conservés
-            pour la lisibilité. Hauteur ~20px, ils tiennent largement sur
-            une card 187px (somme ~120px avec gap) sans chevauchement. */}
-        {(showHalalBadge || isVariable) && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
-            {showHalalBadge && (
-              <span
-                className="inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
-                aria-label="Produit halal certifié"
-              >
-                <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
-                Halal
-              </span>
-            )}
-            {isVariable && (
-              <span
-                className="inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
-                aria-label="Vente au poids variable"
-              >
-                <Scale size={11} className="text-[#C9A227]" aria-hidden />
-                Au poids
-              </span>
-            )}
-          </div>
+        {/* Layout original : HALAL en haut-gauche, AU POIDS en haut-droite.
+            Taille réduite (h=20, text-[9px]) pour éviter le chevauchement
+            qui se produisait avec le format précédent (h=24, text-[10px]). */}
+        {showHalalBadge && (
+          <span
+            className="absolute top-2 left-2 z-10 inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
+            aria-label="Produit halal certifié"
+          >
+            <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
+            Halal
+          </span>
+        )}
+        {isVariable && (
+          <span
+            className="absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
+            aria-label="Vente au poids variable"
+          >
+            <Scale size={11} className="text-[#C9A227]" aria-hidden />
+            Au poids
+          </span>
         )}
 
         <button

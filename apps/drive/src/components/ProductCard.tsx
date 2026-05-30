@@ -1,11 +1,15 @@
 import { useRef, useState } from "react";
-import { BadgeCheck, ImageOff, Plus, Scale } from "lucide-react";
+import { BadgeCheck, Plus, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { formatPriceWithUnit } from "@salamarket/shared";
+import {
+  ProductImageFallback,
+  isPlaceholderUrl,
+} from "@/components/ProductImageFallback";
 
 interface Props {
   product: Product;
@@ -28,7 +32,9 @@ export const ProductCard = ({ product }: Props) => {
   const addItem = useCartStore((s) => s.addItem);
   const { triggerFly } = useFlyingChip();
   const addBtnRef = useRef<HTMLButtonElement>(null);
-  const [imgFailed, setImgFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(() =>
+    isPlaceholderUrl(product.imageUrl),
+  );
 
   const unitType = product.unitType ?? "unit";
   // Pour weight & weight_bracket on n'ajoute pas directement depuis la
@@ -83,17 +89,7 @@ export const ProductCard = ({ product }: Props) => {
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_28px_-16px_rgba(8,42,32,0.18)]">
         {imgFailed ? (
-          /* Fallback graceful : tile sapin + initiale produit. Évite
-             l'affichage de l'icône brisée du navigateur si l'asset 404. */
-          <div
-            className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#0E3B2E] to-[#082A20] text-[#C9A227]"
-            aria-hidden
-          >
-            <ImageOff size={28} strokeWidth={1.6} aria-hidden />
-            <span className="text-[11px] uppercase tracking-[0.18em] font-bold opacity-80">
-              {product.name.slice(0, 14)}
-            </span>
-          </div>
+          <ProductImageFallback category={product.category} size="md" />
         ) : (
           <img
             src={product.imageUrl}
@@ -111,25 +107,31 @@ export const ProductCard = ({ product }: Props) => {
           />
         )}
 
-        {showHalalBadge && (
-          <span
-            className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
-            aria-label="Produit halal certifié"
-          >
-            <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
-            Halal
-          </span>
-        )}
-
-        {/* Badge "Au poids" en haut-droite pour les produits variables */}
-        {isVariable && (
-          <span
-            className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
-            aria-label="Vente au poids variable"
-          >
-            <Scale size={11} className="text-[#C9A227]" aria-hidden />
-            Au poids
-          </span>
+        {/* Badges stack vertical haut-gauche — évite tout chevauchement
+            HALAL × AU POIDS sur cards étroites mobile (~187px à 390px /
+            grid-cols-2). Précédemment : un badge à gauche + un à droite
+            qui se touchaient au centre sur produit weight halal. */}
+        {(showHalalBadge || isVariable) && (
+          <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1 z-10 max-w-[calc(100%-1.25rem)]">
+            {showHalalBadge && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
+                aria-label="Produit halal certifié"
+              >
+                <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
+                Halal
+              </span>
+            )}
+            {isVariable && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[10px] font-extrabold uppercase tracking-[0.1em] shadow-sm"
+                aria-label="Vente au poids variable"
+              >
+                <Scale size={11} className="text-[#C9A227]" aria-hidden />
+                Au poids
+              </span>
+            )}
+          </div>
         )}
 
         <button

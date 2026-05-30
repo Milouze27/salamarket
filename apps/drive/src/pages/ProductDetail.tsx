@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ProductImageFallback,
+  isPlaceholderUrl,
+} from "@/components/ProductImageFallback";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -55,6 +59,7 @@ const ProductDetail = () => {
   const [kg, setKg] = useState<number>(1);
   const [bracketIndex, setBracketIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
+  const [heroFailed, setHeroFailed] = useState(false);
   const addedTimerRef = useRef<number | null>(null);
 
   // Re-init quand l'id change OU quand on charge le produit (pour qu'on
@@ -379,6 +384,9 @@ const ProductDetail = () => {
       <div className="md:max-w-6xl md:mx-auto md:px-8 md:pt-24 md:grid md:grid-cols-[1.05fr_1fr] md:gap-12 lg:gap-16">
         <div className="md:sticky md:top-24 md:self-start">
           <div className="relative aspect-square w-full max-w-2xl mx-auto md:max-w-none bg-white overflow-hidden md:rounded-[36px] md:shadow-[0_30px_60px_-30px_rgba(8,42,32,0.35)] animate-in fade-in zoom-in-95 duration-500">
+            {isPlaceholderUrl(product.imageUrl) || heroFailed ? (
+              <ProductImageFallback category={product.category} size="lg" />
+            ) : (
             <img
               src={product.imageUrl}
               alt={product.name}
@@ -387,12 +395,14 @@ const ProductDetail = () => {
               loading="eager"
               fetchPriority="high"
               decoding="async"
+              onError={() => setHeroFailed(true)}
               /* View Transitions API — partage le même name que la card
                  source pour un morph natif Safari/Chrome récents. Sur
                  browsers sans support, propriété ignorée silencieusement. */
               style={{ viewTransitionName: id ? `product-${id}` : undefined }}
               className="w-full h-full object-cover"
             />
+            )}
             <div
               aria-hidden
               className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[#FAF7EE]/80 md:hidden"

@@ -23,7 +23,7 @@ with valos as (
     s.produit_id,
     s.depot_id,
     s.created_at::date as jour,
-    sum(s.quantite * coalesce(p.prix_vente_ttc, 0))::numeric(12,2) as valeur_eur,
+    sum(s.quantite * coalesce(p.prix_drive_cents / 100.0, 0))::numeric(12,2) as valeur_eur,
     sum(s.quantite)::numeric(12,3) as qte
   from public.sorties_stock s
   join public.produits p on p.id = s.produit_id
@@ -57,9 +57,9 @@ select
   s.depot_id,
   extract(isodow from s.created_at)::int          as jour_semaine,   -- 1=lun..7=dim
   extract(hour   from s.created_at)::int          as heure,
-  encode(digest(s.employe_id::text, 'sha256'), 'hex') as user_hash,
+  md5(coalesce(s.employe_id::text, '')) as user_hash,
   count(*)                                        as nb_evenements,
-  sum(s.quantite * coalesce(p.prix_vente_ttc, 0))::numeric(12,2) as valeur_perdue_eur
+  sum(s.quantite * coalesce(p.prix_drive_cents / 100.0, 0))::numeric(12,2) as valeur_perdue_eur
 from public.sorties_stock s
 join public.produits p on p.id = s.produit_id
 where s.type in ('casse_manipulation','casse_client','perime_dlc','perime_ddm','defaut_fournisseur')
@@ -102,7 +102,7 @@ with semaine as (
     s.depot_id,
     s.produit_id,
     p.nom as produit_nom,
-    sum(s.quantite * coalesce(p.prix_vente_ttc, 0))::numeric(12,2) as valeur_eur,
+    sum(s.quantite * coalesce(p.prix_drive_cents / 100.0, 0))::numeric(12,2) as valeur_eur,
     sum(s.quantite)::numeric(12,3) as qte
   from public.sorties_stock s
   join public.produits p on p.id = s.produit_id

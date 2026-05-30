@@ -125,7 +125,7 @@ select
   f.produit_id,
   f.depot_id,
   p.nom            as produit_nom,
-  p.code_barre,
+  p.ean,
   d.nom            as depot_nom,
   f.stock_actuel,
   f.velocity_adj,

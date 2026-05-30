@@ -29,7 +29,7 @@ create index if not exists idx_bdl_validation_compta
 
 -- ─── Extension des lignes BDL : lot scanné + cartons + écart ──────
 alter table public.bons_de_livraison_lignes
-  add column if not exists lot_id              uuid references public.produits_lots(id),
+  add column if not exists lot_id              text references public.produits_lots(id),
   add column if not exists nb_cartons_scannes  integer not null default 0
                             check (nb_cartons_scannes >= 0),
   add column if not exists prix_achat_ht       numeric(10,4),

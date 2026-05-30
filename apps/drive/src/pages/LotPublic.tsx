@@ -283,7 +283,10 @@ const LotPublic = () => {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-6 -mt-6 pb-12 space-y-5">
+      <main
+        className="max-w-md mx-auto px-6 -mt-6 pb-12 space-y-5"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 3rem)" }}
+      >
         {/* ─── 1. Certification halal ─────────────────────── */}
         <Section
           eyebrow="01 — Certification"

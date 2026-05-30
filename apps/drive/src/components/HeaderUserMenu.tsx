@@ -65,7 +65,7 @@ export const HeaderUserMenu = () => {
       <Link
         to="/connexion"
         aria-label="Se connecter"
-        className="w-10 h-10 rounded-full bg-white border-2 border-[#C9A227]/40 hover:border-[#C9A227] flex items-center justify-center text-[#0E3B2E] active:scale-95 transition-all shadow-md"
+        className="w-11 h-11 md:w-10 md:h-10 rounded-full bg-white border-2 border-[#C9A227]/40 hover:border-[#C9A227] flex items-center justify-center text-[#0E3B2E] active:scale-95 transition-all shadow-md"
       >
         <User size={20} strokeWidth={2.2} aria-hidden />
       </Link>
@@ -88,7 +88,7 @@ export const HeaderUserMenu = () => {
         <button
           type="button"
           aria-label="Mon compte"
-          className="relative h-10 w-10 rounded-full bg-gradient-to-br from-[#C9A227] to-[#C4992C] text-[#0E3B2E] text-sm font-bold flex items-center justify-center shadow-md ring-2 ring-white active:scale-95 transition-all hover:shadow-lg"
+          className="relative h-11 w-11 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-[#C9A227] to-[#C4992C] text-[#0E3B2E] text-sm font-bold flex items-center justify-center shadow-md ring-2 ring-white active:scale-95 transition-all hover:shadow-lg"
         >
           {initials}
           {/* Pastille verte si staff (admin/employee) — signal visuel */}

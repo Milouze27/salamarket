@@ -26,6 +26,10 @@ const HIDDEN_PREFIXES = [
   // Sur cette route, le user est dans une intention d'achat focus, le
   // bottom nav général n'a pas sa place.
   "/produit/",
+  // Page publique de traçabilité halal (QR code ticket) — pas un contexte
+  // de navigation produit. La nav cache la mention légale "PREUVE
+  // AUTO-VÉRIFIABLE" en bas de page.
+  "/lot/",
 ];
 
 const NAV_ITEMS = [

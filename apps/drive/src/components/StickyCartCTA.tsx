@@ -20,6 +20,10 @@ const HIDDEN_PREFIXES = [
   // stacking visuel à 3 bandes en bas (add-to-cart + sticky + bottom nav).
   // Le badge sur le BottomNav suffit à informer du nb d'items en cours.
   "/produit/",
+  // Page publique de traçabilité halal — contexte non-shopping (scannée
+  // depuis ticket pour vérification client). On évite de polluer avec un
+  // CTA panier qui chevauche le footer "PREUVE AUTO-VÉRIFIABLE".
+  "/lot/",
 ];
 
 export const StickyCartCTA = () => {

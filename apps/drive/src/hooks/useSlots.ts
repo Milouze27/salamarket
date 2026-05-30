@@ -59,7 +59,10 @@ export function groupSlotsByDay(slots: Slot[]): DayGroup[] {
     let dayLabel: string;
     if (isToday(first)) dayLabel = "Auj.";
     else if (isTomorrow(first)) dayLabel = "Demain";
-    else dayLabel = format(first, "EEE.", { timeZone: PARIS_TZ, locale: fr });
+    // date-fns fr locale already emits "lun.", "mar."... avec le point.
+    // Ajouter "EEE." en plus produit "lun..", "mar..", "mer.." → bug visible
+    // sur le picker de créneaux. On garde juste "EEE".
+    else dayLabel = format(first, "EEE", { timeZone: PARIS_TZ, locale: fr });
     const dayLabelSub = format(first, "d MMM", {
       timeZone: PARIS_TZ,
       locale: fr,

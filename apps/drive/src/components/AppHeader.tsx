@@ -37,7 +37,7 @@ export const AppHeader = ({ showBack = false, title }: Props) => {
             <button
               onClick={goBack}
               aria-label="Retour"
-              className="w-10 h-10 -ml-2 rounded-full hover:bg-white flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform"
+              className="w-11 h-11 md:w-10 md:h-10 -ml-2 rounded-full hover:bg-white flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform"
             >
               <ArrowLeft size={22} aria-hidden />
             </button>
@@ -60,7 +60,7 @@ export const AppHeader = ({ showBack = false, title }: Props) => {
                 ? `Voir le panier (${count} article${count > 1 ? "s" : ""})`
                 : "Voir le panier"
             }
-            className="relative w-10 h-10 rounded-full hover:bg-white flex items-center justify-center text-text active:scale-90 transition-transform"
+            className="relative w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-white flex items-center justify-center text-text active:scale-90 transition-transform"
           >
             <ShoppingBag size={22} aria-hidden />
             {count > 0 && (

@@ -104,7 +104,9 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
                   onClick={() => handleSelect(item.slug)}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "group relative shrink-0 snap-start flex items-center gap-2 py-2 px-1 border-b-2 transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227]/40 rounded-sm",
+                    // min-h-[44px] sur mobile pour respecter Apple HIG.
+                    // Sur desktop on garde le compact (md:min-h-0).
+                    "group relative shrink-0 snap-start flex items-center gap-2 min-h-[44px] md:min-h-0 py-2 px-1 border-b-2 transition-colors whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227]/40 rounded-sm",
                     isActive
                       ? "border-[#C9A227]"
                       : "border-transparent hover:border-[#C9A227]/40",

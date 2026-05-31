@@ -154,8 +154,9 @@ export default function BdlReceptionPage() {
     void (async () => {
       const sb = supabase();
       if (!sb) return;
+      // SECURITY : vue publique anon-safe.
       const { data } = await sb
-        .from("employes")
+        .from("employes_public")
         .select("id, role, prenom")
         .eq("is_active", true);
       const ids = ((data ?? []) as Array<{

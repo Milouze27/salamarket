@@ -16,8 +16,11 @@ export async function getAdminEmployeIds(): Promise<string[]> {
   const sb = supabase();
   if (!sb) return [];
   try {
+    // SECURITY : on lit la vue `employes_public` côté client (anon).
+    // La table `employes` (pin_hash) est désormais service_role only.
+    // Cf. supabase/migrations/20260531000021_employes_public_view.sql.
     const { data } = await sb
-      .from("employes")
+      .from("employes_public")
       .select("id, role, prenom")
       .eq("is_active", true);
     const ids = ((data ?? []) as Array<{

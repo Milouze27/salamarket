@@ -55,11 +55,20 @@ export async function listDepots(): Promise<Depot[]> {
 export async function listEmployes(depotId?: string): Promise<Employe[]> {
   const sb = supabase();
   if (sb) {
-    let q = sb.from("employes").select("*").eq("is_active", true);
+    // SECURITY : on lit la vue `employes_public` (sans pin_hash, sans
+    // pin_code, sans taux_horaire) côté client. La table `employes`
+    // n'est plus accessible en SELECT anon (cf. migration
+    // 20260531000021_employes_public_view.sql).
+    // Les call sites server-side (api/**) qui ont besoin de pin_hash
+    // utilisent supabaseServer() (service_role) qui bypasse RLS.
+    let q = sb
+      .from("employes_public")
+      .select("*")
+      .eq("is_active", true);
     if (depotId) q = q.eq("depot_principal_id", depotId);
     const { data, error } = await q.order("nom");
     if (error) throw error;
-    return data as Employe[];
+    return (data ?? []) as Employe[];
   }
   return SEED_EMPLOYES.filter(
     (e) => e.is_active && (!depotId || e.depot_principal_id === depotId)
@@ -76,28 +85,14 @@ export async function loginByPin(pin: string): Promise<Employe | null> {
       p_pin: pin,
     });
     if (rpcErr) {
-      // Fallback rétro-compat : la fonction verify_pin n'existe pas
-      // encore (migration 20260531000003 pas déployée). On retombe
-      // sur la query directe par pin_code clair.
-      //
-      // Si la migration EST déployée, pin_code est neutralisé à '0000'
-      // → ce fallback ne matchera PAS un PIN réel. Donc le fallback
-      // est sûr dans les deux scénarios.
-      const isMissingFn =
-        rpcErr.message?.includes("verify_pin") &&
-        (rpcErr.message?.includes("does not exist") ||
-          rpcErr.code === "42883");
-      if (!isMissingFn) {
-        console.error("[loginByPin] verify_pin error:", rpcErr);
-      }
-      const { data, error } = await sb
-        .from("employes")
-        .select("*")
-        .eq("pin_code", pin)
-        .eq("is_active", true)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as Employe) ?? null;
+      // Plus de fallback direct SELECT employes par pin_code :
+      // 1) en prod la table `employes` n'est plus SELECT-able par anon
+      //    (cf. migration 20260531000021_employes_public_view.sql),
+      // 2) pin_code est neutralisé à '0000' (cf. 20260531000003), donc
+      //    la query ne matcherait rien d'utile.
+      // On loggue l'erreur et on renvoie null pour ne pas auth.
+      console.error("[loginByPin] verify_pin RPC failed:", rpcErr);
+      return null;
     }
     if (!employeId) return null;
     // Rehydrate la fiche employé via get_employe_safe (sans pin_hash exposé)

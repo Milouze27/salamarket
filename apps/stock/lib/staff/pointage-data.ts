@@ -126,8 +126,9 @@ export async function listEmployesPourKiosk(
 ): Promise<Employe[]> {
   const sb = supabase();
   if (sb) {
+    // SECURITY : vue publique sans pin_hash / taux_horaire (anon-safe).
     const { data, error } = await sb
-      .from("employes")
+      .from("employes_public")
       .select("*")
       .eq("depot_principal_id", depotId)
       .eq("is_active", true)

@@ -140,8 +140,9 @@ export default function AlertesPage() {
     if (!sb) return;
     // Trouve employe.id depuis le name (pas dispo direct sur SortieSuspecte)
     const empName = nameOf(d.employes);
+    // SECURITY : vue publique anon-safe.
     const { data: emps } = await sb
-      .from("employes")
+      .from("employes_public")
       .select("id, prenom, nom")
       .eq("is_active", true);
     const targetEmp = ((emps ?? []) as Array<{

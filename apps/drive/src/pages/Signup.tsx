@@ -84,10 +84,16 @@ export default function Signup() {
     ) : null;
 
   return (
-    <div className="min-h-dvh bg-bg">
+    // BUG-017 — alignement Signup/Login : bg sapin pleine page, card
+    // blanche pour le formulaire. Cohérence avec /v2/login Stock.
+    <div className="min-h-dvh bg-[#0E3B2E] flex flex-col">
       <AppHeader showBack title="Créer un compte" />
-      <main className="max-w-md mx-auto px-4 py-6">
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <main className="max-w-md mx-auto px-4 py-6 w-full flex-1">
+        <form
+          onSubmit={onSubmit}
+          className="flex flex-col gap-4 bg-white rounded-3xl p-6 shadow-[0_24px_60px_-30px_rgba(8,42,32,0.45)]"
+          noValidate
+        >
           <div className="flex flex-col">
             <label htmlFor="fullName" className="text-sm font-medium text-text mb-1">
               Nom complet

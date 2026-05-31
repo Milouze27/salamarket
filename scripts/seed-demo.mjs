@@ -498,7 +498,61 @@ async function seedActivite(refs) {
   }
 }
 
-// ── 5. Verify : compter ce qu'on a en base ──────────────────────────
+// ── 5. DEMO-008 : Seed produits_lots L2026-05-A23 (traçabilité halal) ──
+//
+// Le PDP boucherie pointe vers /lot/L2026-05-A23 comme exemple de page
+// publique halal. Si la migration 0031 n'a pas trouvé "brochettes poulet"
+// au moment du seed initial, la table reste vide → la page affiche
+// "Lot introuvable". On force ici une INSERT upsert avec un produit
+// fallback ("brochettes" ou "poulet") pour garantir que la démo
+// montre toujours la fiche traçabilité.
+async function seedLotTracabilite(refs) {
+  log('info', 'DEMO-008: seed produits_lots L2026-05-A23 (traçabilité halal)…');
+
+  const prod =
+    refs.findProd('brochette') ||
+    refs.findProd('poulet') ||
+    refs.findProd('escalope') ||
+    refs.produits.find((p) => (p.categorie || '').toLowerCase().includes('boucher'));
+
+  if (!prod) {
+    log('warn', 'aucun produit boucherie trouvé — skip lot traçabilité');
+    report.skipped.push('produits_lots (no boucherie product)');
+    return;
+  }
+
+  // Récupère le fournisseur Bigard (ou fallback) déjà patché halal.
+  const fourn = refs.fournBigard;
+
+  const lotPayload = {
+    id: 'L2026-05-A23',
+    produit_id: prod.id,
+    supplier_lot: 'BPM-2026-127',
+    fournisseur_id: fourn?.id ?? null,
+    certifier_id: 'AVS',
+    certifier_name: 'AVS — A Votre Service',
+    certifier_valid_until: '2027-03-15',
+    abattoir_nom: 'Établissements Bigard Castres',
+    abattoir_pays: 'FR',
+    date_abattage: '2026-05-28',
+    date_reception: new Date().toISOString().slice(0, 10),
+    dlc: '2026-06-10',
+    quantite_recue: 12.5,
+    unite: 'kg',
+    notes:
+      'Poulet fermier label rouge, abattu Castres, certifié AVS catégorie 1. Lot démo référencé depuis les PDP boucherie.',
+  };
+
+  const ins = await safeOp('produits_lots', 'upsert', () =>
+    sb.from('produits_lots').upsert(lotPayload, { onConflict: 'id' }).select('id'));
+
+  if (ins?.data) {
+    track('produits_lots', 'insert', ins.data.length);
+    log('ok', `produits_lots L2026-05-A23 upserted (produit=${prod.nom})`);
+  }
+}
+
+// ── 6. Verify : compter ce qu'on a en base ──────────────────────────
 async function verify() {
   log('info', '─── VERIFY ───');
   const today = new Date().toISOString().slice(0, 10);
@@ -509,6 +563,7 @@ async function verify() {
     { name: 'stockout_forecast critiques', q: () => sb.from('stockout_forecast').select('produit_id, tier', { count: 'exact' }).in('tier', ['warn', 'crit', 'blocker', 'out']) },
     { name: 'sorties 72h', q: () => sb.from('sorties_stock').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 72*3600_000).toISOString()) },
     { name: 'réceptions 72h', q: () => sb.from('receptions').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 72*3600_000).toISOString()) },
+    { name: 'lot traçabilité L2026-05-A23', q: () => sb.from('produits_lots').select('id, certifier_name, abattoir_nom', { count: 'exact' }).eq('id', 'L2026-05-A23') },
   ];
   for (const c of checks) {
     const r = await c.q();
@@ -525,6 +580,7 @@ async function verify() {
     await seedCommandesDrive(refs);
     await seedForecast(refs);
     await seedActivite(refs);
+    await seedLotTracabilite(refs);
     await verify();
 
     console.log('\n═══════════════════════════════════════');

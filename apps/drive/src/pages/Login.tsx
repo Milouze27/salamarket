@@ -35,10 +35,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-dvh bg-bg">
+    // BUG-017 — bg sapin sur tout l'écran d'auth pour aligner sur le
+    // header gradient et l'écran PIN Stock /v2/login. Le crème de fond
+    // (bg-bg) cassait la cohérence visuelle entre la card et le reste
+    // de la page, donnait l'impression d'un écran "à moitié stylé".
+    <div className="min-h-dvh bg-[#0E3B2E] flex flex-col">
       <AppHeader showBack title="Connexion" />
-      <main className="max-w-md mx-auto px-4 py-6">
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <main className="max-w-md mx-auto px-4 py-6 w-full flex-1">
+        <form
+          onSubmit={onSubmit}
+          className="flex flex-col gap-4 bg-white rounded-3xl p-6 shadow-[0_24px_60px_-30px_rgba(8,42,32,0.45)]"
+        >
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm font-medium text-text">
               Email

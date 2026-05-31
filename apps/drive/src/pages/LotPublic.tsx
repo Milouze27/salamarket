@@ -125,6 +125,13 @@ const LotPublic = () => {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      // DEMO-008 — la table `fournisseurs` est verrouillée RLS staff
+      // (lockdown 20260531000002), donc anon ne peut PAS join dessus.
+      // Si on l'embarque dans le select() ça fait planter toute la
+      // query avec 403 → "Lot introuvable" alors que le lot existe.
+      // On charge produits_lots + produits (catalogue public), puis on
+      // fetch fournisseurs séparément en best-effort : s'il est lisible
+      // tant mieux, sinon on affiche juste "Fournisseur — Non renseigné".
       const { data, error } = await supabase
         .from("produits_lots" as never)
         .select(
@@ -134,8 +141,7 @@ const LotPublic = () => {
           abattoir_nom, abattoir_pays, date_abattage,
           date_reception, dlc, ddm, quantite_recue, unite,
           qr_url, notes,
-          produits ( id, nom, marque, categorie ),
-          fournisseurs ( id, nom, siret )
+          produits ( id, nom, marque, categorie )
         `
         )
         .eq("id", id)
@@ -144,11 +150,26 @@ const LotPublic = () => {
       if (error || !data) {
         setNotFound(true);
         setLot(null);
-      } else {
-        setLot(data as unknown as Lot);
-        setNotFound(false);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+      const lotRow = data as unknown as Lot;
+
+      // Best-effort fournisseur (peut être bloqué par RLS pour anon).
+      if (lotRow.fournisseur_id) {
+        const { data: f } = await supabase
+          .from("fournisseurs" as never)
+          .select("id, nom, siret")
+          .eq("id", lotRow.fournisseur_id)
+          .maybeSingle();
+        if (f) lotRow.fournisseurs = f as unknown as FournisseurLite;
+      }
+
+      if (!cancelled) {
+        setLot(lotRow);
+        setNotFound(false);
+        setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;

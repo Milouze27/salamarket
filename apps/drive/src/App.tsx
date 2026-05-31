@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -108,6 +108,11 @@ const App = () => (
             <Suspense fallback={<RouteFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
+                {/* /catalogue : alias SEO-friendly de la home. Référencé
+                    depuis l'empty state du panier B2C, anciens emails et
+                    QR prints (avant le rebranding Drive). On garde la
+                    redirect 301 logique côté client pour ne plus 404. */}
+                <Route path="/catalogue" element={<Navigate to="/" replace />} />
                 <Route path="/produit/:id" element={<ProductDetail />} />
                 <Route path="/panier" element={<Cart />} />
                 <Route path="/creneaux" element={<Slots />} />

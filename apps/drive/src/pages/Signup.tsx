@@ -5,7 +5,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { translateAuthError } from "@/lib/authErrors";
 import { getRedirectFromSearch } from "@/lib/redirect";
 
-const PHONE_RE = /^(\+33|0)[1-9](\d{8})$/;
+// BUG-013 — Accepter les numéros internationaux (E.164 relax) en plus du
+// format français historique. Règle :
+//   - format FR legacy : 0[1-9]XXXXXXXX (10 chiffres, 06/07 par défaut)
+//   - format international : +<country><7..14 digits>, premier digit pays non nul
+// On normalise les espaces avant test (déjà fait côté caller).
+const PHONE_FR_RE = /^(\+33|0)[1-9]\d{8}$/;
+const PHONE_E164_RE = /^\+[1-9]\d{6,14}$/;
+const PHONE_RE = {
+  test: (v: string) => PHONE_FR_RE.test(v) || PHONE_E164_RE.test(v),
+};
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Signup() {
@@ -27,8 +36,8 @@ export default function Signup() {
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
     if (fullName.trim().length < 2) e.fullName = "Min. 2 caractères";
-    if (!PHONE_RE.test(phone.replace(/\s/g, "")))
-      e.phone = "Numéro invalide (ex : 0612345678)";
+    if (!PHONE_RE.test(phone.replace(/[\s.-]/g, "")))
+      e.phone = "Numéro invalide (ex : 0612345678 ou +212612345678)";
     if (!EMAIL_RE.test(email.trim())) e.email = "Email invalide";
     if (password.length < 8) e.password = "Min. 8 caractères";
     if (confirm !== password) e.confirm = "Les mots de passe ne correspondent pas";
@@ -39,6 +48,10 @@ export default function Signup() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Guard anti double-submit (BUG-001) : si une requête est déjà en
+    // vol on ignore les clics suivants, sinon 10 clics rapides créent 9
+    // erreurs 500 + un compte fantôme à moitié provisionné.
+    if (loading) return;
     setTouched({ fullName: true, phone: true, email: true, password: true, confirm: true });
     if (!valid) return;
     setServerError(null);
@@ -48,7 +61,7 @@ export default function Signup() {
         email: email.trim(),
         password,
         full_name: fullName.trim(),
-        phone: phone.replace(/\s/g, ""),
+        phone: phone.replace(/[\s.-]/g, ""),
       });
       navigate(redirectTo, { replace: true });
     } catch (err) {
@@ -100,7 +113,7 @@ export default function Signup() {
               type="tel"
               inputMode="tel"
               autoComplete="tel"
-              placeholder="0612345678"
+              placeholder="0612345678 ou +212612345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}

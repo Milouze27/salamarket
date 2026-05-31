@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { safeJsonStorage } from "./utils/safe-storage";
 import type { Depot, Employe } from "@/lib/types/db";
 
 interface V2State {
@@ -33,7 +34,10 @@ export const useV2 = create<V2State>()(
     }),
     {
       name: "salam-v2-store",
-      storage: createJSONStorage(() => localStorage),
+      // BUG-003 — safeJsonStorage purge auto les clés JSON corrompues
+      // (DevTools, écriture interrompue, migration foirée). Sans ça
+      // Zustand rehydrate throw → spinner infini sur /v2.
+      storage: safeJsonStorage,
       partialize: (s) => ({
         currentDepot: s.currentDepot,
         currentEmploye: s.currentEmploye,

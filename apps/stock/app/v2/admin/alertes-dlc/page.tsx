@@ -30,6 +30,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { supabase } from "@/lib/supabase";
+import { normalizeRemiseDlc } from "@/lib/dlc";
 
 type Niveau = "forcé" | "critique" | "attention" | "surveillance" | "ok";
 
@@ -134,7 +135,19 @@ export default function AlertesDlcPage() {
       setLoading(false);
       return;
     }
-    setAlerts((data ?? []) as DlcAlert[]);
+    // BUG-018 — normalise la remise au chargement : la vue SQL peut
+    // renvoyer 0% pour un lot FORCÉ si la catégorie n'a pas de règle
+    // dans dlc_pricing_rules. Le helper applique le plancher métier
+    // (FORCÉ → 50%, CRITIQUE → 40%, ATTENTION → 20%).
+    const rows = (data ?? []) as DlcAlert[];
+    const normalized: DlcAlert[] = rows.map((r) => ({
+      ...r,
+      remise_suggeree_pct: normalizeRemiseDlc(
+        r.niveau_alerte,
+        r.remise_suggeree_pct,
+      ),
+    }));
+    setAlerts(normalized);
     setLoading(false);
   }
 

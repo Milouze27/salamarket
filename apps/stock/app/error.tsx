@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { AlertTriangle, Home, RotateCcw } from "lucide-react";
+import { AlertTriangle, Home, RotateCcw, Trash2 } from "lucide-react";
 import * as Sentry from "@sentry/nextjs";
+import { resetAppStorage } from "@/lib/utils/safe-storage";
 
 /**
  * Root error boundary (Next 14 App Router). Catches uncaught errors in
@@ -72,6 +73,32 @@ export default function GlobalError({
               <p className="text-xs text-text-secondary">Hub Salam Stock V2</p>
             </div>
           </Link>
+
+          {/* BUG-003 — recovery hard : si le localStorage est corrompu et
+              que le rehydrate Zustand crash en boucle, ce bouton purge
+              les clés persistées + reload. Dernier recours avant un
+              hard refresh manuel par le staff. */}
+          <button
+            type="button"
+            onClick={() => {
+              resetAppStorage();
+              window.location.href = "/v2";
+            }}
+            className="w-full bg-white rounded-2xl shadow-card border border-rule p-4 flex items-center gap-4 active:scale-[0.99] transition-transform text-left"
+          >
+            <span className="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-bold text-text-primary">
+                Réinitialiser l&apos;app
+              </p>
+              <p className="text-xs text-text-secondary">
+                Purge le cache local et recharge. À utiliser si l&apos;écran
+                reste bloqué.
+              </p>
+            </div>
+          </button>
 
           {error?.digest && (
             <p className="pt-4 px-2 text-[11px] text-text-secondary flex items-center gap-1.5">

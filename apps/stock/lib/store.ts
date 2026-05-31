@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
+import { safeJsonStorage } from "./utils/safe-storage";
 import productsData from "./data/products.json";
 import suppliersData from "./data/suppliers.json";
 import ordersData from "./data/purchase-orders.json";
@@ -135,7 +136,10 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "salam-stock-store",
-      storage: createJSONStorage(() => localStorage),
+      // BUG-003 — safeJsonStorage purge auto les clés JSON corrompues
+      // (DevTools, écriture interrompue, migration foirée). Sans ça
+      // Zustand rehydrate throw → spinner infini sur /v2.
+      storage: safeJsonStorage,
       partialize: (s) => ({
         currentUser: s.currentUser,
         products: s.products,

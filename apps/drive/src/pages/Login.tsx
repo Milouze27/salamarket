@@ -18,6 +18,10 @@ export default function Login() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    // Guard anti double-submit (BUG-001) : un clic en cours bloque les
+    // suivants. Cas réel : double-tap iOS qui balance 2 POST /token
+    // simultanés et déclenche le rate-limiter Supabase (HTTP 429).
+    if (loading) return;
     setError(null);
     setLoading(true);
     try {

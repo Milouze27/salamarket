@@ -21,6 +21,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getHijriContext, getSalutation } from "@/lib/hijri";
+import { normalizeRemiseDlc } from "@/lib/dlc";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -296,10 +297,19 @@ export async function GET(req: Request) {
   let dlcCountCritique = 0;
   if (dlcRes.status === "fulfilled" && !dlcRes.value.error) {
     const raw = (dlcRes.value.data ?? []) as DlcInputRow[];
-    dlcRows = raw.slice(0, 14).map((r) => {
+    // BUG-018 — normalise la remise (FORCÉ → ≥50%, CRITIQUE → ≥40%,
+    // ATTENTION → ≥20%) avant TOUT calcul, sinon la valeur de démarque
+    // estimée tombe à 0€ quand la vue SQL ne trouve pas de rule
+    // matchante pour la catégorie du produit.
+    const rawNormalized = raw.map((r) => ({
+      ...r,
+      remise_suggeree_pct: normalizeRemiseDlc(
+        r.niveau_alerte,
+        r.remise_suggeree_pct,
+      ),
+    }));
+    dlcRows = rawNormalized.slice(0, 14).map((r) => {
       const valeur = (r.quantite_recue ?? 0) * (r.remise_suggeree_pct / 100) * 8;
-      dlcValeur += valeur;
-      if (r.niveau_alerte === "critique" || r.niveau_alerte === "forcé") dlcCountCritique += 1;
       return {
         lot_id: r.lot_id,
         produit_id: r.produit_id,
@@ -311,10 +321,10 @@ export async function GET(req: Request) {
         valeur_remise_estimee_eur: Math.round(valeur * 100) / 100,
       };
     });
-    // recompute totals on full set for accuracy (not just top 14)
+    // Totaux calculés sur le full set normalisé (pas que le top 14).
     dlcValeur = 0;
     dlcCountCritique = 0;
-    for (const r of raw) {
+    for (const r of rawNormalized) {
       dlcValeur += (r.quantite_recue ?? 0) * (r.remise_suggeree_pct / 100) * 8;
       if (r.niveau_alerte === "critique" || r.niveau_alerte === "forcé") dlcCountCritique += 1;
     }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { emitConsentChange } from "@/lib/cookie-consent";
 
 const STORAGE_KEY = "cookieConsent";
 
@@ -39,6 +40,10 @@ const writeConsent = (c: Omit<Consent, "ts" | "necessary">) => {
     // Storage indisponible (mode privé Safari saturé) — on tombe en silence.
     // Le banner réapparaîtra à la prochaine session, ce qui est acceptable.
   }
+  // Notifie les scripts tiers (analytics/marketing) qui s'abonnent via
+  // onConsentChange : ils ne se chargent qu'après consentement de la
+  // catégorie correspondante (RGPD opt-in réellement câblé).
+  emitConsentChange();
 };
 
 /**

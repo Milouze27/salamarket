@@ -145,14 +145,21 @@ export const DriveStripePayment = ({
       stripe={stripePromise}
       options={{
         clientSecret,
+        // DSN-18 — appearance entièrement on-brand. On quitte le thème
+        // "stripe" générique (inputs bleutés par défaut) pour "flat" + une
+        // palette sapin/cream/or et Plus Jakarta Sans (déjà chargé via CDN),
+        // pour que le PaymentElement soit indistinguable du reste du checkout
+        // au moment le plus sensible du funnel.
         appearance: {
-          theme: "stripe",
+          theme: "flat",
           variables: {
             colorPrimary: "#0E3B2E",
             colorBackground: "#FFFFFF",
             colorText: "#0F1A14",
-            fontFamily: "system-ui, -apple-system, sans-serif",
-            borderRadius: "12px",
+            colorTextSecondary: "#6B7280",
+            colorDanger: "#E5483D",
+            fontFamily: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
+            borderRadius: "14px",
             fontSizeBase: "16px",
             spacingUnit: "4px",
           },
@@ -160,10 +167,29 @@ export const DriveStripePayment = ({
             ".Input": {
               fontSize: "16px",
               padding: "12px",
+              border: "1px solid #E8E4D8",
+              backgroundColor: "#FFFFFF",
+              boxShadow: "none",
+            },
+            ".Input:focus": {
+              border: "1px solid #0E3B2E",
+              boxShadow: "0 0 0 3px rgba(14,59,46,0.12)",
             },
             ".Label": {
               fontSize: "14px",
-              fontWeight: "500",
+              fontWeight: "600",
+              color: "#0F1A14",
+            },
+            ".Tab, .Block": {
+              border: "1px solid #E8E4D8",
+              boxShadow: "none",
+            },
+            ".Tab:hover": {
+              border: "1px solid #0E3B2E",
+            },
+            ".Tab--selected": {
+              border: "1px solid #0E3B2E",
+              boxShadow: "0 0 0 1px #0E3B2E",
             },
           },
         },

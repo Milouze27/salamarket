@@ -92,8 +92,13 @@ const Slots = () => {
           </div>
         ) : groups.length > 0 ? (
           <div
-            className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sticky top-14 z-30 bg-bg/95 backdrop-blur"
+            className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sticky z-30 bg-bg/95 backdrop-blur"
             style={{
+              // Sticky offset notch-aware : le header consomme
+              // env(safe-area-inset-top) + 3.5rem (h-14). Sans ça, les tabs
+              // jours se glissaient SOUS le header au scroll sur iPhone à
+              // Dynamic Island (LAY-14).
+              top: "calc(env(safe-area-inset-top) + 3.5rem)",
               scrollSnapType: "x mandatory",
               scrollbarWidth: "none",
             }}

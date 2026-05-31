@@ -2,6 +2,7 @@
 // Fallback hardcoded car Vercel monorepo + Vite ne load pas toujours .env.production.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { safeStorage } from '@/lib/safe-storage';
 
 const FALLBACK_URL = 'https://tltmermqodelorthtbre.supabase.co';
 const FALLBACK_KEY =
@@ -31,7 +32,7 @@ if (
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: safeStorage,
     persistSession: true,
     autoRefreshToken: true,
   }

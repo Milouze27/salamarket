@@ -259,7 +259,7 @@ export function V2Shell({
               <LogOut className="w-4 h-4" />
             </button>
           </div>
-          {mode === "local" && (
+          {mode === "local" && process.env.NODE_ENV === "development" && (
             <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">
               MODE DÉMO LOCAL · Supabase non connecté
             </div>

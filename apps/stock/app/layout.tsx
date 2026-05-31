@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { SWRegister } from "@/components/SWRegister";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -17,11 +18,27 @@ export const metadata: Metadata = {
   },
   description:
     "Salam Market Toulouse — réception, sortie, transferts, inventaire et drive multi-dépôts. App PWA opérée sur le terrain.",
+  // App staff interne — JAMAIS indexée. Empêche les fuites
+  // concurrentielles (forecast Ramadan, marges, fournisseurs) via Google.
+  // Couplé à /public/robots.txt (Disallow: /).
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      "max-video-preview": -1,
+      "max-image-preview": "none",
+      "max-snippet": -1,
+    },
+  },
   manifest: "/manifest.json",
   applicationName: "Salam Stock",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Salam Stock",
   },
   openGraph: {
@@ -56,7 +73,6 @@ export const viewport: Viewport = {
   themeColor: "#0E3B2E",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
 };
 
@@ -108,6 +124,7 @@ export default function RootLayout({
         ))}
       </head>
       <body className="antialiased bg-cream text-text-primary">
+        <SWRegister />
         {children}
         <Toaster
           position="top-center"

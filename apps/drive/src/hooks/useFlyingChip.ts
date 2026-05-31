@@ -1,5 +1,16 @@
 import { useCallback } from "react";
 
+// Respecte le réglage iOS/macOS "Réduire les animations". matchMedia est lu
+// à chaque déclenchement (pas mis en cache) pour suivre un changement de
+// préférence en cours de session sans recharger l'app.
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 // Public selectors that the cart icon should expose somewhere in the DOM.
 // The hook picks the first match (cart icon may render in 2 places: header
 // big & header compact). Tag the visible/best target with the BottomNav
@@ -39,6 +50,15 @@ export function useFlyingChip() {
         }
       }
       if (!target) return;
+
+      // "Réduire les animations" : on saute le chip volant ET le retour
+      // haptique (les deux sont des effets de mouvement perçus), mais on
+      // bump quand même le compteur panier pour conserver le feedback non
+      // animé (le CSS du bump est neutralisé par @media reduced-motion).
+      if (prefersReducedMotion()) {
+        target.setAttribute("data-cart-bump", String(Date.now()));
+        return;
+      }
 
       const from = fromEl.getBoundingClientRect();
       const to = target.getBoundingClientRect();
@@ -94,6 +114,7 @@ export function useFlyingChip() {
 
       // Use WAAPI for 60fps animation. Curve mimics a slight arc by easing
       // out fast then settling — keeps it short (420ms) and snappy.
+      const DURATION = 420;
       const anim = chip.animate(
         [
           {
@@ -111,18 +132,48 @@ export function useFlyingChip() {
           },
         ],
         {
-          duration: 420,
+          duration: DURATION,
           easing: "cubic-bezier(0.22, 0.61, 0.36, 1)",
           fill: "forwards",
         },
       );
 
-      anim.onfinish = () => {
+      // Cleanup idempotent — déclenché par onfinish (cas nominal), oncancel,
+      // un filet setTimeout, ET visibilitychange→hidden. Garde-fou anti-fuite :
+      // si l'utilisateur background l'onglet / verrouille l'iPhone pendant les
+      // 420ms, WAAPI suspend l'anim quand document.hidden et onfinish peut ne
+      // JAMAIS fire → le chip restait collé en position:fixed z-index:999
+      // par-dessus l'UI au retour. Le spam d'ajouts empilait des orphelins.
+      let cleaned = false;
+      let safety: number | undefined;
+      const onHide = () => {
+        if (document.visibilityState === "hidden") cleanup();
+      };
+      function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
+        if (safety !== undefined) window.clearTimeout(safety);
+        document.removeEventListener("visibilitychange", onHide);
+        try {
+          anim.cancel();
+        } catch {
+          /* anim peut déjà être finie/annulée — ignore */
+        }
         chip.remove();
+      }
+
+      anim.onfinish = () => {
+        cleanup();
         // Trigger cart counter bump by toggling data attribute.
         // The cart icon element re-applies a CSS animation keyframe.
         target?.setAttribute("data-cart-bump", String(Date.now()));
       };
+      anim.oncancel = cleanup;
+      // Filet de secours : +200ms après la durée nominale, on force la
+      // suppression même si onfinish n'a jamais été émis (cf. splash
+      // index.html qui a déjà ce pattern à 1500ms).
+      safety = window.setTimeout(cleanup, DURATION + 200);
+      document.addEventListener("visibilitychange", onHide);
     },
     [],
   );

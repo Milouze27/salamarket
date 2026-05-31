@@ -62,6 +62,11 @@ const ProductDetail = () => {
   const [bracketIndex, setBracketIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
   const [heroFailed, setHeroFailed] = useState(false);
+  // Annonce lecteur d'écran à l'ajout (le "Ajouté !" visuel n'est pas un
+  // status role). key force la re-lecture sur ajouts répétés.
+  const [announce, setAnnounce] = useState<{ key: number; msg: string } | null>(
+    null,
+  );
   const addedTimerRef = useRef<number | null>(null);
   // Throttle leading-edge 200ms anti double-tap iOS (BUG-011 pattern
   // — voir ProductCard.tsx:39). Sur PDP le risque est plus élevé : le
@@ -99,8 +104,13 @@ const ProductDetail = () => {
         navigate("/");
       }
     };
+    // Saute le morph de page si "Réduire les animations" est actif.
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // @ts-expect-error - startViewTransition not yet in TS lib.dom default
-    if (typeof document !== "undefined" && document.startViewTransition) {
+    if (!reduce && typeof document !== "undefined" && document.startViewTransition) {
       // @ts-expect-error - same
       document.startViewTransition(run);
     } else {
@@ -135,6 +145,14 @@ const ProductDetail = () => {
       // unit — on duplique l'add pour respecter qty (fusion gérée par store)
       for (let i = 0; i < qty; i += 1) addItem(product);
     }
+    // Annonce a11y contextualisée selon le type d'unité.
+    const addedMsg =
+      unitType === "weight"
+        ? `${product.name}, ${formatKg(kg)} estimés, ajouté au panier`
+        : unitType === "unit" && qty > 1
+          ? `${product.name}, ${qty} ajoutés au panier`
+          : `${product.name} ajouté au panier`;
+    setAnnounce({ key: Date.now(), msg: addedMsg });
     setJustAdded(true);
     if (addedTimerRef.current !== null) {
       window.clearTimeout(addedTimerRef.current);
@@ -285,20 +303,16 @@ const ProductDetail = () => {
     </div>
   );
 
-  // CTA bloc — partagé desktop & mobile.
+  // CTA bloc — partagé desktop & mobile, structure fluide mobile-first.
   //
-  // BUG-007 (iPhone SE 320px) : sur viewport étroit avec unitType=unit,
-  // on a stepper(~140px) + CTA(flex-1) + gap dans un parent ~280px utile
-  // (320 − padding 5×2). Si le prix ou le label dépassait, le bouton
-  // sortait. Mitigations :
-  //   1. `min-w-0` sur le bouton flex-1 pour qu'il puisse rétrécir sous
-  //      son contenu (sans, flexbox respecte la min-content width du
-  //      texte interne — c'est ça qui débordait).
-  //   2. Le label est dans un <span> truncate avec gap-1.5 serré ; on
-  //      ne masque rien, on accepte juste qu'il puisse se tronquer en
-  //      "Ajouter au pa…" plutôt que casser le layout.
-  //   3. Quand compact (sticky mobile), gap-2 au lieu de gap-3.
-  //   4. Padding interne réduit pour libérer de la largeur de label.
+  // Le cluster tient nativement de 320 à 1440 sans cas spéciaux par
+  // breakpoint : le bouton est `flex-1 min-w-0` (peut rétrécir sous la
+  // min-content de son texte), son contenu est une seule ligne avec un
+  // segment `truncate` pour le label et des segments `shrink-0` pour le
+  // prix + la flèche (qui ne se tronquent jamais). Le stepper unités est
+  // `shrink-0`. En mode `compact` (sticky mobile) on resserre juste le gap
+  // inter-éléments (gap-2 vs gap-3) — pas une rustine, le même markup
+  // s'adapte. Vérifié 320/375/390/430 : ni débordement ni wrap cassé.
   const CtaCluster = ({ compact = false }: { compact?: boolean }) => (
     <div className="flex flex-col gap-3 min-w-0">
       <div className={cn("flex items-center min-w-0", compact ? "gap-2" : "gap-3")}>
@@ -469,10 +483,11 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        <div
-          className="max-w-2xl mx-auto px-4 -mt-4 md:mt-0 md:px-0 relative md:pb-8"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8rem)" }}
-        >
+        {/* pb-cta-only (token charte) sur mobile = clearance CTA sticky +
+            safe-area + respiration, pour que le dernier contenu (suggestions)
+            ne soit jamais masqué par la barre "Ajouter au panier". Sur
+            desktop le CTA est inline → md:pb-8 suffit, on neutralise le token. */}
+        <div className="max-w-2xl mx-auto px-4 -mt-4 md:mt-0 md:px-0 relative pb-cta-only md:!pb-8">
           <section className="px-1 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Link
               to={`/?category=${product.category}`}
@@ -506,9 +521,9 @@ const ProductDetail = () => {
             <FeatPill
               icon={
                 product.inStock ? (
-                  <span className="w-2 h-2 rounded-full bg-green-600" aria-hidden />
+                  <span className="w-2 h-2 rounded-full bg-[#2D7A4F]" aria-hidden />
                 ) : (
-                  <span className="w-2 h-2 rounded-full bg-red-600" aria-hidden />
+                  <span className="w-2 h-2 rounded-full bg-[#E5483D]" aria-hidden />
                 )
               }
               label={product.inStock ? "Disponible" : "Indisponible"}
@@ -631,22 +646,24 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Sticky bottom MOBILE UNIQUEMENT.
-          BUG-007 : px-5 (20px chaque côté) sur viewport 320px laissait
-          ~280px utile. Stepper(~140) + CTA(flex-1) + gap empilés = label
-          du bouton souvent tronqué dès le premier caractère long. On
-          bascule sur px-3 → sm:px-5 : 12px sur iPhone SE, 20px à partir
-          de 640px. La BottomNav (en dessous) suit la même règle. */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-border md:hidden"
-        style={{ bottom: 0 }}
-      >
+      {/* Sticky bottom MOBILE UNIQUEMENT. Padding-inline fluide px-3 →
+          sm:px-5 : 12px sur iPhone SE (320px) où chaque pixel de largeur de
+          label compte, 20px dès 640px pour la respiration. Le contenu
+          (CtaCluster) gère son propre rétrécissement, ce padding ne fait que
+          border la gouttière. */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-border md:hidden">
         <div
           className="max-w-2xl mx-auto px-3 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
           <CtaCluster compact />
         </div>
       </div>
+
+      {/* Région live polie — annonce l'ajout panier aux lecteurs d'écran.
+          Unique pour la page (les deux CtaCluster partagent cet état). */}
+      <span key={announce?.key} aria-live="polite" className="sr-only">
+        {announce?.msg ?? ""}
+      </span>
     </div>
   );
 };
@@ -660,9 +677,12 @@ const FeatPill = ({
   label: string;
   tone: "success" | "error" | "brand";
 }) => {
+  // DSN-13 — tons calés sur les tokens charte (success #2D7A4F / success-soft
+  // #E8F5EE ; danger #E5483D / danger-soft #FEF2F1 ; brand sapin), plus le
+  // vert/rouge Tailwind brut hors palette.
   const tones = {
-    success: "bg-green-50 text-green-700",
-    error: "bg-red-50 text-red-700",
+    success: "bg-[#E8F5EE] text-[#2D7A4F]",
+    error: "bg-[#FEF2F1] text-[#E5483D]",
     brand: "bg-[#0E3B2E]/8 text-[#0E3B2E]",
   };
   return (

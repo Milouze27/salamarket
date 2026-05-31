@@ -16,8 +16,24 @@ interface Props {
   product: Product;
 }
 
-// View Transitions API — feature detection sans throw côté TS.
+// Respecte "Réduire les animations" (iOS/macOS). Lu à chaud à chaque appel.
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// View Transitions API — feature detection sans throw côté TS. On saute le
+// morph de page si l'utilisateur a demandé moins de mouvement (le
+// startViewTransition anime un cross-fade + le shared-element, perçu comme
+// du motion → on exécute fn() directement).
 function startTransition(fn: () => void) {
+  if (prefersReducedMotion()) {
+    fn();
+    return;
+  }
   // @ts-expect-error - startViewTransition not yet in TS lib.dom default
   if (typeof document !== "undefined" && document.startViewTransition) {
     // @ts-expect-error - same
@@ -39,6 +55,13 @@ export const ProductCard = ({ product }: Props) => {
   const lastAddAtRef = useRef<number>(0);
   const [imgFailed, setImgFailed] = useState(() =>
     isPlaceholderUrl(product.imageUrl),
+  );
+  // Annonce VoiceOver/TalkBack à l'ajout — le feedback visuel (chip volant
+  // + bump du compteur) est invisible pour un lecteur d'écran. On pousse un
+  // message dans une région aria-live polite locale. Le key force la
+  // re-lecture même si le même produit est ajouté plusieurs fois.
+  const [announce, setAnnounce] = useState<{ key: number; msg: string } | null>(
+    null,
   );
 
   const unitType = product.unitType ?? "unit";
@@ -70,6 +93,7 @@ export const ProductCard = ({ product }: Props) => {
       name: product.name,
     });
     addItem(product);
+    setAnnounce({ key: Date.now(), msg: `${product.name} ajouté au panier` });
   };
 
   const handleOpen = () => {
@@ -151,8 +175,11 @@ export const ProductCard = ({ product }: Props) => {
             l'indispo sans masquer le produit. */}
         {isOutOfStock && (
           <>
+            {/* DSN-13 — badge calé sur le token destructive de la charte
+                (#E5483D + danger-soft #FEF2F1), plus le rouge Tailwind brut.
+                Frosted comme les autres pills catalogue pour cohérence. */}
             <span
-              className="absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 pl-1.5 pr-1.5 h-[20px] rounded-full bg-red-50/95 backdrop-blur text-red-700 text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-red-200"
+              className="absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 pl-1.5 pr-1.5 h-[20px] rounded-full bg-[#FEF2F1]/95 backdrop-blur text-[#E5483D] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-[#E5483D]/25"
               aria-label="Produit en rupture de stock"
             >
               Rupture
@@ -202,6 +229,16 @@ export const ProductCard = ({ product }: Props) => {
           </span>
         </div>
       </div>
+
+      {/* Région live polie — annonce l'ajout au panier aux lecteurs d'écran
+          (le chip volant + bump compteur sont aria-hidden). sr-only. */}
+      <span
+        key={announce?.key}
+        aria-live="polite"
+        className="sr-only"
+      >
+        {announce?.msg ?? ""}
+      </span>
     </article>
   );
 };

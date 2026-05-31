@@ -12,10 +12,23 @@ const ITEMS = [
   ...BRAND.categories.map(({ slug, name }) => ({ slug, name })),
 ];
 
+function prefersReducedMotion() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 // Helper — preference for View Transitions if browser supports it. Wraps a
 // state update so the underline glides FLIP-style. Graceful degradation =
-// the underline just snaps (still works, no error).
+// the underline just snaps (still works, no error). Honoré reduced-motion :
+// on saute le glide FLIP et on applique l'état directement.
 function withViewTransition(fn: () => void) {
+  if (prefersReducedMotion()) {
+    fn();
+    return;
+  }
   // @ts-expect-error - startViewTransition is not yet in lib.dom for all TS versions
   if (typeof document !== "undefined" && document.startViewTransition) {
     // @ts-expect-error - same
@@ -45,7 +58,7 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
     if (btnLeft < viewLeft || btnRight > viewRight) {
       track.scrollTo({
         left: btnLeft - 24,
-        behavior: "smooth",
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
       });
     }
   }, [active]);
@@ -58,7 +71,11 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
     <nav
       id="nos-rayons"
       aria-label="Filtrer par rayon"
-      className="sticky z-40 bg-[#FAF7EE]/95 backdrop-blur-md border-b border-[#0E3B2E]/12"
+      // LAY-18 — overflow-x-clip borne tout dépassement sub-pixel généré
+      // par le full-bleed -mx-6 du track SANS créer de conteneur de scroll
+      // (contrairement à overflow-x-hidden), donc le sticky vertical reste
+      // intact et le bleed ne contribue jamais au scroll horizontal de la page.
+      className="sticky z-40 overflow-x-clip bg-[#FAF7EE]/95 backdrop-blur-md border-b border-[#0E3B2E]/12"
       style={{ top: "calc(env(safe-area-inset-top) + 3.5rem)" }}
     >
       <div className="max-w-7xl mx-auto px-6 md:px-8">

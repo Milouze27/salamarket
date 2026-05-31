@@ -11,10 +11,16 @@
  *
  * Dates MFCM Paris (Mosquée Fédération Calcul Musulman). On garde la
  * granularité fine (ramadan_debut, milieu, fin_10j, aid_fitr, aid_adha,
- * achoura, mouloud) pour pouvoir afficher des contextes précis :
+ * achoura) pour pouvoir afficher des contextes précis :
  *   • "Ramadan dans 28 jours" (vs ramadan_debut)
  *   • "10 derniers jours de Ramadan dans 18j" (vs ramadan_fin_10j)
  *   • "Aïd al-Adha dans 9 jours — sacrifice mouton" (vs aid_adha)
+ *
+ * NOTE 2026-05-31 : Mouloud (Mawlid an-Nabi) et Rajab retirés du seed.
+ * Mawlid n'est pas un Eid (les seuls Eids sont Eid al-Fitr et Eid al-Adha)
+ * et est considéré bid'a par certaines écoles (salafi/wahhabi). On évite
+ * de prendre parti dans une boucherie halal qui sert toutes les écoles.
+ * Les types enum sont conservés pour backward compat (cf migration 20260531000010).
  *
  * IMPORTANT : ces dates sont conformes au seed SQL. Si tu changes
  * l'une, change l'autre.
@@ -52,7 +58,6 @@ export const HIJRI_EVENTS: HijriEvent[] = [
   { evenement: "aid_fitr",         date_debut: "2026-03-20", date_fin: "2026-03-22", annee_hijri: 1447, libelle: "Aïd al-Fitr 1447",             impact_ca: "critique" },
   { evenement: "aid_adha",         date_debut: "2026-05-27", date_fin: "2026-05-29", annee_hijri: 1447, libelle: "Aïd al-Adha 1447",             impact_ca: "critique" },
   { evenement: "achoura",          date_debut: "2026-06-26", date_fin: "2026-06-26", annee_hijri: 1448, libelle: "Achoura 1448",                 impact_ca: "moyen" },
-  { evenement: "mouloud",          date_debut: "2026-08-25", date_fin: "2026-08-25", annee_hijri: 1448, libelle: "Mouloud 1448",                 impact_ca: "faible" },
   // 1448 (2027)
   { evenement: "ramadan_debut",    date_debut: "2027-02-08", date_fin: "2027-02-08", annee_hijri: 1448, libelle: "Ramadan 1448 — début",         impact_ca: "critique" },
   { evenement: "ramadan_fin_10j",  date_debut: "2027-02-28", date_fin: "2027-03-09", annee_hijri: 1448, libelle: "Ramadan 1448 — 10 derniers j", impact_ca: "critique" },
@@ -127,7 +132,7 @@ const LABEL_COURT: Record<HijriEventType, string> = {
  *   1. Si on est DANS la fenêtre d'un événement (date_debut ≤ today ≤ date_fin),
  *      on le renvoie en `en_cours = true`.
  *   2. Sinon, on renvoie le prochain événement à venir (impact 'critique'
- *      ou 'fort' uniquement — Mouloud à 4 mois on s'en moque).
+ *      ou 'fort' uniquement — un event à 4 mois on s'en moque).
  *   3. Si rien dans les 90j, on renvoie l'événement le plus proche absolu.
  */
 export function getHijriContext(today: Date = todayLocal()): HijriContext {
@@ -207,9 +212,8 @@ export function getHijriContext(today: Date = todayLocal()): HijriContext {
     message,
     // BUG-020 : on exclut l'événement déjà choisi pour le hero du listing
     // timeline, sinon la card affiche "Achoura J-26" en grand ET
-    // "Achoura J-26" en première ligne — doublon qui faisait penser
-    // qu'Achoura et Mouloud avaient la même date. On élargit la fenêtre
-    // à 120j pour garder Mouloud visible quand on cible Achoura.
+    // "Achoura J-26" en première ligne — doublon visuel. On élargit la
+    // fenêtre à 120j pour garder les events suivants visibles.
     fenetre_90j: futurs
       .filter(
         (x) =>

@@ -75,6 +75,10 @@ export interface CockpitCompetitorRow {
   photo_url: string | null;
   releve_le: string;
   notes: string | null;
+  // HOTFIX-VAGUE7 : champs dynamiques pour CompetitorCard
+  concurrent_nom: string;             // 'Aya Market' par défaut, peut varier
+  prix_salam_eur: number | null;      // prix Drive du produit Salam pour calcul delta
+  delta_pct: number | null;           // (releve - salam) / salam * 100 (positif = concurrent + cher)
 }
 
 export interface CockpitSnapshot {
@@ -224,10 +228,14 @@ export async function GET(req: Request) {
       if (depotId) q = q.eq("depot_id", depotId);
       return q;
     })(),
-    // 8. Competitor intel
+    // 8. Competitor intel — HOTFIX-VAGUE7 : on JOIN produits pour avoir
+    //    le prix Salam (prix_drive_cents) et le concurrent_nom, ce qui
+    //    permet à CompetitorCard d'afficher dynamiquement le delta %.
     sb
       .from("competitor_intel")
-      .select("id, libelle_releve, prix_releve_eur, unite, photo_url, releve_le, notes")
+      .select(
+        "id, libelle_releve, prix_releve_eur, unite, photo_url, releve_le, notes, concurrent_nom, produit_id, produit:produits(id, prix_drive_cents)",
+      )
       .order("releve_le", { ascending: false })
       .limit(5),
   ]);
@@ -431,12 +439,53 @@ export async function GET(req: Request) {
   }
 
   // ─── Process competitor ────────────────────────────────────────
+  // HOTFIX-VAGUE7 : calcule prix_salam_eur (depuis produits.prix_drive_cents
+  // récupéré via le JOIN), puis delta_pct = (releve - salam) / salam * 100.
+  // Positif → concurrent plus cher → on est compétitif sur ce produit.
+  // Négatif → concurrent moins cher → menace pricing à surveiller.
+  type CompetitorRaw = {
+    id: string;
+    libelle_releve: string;
+    prix_releve_eur: number | string;
+    unite: string | null;
+    photo_url: string | null;
+    releve_le: string;
+    notes: string | null;
+    concurrent_nom: string | null;
+    produit_id: string | null;
+    produit:
+      | { id: string; prix_drive_cents: number | null }
+      | { id: string; prix_drive_cents: number | null }[]
+      | null;
+  };
   let competitor: CockpitCompetitorRow[] = [];
   if (competitorRes.status === "fulfilled" && !competitorRes.value.error) {
-    competitor = ((competitorRes.value.data ?? []) as CockpitCompetitorRow[]).map((r) => ({
-      ...r,
-      prix_releve_eur: Number(r.prix_releve_eur),
-    }));
+    const raw = (competitorRes.value.data ?? []) as unknown as CompetitorRaw[];
+    competitor = raw.map((r) => {
+      const releve = Number(r.prix_releve_eur);
+      const produit = Array.isArray(r.produit)
+        ? r.produit[0] ?? null
+        : r.produit;
+      const cents = produit?.prix_drive_cents ?? null;
+      const prixSalam =
+        cents !== null && cents !== undefined ? cents / 100 : null;
+      const deltaPct =
+        prixSalam !== null && prixSalam > 0
+          ? Math.round(((releve - prixSalam) / prixSalam) * 1000) / 10
+          : null;
+      return {
+        id: r.id,
+        libelle_releve: r.libelle_releve,
+        prix_releve_eur: releve,
+        unite: r.unite,
+        photo_url: r.photo_url,
+        releve_le: r.releve_le,
+        notes: r.notes,
+        concurrent_nom: r.concurrent_nom || "Aya Market",
+        prix_salam_eur: prixSalam,
+        delta_pct: deltaPct,
+      };
+    });
   }
 
   // ─── Hijri context ─────────────────────────────────────────────

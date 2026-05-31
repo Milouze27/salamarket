@@ -18,12 +18,21 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  // SÉCURITÉ (durci HOTFIX vague 7) : refuse si CRON_SECRET non configuré.
+  // Sinon n'importe qui peut déclencher REFRESH MATERIALIZED VIEW à la
+  // chaîne et burner la quota Supabase.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error("[cron/refresh-cockpit] CRON_SECRET non configuré, refus");
+    return NextResponse.json(
+      { error: "cron_misconfigured" },
+      { status: 503 }
+    );
+  }
+  const auth = req.headers.get("authorization");
+  const vercelCron = req.headers.get("x-vercel-cron");
+  if (auth !== `Bearer ${cronSecret}` && vercelCron !== "1") {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;

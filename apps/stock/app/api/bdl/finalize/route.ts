@@ -252,7 +252,11 @@ async function pushAdminsServer(
   const origin = new URL(req.url).origin;
   await fetch(`${origin}/api/push/send`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      // HOTFIX vague 7 : /api/push/send exige x-internal-secret.
+      "x-internal-secret": process.env.INTERNAL_API_SECRET ?? "",
+    },
     body: JSON.stringify({ ...payload, employe_ids: ids }),
   });
 }

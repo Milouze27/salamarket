@@ -139,19 +139,17 @@ export default function RecapFiscalPage() {
   async function sendEmail() {
     toast.loading("Envoi par email…", { id: "z-email" });
     try {
-      const r = await fetch("/api/notify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          kind: "daily_z_email",
-          payload: {
-            date,
-            pdf_url: `/api/cashbox/daily-z-pdf?date=${date}`,
-            csv_url: `/api/cashbox/daily-z-csv?date=${date}`,
-          },
-        }),
+      // HOTFIX vague 7 : passer par server action (x-internal-secret).
+      const { sendInternalNotify } = await import("@/lib/actions/notify");
+      const r = await sendInternalNotify({
+        kind: "daily_z_email",
+        payload: {
+          date,
+          pdf_url: `/api/cashbox/daily-z-pdf?date=${date}`,
+          csv_url: `/api/cashbox/daily-z-csv?date=${date}`,
+        },
       });
-      if (!r.ok) throw new Error("Envoi échoué");
+      if (!r.ok) throw new Error(r.error ?? "Envoi échoué");
       toast.success("Email envoyé à l'adresse comptable configurée", {
         id: "z-email",
       });

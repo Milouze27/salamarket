@@ -531,10 +531,9 @@ export default function BdlReceptionPage() {
       return;
     }
     // Notif interne legacy
-    void fetch("/api/notify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    // HOTFIX vague 7 : server action injecte x-internal-secret.
+    void import("@/lib/actions/notify").then((m) =>
+      m.sendInternalNotify({
         kind: "surplus_reception",
         payload: {
           bdl: bdl.numero_bdl,
@@ -542,8 +541,8 @@ export default function BdlReceptionPage() {
           quantite: surplusQty,
           signale_par: `${employe?.prenom ?? ""} ${employe?.nom ?? ""}`.trim(),
         },
-      }),
-    }).catch(() => {});
+      })
+    ).catch(() => {});
     // Push iPhone Otmane + Ahmed
     void import("@/lib/notifications").then((m) =>
       m.pushToAdmins({
@@ -675,10 +674,9 @@ export default function BdlReceptionPage() {
         })
         .eq("id", bdl.id);
       // 3. Notif legacy
-      void fetch("/api/notify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      // HOTFIX vague 7 : server action injecte x-internal-secret.
+      void import("@/lib/actions/notify").then((m) =>
+        m.sendInternalNotify({
           kind: "bdl_receptionne",
           payload: {
             bdl: bdl.numero_bdl,
@@ -688,8 +686,8 @@ export default function BdlReceptionPage() {
             total: progression.total,
             employe: `${employe?.prenom} ${employe?.nom}`,
           },
-        }),
-      }).catch(() => {});
+        })
+      ).catch(() => {});
       // 4. Push iPhone admin — réception complète, stock mis à jour
       void import("@/lib/notifications").then((m) =>
         m.pushToAdmins({

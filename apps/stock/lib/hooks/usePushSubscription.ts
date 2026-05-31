@@ -148,14 +148,12 @@ export function usePushSubscription(employeId: string | null) {
 
   const sendTest = useCallback(async (): Promise<boolean> => {
     try {
-      const res = await fetch("/api/push/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employe_id: employeId }),
-      });
-      if (!res.ok) {
-        const txt = await res.text().catch(() => res.statusText);
-        console.error("[Push] test failed:", res.status, txt);
+      // HOTFIX vague 7 : /api/push/test exige x-internal-secret.
+      // On passe par la server action qui l'injecte côté serveur.
+      const { sendPushTest } = await import("@/lib/actions/push-send");
+      const r = await sendPushTest({ employe_id: employeId ?? undefined });
+      if (!r.ok) {
+        console.error("[Push] test failed:", r.error);
         return false;
       }
       return true;

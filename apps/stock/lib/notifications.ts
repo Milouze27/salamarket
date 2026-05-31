@@ -53,16 +53,15 @@ interface PushPayload {
 }
 
 /** Fire-and-forget push vers les admins (Otmane + Ahmed).
- *  Non bloquant — les erreurs sont logguées sans throw. */
+ *  Non bloquant — les erreurs sont logguées sans throw.
+ *  HOTFIX vague 7 : passe par la server action `sendPush` qui injecte
+ *  x-internal-secret côté serveur (sinon /api/push/send refuse). */
 export async function pushToAdmins(payload: PushPayload): Promise<void> {
   const employe_ids = await getAdminEmployeIds();
   if (employe_ids.length === 0) return;
   try {
-    await fetch("/api/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, employe_ids }),
-    });
+    const { sendPush } = await import("@/lib/actions/push-send");
+    await sendPush({ ...payload, employe_ids });
   } catch (e) {
     console.warn("[notifications] pushToAdmins fail:", e);
   }
@@ -76,11 +75,8 @@ export async function pushToEmployes(
 ): Promise<void> {
   if (employe_ids.length === 0) return;
   try {
-    await fetch("/api/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, employe_ids }),
-    });
+    const { sendPush } = await import("@/lib/actions/push-send");
+    await sendPush({ ...payload, employe_ids });
   } catch (e) {
     console.warn("[notifications] pushToEmployes fail:", e);
   }

@@ -31,6 +31,24 @@ function configureVapid(): boolean {
 }
 
 export async function POST(req: Request) {
+  // ─── AUTH : header x-internal-secret obligatoire (HOTFIX vague 7) ────
+  // Sans ça, n'importe qui peut spammer les iPhones du staff (exploit
+  // confirmé live : 5 push reçus par scanner externe). Les callers
+  // internes (server actions, crons, autres routes) injectent ce header
+  // via process.env.INTERNAL_API_SECRET.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[push/send] INTERNAL_API_SECRET non configuré, refus.");
+    return NextResponse.json(
+      { error: "push service misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 }
+    );
+  }
+  const provided = req.headers.get("x-internal-secret");
+  if (provided !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   if (!configureVapid()) {
     return NextResponse.json(
       { error: "VAPID keys not configured server-side" },

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import type { MonthlyReport } from "@/lib/cashbox/monthly-report";
-import { downloadOrShare } from "@/lib/download-helper";
+import { downloadOrShareBlob, base64ToBlob } from "@/lib/download-helper";
 import { DownloadCompleteBar } from "@/components/v2/DownloadCompleteBar";
 
 const fr = (n: number) => new Intl.NumberFormat("fr-FR", {
@@ -40,13 +40,22 @@ export default function RapportMensuelPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/cashbox/monthly-report?mois=${mois}`)
-      .then((r) => r.json())
-      .then((data: MonthlyReport | { error: string }) => {
-        if ("error" in data) { toast.error(data.error); setReport(null); }
-        else setReport(data);
-      })
-      .finally(() => setLoading(false));
+    // HOTFIX vague 7 : /api/cashbox/monthly-report* exige x-internal-secret.
+    // On passe par les server actions qui injectent le secret côté serveur.
+    (async () => {
+      try {
+        const { fetchMonthlyReport } = await import("@/lib/actions/cashbox");
+        const r = await fetchMonthlyReport(mois);
+        if (!r.ok || !r.data) {
+          toast.error(r.error ?? "Erreur");
+          setReport(null);
+        } else {
+          setReport(r.data as unknown as MonthlyReport);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [mois]);
 
   const monthOptions = useMemo(() => {
@@ -63,9 +72,17 @@ export default function RapportMensuelPage() {
   async function downloadPdf() {
     toast.loading("Génération PDF…", { id: "rep-pdf" });
     const filename = `salam-rapport-mensuel-${mois}.pdf`;
-    const r = await downloadOrShare({
-      url: `/api/cashbox/monthly-report-pdf?mois=${mois}`,
-      filename,
+    // HOTFIX vague 7 : passe par server action (x-internal-secret).
+    const { fetchMonthlyReportPdf } = await import("@/lib/actions/cashbox");
+    const bin = await fetchMonthlyReportPdf(mois);
+    if (!bin.ok || !bin.base64) {
+      toast.error(bin.error ?? "Erreur", { id: "rep-pdf" });
+      return;
+    }
+    const blob = base64ToBlob(bin.base64, bin.contentType ?? "application/pdf");
+    const r = await downloadOrShareBlob({
+      blob,
+      filename: bin.filename ?? filename,
       contentType: "application/pdf",
       shareTitle: `Rapport mensuel ${mois}`,
     });
@@ -87,9 +104,17 @@ export default function RapportMensuelPage() {
   async function downloadCsv() {
     toast.loading("Génération CSV…", { id: "rep-csv" });
     const filename = `salam-rapport-mensuel-${mois}.csv`;
-    const r = await downloadOrShare({
-      url: `/api/cashbox/monthly-report-csv?mois=${mois}`,
-      filename,
+    // HOTFIX vague 7 : passe par server action (x-internal-secret).
+    const { fetchMonthlyReportCsv } = await import("@/lib/actions/cashbox");
+    const bin = await fetchMonthlyReportCsv(mois);
+    if (!bin.ok || !bin.base64) {
+      toast.error(bin.error ?? "Erreur", { id: "rep-csv" });
+      return;
+    }
+    const blob = base64ToBlob(bin.base64, bin.contentType ?? "text/csv; charset=utf-8");
+    const r = await downloadOrShareBlob({
+      blob,
+      filename: bin.filename ?? filename,
       contentType: "text/csv",
       shareTitle: `Rapport CSV ${mois}`,
     });
@@ -224,12 +249,18 @@ export default function RapportMensuelPage() {
             <button onClick={async () => {
               toast.loading("Envoi…", { id: "rep-email" });
               try {
-                const r = await fetch("/api/notify", { method: "POST", headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ kind: "monthly_report_email",
-                    payload: { mois, ca_total: report.consolidation.ca_ttc_total,
-                      pdf_url: `/api/cashbox/monthly-report-pdf?mois=${mois}`,
-                      csv_url: `/api/cashbox/monthly-report-csv?mois=${mois}` } }) });
-                if (!r.ok) throw new Error("Échec");
+                // HOTFIX vague 7 : server action injecte x-internal-secret.
+                const { sendInternalNotify } = await import("@/lib/actions/notify");
+                const r = await sendInternalNotify({
+                  kind: "monthly_report_email",
+                  payload: {
+                    mois,
+                    ca_total: report.consolidation.ca_ttc_total,
+                    pdf_url: `/api/cashbox/monthly-report-pdf?mois=${mois}`,
+                    csv_url: `/api/cashbox/monthly-report-csv?mois=${mois}`,
+                  },
+                });
+                if (!r.ok) throw new Error(r.error ?? "Échec");
                 toast.success("Email envoyé au comptable", { id: "rep-email" });
               } catch (e) { toast.error(e instanceof Error ? e.message : "Erreur", { id: "rep-email" }); }
             }}

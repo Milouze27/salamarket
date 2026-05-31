@@ -25,7 +25,11 @@ export async function GET(req: Request) {
     const origin = new URL(req.url).origin;
     const notif = await fetch(`${origin}/api/notify`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        // HOTFIX vague 7 : /api/notify exige x-internal-secret.
+        "x-internal-secret": process.env.INTERNAL_API_SECRET ?? "",
+      },
       body: JSON.stringify({
         kind: "monthly_report_auto",
         payload: {

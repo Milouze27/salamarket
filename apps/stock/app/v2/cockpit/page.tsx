@@ -68,14 +68,15 @@ export default function CockpitPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadSnapshot = useCallback(async () => {
-    const params = depot ? `?depot_id=${depot.id}` : "";
     try {
-      const res = await fetch(`/api/cockpit/snapshot${params}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as CockpitSnapshot;
-      setSnap(data);
+      // HOTFIX vague 7 : /api/cockpit/snapshot exige x-internal-secret.
+      // Server action loadCockpitSnapshot injecte le secret côté serveur.
+      const { loadCockpitSnapshot } = await import("@/lib/actions/cockpit");
+      const r = await loadCockpitSnapshot(depot?.id);
+      if (!r.ok || !r.data) {
+        throw new Error(r.error ?? "Erreur");
+      }
+      setSnap(r.data);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur chargement");

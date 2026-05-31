@@ -321,18 +321,20 @@ export default function V2PreparationDetailPage() {
       return;
     }
     await setCommandeStatut(commande.id, "pret");
-    await fetch("/api/notify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    // HOTFIX vague 7 : server action injecte x-internal-secret.
+    try {
+      const { sendInternalNotify } = await import("@/lib/actions/notify");
+      await sendInternalNotify({
         kind: "commande_prete",
         payload: {
           commande: commande.numero_commande,
           client: commande.client_nom,
           telephone: commande.client_telephone,
         },
-      }),
-    });
+      });
+    } catch {
+      /* fire-and-forget */
+    }
     // Send "commande prête" email — fire-and-forget via server action
     // (passe l'INTERNAL_API_SECRET côté serveur, /api/email/send n'accepte
     //  plus de POST anonyme depuis le navigateur).

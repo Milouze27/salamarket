@@ -69,7 +69,54 @@ export async function downloadOrShare(opts: DownloadOpts): Promise<DownloadResul
     };
   }
 
+  return downloadOrShareBlob({ blob, filename, contentType, shareTitle });
+}
+
+interface DownloadBlobOpts {
+  blob: Blob;
+  filename: string;
+  contentType?: string;
+  shareTitle?: string;
+}
+
+/** Convertit du base64 en Blob — utile pour les server actions qui
+ *  retournent un binaire encodé (cf. /lib/actions/cashbox.ts). */
+export function base64ToBlob(base64: string, contentType: string): Blob {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: contentType });
+}
+
+/**
+ * HOTFIX vague 7 : variante prenant un Blob déjà téléchargé (typiquement
+ * obtenu via une server action qui appelle une route protégée par
+ * x-internal-secret). Évite de devoir exposer le secret au browser.
+ */
+export async function downloadOrShareBlob(
+  opts: DownloadBlobOpts,
+): Promise<DownloadResult> {
+  const { filename, contentType, shareTitle } = opts;
+  let { blob } = opts;
+  if (contentType && blob.type === "") {
+    blob = new Blob([await blob.arrayBuffer()], { type: contentType });
+  }
   const file = new File([blob], filename, { type: blob.type || contentType || "application/octet-stream" });
+  return shareOrDownloadFile({ file, blob, filename, shareTitle });
+}
+
+/**
+ * Helper interne partagé entre downloadOrShare (URL) et downloadOrShareBlob
+ * (Blob direct). Implémente les 3 paliers : Web Share / window.open / <a>.
+ */
+async function shareOrDownloadFile(args: {
+  file: File;
+  blob: Blob;
+  filename: string;
+  shareTitle?: string;
+}): Promise<DownloadResult> {
+  const { file, blob, filename, shareTitle } = args;
 
   // Palier 1 — Web Share API avec fichier (iOS 15+ natif PWA)
   const nav = typeof navigator !== "undefined" ? navigator : null;

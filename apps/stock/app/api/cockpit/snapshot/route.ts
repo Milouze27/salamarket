@@ -15,8 +15,9 @@
  * Fallback dégradé : si la MV n'est pas refresh (par ex avant le premier
  * cron 02h), on fallback sur un select live sur ventes_cashmag_import.
  *
- * Aucune auth : la donnée est interne staff, pas de PII client. Le
- * cockpit est protégé par le PIN au niveau page.
+ * AUTH (HOTFIX vague 7) : require x-internal-secret. La donnée est interne
+ * staff (CA hier, top stockouts, casse, competitor intel) — pas dispo
+ * publiquement. Le PIN au niveau page protégeait l'UI, mais pas la route.
  */
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -127,6 +128,22 @@ function sameDayLastWeekIso(today: Date = new Date()): string {
 
 // ─── Handler ──────────────────────────────────────────────────────
 export async function GET(req: Request) {
+  // ─── AUTH : header x-internal-secret obligatoire (HOTFIX vague 7) ────
+  // Caller : server action loadCockpitSnapshot (lib/actions/cockpit.ts)
+  // qui ajoute le secret côté serveur. Bloque les scans externes.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[cockpit/snapshot] INTERNAL_API_SECRET non configuré, refus.");
+    return NextResponse.json(
+      { error: "cockpit snapshot misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 }
+    );
+  }
+  const provided = req.headers.get("x-internal-secret");
+  if (provided !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const url = new URL(req.url);
   const depotId = url.searchParams.get("depot_id");
   const warnings: string[] = [];

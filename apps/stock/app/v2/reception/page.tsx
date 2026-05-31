@@ -288,10 +288,10 @@ export default function V2ReceptionPage() {
     try {
       await validateReception(receptionId, { vide: isEmpty });
       if (isEmpty) {
-        await fetch("/api/notify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
+        // HOTFIX vague 7 : server action injecte x-internal-secret.
+        try {
+          const { sendInternalNotify } = await import("@/lib/actions/notify");
+          await sendInternalNotify({
             kind: "reception_vide",
             payload: {
               reception_id: receptionId,
@@ -300,8 +300,10 @@ export default function V2ReceptionPage() {
               fournisseur: fournisseur || "(non renseigné)",
               numero_bl: numeroBl || "(non renseigné)",
             },
-          }),
-        }).catch(() => {});
+          });
+        } catch {
+          /* fire-and-forget */
+        }
         toast.warning("Réception vide enregistrée. Otmane notifié.");
       } else {
         toast.success("Réception validée. Stock mis à jour.");

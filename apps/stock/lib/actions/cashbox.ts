@@ -1,0 +1,142 @@
+"use server";
+
+/**
+ * Server actions wrappers pour /api/cashbox/monthly-report*.
+ *
+ * Les rapports mensuels exposent du P&L (CA, TVA collectée, top produits).
+ * Ils ne doivent PAS être servis à un appel anonyme externe. La protection
+ * se fait via x-internal-secret côté API route ; ces server actions
+ * injectent le secret côté serveur sans l'exposer au browser.
+ *
+ * Pour les téléchargements PDF/CSV, on retourne le binaire en base64 :
+ * le caller (client component) le convertit en Blob puis le passe à
+ * downloadOrShare ou à un <a download>.
+ */
+
+import { headers } from "next/headers";
+
+interface MonthlyReportSummary {
+  // shape minimale — le caller la cast vers son type complet si besoin.
+  consolidation: {
+    ca_ttc_total: number;
+    [k: string]: unknown;
+  };
+  [k: string]: unknown;
+}
+
+async function resolveOrigin(): Promise<string> {
+  const h = await headers();
+  const host =
+    h.get("x-forwarded-host") ??
+    h.get("host") ??
+    process.env.VERCEL_URL ??
+    "localhost:3000";
+  const proto =
+    h.get("x-forwarded-proto") ??
+    (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+export async function fetchMonthlyReport(
+  mois: string,
+): Promise<{ ok: boolean; data?: MonthlyReportSummary; error?: string }> {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return { ok: false, error: "INTERNAL_API_SECRET non configuré." };
+  }
+
+  const origin = await resolveOrigin();
+  try {
+    const res = await fetch(
+      `${origin}/api/cashbox/monthly-report?mois=${encodeURIComponent(mois)}`,
+      {
+        headers: { "x-internal-secret": internalSecret },
+        cache: "no-store",
+      },
+    );
+    const json = (await res.json().catch(() => ({}))) as
+      | MonthlyReportSummary
+      | { error: string };
+    if (!res.ok) {
+      const errMsg =
+        "error" in json && typeof json.error === "string"
+          ? json.error
+          : `HTTP ${res.status}`;
+      return { ok: false, error: errMsg };
+    }
+    return { ok: true, data: json as MonthlyReportSummary };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+interface BinaryDownloadResult {
+  ok: boolean;
+  /** base64-encoded body */
+  base64?: string;
+  contentType?: string;
+  filename?: string;
+  error?: string;
+}
+
+async function fetchBinaryProtected(
+  path: string,
+  fallbackContentType: string,
+  fallbackFilename: string,
+): Promise<BinaryDownloadResult> {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return { ok: false, error: "INTERNAL_API_SECRET non configuré." };
+  }
+
+  const origin = await resolveOrigin();
+  try {
+    const res = await fetch(`${origin}${path}`, {
+      headers: { "x-internal-secret": internalSecret },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => `HTTP ${res.status}`);
+      return { ok: false, error: errText.slice(0, 200) };
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") ?? fallbackContentType;
+    const dispo = res.headers.get("content-disposition") ?? "";
+    const fnameMatch = dispo.match(/filename="?([^"]+)"?/);
+    const filename = fnameMatch ? fnameMatch[1] : fallbackFilename;
+    return {
+      ok: true,
+      base64: buf.toString("base64"),
+      contentType,
+      filename,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+export async function fetchMonthlyReportPdf(
+  mois: string,
+): Promise<BinaryDownloadResult> {
+  return fetchBinaryProtected(
+    `/api/cashbox/monthly-report-pdf?mois=${encodeURIComponent(mois)}`,
+    "application/pdf",
+    `salam-rapport-mensuel-${mois}.pdf`,
+  );
+}
+
+export async function fetchMonthlyReportCsv(
+  mois: string,
+): Promise<BinaryDownloadResult> {
+  return fetchBinaryProtected(
+    `/api/cashbox/monthly-report-csv?mois=${encodeURIComponent(mois)}`,
+    "text/csv; charset=utf-8",
+    `salam-rapport-mensuel-${mois}.csv`,
+  );
+}

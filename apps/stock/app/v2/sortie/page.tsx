@@ -160,10 +160,9 @@ export default function V2SortiePage() {
       // Notify Otmane + Ahmed if low score
       if (iaScore !== null && iaScore < 0.6) {
         // 1. /api/notify (canal interne historique)
-        void fetch("/api/notify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
+        // HOTFIX vague 7 : passer par server action qui injecte le secret.
+        void import("@/lib/actions/notify").then((m) =>
+          m.sendInternalNotify({
             kind: "sortie_low_coherence",
             payload: {
               sortie_id: sortie.id,
@@ -175,16 +174,14 @@ export default function V2SortiePage() {
               ia_score: iaScore,
               ia_notes: iaNotes,
             },
-          }),
-        }).catch((e) => console.warn("[notify] fail:", e));
+          })
+        ).catch((e) => console.warn("[notify] fail:", e));
 
         // 2. Web Push lock-screen iPhone vers Otmane + Ahmed
         if (adminIds.length > 0) {
           const scorePct = Math.round(iaScore * 100);
-          void fetch("/api/push/send", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
+          void import("@/lib/actions/push-send").then((m) =>
+            m.sendPush({
               title: `🚨 Sortie suspecte · IA ${scorePct}%`,
               body: `${produit.nom} × ${quantite} (${type}) · ${depot.nom}${
                 iaNotes ? ` · ${iaNotes.slice(0, 80)}` : ""
@@ -194,8 +191,8 @@ export default function V2SortiePage() {
               urgent: iaScore < 0.4,
               employe_ids: adminIds,
               alerte_id: sortie.id,
-            }),
-          }).catch((e) => console.warn("[push] fail:", e));
+            })
+          ).catch((e) => console.warn("[push] fail:", e));
         }
 
         toast.warning(

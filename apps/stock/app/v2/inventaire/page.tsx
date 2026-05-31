@@ -144,10 +144,10 @@ export default function V2InventairePage() {
           `Inventaire ${progress} validé · conformité ${conf.toFixed(1)}% · Otmane + Ahmed notifiés.`,
           { id: "inv-done" }
         );
-        await fetch("/api/notify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
+        // HOTFIX vague 7 : server action injecte x-internal-secret.
+        try {
+          const { sendInternalNotify } = await import("@/lib/actions/notify");
+          await sendInternalNotify({
             kind: "inventaire_low_conformite",
             payload: {
               depot: depot?.nom,
@@ -157,8 +157,10 @@ export default function V2InventairePage() {
               comptes: fillable.length,
               assignes: mineAssigned.length,
             },
-          }),
-        }).catch(() => {});
+          });
+        } catch (e) {
+          console.warn("[notify] inventaire fail:", e);
+        }
       } else {
         toast.success(
           `Inventaire ${progress} validé · conformité ${conf.toFixed(1)}% · admin notifié.`,

@@ -168,7 +168,11 @@ export async function GET(req: Request) {
     try {
       const r = await fetch(`${origin}/api/push/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          // HOTFIX vague 7 : /api/push/send exige x-internal-secret.
+          "x-internal-secret": process.env.INTERNAL_API_SECRET ?? "",
+        },
         body: JSON.stringify({
           title: `📋 Inventaire tournant · ${d.nom}`,
           body: `${chosen.prenom ?? "Bonjour"}, ${inserts.length} produits à compter ce matin sur ton dépôt.`,

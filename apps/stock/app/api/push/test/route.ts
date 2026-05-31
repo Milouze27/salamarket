@@ -6,6 +6,23 @@ export const runtime = "nodejs";
  *  l'endpoint test du send réel pour qu'on puisse logger / rate-limiter
  *  différemment plus tard. */
 export async function POST(req: Request) {
+  // ─── AUTH : header x-internal-secret obligatoire (HOTFIX vague 7) ────
+  // Sinon, n'importe qui peut déclencher un push test vers tous les
+  // iPhones du staff. Caller : usePushSubscription via server action
+  // sendPushTest (lib/actions/push-send.ts).
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[push/test] INTERNAL_API_SECRET non configuré, refus.");
+    return NextResponse.json(
+      { error: "push service misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 }
+    );
+  }
+  const provided = req.headers.get("x-internal-secret");
+  if (provided !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   let employe_id: string | undefined;
   try {
     const body = (await req.json()) as { employe_id?: string };
@@ -22,7 +39,11 @@ export async function POST(req: Request) {
 
   const res = await fetch(`${origin}/api/push/send`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // Forward le secret au /api/push/send qui exige aussi l'auth.
+      "x-internal-secret": internalSecret,
+    },
     body: JSON.stringify({
       title: "🟢 Test Salam Stock",
       body: "Notifications actives. Vous recevrez les alertes IA, casses suspectes et ruptures critiques en temps réel.",

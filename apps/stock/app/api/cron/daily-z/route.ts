@@ -37,7 +37,11 @@ export async function GET(req: Request) {
     // selon config WHATSAPP_WEBHOOK_URL / EMAIL_*).
     const notifRes = await fetch(`${origin}/api/notify`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        // HOTFIX vague 7 : /api/notify exige x-internal-secret.
+        "x-internal-secret": process.env.INTERNAL_API_SECRET ?? "",
+      },
       body: JSON.stringify({
         kind: "daily_z_auto",
         payload: {

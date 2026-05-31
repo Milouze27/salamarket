@@ -3,7 +3,37 @@ import { computeMonthlyReport, currentMonthYYYYMM } from "@/lib/cashbox/monthly-
 
 export const dynamic = "force-dynamic";
 
+/**
+ * AUTH (HOTFIX vague 7) : refuse les appels anonymes — la route expose
+ * un CSV P&L complet (CA, TVA, top produits). Accepte :
+ *   - header `x-internal-secret` = INTERNAL_API_SECRET (server actions)
+ *   - header `authorization: Bearer <CRON_SECRET>` (cron Vercel)
+ *   - header `x-vercel-cron: 1` (cron Vercel runtime)
+ */
+function checkAuth(req: Request): { ok: boolean; error?: string; status?: number } {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  const cronSecret = process.env.CRON_SECRET;
+  if (!internalSecret && !cronSecret) {
+    return {
+      ok: false,
+      status: 503,
+      error: "monthly-report-csv misconfigured (INTERNAL_API_SECRET or CRON_SECRET required)",
+    };
+  }
+  const provided = req.headers.get("x-internal-secret");
+  if (internalSecret && provided === internalSecret) return { ok: true };
+  const auth = req.headers.get("authorization");
+  if (cronSecret && auth === `Bearer ${cronSecret}`) return { ok: true };
+  const vercelCron = req.headers.get("x-vercel-cron");
+  if (cronSecret && vercelCron === "1") return { ok: true };
+  return { ok: false, status: 401, error: "unauthorized" };
+}
+
 export async function GET(req: Request) {
+  const auth = checkAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   const url = new URL(req.url);
   const mois = url.searchParams.get("mois") || currentMonthYYYYMM();
   if (!/^\d{4}-\d{2}$/.test(mois)) {

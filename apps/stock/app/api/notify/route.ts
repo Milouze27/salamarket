@@ -8,6 +8,23 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+  // ─── AUTH : header x-internal-secret obligatoire (HOTFIX vague 7) ────
+  // Sinon n'importe qui peut spammer le webhook WhatsApp / logs serveur
+  // avec n'importe quel `kind` arbitraire. Les callers internes
+  // (server actions, crons, autres routes) passent le secret.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[notify] INTERNAL_API_SECRET non configuré, refus.");
+    return NextResponse.json(
+      { error: "notify service misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 }
+    );
+  }
+  const provided = req.headers.get("x-internal-secret");
+  if (provided !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const body = (await req.json().catch(() => null)) as
     | { kind: string; payload: unknown }
     | null;

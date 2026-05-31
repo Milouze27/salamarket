@@ -162,18 +162,17 @@ export default function AlertesPage() {
       .update({ ia_coherence_notes: note.slice(0, 500) })
       .eq("id", d.id);
     // Push notif iPhone vers l'employé
-    void fetch("/api/push/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    // HOTFIX vague 7 : passer par server action (x-internal-secret).
+    void import("@/lib/actions/push-send").then((m) =>
+      m.sendPush({
         title: `🔍 Clarification demandée`,
         body: `${employe?.prenom ?? "Admin"} te demande de clarifier la sortie ${d.type} de ${d.produits?.nom ?? "produit"}.`,
         url: "/v2/sortie",
         tag: `clarif-${d.id}`,
         urgent: true,
         employe_ids: [targetEmp.id],
-      }),
-    }).catch((e) => console.warn("[push clarif] fail:", e));
+      })
+    ).catch((e) => console.warn("[push clarif] fail:", e));
     toast.warning(
       `Clarification demandée à ${empName} (push iPhone envoyée)`,
       { duration: 4000 }

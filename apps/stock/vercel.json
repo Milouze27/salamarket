@@ -35,11 +35,11 @@
     },
     {
       "path": "/api/cron/forecast",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 4 * * *"
     },
     {
       "path": "/api/cron/dlc-scan",
-      "schedule": "0 * * * *"
+      "schedule": "30 5 * * *"
     }
   ]
 }

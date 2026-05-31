@@ -141,10 +141,10 @@ export default function CockpitPage() {
   }));
 
   return (
-    <V2Shell>
+    <V2Shell wide>
       <PageAccentStripe accent="sapin-or" />
 
-      <div className="px-4 sm:px-5 pt-3 pb-2 flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-5 md:px-8 pt-3 pb-2 flex items-center justify-between gap-3 max-w-7xl mx-auto w-full">
         <div className="flex flex-col">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#5A6470]">
             Cockpit matin
@@ -172,9 +172,9 @@ export default function CockpitPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
-        className="px-4 sm:px-5 flex flex-col gap-4"
+        className="px-4 sm:px-5 md:px-8 flex flex-col gap-4 max-w-7xl mx-auto w-full"
       >
-        {/* ZONE 1 — Hero KPI */}
+        {/* ZONE 1 — Hero KPI (full width sur desktop pour rester impact-first) */}
         <HeroKpi
           prenom={prenom}
           salutation={salutation}
@@ -187,6 +187,9 @@ export default function CockpitPage() {
           loading={loading}
         />
 
+        {/* Grille responsive des autres cards — empilées sur mobile,
+            2 cols sur tablette, 3 cols sur desktop. BUG-006 fix. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* ZONE 2 — Calendrier hijri */}
         <RamadanCard
           message={hijriMessage}
@@ -321,6 +324,7 @@ export default function CockpitPage() {
             router.push("/v2/admin");
           }}
         />
+        </div>{/* /grid responsive */}
 
         {/* Footer : warnings dev/admin */}
         {snap && snap.warnings.length > 0 && (

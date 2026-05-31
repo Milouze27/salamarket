@@ -60,10 +60,10 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
               Intel concurrent
             </p>
             <p className="text-[16px] font-bold text-[#0F1A14] leading-tight mt-0.5">
-              Aya Market
+              Aya Market — prix agneau -8%
             </p>
             <p className="text-[11.5px] text-[#7B8693] mt-0.5">
-              200m — 5 derniers relevés
+              200m du dépôt · baisse cette semaine
             </p>
           </div>
         </div>
@@ -83,10 +83,10 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
       {empty && (
         <div className="rounded-[16px] border border-dashed border-[#E8E4D8] py-6 text-center">
           <p className="text-[13px] font-semibold text-[#5A6470]">
-            Pas encore de relevé.
+            Aucun prix Aya Market relevé cette semaine.
           </p>
           <p className="text-[11.5px] text-[#7B8693] mt-1">
-            Envoie un collaborateur cette semaine.
+            Tape « Relevé » pour photographier agneau, poulet, merguez.
           </p>
         </div>
       )}

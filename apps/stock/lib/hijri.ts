@@ -156,8 +156,16 @@ export function getHijriContext(today: Date = todayLocal()): HijriContext {
       jours_jusqua: enCours.jours_jusqua_debut,
       en_cours: true,
       message: `On est dans ${LABEL_COURT[enCours.event.evenement]}`,
+      // BUG-020 : on exclut l'événement déjà mis en avant (enCours) du
+      // listing 90j pour éviter le doublon visuel (titre + 1ère ligne
+      // timeline avec la même valeur J).
       fenetre_90j: enriched
-        .filter((x) => x.jours_jusqua_debut > 0 && x.jours_jusqua_debut <= 90)
+        .filter(
+          (x) =>
+            x.jours_jusqua_debut > 0 &&
+            x.jours_jusqua_debut <= 120 &&
+            x.event.evenement !== enCours.event.evenement,
+        )
         .map((x) => ({ event: x.event, jours_jusqua: x.jours_jusqua_debut })),
     };
   }
@@ -197,8 +205,17 @@ export function getHijriContext(today: Date = todayLocal()): HijriContext {
     jours_jusqua: j,
     en_cours: false,
     message,
+    // BUG-020 : on exclut l'événement déjà choisi pour le hero du listing
+    // timeline, sinon la card affiche "Achoura J-26" en grand ET
+    // "Achoura J-26" en première ligne — doublon qui faisait penser
+    // qu'Achoura et Mouloud avaient la même date. On élargit la fenêtre
+    // à 120j pour garder Mouloud visible quand on cible Achoura.
     fenetre_90j: futurs
-      .filter((x) => x.jours_jusqua_debut <= 90)
+      .filter(
+        (x) =>
+          x.jours_jusqua_debut <= 120 &&
+          x.event.evenement !== choisi.event.evenement,
+      )
       .map((x) => ({ event: x.event, jours_jusqua: x.jours_jusqua_debut })),
   };
 }

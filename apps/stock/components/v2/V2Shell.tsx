@@ -122,10 +122,13 @@ export function V2Shell({
   children,
   hideNav = false,
   className = "",
+  wide = false,
 }: {
   children: ReactNode;
   hideNav?: boolean;
   className?: string;
+  /** Si true : le shell s'étend en max-w-7xl sur ≥md (cockpit / admin desktop). */
+  wide?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -197,9 +200,16 @@ export function V2Shell({
   const primary = primaryFor(employe.role);
   const secondary = secondaryFor(employe.role);
 
+  // BUG-006 : cockpit/admin doivent pouvoir respirer sur desktop/iPad.
+  // En mode wide, on étend le container à max-w-7xl ≥md tout en gardant
+  // la pill-nav mobile centrée à 460px côté CSS.
+  const containerClass = wide
+    ? "mx-auto w-full max-w-[460px] md:max-w-7xl min-h-screen relative bg-cream"
+    : "mx-auto w-full max-w-[460px] min-h-screen relative bg-cream";
+
   return (
     <div className="min-h-screen bg-cream">
-      <div className="mx-auto w-full max-w-[460px] min-h-screen relative bg-cream">
+      <div className={containerClass}>
         {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
         <header className="sticky top-0 z-30 bg-gradient-to-b from-[#0E3B2E] to-[#082A20] backdrop-blur-xl">
@@ -271,7 +281,11 @@ export function V2Shell({
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className={`${className} ${hideNav ? "pb-cta-only" : "pb-nav-stack"} pt-2`}
+          // BUG-008 : pb-nav-stack mobile (164px+) car nav bottom flotte.
+          // Sur ≥md la nav devient md:hidden → on rabat à pb-8 (32px) pour
+          // pas laisser un trou noir en bas d'écran. Le user a explicitement
+          // pointé que la nav bottom ne doit JAMAIS cacher du contenu utile.
+          className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack md:pb-8"} pt-2`}
         >
           {!depot && (
             <div className="px-5 pt-6">
@@ -290,7 +304,7 @@ export function V2Shell({
             le -lg qui crée une lueur halo sapin trop grasse sur cream. */}
         {!hideNav && (
           <nav
-            className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none"
+            className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none md:hidden"
             aria-label="Navigation principale"
           >
             <div className="mx-auto max-w-[460px] px-3 pb-2 pt-2 pointer-events-auto">

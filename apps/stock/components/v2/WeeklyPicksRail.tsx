@@ -32,15 +32,32 @@ export function WeeklyPicksRail() {
     }
     let cancelled = false;
     setLoading(true);
+    // BUG-019 : on priorise les catégories halal (Boucherie, Charcuterie
+    // halal, Traiteur, Frais) sur le rail "cette semaine". Sans ce tri
+    // pondéré, les sodas et eau (gros stocks) dominaient et le rail
+    // affichait Cola/Fanta plutôt que merguez/escalope/brochettes — ce
+    // qui sapait l'identité halal-native du produit pour Otmane.
+    const HALAL_PRIORITY: Record<string, number> = {
+      Boucherie: 0,
+      Traiteur: 1,
+      Charcuterie: 2,
+      Frais: 3,
+      Surgelés: 4,
+      "Produits du Maghreb": 5,
+      Épicerie: 6,
+    };
     void listProduitsInDepot(depot.id)
       .then((all) => {
         if (cancelled) return;
-        // Proxy "actifs" : qty > 0, triés par qty décroissante (les plus
-        // tournants), puis on prend les 8 premiers. Pour la démo c'est
-        // suffisant ; on peut brancher une vraie metric activité plus tard.
         const picked = all
           .filter((p) => p.quantite > 0)
-          .sort((a, b) => b.quantite - a.quantite)
+          .sort((a, b) => {
+            const ap = HALAL_PRIORITY[a.categorie ?? ""] ?? 99;
+            const bp = HALAL_PRIORITY[b.categorie ?? ""] ?? 99;
+            if (ap !== bp) return ap - bp;
+            // Tie-break sur la qté décroissante (rotation forte au sein de la cat)
+            return b.quantite - a.quantite;
+          })
           .slice(0, 8);
         setItems(picked);
       })

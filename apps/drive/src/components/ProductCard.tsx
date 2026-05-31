@@ -10,6 +10,7 @@ import {
   ProductImageFallback,
   isPlaceholderUrl,
 } from "@/components/ProductImageFallback";
+import { cdnImage } from "@/lib/imageUrl";
 
 interface Props {
   product: Product;
@@ -92,7 +93,7 @@ export const ProductCard = ({ product }: Props) => {
           <ProductImageFallback category={product.category} size="md" />
         ) : (
           <img
-            src={product.imageUrl}
+            src={cdnImage(product.imageUrl, { width: 600 })}
             alt={product.name}
             loading="lazy"
             decoding="async"

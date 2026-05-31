@@ -7,6 +7,7 @@ import {
   Clock,
   CreditCard,
   Loader2,
+  QrCode,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -469,6 +470,21 @@ const OrderConfirmation = () => {
               {order.notes}
             </p>
           )}
+        </section>
+
+        {/* Traçabilité halal — promesse différenciante.
+            Le ticket d'impression magasin inclut un QR code par lot pour
+            chaque viande/charcuterie. On le rappelle ici pour ancrer la
+            valeur "Salamarket = lot traçable", pas "Salamarket = caisse". */}
+        <section className="border-t border-[#0E3B2E]/15 pt-6 animate-in fade-in slide-in-from-bottom-3 duration-500 delay-[850ms] [animation-fill-mode:backwards]">
+          <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-3 flex items-center gap-2">
+            <QrCode size={11} aria-hidden />
+            Traçabilité halal
+          </p>
+          <p className="text-[14px] text-[#0F1A14]/80 leading-relaxed max-w-[48ch]">
+            Votre QR de traçabilité halal sera imprimé sur votre ticket de
+            retrait pour vérifier l&apos;origine de votre viande.
+          </p>
         </section>
 
         {/* Bandeau service — pro, pas signature personnelle */}

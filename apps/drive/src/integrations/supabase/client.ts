@@ -11,6 +11,21 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
 const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
 
+// Warn loud si on retombe sur le fallback hardcoded : on veut savoir si
+// le projet Vercel n'a pas les bonnes env vars set en prod. Le fallback
+// reste safe pour ne pas casser une démo, mais sans le warn on dérive en
+// silence (incident vécu : prod tournait 3 semaines sur l'anon key
+// hardcoded car VITE_SUPABASE_* manquait sur Vercel).
+if (
+  !import.meta.env.VITE_SUPABASE_URL ||
+  !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[supabase/client] Using fallback anon key — set VITE_SUPABASE_URL + VITE_SUPABASE_PUBLISHABLE_KEY env vars in Vercel pour la prod.",
+  );
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

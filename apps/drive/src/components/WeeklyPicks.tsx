@@ -7,6 +7,7 @@ import {
   ProductImageFallback,
   isPlaceholderUrl,
 } from "@/components/ProductImageFallback";
+import { cdnImage } from "@/lib/imageUrl";
 
 interface Props {
   products: Product[];
@@ -126,7 +127,7 @@ export const WeeklyPicks = ({ products }: Props) => {
                       <ProductImageFallback category={product.category} size="lg" />
                     ) : (
                     <img
-                      src={product.imageUrl}
+                      src={cdnImage(product.imageUrl, { width: 800 })}
                       alt={product.name}
                       loading="eager"
                       fetchPriority={idx === 0 ? "high" : "auto"}

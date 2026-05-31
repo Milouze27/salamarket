@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
+import { TrustBar } from "@/components/TrustBar";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice, unitLabel } from "@/lib/format";
 import {
@@ -18,6 +19,7 @@ import {
   formatKg,
   getBrackets,
 } from "@salamarket/shared";
+import { cdnImage } from "@/lib/imageUrl";
 
 const MIN_ORDER_CENTS = 1500;
 
@@ -169,7 +171,7 @@ const Cart = () => {
                       aria-label={`Voir ${item.product.name}`}
                     >
                       <img
-                        src={item.product.imageUrl}
+                        src={cdnImage(item.product.imageUrl, { width: 160 })}
                         alt={item.product.name}
                         width={80}
                         height={80}
@@ -359,6 +361,9 @@ const Cart = () => {
                   </Link>
                 </p>
               )}
+              <div className="mt-5">
+                <TrustBar />
+              </div>
             </section>
           </>
         )}

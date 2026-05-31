@@ -11,6 +11,7 @@ import {
   BadgeCheck,
   Minus,
   Plus,
+  QrCode,
   Scale,
   ShoppingCart,
   Sparkles,
@@ -30,6 +31,7 @@ import {
 } from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
 import { cn } from "@/lib/utils";
+import { cdnImage } from "@/lib/imageUrl";
 
 const MAX_QTY = 50;
 const MIN_KG = 0.1;
@@ -388,7 +390,7 @@ const ProductDetail = () => {
               <ProductImageFallback category={product.category} size="lg" />
             ) : (
             <img
-              src={product.imageUrl}
+              src={cdnImage(product.imageUrl, { width: 1200 })}
               alt={product.name}
               width={1200}
               height={1200}
@@ -407,6 +409,28 @@ const ProductDetail = () => {
               aria-hidden
               className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[#FAF7EE]/80 md:hidden"
             />
+
+            {/* Mini-sceau Halal Certifié overlay top-right.
+                Boucherie/charcuterie uniquement. Réutilise le ring or
+                .halal-seal-ring du onboarding pour cohérence. Posé sur
+                l'image hero comme une vraie estampille certif. ~68px
+                pour rester lisible mobile sans dominer l'image. */}
+            {showHalalBadge && (
+              <div
+                className="absolute top-3 right-3 md:top-5 md:right-5 z-10 pointer-events-none"
+                aria-hidden
+              >
+                <div className="relative w-[68px] h-[68px] md:w-[80px] md:h-[80px] rounded-full bg-[#FAF7EE] shadow-lg shadow-[#082A20]/30 flex flex-col items-center justify-center">
+                  <span className="halal-seal-ring absolute inset-[5px] rounded-full border-[1.5px] border-[#C9A227]/55" />
+                  <span className="relative text-[8px] md:text-[9px] uppercase tracking-[0.22em] font-bold text-[#C9A227] leading-tight">
+                    Halal
+                  </span>
+                  <span className="relative text-[11px] md:text-[13px] font-extrabold text-[#0E3B2E] leading-tight tracking-[-0.02em]">
+                    Certifié
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -522,6 +546,34 @@ const ProductDetail = () => {
               </p>
             </div>
           </section>
+
+          {/* Traçabilité halal — boucherie/charcuterie uniquement.
+              Le lot QR est la promesse différenciante Salamarket : chaque
+              barquette est traçable jusqu'à l'éleveur. On le pose ici sur
+              chaque PDP viande pour ancrer la promesse marque et drainer
+              vers /lot/L… qui montre le détail. */}
+          {showHalalBadge && (
+            <section className="mt-3 flex items-start gap-3 rounded-3xl border border-[#C9A227]/40 bg-[#FBF6E2] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:340ms] [animation-fill-mode:backwards]">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                <QrCode size={18} className="text-[#C9A227]" aria-hidden />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[#3E2E0A]">
+                  Traçabilité halal
+                </p>
+                <p className="text-xs text-[#3E2E0A]/75 mt-0.5 leading-relaxed">
+                  Chaque lot a son QR code unique pour vérifier l&apos;origine
+                  et la certification.{" "}
+                  <Link
+                    to="/lot/L2026-05-A23"
+                    className="underline underline-offset-2 font-semibold text-[#0E3B2E] hover:text-[#082A20]"
+                  >
+                    Voir un lot d&apos;exemple
+                  </Link>
+                </p>
+              </div>
+            </section>
+          )}
 
           {/* CTA inline desktop */}
           <section className="hidden md:flex flex-col gap-3 mt-7 pt-6 border-t border-[#0E3B2E]/15 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:350ms] [animation-fill-mode:backwards]">

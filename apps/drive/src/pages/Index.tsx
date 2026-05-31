@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
-import { AlertCircle, SearchX } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { AlertCircle, QrCode, SearchX } from "lucide-react";
 import { Header } from "@/components/Header";
 import { EditorialIntro } from "@/components/EditorialIntro";
 import { WeeklyPicks } from "@/components/WeeklyPicks";
@@ -241,6 +241,25 @@ const Index = () => {
             <br />
             <span style={{ color: "#C9A227" }}>Halal.</span>
           </h2>
+
+          {/* Traçabilité halal — chips éditorial avant le hairline.
+              Single-point d'entrée discret vers la promesse lot QR
+              (chaque pièce viande a son lot vérifiable). */}
+          <div className="mt-10 md:mt-14 flex flex-wrap items-center gap-3">
+            <Link
+              to="/lot/L2026-05-A23"
+              className="inline-flex items-center gap-2 px-4 h-10 rounded-full bg-[#FAF7EE]/10 border border-[#C9A227]/40 text-[#FAF7EE] text-[12px] font-semibold tracking-[0.04em] hover:bg-[#C9A227]/15 hover:border-[#C9A227]/65 active:scale-[0.98] transition-all"
+            >
+              <QrCode size={14} className="text-[#C9A227]" aria-hidden />
+              Traçabilité halal — voir un lot
+            </Link>
+            <Link
+              to="/drive-au-poids"
+              className="inline-flex items-center px-4 h-10 rounded-full bg-transparent border border-[#FAF7EE]/20 text-[#FAF7EE] text-[12px] font-semibold tracking-[0.04em] hover:bg-[#FAF7EE]/8 active:scale-[0.98] transition-all"
+            >
+              Comment marche le drive au poids
+            </Link>
+          </div>
 
           {/* Microcopy — adresse + horaires + copyright en hairline discret */}
           <div className="mt-12 md:mt-16 pt-6 border-t border-[#FAF7EE]/15 flex flex-wrap justify-between gap-x-8 gap-y-3 text-[12px] text-[#FAF7EE]/65">

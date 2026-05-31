@@ -87,8 +87,14 @@ export default function V2LoginPage() {
     }
   }, [pin, loading, setEmploye, setDepot, router]);
 
+  // Démo PINs visible uniquement quand le flag est explicitement "true".
+  // En prod (sans le flag), on cache pour pas exposer les codes des employés
+  // à n'importe qui qui ouvre /v2/login. En preview / dev, on garde affiché
+  // pour faciliter les démos clients sans avoir à mémoriser un PIN.
+  const showDemoPins = process.env.NEXT_PUBLIC_SHOW_DEMO_PINS === "true";
+
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
+    <div className="min-h-screen bg-[#082A20] flex flex-col">
       <div className="mx-auto w-full max-w-[460px] flex-1 flex flex-col">
         <header className="gradient-header rounded-b-[28px] safe-top-hero pb-10 px-6 text-text-ondark relative overflow-hidden">
           {/* subtle texture: gold orb top-right */}
@@ -132,8 +138,8 @@ export default function V2LoginPage() {
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                   className={`w-13 h-13 w-[52px] h-[52px] rounded-2xl border-2 flex items-center justify-center transition-colors ${
                     filled
-                      ? "bg-primary border-primary"
-                      : "bg-white border-rule"
+                      ? "bg-gold border-gold"
+                      : "bg-white/8 border-white/20"
                   }`}
                 >
                   <AnimatePresence>
@@ -144,7 +150,7 @@ export default function V2LoginPage() {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                        className="w-2.5 h-2.5 rounded-full bg-gold"
+                        className="w-2.5 h-2.5 rounded-full bg-[#082A20]"
                       />
                     )}
                   </AnimatePresence>
@@ -177,7 +183,7 @@ export default function V2LoginPage() {
             <button
               onClick={back}
               disabled={pin.length === 0 || loading}
-              className="aspect-square rounded-2xl bg-cream border border-rule flex items-center justify-center text-text-secondary active:scale-[0.96] transition-transform duration-150 ease-out disabled:opacity-30"
+              className="aspect-square rounded-2xl bg-white/8 border border-white/15 flex items-center justify-center text-white/75 active:scale-[0.96] transition-transform duration-150 ease-out disabled:opacity-30"
               aria-label="Effacer"
             >
               <Delete className="w-5 h-5" />
@@ -191,17 +197,17 @@ export default function V2LoginPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="mt-6 flex items-center justify-center gap-2 text-primary text-sm font-semibold"
+                className="mt-6 flex items-center justify-center gap-2 text-gold text-sm font-semibold"
               >
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-primary/25 border-t-primary animate-spin" />
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-gold/25 border-t-gold animate-spin" />
                 Authentification…
               </motion.div>
             )}
           </AnimatePresence>
 
-          {employes.length > 0 && (
+          {showDemoPins && employes.length > 0 && (
             <div className="mt-10 px-1">
-              <p className="label-caps text-text-tertiary mb-3 inline-flex items-center gap-1.5">
+              <p className="label-caps text-white/55 mb-3 inline-flex items-center gap-1.5">
                 <Fingerprint className="w-3 h-3" />
                 Comptes démo
               </p>
@@ -212,14 +218,14 @@ export default function V2LoginPage() {
                     className="flex items-center justify-between gap-3 text-[13px]"
                   >
                     <span className="flex items-center gap-2 min-w-0">
-                      <span className="mono font-bold tabular text-text-primary">
+                      <span className="mono font-bold tabular text-gold">
                         {e.pin_code}
                       </span>
-                      <span className="text-text-secondary truncate">
+                      <span className="text-white/80 truncate">
                         {e.prenom} {e.nom}
                       </span>
                     </span>
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-text-tertiary shrink-0">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-white/45 shrink-0">
                       {ROLE_LABEL[e.role] ?? e.role}
                     </span>
                   </li>

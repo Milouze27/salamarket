@@ -266,7 +266,7 @@ export default function V2SortiePage() {
           <div className="space-y-2">
             <button
               onClick={() => setScannerOpen(true)}
-              className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 active:scale-[0.99]"
+              className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 press-card"
             >
               <ScanBarcode className="w-5 h-5" />
               <span className="font-bold">Scanner le produit</span>
@@ -339,7 +339,7 @@ export default function V2SortiePage() {
                   key={t.value}
                   onClick={() => setType(t.value)}
                   aria-pressed={active}
-                  className={`relative text-left rounded-2xl border transition-all duration-200 ease-out active:scale-[0.98] ${
+                  className={`relative text-left rounded-2xl border transition-all duration-200 ease-out press-card ${
                     fullWidth ? "col-span-2 px-4 py-3" : "p-3"
                   } ${
                     active
@@ -458,11 +458,11 @@ export default function V2SortiePage() {
       )}
 
       <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
+        <div className="sticky-action-inner pt-3 pb-3 pointer-events-auto">
           <button
             onClick={submit}
             disabled={!canSubmit || submitting}
-            className="w-full bg-danger text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
+            className="w-full bg-danger text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 press-btn"
           >
             <div className="text-left">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/85">

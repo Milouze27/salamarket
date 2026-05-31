@@ -533,7 +533,7 @@ export default function V2ReceptionPage() {
             </p>
             <button
               onClick={() => setShowLibre(true)}
-              className="w-full bg-white border border-rule rounded-2xl py-4 px-4 flex items-center justify-between active:scale-[0.99] transition-transform"
+              className="w-full bg-white border border-rule rounded-2xl py-4 px-4 flex items-center justify-between press-card"
             >
               <span className="flex items-center gap-3 text-text-primary">
                 <span className="w-10 h-10 rounded-xl bg-gold-soft text-primary-dark flex items-center justify-center">
@@ -559,7 +559,7 @@ export default function V2ReceptionPage() {
           <button
             onClick={() => setShowLibre(false)}
             type="button"
-            className="inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 mb-2 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary active:scale-[0.97] transition-transform"
+            className="inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 mb-2 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary press-btn"
           >
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cream">
               <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.4} />
@@ -630,7 +630,7 @@ export default function V2ReceptionPage() {
           <section className="px-5 mt-5">
             <button
               onClick={() => setScannerOpen(true)}
-              className="w-full bg-primary text-white rounded-[20px] py-5 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
+              className="w-full bg-primary text-white rounded-[20px] py-5 px-5 flex items-center justify-between shadow-card-lg press-card"
             >
               <span className="flex items-center gap-3">
                 <span className="w-12 h-12 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
@@ -701,11 +701,11 @@ export default function V2ReceptionPage() {
           </section>
 
           <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
-            <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
+            <div className="sticky-action-inner pt-3 pb-3 pointer-events-auto">
               <button
                 onClick={finalize}
                 disabled={submitting}
-                className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors ${
+                className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors press-btn ${
                   scans.length === 0
                     ? "bg-warning text-white"
                     : "bg-primary text-white"
@@ -766,13 +766,22 @@ export default function V2ReceptionPage() {
           reste set, donc dès que le scanner se ferme, le modal
           réapparaît automatiquement. */}
       {unknownEan && !learnScannerOpen && !recognitionOpen && (
-        <div className="fixed inset-0 z-[70] fixed-overlay flex items-end justify-center">
-          <div className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-10 animate-slide-up">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Code-barres inconnu"
+          className="fixed inset-0 z-[70] fixed-overlay flex items-end md:items-center justify-center"
+        >
+          <div className="bg-white w-full max-w-[460px] rounded-t-[28px] md:rounded-[28px] p-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-slide-up max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-text-primary">
                 Code inconnu
               </p>
-              <button onClick={closeLearn}>
+              <button
+                onClick={closeLearn}
+                aria-label="Fermer"
+                className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full press-icon active:bg-cream"
+              >
                 <X className="w-4 h-4 text-text-tertiary" />
               </button>
             </div>
@@ -791,14 +800,14 @@ export default function V2ReceptionPage() {
                 <div className="grid grid-cols-2 gap-3 mt-5">
                   <button
                     onClick={() => setLearnMode("carton-qty")}
-                    className="bg-gold-soft text-primary-dark rounded-2xl py-5 flex flex-col items-center gap-2 active:scale-95"
+                    className="bg-gold-soft text-primary-dark rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
                   >
                     <Package className="w-6 h-6" />
                     <span className="font-bold">Carton</span>
                   </button>
                   <button
                     onClick={() => setLearnMode("search")}
-                    className="bg-cream text-primary rounded-2xl py-5 flex flex-col items-center gap-2 active:scale-95"
+                    className="bg-cream text-primary rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
                   >
                     <PackageOpen className="w-6 h-6" />
                     <span className="font-bold">Unité</span>
@@ -857,7 +866,7 @@ export default function V2ReceptionPage() {
                 </div>
                 <button
                   onClick={() => setRecognitionOpen(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-dark to-primary text-white rounded-2xl py-4 font-bold shadow-card-lg active:scale-[0.99] transition-transform"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary-dark to-primary text-white rounded-2xl py-4 font-bold shadow-card-lg press-btn"
                 >
                   <Sparkles className="w-5 h-5 text-gold" strokeWidth={2.4} />
                   Reconnaître automatiquement (IA)
@@ -878,7 +887,7 @@ export default function V2ReceptionPage() {
                 {learnMode === "carton-unit-scan" && (
                   <button
                     onClick={() => setLearnScannerOpen(true)}
-                    className="w-full mt-3 bg-primary text-white rounded-2xl py-3 inline-flex items-center justify-center gap-2 font-bold active:scale-[0.99]"
+                    className="w-full mt-3 bg-primary text-white rounded-2xl py-3 inline-flex items-center justify-center gap-2 font-bold press-btn"
                   >
                     <ScanBarcode className="w-5 h-5" />
                     Scanner un produit interne
@@ -899,7 +908,7 @@ export default function V2ReceptionPage() {
                     <button
                       key={p.id}
                       onClick={() => handleLearnUnitFor(p)}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-cream"
+                      className="w-full flex items-center gap-3 p-2 min-h-[56px] rounded-xl active:bg-cream press-card text-left"
                     >
                       <ProductThumbnail
                         nom={p.nom}
@@ -975,7 +984,7 @@ function BdlCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full bg-white border rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-[0.99] transition-transform ${
+      className={`w-full bg-white border rounded-2xl p-4 flex flex-col gap-3 text-left press-card ${
         variant === "encours"
           ? "border-gold/40 shadow-card"
           : "border-rule"

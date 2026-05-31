@@ -37,6 +37,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { EmptyState as SharedEmptyState } from "@/components/shared/EmptyState";
 import { CertHalalBadge } from "@/components/po/cert-halal-badge";
 import { PoDrawer } from "@/components/po/po-drawer";
 import { supabase } from "@/lib/supabase";
@@ -387,7 +388,7 @@ function TabBtn({
     <button
       type="button"
       onClick={onClick}
-      className="pill-filter"
+      className="pill-filter press-btn"
       data-active={active}
       style={{ minHeight: 44 }}
     >
@@ -441,15 +442,9 @@ function EmptyState({ tab }: { tab: Tab }) {
       sub: "Les commandes reçues s'affichent ici une fois le BDL scanné.",
     },
   }[tab];
-  const Icon = map.Icon;
   return (
-    <div
-      className="card text-center"
-      style={{ padding: 32 }}
-    >
-      <Icon size={32} color="var(--text-tertiary)" className="mx-auto mb-3" />
-      <p className="h3" style={{ color: "var(--text-primary)" }}>{map.title}</p>
-      <p className="body-sm mt-1">{map.sub}</p>
+    <div className="card" style={{ padding: 8 }}>
+      <SharedEmptyState icon={map.Icon} title={map.title} description={map.sub} compact />
     </div>
   );
 }

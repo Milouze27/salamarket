@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
   Calendar,
   ExternalLink,
   Factory,
@@ -30,6 +31,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { supabase } from "@/lib/supabase";
 
 interface LotRow {
@@ -161,23 +163,18 @@ export default function V2LotsListPage() {
             <Loader2 size={16} className="animate-spin" /> Chargement…
           </div>
         ) : list.length === 0 ? (
-          <div className="card text-center" style={{ padding: 28 }}>
-            <QrCode
-              size={32}
-              color="var(--text-tertiary)"
-              className="mx-auto mb-2"
+          <div className="card" style={{ padding: 8 }}>
+            <EmptyState
+              icon={QrCode}
+              title="Aucun lot enregistré"
+              description="Chaque livraison réceptionnée crée un lot tracé avec QR public. Commence par une réception."
+              compact
+              action={
+                <Link href="/v2/reception" className="btn-primary" style={{ minHeight: 44 }}>
+                  <ArrowRight size={16} /> Réceptionner une livraison
+                </Link>
+              }
             />
-            <p className="body-md">
-              Aucun lot enregistré. Reçois ta première livraison via{" "}
-              <Link
-                href="/v2/reception"
-                className="underline underline-offset-2"
-                style={{ color: "var(--primary-green)" }}
-              >
-                /v2/reception
-              </Link>
-              .
-            </p>
           </div>
         ) : (
           <ul className="space-y-3">
@@ -192,7 +189,7 @@ export default function V2LotsListPage() {
                 >
                   <Link
                     href={`/v2/lots/${lot.id}`}
-                    className="block card hover:shadow-md transition-shadow"
+                    className="block card card-tappable hover:shadow-md"
                     style={{ padding: 14 }}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -263,7 +260,7 @@ export default function V2LotsListPage() {
                     {/* Public link footer */}
                     <div
                       className="mt-3 pt-3 flex items-center justify-between gap-2"
-                      style={{ borderTop: "1px solid var(--rule)" }}
+                      style={{ borderTop: "1px solid var(--border-light)" }}
                     >
                       <a
                         href={`${DRIVE_BASE_URL}/lot/${lot.id}`}
@@ -304,7 +301,7 @@ function CertifBadge({
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-        style={{ background: "#FEE2E2", color: "#991B1B" }}
+        style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
       >
         <ShieldAlert size={11} />
         Expiré
@@ -315,7 +312,7 @@ function CertifBadge({
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-        style={{ background: "#FEF3C7", color: "#92400E" }}
+        style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
       >
         <ShieldAlert size={11} />
         Bientôt
@@ -326,7 +323,7 @@ function CertifBadge({
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-        style={{ background: "#DCFCE7", color: "#166534" }}
+        style={{ background: "var(--success-soft)", color: "var(--success)" }}
       >
         <ShieldCheck size={11} />
         Valide
@@ -336,7 +333,7 @@ function CertifBadge({
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-      style={{ background: "#E5E7EB", color: "#374151" }}
+      style={{ background: "var(--bg-cream)", color: "var(--text-secondary)" }}
     >
       —
     </span>
@@ -353,10 +350,10 @@ function StatPill({
   tone: "success" | "warning" | "danger" | "neutral";
 }) {
   const tones = {
-    success: { bg: "#DCFCE7", color: "#166534" },
-    warning: { bg: "#FEF3C7", color: "#92400E" },
-    danger: { bg: "#FEE2E2", color: "#991B1B" },
-    neutral: { bg: "#E5E7EB", color: "#374151" },
+    success: { bg: "var(--success-soft)", color: "var(--success)" },
+    warning: { bg: "var(--warning-soft)", color: "var(--warning)" },
+    danger: { bg: "var(--danger-soft)", color: "var(--danger)" },
+    neutral: { bg: "var(--bg-cream)", color: "var(--text-secondary)" },
   } as const;
   const t = tones[tone];
   return (

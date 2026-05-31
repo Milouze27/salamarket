@@ -500,6 +500,51 @@ body {
   .scroll-x-snap > * {
     scroll-snap-align: start;
   }
+
+  /* ─── DSN-05 — Langage tactile unifié (un seul "press" sur les 2 apps) ──
+     Trois niveaux canoniques de feedback au tap, appliqués via classe :
+       .press-card → surfaces larges (cards, lignes de liste tappables)
+       .press-btn  → boutons/CTA
+       .press-icon → cibles iconographiques (FAB, boutons ronds header)
+     Tous partagent le même easing que le reste de l'app et respectent
+     prefers-reduced-motion (override global plus bas neutralise le scale). */
+  .press-card {
+    transition: transform var(--dur-fast) var(--ease-out-quart),
+                box-shadow var(--dur-base) var(--ease-out-quart);
+  }
+  .press-card:active { transform: scale(0.985); }
+  .press-btn {
+    transition: transform var(--dur-fast) var(--ease-out-quart),
+                background var(--dur-base) var(--ease-out-quart),
+                filter var(--dur-base) var(--ease-out-quart);
+  }
+  .press-btn:active { transform: scale(0.97); }
+  .press-btn:disabled { transform: none; }
+  .press-icon {
+    transition: transform var(--dur-fast) var(--ease-out-quart),
+                background var(--dur-base) var(--ease-out-quart);
+  }
+  .press-icon:active { transform: scale(0.92); }
+
+  /* ─── LAY-08 — Barre d'action collée alignée sur le conteneur ──────────
+     Largeur max identique au contenu V2Shell (460px mobile), padding
+     horizontal cohérent + safe-area. Évite que le CTA flotte à 460px
+     pendant que le contenu s'étale sur desktop. */
+  .sticky-action-inner {
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    max-width: 460px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* prefers-reduced-motion : neutralise aussi les scale tactiles. */
+@media (prefers-reduced-motion: reduce) {
+  .press-card:active,
+  .press-btn:active,
+  .press-icon:active { transform: none; }
 }
 
 /* shadcn dialog overlay tweak */

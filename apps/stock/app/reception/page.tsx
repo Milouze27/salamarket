@@ -55,7 +55,8 @@ export default function ReceptionPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 min-h-[44px] py-2 rounded-full text-[14px] md:text-[13px] font-semibold transition-colors ${
+              aria-pressed={t === tab}
+              className={`flex-1 min-h-[44px] py-2 rounded-full text-[14px] md:text-[13px] font-semibold transition-colors press-btn ${
                 t === tab ? "bg-primary text-white" : "text-text-secondary"
               }`}
             >
@@ -80,7 +81,7 @@ export default function ReceptionPage() {
               <Link
                 key={o.id}
                 href={`/reception/${o.id}`}
-                className="block bg-white rounded-[20px] shadow-card p-5 active:scale-[0.99] transition-transform"
+                className="block bg-white rounded-[20px] shadow-card p-5 press-card"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -112,10 +113,10 @@ export default function ReceptionPage() {
                       {formatCurrency(o.total_ht)}
                     </p>
                   </div>
-                  <button className="btn-gold !py-2.5 !px-5 text-[13px] min-h-[44px]">
+                  <span className="btn-gold !py-2.5 !px-5 text-[13px] min-h-[44px]" aria-hidden>
                     <Truck className="w-4 h-4" />
                     Démarrer
-                  </button>
+                  </span>
                 </div>
               </Link>
             );

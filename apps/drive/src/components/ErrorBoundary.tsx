@@ -1,4 +1,5 @@
 import { Component, ReactNode, ErrorInfo } from "react";
+import * as Sentry from "@sentry/react";
 import { BRAND } from "@/config/brand";
 
 interface State {
@@ -15,6 +16,15 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info);
+    // Cf. backlog `obs-no-sentry-error-tracking`.
+    // Passe le componentStack React en context Sentry pour qu'on
+    // identifie quel sous-arbre a crashé dans la stacktrace.
+    Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack: info.componentStack },
+      },
+      tags: { boundary: "drive/ErrorBoundary" },
+    });
   }
 
   render() {

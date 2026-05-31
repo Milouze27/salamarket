@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, Home, RotateCcw } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Root error boundary (Next 14 App Router). Catches uncaught errors in
@@ -10,6 +11,10 @@ import { AlertTriangle, Home, RotateCcw } from "lucide-react";
  *
  * Reset = retry the same segment without full reload (Next handles the
  * remount). Logged to console so prod issues surface in Vercel logs.
+ *
+ * Sentry : `Sentry.captureException` est tagué avec `digest` (l'ID
+ * généré par Next) pour qu'on puisse cross-référencer logs Vercel ↔
+ * issue Sentry. Cf. backlog `obs-no-sentry-error-tracking`.
  */
 export default function GlobalError({
   error,
@@ -21,6 +26,9 @@ export default function GlobalError({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error("[salam-stock] root error boundary:", error);
+    Sentry.captureException(error, {
+      tags: { boundary: "app/error.tsx", digest: error.digest ?? "none" },
+    });
   }, [error]);
 
   return (

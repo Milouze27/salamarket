@@ -1,3 +1,30 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
+/**
+ * Content-Security-Policy — déployée en Report-Only d'abord pour
+ * valider qu'on ne casse pas Stripe Elements / Supabase realtime /
+ * Anthropic API. On bascule en mode enforced après 1-2 semaines de
+ * télémétrie sans violations légitimes.
+ *
+ * Note : 'unsafe-inline' sur style-src est temporaire — Tailwind et
+ * shadcn injectent des styles inline. On migrera vers nonces quand
+ * Next 14 supportera proprement le nonce CSP App Router.
+ */
+const CSP_REPORT_ONLY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' js.stripe.com",
+  "connect-src 'self' *.supabase.co api.anthropic.com api.stripe.com *.ingest.sentry.io *.ingest.us.sentry.io *.ingest.de.sentry.io",
+  "img-src 'self' data: blob: https:",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "frame-src js.stripe.com hooks.stripe.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -33,6 +60,23 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
+          // ─── Sécurité (sec-no-csp-no-hsts-headers backlog) ───
+          // HSTS : force HTTPS 2 ans, inclus sous-domaines, preload list.
+          // Note : irréversible côté browser pendant 2 ans, on prend.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          // X-Frame-Options : DENY tout embed iframe (anti clickjacking).
+          // Stock = staff app, jamais d'embed légitime.
+          { key: "X-Frame-Options", value: "DENY" },
+          // CSP en Report-Only le temps de valider tous les flux Stripe
+          // / Supabase. Cf. CSP_REPORT_ONLY ci-dessus.
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: CSP_REPORT_ONLY,
+          },
+          // ─── Sécurité (déjà en place) ───
           // Autorise explicitement la caméra (scan code-barre) sur le
           // domaine self. Sans header, certains contextes PWA iOS et les
           // browsers paranoïaques bloquent getUserMedia silencieusement.
@@ -49,4 +93,35 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// ─── Sentry wrapper ────────────────────────────────────────────────
+// Cf. backlog `obs-no-sentry-error-tracking`.
+//
+// silent: true → pas de bruit en dev, juste les uploads de sourcemaps
+//                en prod via SENTRY_AUTH_TOKEN.
+// org/project : repris depuis env si dispo, sinon fallback statique.
+// widenClientFileUpload : capture les sourcemaps des chunks dynamiques.
+// disableLogger : retire les console.log Sentry du bundle browser
+//                 (réduit ~5KB sur le bundle final).
+// automaticVercelMonitors : false par défaut, on a déjà nos crons dans
+//                           vercel.json et on ne veut pas que Sentry
+//                           crée des doublons côté monitoring.
+const sentryBuildOptions = {
+  silent: true,
+  org: process.env.SENTRY_ORG || "salamarket",
+  project: process.env.SENTRY_PROJECT || "stock",
+  widenClientFileUpload: true,
+  disableLogger: true,
+  automaticVercelMonitors: false,
+  // Si SENTRY_AUTH_TOKEN absent (dev local), on skip l'upload des
+  // sourcemaps pour pas planter le build.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+};
+
+// Wrap UNIQUEMENT si la DSN est fournie. Sinon on retourne la config
+// brute pour pas faire chier en local sans compte Sentry.
+const finalConfig =
+  process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN
+    ? withSentryConfig(nextConfig, sentryBuildOptions)
+    : nextConfig;
+
+export default finalConfig;

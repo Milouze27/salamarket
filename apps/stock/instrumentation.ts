@@ -7,15 +7,41 @@
  *
  * Cf. https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
  *
- * Objectif : refuser de démarrer en production avec des placeholders
- * Stripe (PLACEHOLDER / TODO / CHANGEME / vide). Évite l'incident
- * silencieux du genre "la prod tourne mais aucun paiement n'aboutit
- * parce que la clé est encore `sk_test_PLACEHOLDER`".
+ * Objectif :
+ *  1. Init Sentry (server + edge runtime) si DSN configurée.
+ *  2. Refuser de démarrer en production avec des placeholders Stripe
+ *     (PLACEHOLDER / TODO / CHANGEME / vide). Évite l'incident silencieux
+ *     du genre "la prod tourne mais aucun paiement n'aboutit parce que la
+ *     clé est encore `sk_test_PLACEHOLDER`".
+ *  3. Expose onRequestError pour que Next route les erreurs SSR vers Sentry.
  *
- * Cf. backlog `pay-test-mode-hardcoded-blocker`.
+ * Cf. backlog `pay-test-mode-hardcoded-blocker` + `obs-no-sentry-error-tracking`.
  */
 
+import * as Sentry from "@sentry/nextjs";
+
+/**
+ * onRequestError — hook officiel Next 14 pour capturer les erreurs
+ * server-side render. Sentry v10 expose `captureRequestError` qui
+ * doit être ré-exporté ici depuis `instrumentation.ts`.
+ * Cf. https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+ */
+export const onRequestError = Sentry.captureRequestError;
+
 export async function register() {
+  // ─── Sentry init (Node + Edge runtimes) ─────────────────────────────
+  // Next 14 charge sentry.server.config.ts via `withSentryConfig` mais
+  // sur le path "instrumentation.ts" il faut explicitement require le
+  // fichier sinon Sentry n'est pas armé sur le runtime Node.
+  // Cf. https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+  }
+
+  // ─── Env validation (Node runtime uniquement) ──────────────────────
   // Ne s'exécute que côté serveur Node (pas Edge runtime).
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
@@ -28,6 +54,7 @@ export async function register() {
 
   assertEnv();
 }
+
 
 function assertEnv() {
   const errors: string[] = [];

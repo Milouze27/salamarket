@@ -55,6 +55,34 @@
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --dur-page: 280ms;
+  --dur-slow: 300ms;
+
+  /* AA-safe gold for TEXT on cream/white (DSN-07) — #C9A227 fails WCAG
+     on light, so labels/eyebrows on cream use this darker gold. */
+  --or-text: #8B6F0E;
+
+  /* Canonical status aliases — shared names + hues with Drive (DSN-02) */
+  --status-success: #2D7A4F;
+  --status-success-bg: #E8F5EE;
+  --status-success-text: #1C5536;
+  --status-warning: #D97706;
+  --status-warning-bg: #FEF3E2;
+  --status-warning-text: #92570A;
+  --status-danger: #E5483D;
+  --status-danger-bg: #FEF2F1;
+  --status-danger-text: #A4271F;
+  --status-neutral-bg: #F1ECDD;
+  --status-neutral-text: #5A6470;
+
+  /* Radius scale — canonical, identical to Drive (DSN-08) */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* Safe-area top (parity with Drive, LAY-06) */
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 * {
@@ -455,6 +483,25 @@ body {
   .cta-above-safe {
     bottom: var(--safe-bottom);
   }
+  /* Sticky sub-header offset under the app header (parity with Drive, LAY-06) */
+  .top-header {
+    top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + var(--header-height));
+  }
+
+  /* Shared elevation / radius / text utilities — same names as Drive
+     (DSN-02/08/09) so both apps speak one token language. */
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-card-hover { box-shadow: var(--shadow-card-hover); }
+  .shadow-card-lg { box-shadow: var(--shadow-card-lg); }
+  .rounded-token-sm { border-radius: var(--radius-sm); }
+  .rounded-token-md { border-radius: var(--radius-md); }
+  .rounded-token-lg { border-radius: var(--radius-lg); }
+  .rounded-token-xl { border-radius: var(--radius-xl); }
+  /* AA-safe gold text + semantic text helpers (replace stray text-slate-*) */
+  .text-gold-ink { color: var(--or-text); }
+  .text-ink { color: var(--text-primary); }
+  .text-ink-2 { color: var(--text-secondary); }
+  .text-ink-3 { color: var(--text-tertiary); }
 
   /* ─── P0-5 — Scroll-x filter pills with gradient fade ─────
      Container scrollable horizontalement avec fade or-cream à

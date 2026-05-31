@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -208,6 +208,9 @@ export function V2Shell({
     : "mx-auto w-full max-w-[460px] min-h-screen relative bg-cream";
 
   return (
+    // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms
+    // (translate/scale/x) sous reduce-motion OS, en gardant les fades d'opacité.
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-cream">
       <div className={containerClass}>
         {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),

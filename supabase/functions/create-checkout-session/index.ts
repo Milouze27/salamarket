@@ -344,9 +344,16 @@ serve(async (req) => {
     }
 
     // 8b. Paiement en ligne → Stripe Checkout
+    // FIX 2026-05-31 (pay-no-applepay-googlepay) : on omet
+    // payment_method_types pour laisser Stripe Checkout détecter
+    // automatiquement les wallets (Apple Pay / Google Pay) selon la
+    // configuration Dashboard. Stripe Checkout active automatiquement
+    // les wallets quand `payment_method_types` n'est pas spécifié et que
+    // la "automatic payment methods" rule est activée côté Dashboard.
+    // Requis également côté Dashboard : Settings → Payment methods →
+    // toggle Wallets + Apple Pay domain `salamarket-drive.vercel.app`.
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
       customer_email: user.email,
       line_items: trustedItems.map((it) => ({
         price_data: {

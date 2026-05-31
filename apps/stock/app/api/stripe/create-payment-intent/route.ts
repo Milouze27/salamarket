@@ -64,10 +64,13 @@ export async function POST(req: Request) {
   // Function create-checkout-session (source unique de vérité). On
   // garde le fallback compute legacy si la colonne est null (commandes
   // créées avant ce fix).
+  // FIX 2026-05-31 (pay-no-receipt-email) : on lit aussi client_email
+  // pour pouvoir le passer en `receipt_email` au PaymentIntent (reçu
+  // Stripe auto au client, évite les appels "j'ai pas de facture").
   const { data: commande, error: errCmd } = await sb
     .from("commandes_drive")
     .select(
-      "id, statut_paiement, stripe_payment_intent_id, total_ttc, montant_autorise_ttc, " +
+      "id, statut_paiement, stripe_payment_intent_id, total_ttc, montant_autorise_ttc, client_email, " +
         "commandes_drive_lignes (montant_estime_ttc, quantite, prix_unitaire)",
     )
     .eq("id", commande_id)
@@ -86,6 +89,7 @@ export async function POST(req: Request) {
     stripe_payment_intent_id: string | null;
     total_ttc: number | string | null;
     montant_autorise_ttc: number | string | null;
+    client_email: string | null;
     commandes_drive_lignes: LigneRow[] | null;
   };
 
@@ -144,18 +148,40 @@ export async function POST(req: Request) {
   const montantAutoriseCentimes = Math.round(montantAutoriseTtc * 100);
 
   // 4. Crée le PaymentIntent côté Stripe
+  // FIX 2026-05-31 (pay-no-applepay-googlepay) : on remplace l'ancien
+  // `payment_method_types: ["card"]` implicite par
+  // `automatic_payment_methods: { enabled: true }`. Stripe va alors
+  // détecter automatiquement les wallets éligibles selon le device
+  // (Apple Pay sur iOS Safari + PWA installée, Google Pay sur Android
+  // Chrome, etc.) et les afficher dans le PaymentElement.
+  //
+  // Pour que ça marche en prod il faut :
+  //   1. Stripe Dashboard → Settings → Payment methods → activer
+  //      "Apple Pay" et "Google Pay" (toggle Wallets).
+  //   2. Dashboard → Payment methods → Apple Pay → Configure domains
+  //      → ajouter `salamarket-drive.vercel.app`.
+  //   3. Héberger le fichier `/.well-known/apple-developer-merchantid-
+  //      domain-association` téléchargé depuis Stripe sur le domaine
+  //      Drive (cf. apps/drive/public/.well-known/).
+  // FIX 2026-05-31 (pay-no-receipt-email) : on ajoute `receipt_email`
+  // pour que Stripe envoie un reçu automatique au client après capture.
   let paymentIntent: Stripe.PaymentIntent;
   try {
-    paymentIntent = await stripe().paymentIntents.create({
+    const createParams: Stripe.PaymentIntentCreateParams = {
       amount: montantAutoriseCentimes,
       currency: "eur",
       capture_method: "manual",
+      automatic_payment_methods: { enabled: true },
       metadata: {
         commande_id,
         estime_ttc: estimeTtc.toFixed(2),
         marge_pct: "20",
       },
-    });
+    };
+    if (cmd.client_email) {
+      createParams.receipt_email = cmd.client_email;
+    }
+    paymentIntent = await stripe().paymentIntents.create(createParams);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erreur Stripe inconnue";
     console.error("[stripe/create-pi] échec Stripe :", e);

@@ -13,6 +13,7 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { BottomNav } from "@/components/BottomNav";
 import { StickyCartCTA } from "@/components/StickyCartCTA";
+import { CookieBanner } from "@/components/CookieBanner";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
 // pénaliser le 1st paint sur l'écran d'accueil et le flow de commande.
@@ -61,7 +62,26 @@ const AdminComptesPro = lazy(() => import("./pages/admin/ComptesPro.tsx"));
 const AdminCommandesPro = lazy(() => import("./pages/admin/CommandesPro.tsx"));
 const AdminFacturesPro = lazy(() => import("./pages/admin/FacturesPro.tsx"));
 
-const queryClient = new QueryClient();
+// Pages légales — chargées lazy, faible traffic, jamais sur le chemin chaud
+const LegalAbout = lazy(() => import("./pages/legal/About.tsx"));
+const LegalMentions = lazy(() => import("./pages/legal/Mentions.tsx"));
+const LegalCGV = lazy(() => import("./pages/legal/CGV.tsx"));
+const LegalConfidentialite = lazy(() => import("./pages/legal/Confidentialite.tsx"));
+
+// React Query — defaults raisonnés. Sans staleTime, chaque mount refetch
+// → flicker visuel + bande passante gaspillée + jank au focus window.
+// 60s = compromis raisonnable pour un catalogue qui bouge peu, gcTime
+// 5min pour garder les pages déjà visitées chaudes en cache.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 300_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const RouteFallback = () => (
   <div className="min-h-dvh bg-[#FAFAF7] flex items-center justify-center">
@@ -282,12 +302,18 @@ const App = () => (
                     </RoleProtectedRoute>
                   }
                 />
+                {/* ───────────── Pages légales (publiques) ───────────── */}
+                <Route path="/a-propos" element={<LegalAbout />} />
+                <Route path="/mentions-legales" element={<LegalMentions />} />
+                <Route path="/cgv" element={<LegalCGV />} />
+                <Route path="/confidentialite" element={<LegalConfidentialite />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
             <StickyCartCTA />
             <BottomNav />
+            <CookieBanner />
           </AuthProvider>
         </BrowserRouter>
       </ErrorBoundary>

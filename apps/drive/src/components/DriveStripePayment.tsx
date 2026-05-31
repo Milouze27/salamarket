@@ -9,6 +9,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Loader2, Lock, Scale } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { stripeErrorObjectToFr } from "@/lib/stripe-errors-fr";
 
 // ────────────────────────────────────────────────────────────────────
 // DriveStripePayment — paiement par Stripe Elements pour le Drive au
@@ -182,6 +183,48 @@ const formatEUR = (cents: number) =>
     cents / 100,
   );
 
+/**
+ * Best-effort instrumentation : si Sentry est chargé globalement
+ * (cf. https://docs.sentry.io/platforms/javascript/), on capture un
+ * breadcrumb + message info. Sinon on log en console (debuggable via
+ * remote inspect Safari sur l'iPhone d'Otmane).
+ *
+ * Évite d'ajouter une dep dure à `@sentry/react` sur le bundle Drive
+ * tant que Sentry n'est pas officiellement intégré (cf. backlog
+ * `pay-3ds-not-tested`).
+ */
+type SentryGlobal = {
+  addBreadcrumb?: (b: {
+    category?: string;
+    message?: string;
+    level?: "info" | "warning" | "error";
+    data?: Record<string, unknown>;
+  }) => void;
+  captureMessage?: (
+    msg: string,
+    ctx?: { level?: "info" | "warning" | "error"; extra?: Record<string, unknown> },
+  ) => void;
+};
+
+function logBreadcrumb(event: string, data: Record<string, unknown>): void {
+  // eslint-disable-next-line no-console
+  console.info(`[stripe-event] ${event}`, data);
+  if (typeof window === "undefined") return;
+  const sentry = (window as unknown as { Sentry?: SentryGlobal }).Sentry;
+  if (!sentry) return;
+  try {
+    sentry.addBreadcrumb?.({
+      category: "stripe",
+      message: event,
+      level: "info",
+      data,
+    });
+    sentry.captureMessage?.(event, { level: "info", extra: data });
+  } catch {
+    // Sentry KO ne doit jamais casser le paiement.
+  }
+}
+
 const PaymentForm = ({
   authorizedCents,
   estimatedCents,
@@ -201,13 +244,46 @@ const PaymentForm = ({
     if (!stripe || !elements) return;
     setSubmitting(true);
     setErrorMsg(null);
+
+    // FIX 2026-05-31 (pay-3ds-not-tested) : on log un breadcrumb Sentry
+    // (si dispo) avant l'appel confirmPayment. Si Stripe enchaîne une
+    // modale 3DS / redirect (cas ~50 % FR), on garde une trace pour
+    // diagnostiquer les paiements qui ne reviennent pas.
+    logBreadcrumb("stripe_confirm_payment_start", {
+      returnUrl,
+      hasStripe: true,
+    });
+
     const result = await stripe.confirmPayment({
       elements,
       confirmParams: { return_url: returnUrl },
     });
     if (result.error) {
-      setErrorMsg(result.error.message ?? "Erreur de paiement");
+      // FIX 2026-05-31 (pay-error-messages-fr) : on traduit le code
+      // Stripe en message FR client-friendly. Fallback : message Stripe
+      // d'origine si aucun code mappé.
+      const frMsg = stripeErrorObjectToFr({
+        code: result.error.code ?? null,
+        decline_code: result.error.decline_code ?? null,
+        message: result.error.message ?? null,
+      });
+      setErrorMsg(frMsg);
       setSubmitting(false);
+      logBreadcrumb("stripe_confirm_payment_error", {
+        code: result.error.code,
+        decline_code: result.error.decline_code,
+        type: result.error.type,
+      });
+    } else {
+      // Pas d'erreur ET pas de return = Stripe redirige (3DS ou succès
+      // direct). On le tag pour le debugging des 3DS qui ne reviennent
+      // jamais.
+      logBreadcrumb("stripe_3ds_redirect", {
+        returnUrl,
+        message:
+          "Stripe va rediriger (3DS modal ou succès direct). " +
+          "Si on ne revient pas, vérifier que return_url est accessible.",
+      });
     }
     // En cas de succès, Stripe redirige vers return_url — pas de cleanup.
   };

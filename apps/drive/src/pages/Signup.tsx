@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { translateAuthError } from "@/lib/authErrors";
@@ -19,6 +19,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -34,7 +35,7 @@ export default function Signup() {
     return e;
   }, [fullName, phone, email, password, confirm]);
 
-  const valid = Object.keys(errors).length === 0;
+  const valid = Object.keys(errors).length === 0 && acceptedTerms;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -164,6 +165,42 @@ export default function Signup() {
               {serverError}
             </p>
           )}
+
+          {/* CGV + Politique de confidentialité — checkbox bloquante.
+              Obligation légale (LCEN + RGPD : consentement éclairé). */}
+          <label
+            htmlFor="acceptTerms"
+            className="flex items-start gap-3 text-sm text-text cursor-pointer select-none mt-1"
+          >
+            <input
+              id="acceptTerms"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-[#0E3B2E]/40 accent-[#0E3B2E] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0E3B2E]/30"
+            />
+            <span className="leading-snug text-[13px] text-[#0F1A14]/75">
+              J'accepte les{" "}
+              <Link
+                to="/cgv"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 text-[#0E3B2E] font-medium hover:text-[#082A20]"
+              >
+                Conditions générales de vente
+              </Link>
+              {" "}et la{" "}
+              <Link
+                to="/confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 text-[#0E3B2E] font-medium hover:text-[#082A20]"
+              >
+                Politique de confidentialité
+              </Link>
+              .
+            </span>
+          </label>
 
           <button
             type="submit"

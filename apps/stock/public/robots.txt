@@ -1,0 +1,5 @@
+# Salam Stock — application staff interne uniquement.
+# Aucune indexation autorisée (forecast Ramadan, marges, fournisseurs,
+# données opérationnelles confidentielles).
+User-agent: *
+Disallow: /

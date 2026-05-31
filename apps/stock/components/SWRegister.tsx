@@ -5,10 +5,16 @@ import { useEffect } from "react";
 /**
  * Registers /sw.js on mount (browser only). Without this, Web Push
  * (iOS 16.4+ PWA standalone) never fires because the SW never installs.
+ * Le SW gère aussi le fallback offline (cf. public/sw.js).
  *
  * Idempotent: navigator.serviceWorker.register is a no-op when the same
  * script URL is already controlling the page. Errors are swallowed to
  * avoid breaking PWAs on browsers that block SW (private mode Safari).
+ *
+ * Update prompt : quand une nouvelle version du SW est installée en
+ * attente, on dispatch un CustomEvent('sw-update-available'). Un Toast
+ * UI peut écouter et proposer "Recharger" qui dispatchera
+ * 'sw-activate-update' pour activer la nouvelle version.
  */
 export function SWRegister() {
   useEffect(() => {
@@ -18,6 +24,25 @@ export function SWRegister() {
     const reg = () => {
       navigator.serviceWorker
         .register("/sw.js")
+        .then((registration) => {
+          // Surveille les updates pour proposer un refresh à l'utilisateur.
+          registration.addEventListener("updatefound", () => {
+            const installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener("statechange", () => {
+              if (
+                installing.state === "installed" &&
+                navigator.serviceWorker.controller
+              ) {
+                window.dispatchEvent(
+                  new CustomEvent("sw-update-available", {
+                    detail: { registration },
+                  })
+                );
+              }
+            });
+          });
+        })
         .catch(() => {
           /* SW registration failed — likely Safari private mode or
              corporate proxy. Push notifs degrade gracefully. */
@@ -31,6 +56,25 @@ export function SWRegister() {
     } else {
       window.setTimeout(reg, 1000);
     }
+
+    // Listener pour activer le SW en attente quand l'UI confirme.
+    const onActivate = async () => {
+      const r = await navigator.serviceWorker.getRegistration("/sw.js");
+      const waiting = r?.waiting;
+      if (!waiting) {
+        window.location.reload();
+        return;
+      }
+      let refreshed = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (refreshed) return;
+        refreshed = true;
+        window.location.reload();
+      });
+      waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+    window.addEventListener("sw-activate-update", onActivate);
+    return () => window.removeEventListener("sw-activate-update", onActivate);
   }, []);
   return null;
 }

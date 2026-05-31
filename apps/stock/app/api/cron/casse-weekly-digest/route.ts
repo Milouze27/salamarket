@@ -25,12 +25,19 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  // SÉCURITÉ (durci 2026-05-31) : refuse si CRON_SECRET non configuré.
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error("[cron/casse-weekly-digest] CRON_SECRET non configuré");
+    return NextResponse.json(
+      { error: "cron_misconfigured" },
+      { status: 503 }
+    );
+  }
+  const auth = req.headers.get("authorization");
+  const vercelCron = req.headers.get("x-vercel-cron");
+  if (auth !== `Bearer ${cronSecret}` && vercelCron !== "1") {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   // Override `now` via ?now=ISO pour test depuis le preview (démo)
@@ -82,7 +89,10 @@ export async function GET(req: Request) {
   try {
     emailRes = await fetch(`${origin}/api/email/send`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-internal-token": process.env.INTERNAL_API_SECRET ?? "",
+      },
       body: JSON.stringify({ to: recipients, subject, html, text }),
     });
   } catch (err) {

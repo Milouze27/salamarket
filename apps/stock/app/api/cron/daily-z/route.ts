@@ -8,16 +8,23 @@ export const runtime = "nodejs";
  * Cron Vercel — tous les jours à 23h59 (Europe/Paris) via vercel.json.
  * Calcule le Z du jour courant et déclenche l'envoi email via /api/notify.
  *
- * SÉCURITÉ : Vercel ajoute automatiquement l'header
- * Authorization: Bearer <CRON_SECRET> sur les routes cron. On vérifie.
+ * SÉCURITÉ (durci 2026-05-31) : on REFUSE de servir si CRON_SECRET n'est
+ * pas configuré, ou si l'auth ne match pas. Vercel injecte
+ * Authorization: Bearer <CRON_SECRET> ET x-vercel-cron: 1 sur ses crons.
  */
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error("[cron/daily-z] CRON_SECRET non configuré, refus de servir");
+    return NextResponse.json(
+      { error: "cron_misconfigured" },
+      { status: 503 }
+    );
+  }
+  const auth = req.headers.get("authorization");
+  const vercelCron = req.headers.get("x-vercel-cron");
+  if (auth !== `Bearer ${cronSecret}` && vercelCron !== "1") {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const date = todayIsoParis();

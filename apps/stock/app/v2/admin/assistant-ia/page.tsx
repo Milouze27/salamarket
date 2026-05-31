@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import DOMPurify from "dompurify";
 import {
   ArrowLeft,
   Bot,
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { askAssistant } from "@/lib/actions/assistant";
 
 interface ChatMsg {
   id: string;
@@ -33,11 +35,31 @@ const SUGGESTIONS = [
   "Quels employés ont le score IA le plus bas ?",
 ];
 
-function md(text: string): string {
-  // Très basique : **gras** → <b>, sauts de ligne → <br/>
+function escapeHtml(text: string): string {
   return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function md(text: string): string {
+  // Sécurisé : escape HTML d'abord, PUIS appliquer les marqueurs markdown,
+  // PUIS sanitize via DOMPurify (ceinture + bretelles contre XSS).
+  // L'API IA renvoie du texte qu'on ne contrôle pas → toute injection
+  // possible. Cf. sec-xss-assistant-ia-dangerouslysethtml.
+  const escaped = escapeHtml(text)
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/\n/g, "<br/>");
+  // DOMPurify nécessite window → guard SSR. Le composant est "use client"
+  // donc en pratique md() ne tourne que côté navigateur ; le guard évite
+  // un crash si Next tente un static rendering.
+  if (typeof window === "undefined") return escaped;
+  return DOMPurify.sanitize(escaped, {
+    ALLOWED_TAGS: ["b", "br", "strong", "em", "i"],
+    ALLOWED_ATTR: [],
+  });
 }
 
 export default function AssistantIAPage() {
@@ -65,21 +87,14 @@ export default function AssistantIAPage() {
     setMessages(nextMsgs);
     setSending(true);
     try {
-      const r = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          messages: nextMsgs.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
-      });
-      const data = (await r.json()) as {
-        answer: string;
-        tool_calls?: Array<{ name: string; input: unknown }>;
-        error?: string;
-      };
+      // Server action — ajoute le header `x-internal-secret` côté serveur.
+      // L'API route /api/assistant n'accepte plus de POST anonyme.
+      const data = await askAssistant(
+        nextMsgs.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
+      );
       if (data.error) {
         throw new Error(data.error);
       }
@@ -88,7 +103,7 @@ export default function AssistantIAPage() {
         {
           id: `a-${Date.now()}`,
           role: "assistant",
-          content: data.answer,
+          content: data.answer ?? "(pas de réponse)",
           tools: data.tool_calls,
         },
       ]);

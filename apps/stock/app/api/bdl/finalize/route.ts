@@ -24,14 +24,11 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { validateBody } from "@/lib/validate/helper";
+import { finalizeBdlSchema } from "@/lib/validate/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface FinalizeBody {
-  bdl_id: string;
-  employe_id?: string;
-}
 
 interface LigneRow {
   id: string;
@@ -47,15 +44,9 @@ interface LigneRow {
 const PUSH_THRESHOLD_PCT = 0.02;
 
 export async function POST(req: Request) {
-  let body: FinalizeBody;
-  try {
-    body = (await req.json()) as FinalizeBody;
-  } catch {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  }
-  if (!body.bdl_id) {
-    return NextResponse.json({ error: "missing_bdl_id" }, { status: 400 });
-  }
+  const parsed = await validateBody(req, finalizeBdlSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const sb = supabaseServer();
 

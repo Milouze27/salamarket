@@ -22,13 +22,11 @@ import { jsPDF } from "jspdf";
 import { supabaseServer } from "@/lib/supabase-server";
 import { signPoToken } from "@/lib/po-token";
 import { certifAlerte, ORGANISME_LABELS } from "@/lib/types/po";
+import { validateBody } from "@/lib/validate/helper";
+import { sendPoSchema } from "@/lib/validate/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface SendBody {
-  po_id: string;
-}
 
 function eur(n: number) {
   return new Intl.NumberFormat("fr-FR", {
@@ -270,15 +268,9 @@ function htmlEmail(opts: {
 }
 
 export async function POST(req: Request) {
-  let body: SendBody;
-  try {
-    body = (await req.json()) as SendBody;
-  } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
-  }
-  if (!body.po_id) {
-    return NextResponse.json({ error: "po_id requis" }, { status: 400 });
-  }
+  const parsed = await validateBody(req, sendPoSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   const sb = supabaseServer();
 

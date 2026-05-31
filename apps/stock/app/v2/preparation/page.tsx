@@ -424,19 +424,19 @@ export default function V2PreparationKanbanPage() {
     setUpdating(true);
     try {
       await setCommandeStatut(cmd.id, target);
-      // Send "commande prête" email — fire-and-forget
+      // Send "commande prête" email — fire-and-forget via server action
+      // (passe l'INTERNAL_API_SECRET côté serveur).
       if (target === "pret" && cmd.client_email) {
-        fetch("/api/email/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: cmd.client_email,
-            subject: "Votre commande Salamarket est prête !",
-            html: buildCommandePreteEmail({
-              id: cmd.id,
-              numero_commande: cmd.numero_commande,
-              client_nom: cmd.client_nom,
-            }),
+        const { sendOperationalEmail } = await import(
+          "@/lib/actions/email-send"
+        );
+        sendOperationalEmail({
+          to: cmd.client_email,
+          subject: "Votre commande Salamarket est prête !",
+          html: buildCommandePreteEmail({
+            id: cmd.id,
+            numero_commande: cmd.numero_commande,
+            client_nom: cmd.client_nom,
           }),
         }).catch(() => {});
       }

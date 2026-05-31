@@ -29,12 +29,19 @@ interface StockRow {
 }
 
 export async function GET(req: Request) {
+  // SÉCURITÉ (durci 2026-05-31) : refuse si CRON_SECRET non configuré.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    console.error("[cron/inventaire-tournant] CRON_SECRET non configuré");
+    return NextResponse.json(
+      { error: "cron_misconfigured" },
+      { status: 503 }
+    );
+  }
+  const auth = req.headers.get("authorization");
+  const vercelCron = req.headers.get("x-vercel-cron");
+  if (auth !== `Bearer ${secret}` && vercelCron !== "1") {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

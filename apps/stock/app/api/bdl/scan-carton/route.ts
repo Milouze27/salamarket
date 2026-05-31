@@ -35,16 +35,11 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { validateBody } from "@/lib/validate/helper";
+import { scanCartonSchema } from "@/lib/validate/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-interface ScanBody {
-  bdl_id: string;
-  ean: string;
-  employe_id?: string;
-  lot_id?: string;
-}
 
 interface CartonRow {
   ean_carton: string;
@@ -72,22 +67,10 @@ interface LigneRow {
 const PUSH_THRESHOLD_PCT = 0.02;
 
 export async function POST(req: Request) {
-  let body: ScanBody;
-  try {
-    body = (await req.json()) as ScanBody;
-  } catch {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
-  }
-  if (!body.bdl_id || !body.ean) {
-    return NextResponse.json(
-      { error: "missing_bdl_id_or_ean" },
-      { status: 400 }
-    );
-  }
+  const parsed = await validateBody(req, scanCartonSchema);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const ean = body.ean.trim();
-  if (ean.length < 4) {
-    return NextResponse.json({ error: "ean_too_short" }, { status: 400 });
-  }
 
   const sb = supabaseServer();
 

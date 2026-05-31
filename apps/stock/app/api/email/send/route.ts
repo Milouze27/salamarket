@@ -11,6 +11,22 @@ interface EmailSendBody {
 }
 
 export async function POST(req: Request) {
+  // ─── AUTH : empêcher l'utilisation comme relais spam anonyme ───
+  // Tous les callers internes (po/send, casse-weekly-digest, send-now)
+  // doivent passer le header `x-internal-token` = INTERNAL_API_SECRET.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[email/send] INTERNAL_API_SECRET non configuré, refus de servir.");
+    return NextResponse.json(
+      { error: "Email service misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 }
+    );
+  }
+  const provided = req.headers.get("x-internal-token");
+  if (provided !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
 

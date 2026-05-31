@@ -11,9 +11,17 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { assistantQuerySchema } from "@/lib/validate/schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Rate-limit : 30 requêtes / heure / IP. Chaque call peut coûter ~6 turns
+// Claude Sonnet (loop agentic) → un attaquant non rate-limit burn la quota
+// ANTHROPIC_API_KEY en quelques minutes.
+const RL_MAX_PER_HOUR = 30;
+const RL_WINDOW_MS = 60 * 60 * 1000;
 
 interface ChatMsg {
   role: "user" | "assistant";
@@ -364,12 +372,74 @@ async function runTool(name: string, input: any): Promise<unknown> {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { messages: ChatMsg[] };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  const ip = getClientIp(req);
+
+  // ─── AUTH : header x-internal-secret obligatoire ──────────────────
+  // L'UI client passe par la server action `askAssistant` qui ajoute
+  // automatiquement ce header. Bloque les appels CURL anonymes qui
+  // burn la quota Claude (chaque call = jusqu'à 6 turns Claude Sonnet).
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    console.error("[assistant] INTERNAL_API_SECRET missing — refuse de servir");
+    return NextResponse.json(
+      { error: "assistant_misconfigured" },
+      { status: 503 }
+    );
   }
+  const provided = req.headers.get("x-internal-secret");
+  if (provided !== internalSecret) {
+    console.warn(`[assistant] AUTH FAIL ip=${ip}`);
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // ─── RATE-LIMIT : 30 req/h par IP ─────────────────────────────────
+  const rl = checkRateLimit(ip, "assistant", RL_MAX_PER_HOUR, RL_WINDOW_MS);
+  if (!rl.allowed) {
+    console.warn(`[assistant] RATE LIMIT ip=${ip} retry=${rl.retryAfter}s`);
+    return NextResponse.json(
+      {
+        error: "rate_limited",
+        detail: `Trop de requêtes. Réessaye dans ${rl.retryAfter}s.`,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rl.retryAfter),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Limit": String(RL_MAX_PER_HOUR),
+        },
+      }
+    );
+  }
+
+  // ─── VALIDATION Zod du body ───────────────────────────────────────
+  let rawBody: unknown;
+  try {
+    rawBody = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const parsed = assistantQuerySchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "validation_failed",
+        issues: parsed.error.issues.map((i) => ({
+          path: i.path.join("."),
+          message: i.message,
+        })),
+      },
+      { status: 400 }
+    );
+  }
+  const body: { messages: ChatMsg[] } = parsed.data;
+
+  // ─── AUDIT LOG : ip + nb messages + premier extrait ───────────────
+  const firstUserMsg =
+    body.messages.find((m) => m.role === "user")?.content?.slice(0, 80) ?? "";
+  console.log(
+    `[assistant] AUDIT ip=${ip} msgs=${body.messages.length} remaining=${rl.remaining} q="${firstUserMsg.replace(/\n/g, " ")}"`
+  );
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {

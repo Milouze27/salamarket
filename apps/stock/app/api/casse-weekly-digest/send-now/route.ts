@@ -81,7 +81,10 @@ export async function POST(req: Request) {
   const origin = new URL(req.url).origin;
   const emailRes = await fetch(`${origin}/api/email/send`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-internal-token": process.env.INTERNAL_API_SECRET ?? "",
+    },
     body: JSON.stringify({ to: recipients, subject, html, text }),
   });
   const emailJson = (await emailRes.json().catch(() => ({}))) as {

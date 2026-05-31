@@ -235,7 +235,10 @@ export async function finalizePreparation(
         "http://localhost:3000";
       fetch(`${baseUrl}/api/email/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-token": process.env.INTERNAL_API_SECRET ?? "",
+        },
         body: JSON.stringify({
           to: commande.client_email,
           subject: "Votre commande Salamarket est prête !",

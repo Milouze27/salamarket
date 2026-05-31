@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, MailCheck, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
+import { sendOperationalEmail } from "@/lib/actions/email-send";
 
 interface Props {
   /** Adresse cible pour le test. Si null, désactive le bouton. */
@@ -21,25 +22,18 @@ export function EmailRecapCard({ defaultTo = "ceo@hamy.studio" }: Props) {
     }
     setSending(true);
     try {
-      const res = await fetch("/api/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to,
-          subject: "Salam Stock · Récap quotidien (test)",
-          html: emailHtmlSample(),
-        }),
+      const result = await sendOperationalEmail({
+        to,
+        subject: "Salam Stock · Récap quotidien (test)",
+        html: emailHtmlSample(),
       });
-      const json = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        id?: string;
-        status?: string;
-      };
-      if (!res.ok || json.error) {
-        toast.error(json.error ?? `Échec (${res.status})`, { duration: 7000 });
+      if (!result.ok) {
+        toast.error(result.error ?? "Échec", { duration: 7000 });
         return;
       }
-      toast.success(`Email envoyé à ${to}. ID: ${json.id?.slice(0, 12) ?? "?"}…`);
+      toast.success(
+        `Email envoyé à ${to}. ID: ${result.id?.slice(0, 12) ?? "?"}…`
+      );
       setSentOnce(true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

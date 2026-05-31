@@ -333,19 +333,20 @@ export default function V2PreparationDetailPage() {
         },
       }),
     });
-    // Send "commande prête" email — fire-and-forget
+    // Send "commande prête" email — fire-and-forget via server action
+    // (passe l'INTERNAL_API_SECRET côté serveur, /api/email/send n'accepte
+    //  plus de POST anonyme depuis le navigateur).
     if (commande.client_email) {
-      fetch("/api/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: commande.client_email,
-          subject: "Votre commande Salamarket est prête !",
-          html: buildCommandePreteEmail({
-            id: commande.id,
-            numero_commande: commande.numero_commande,
-            client_nom: commande.client_nom,
-          }),
+      const { sendOperationalEmail } = await import(
+        "@/lib/actions/email-send"
+      );
+      sendOperationalEmail({
+        to: commande.client_email,
+        subject: "Votre commande Salamarket est prête !",
+        html: buildCommandePreteEmail({
+          id: commande.id,
+          numero_commande: commande.numero_commande,
+          client_nom: commande.client_nom,
         }),
       }).catch(() => {});
     }

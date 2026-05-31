@@ -20,10 +20,17 @@ export function SWRegister() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
+    // Build id (Vercel commit SHA ou fallback) injecté dans l'URL du SW.
+    // Chaque déploiement change l'URL → le browser réinstalle le SW et
+    // l'activate purge les caches de l'ancienne version (anti-gonflement
+    // storage iOS). En dev l'id vaut "dev" et reste stable.
+    const buildId = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
+    const swUrl = `/sw.js?v=${encodeURIComponent(buildId)}`;
+
     // Defer to avoid blocking first paint. Idle-callback when available.
     const reg = () => {
       navigator.serviceWorker
-        .register("/sw.js")
+        .register(swUrl)
         .then((registration) => {
           // Surveille les updates pour proposer un refresh à l'utilisateur.
           registration.addEventListener("updatefound", () => {
@@ -59,7 +66,7 @@ export function SWRegister() {
 
     // Listener pour activer le SW en attente quand l'UI confirme.
     const onActivate = async () => {
-      const r = await navigator.serviceWorker.getRegistration("/sw.js");
+      const r = await navigator.serviceWorker.getRegistration(swUrl);
       const waiting = r?.waiting;
       if (!waiting) {
         window.location.reload();

@@ -183,20 +183,32 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = event.notification.data?.url || '/admin';
+  const targetUrl = new URL(target, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-      // Si une fenêtre de l'app est déjà ouverte, on la focus + navigate.
+      // 1. Une fenêtre déjà sur la cible exacte → focus simple.
       for (const win of wins) {
-        if ('focus' in win) {
-          win.focus();
-          if ('navigate' in win) {
-            win.navigate(target);
-          }
-          return;
+        if (win.url === targetUrl && 'focus' in win) {
+          return win.focus();
         }
       }
-      // Sinon on en ouvre une nouvelle.
+      // 2. Une fenêtre même-origine ouverte ailleurs → focus + tente
+      //    navigate() (fiable sur Android/Chromium) + postMessage en
+      //    fallback pour router côté React (BrowserRouter) sur iOS PWA,
+      //    où WindowClient.navigate() est inconstant. On ne return PAS
+      //    avant d'avoir tenté de router la fenêtre vers la cible.
+      for (const win of wins) {
+        if (win.url.startsWith(self.location.origin) && 'focus' in win) {
+          const focused = win.focus();
+          if ('navigate' in win) {
+            win.navigate(targetUrl).catch(() => {});
+          }
+          win.postMessage({ type: 'sw-navigate', url: target });
+          return focused;
+        }
+      }
+      // 3. Aucune fenêtre exploitable → on en ouvre une.
       return clients.openWindow(target);
     })
   );

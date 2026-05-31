@@ -1,23 +1,42 @@
 import { withSentryConfig } from "@sentry/nextjs";
 
 /**
- * Content-Security-Policy — déployée en Report-Only d'abord pour
- * valider qu'on ne casse pas Stripe Elements / Supabase realtime /
- * Anthropic API. On bascule en mode enforced après 1-2 semaines de
- * télémétrie sans violations légitimes.
- *
- * Note : 'unsafe-inline' sur style-src est temporaire — Tailwind et
- * shadcn injectent des styles inline. On migrera vers nonces quand
- * Next 14 supportera proprement le nonce CSP App Router.
+ * Build id déterministe par déploiement.
+ * - Sur Vercel : SHA du commit (VERCEL_GIT_COMMIT_SHA) → change à chaque
+ *   release, stable entre les serverless functions d'un même déploiement.
+ * - En local : null → Next génère son id par défaut.
+ * On le ré-expose en NEXT_PUBLIC_BUILD_ID pour que le Service Worker
+ * (cf. public/sw.js + components/SWRegister.tsx) versionne ses caches
+ * sur la même valeur et les purge à chaque release.
  */
-const CSP_REPORT_ONLY = [
+const BUILD_ID =
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+  process.env.NEXT_PUBLIC_BUILD_ID ||
+  null;
+
+/**
+ * Content-Security-Policy — enforced.
+ *
+ * Historique : déployée d'abord en Report-Only le temps de valider qu'on
+ * ne casse ni Stripe Elements, ni Supabase realtime, ni l'API Anthropic.
+ * La télémétrie n'ayant pas remonté de violation légitime, on bascule en
+ * mode enforced (Report-Only n'offre aucune protection réelle).
+ *
+ * Note : 'unsafe-inline' sur style-src reste nécessaire — Tailwind et
+ * shadcn injectent des styles inline. 'unsafe-eval' sur script-src est
+ * requis par le runtime dev/SSR de Next 14. On migrera vers des nonces
+ * quand Next supportera proprement le nonce CSP App Router.
+ */
+const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' js.stripe.com",
-  "connect-src 'self' *.supabase.co api.anthropic.com api.stripe.com *.ingest.sentry.io *.ingest.us.sentry.io *.ingest.de.sentry.io",
+  "connect-src 'self' *.supabase.co wss://*.supabase.co api.anthropic.com api.stripe.com *.ingest.sentry.io *.ingest.us.sentry.io *.ingest.de.sentry.io",
   "img-src 'self' data: blob: https:",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "frame-src js.stripe.com hooks.stripe.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -32,6 +51,15 @@ const nextConfig = {
   // (pas pré-compilé). Next 14 doit le passer dans son pipeline SWC
   // sinon les imports échouent en runtime.
   transpilePackages: ["@salamarket/shared"],
+  // Expose le build id au client pour que le Service Worker versionne
+  // ses caches dessus (cf. SWRegister.tsx → /sw.js?v=<buildId>).
+  env: {
+    NEXT_PUBLIC_BUILD_ID: BUILD_ID || "dev",
+  },
+  // Aligne l'id de build Next sur le SHA commit (quand dispo) : les
+  // chunks /_next/static/<buildId>/* et la version du SW partagent ainsi
+  // la même valeur de release.
+  ...(BUILD_ID ? { generateBuildId: async () => BUILD_ID } : {}),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos" },
@@ -70,11 +98,12 @@ const nextConfig = {
           // X-Frame-Options : DENY tout embed iframe (anti clickjacking).
           // Stock = staff app, jamais d'embed légitime.
           { key: "X-Frame-Options", value: "DENY" },
-          // CSP en Report-Only le temps de valider tous les flux Stripe
-          // / Supabase. Cf. CSP_REPORT_ONLY ci-dessus.
+          // CSP enforced (cf. const CSP ci-dessus). Verrouille les sources
+          // exécutables/réseau aux seuls domaines légitimes Stripe /
+          // Supabase / Anthropic / Sentry.
           {
-            key: "Content-Security-Policy-Report-Only",
-            value: CSP_REPORT_ONLY,
+            key: "Content-Security-Policy",
+            value: CSP,
           },
           // ─── Sécurité (déjà en place) ───
           // Autorise explicitement la caméra (scan code-barre) sur le

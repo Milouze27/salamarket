@@ -39,8 +39,80 @@ function formatRelativeDate(iso: string): string {
   return dt.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
+/**
+ * HOTFIX-VAGUE7 — derive titre dynamique depuis le relevé le plus récent
+ * qui a un delta calculable. Format : "<Concurrent> · prix <produit> ±N%".
+ *
+ * Heuristique :
+ *   - rows arrive trié releve_le desc (cf. snapshot route).
+ *   - On prend le 1er relevé avec delta_pct != null (donc produit matché
+ *     en base avec prix_drive_cents non-null).
+ *   - Fallback : si aucun delta dispo mais des rows existent, on prend
+ *     le libellé du plus récent sans delta.
+ *   - Si rows vide → caller utilise titre "à activer".
+ */
+function deriveTitle(rows: CockpitCompetitorRow[]): {
+  eyebrow: string;
+  title: string;
+  sub: string;
+} {
+  if (rows.length === 0) {
+    return {
+      eyebrow: "Intel concurrent · à activer",
+      title: "Aucun relevé concurrent",
+      sub: "Tape « Relevé » pour photographier prix Aya Market",
+    };
+  }
+
+  // Tronque le libellé produit pour rester lisible sur 1 ligne mobile.
+  const truncProduit = (s: string): string => {
+    const clean = s.replace(/\s+/g, " ").trim();
+    return clean.length > 28 ? clean.slice(0, 26) + "…" : clean;
+  };
+
+  // Défensif : prend le 1er relevé avec un delta numérique (pas undefined,
+  // pas null). Sans cette garde, si l'API n'a pas encore exposé delta_pct
+  // (cas où la version client est en avance sur le déploiement serveur),
+  // on aurait crashé sur .toFixed(1).
+  const hasNumericDelta = (r: CockpitCompetitorRow): boolean =>
+    typeof r.delta_pct === "number" && Number.isFinite(r.delta_pct);
+  const withDelta = rows.find(hasNumericDelta);
+  const r = withDelta ?? rows[0];
+  const concurrent = r.concurrent_nom || "Aya Market";
+  const produit = truncProduit(r.libelle_releve);
+
+  if (!hasNumericDelta(r)) {
+    return {
+      eyebrow: "Intel concurrent",
+      title: `${concurrent} · ${produit}`,
+      sub: "Prix relevé sans équivalent Salam mappé",
+    };
+  }
+
+  // À ce stade r.delta_pct est numérique fini (validé par hasNumericDelta).
+  const delta = r.delta_pct as number;
+  const sign = delta > 0 ? "+" : "";
+  const pct = `${sign}${delta.toFixed(1)}%`;
+  // Convention : delta_pct = (concurrent - salam) / salam.
+  //   - positif → concurrent + cher → on est mieux placés (titre vert)
+  //   - négatif → concurrent - cher → menace pricing (titre orange)
+  const sub =
+    delta > 0
+      ? "Salam mieux placé · 200m du dépôt"
+      : delta < 0
+        ? "Concurrent plus agressif · à investiguer"
+        : "Prix alignés · 200m du dépôt";
+
+  return {
+    eyebrow: "Intel concurrent",
+    title: `${concurrent} · prix ${produit} ${pct}`,
+    sub,
+  };
+}
+
 export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
   const empty = rows.length === 0;
+  const titleData = deriveTitle(rows);
 
   return (
     <div
@@ -57,13 +129,13 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
           </span>
           <div className="min-w-0">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#5A6470]">
-              Intel concurrent
+              {titleData.eyebrow}
             </p>
             <p className="text-[16px] font-bold text-[#0F1A14] leading-tight mt-0.5">
-              Aya Market — prix agneau -8%
+              {titleData.title}
             </p>
             <p className="text-[11.5px] text-[#7B8693] mt-0.5">
-              200m du dépôt · baisse cette semaine
+              {titleData.sub}
             </p>
           </div>
         </div>

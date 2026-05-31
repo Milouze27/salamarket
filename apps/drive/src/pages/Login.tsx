@@ -93,6 +93,17 @@ export default function Login() {
             {loading ? "Connexion…" : "Se connecter"}
           </button>
 
+          {/* Mot de passe oublié — placé immédiatement sous le CTA pour
+              que l'utilisateur en échec d'auth le voie sans scroller.
+              Pattern Apple/Google : recovery link toujours adjacent au
+              bouton de connexion. */}
+          <Link
+            to="/mot-de-passe-oublie"
+            className="min-h-[44px] flex items-center justify-center text-center text-[13px] text-text/70 hover:text-primary underline underline-offset-4"
+          >
+            Mot de passe oublié ?
+          </Link>
+
           <Link
             to={`/inscription${location.search}`}
             className="min-h-[44px] flex items-center justify-center text-center text-sm text-primary underline underline-offset-4"

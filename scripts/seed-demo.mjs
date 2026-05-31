@@ -552,10 +552,187 @@ async function seedLotTracabilite(refs) {
   }
 }
 
-// ── 6. Verify : compter ce qu'on a en base ──────────────────────────
+// ── 6. HOTFIX-VAGUE7 : Seed mv_ventes_quotidiennes (J-1 + J-8) + target ──
+//
+// Le cockpit Sabah affiche un hero "—" parce que :
+//   - ventes_cashmag_import est vide pour J-1 et J-8 → mv_ventes_quotidiennes
+//     n'a aucune ligne pour ces jours → ventes_hier null + delta N-1 null.
+//   - cockpit_targets pour J-1 absent → pct_target null.
+//
+// On insère :
+//   - 142 tickets J-1 (38420€ TTC) → panier moyen ~270€
+//   - 128 tickets J-8 (34200€ TTC) → panier moyen ~267€ (delta N-1 = +12,3%)
+//   - target J-1 = 35000€ (pct_target ≈ 110% → vert)
+//
+// Refresh MV ensuite via cron Vercel `/api/cron/refresh-cockpit`.
+async function seedCockpitVentes(refs) {
+  log('info', 'HOTFIX-VAGUE7: seed mv_ventes_quotidiennes J-1 + J-8…');
+
+  if (!refs.depotParticulier) {
+    log('warn', 'depot principal absent — skip seed cockpit');
+    report.skipped.push('mv_ventes_quotidiennes (no depot)');
+    return;
+  }
+
+  const todayParis = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const jminus1 = new Date(todayParis); jminus1.setDate(jminus1.getDate() - 1);
+  const jminus8 = new Date(todayParis); jminus8.setDate(jminus8.getDate() - 8);
+  const isoDate = (d) => d.toISOString().slice(0, 10);
+  const tagJ1 = `J1-${isoDate(jminus1).replace(/-/g, '')}`;
+  const tagJ8 = `J8-${isoDate(jminus8).replace(/-/g, '')}`;
+
+  // Cleanup les seeds précédents (idempotence)
+  if (!DRY) {
+    await sb.from('ventes_cashmag_import')
+      .delete()
+      .like('imported_by', 'SEED-COCKPIT%');
+  }
+
+  // Helper : produit N tickets sur date `d` totalisant `totalTtc` €
+  function buildTickets(d, nbTickets, totalTtc, tag) {
+    const perTicket = totalTtc / nbTickets;
+    const baseDate = isoDate(d);
+    const rows = [];
+    for (let i = 0; i < nbTickets; i++) {
+      // Distribute hours 09:00 → 19:00 pour réalisme
+      const hour = 9 + Math.floor((i / nbTickets) * 10);
+      const min = Math.floor(Math.random() * 60);
+      const sec = Math.floor(Math.random() * 60);
+      const ticket = `${tag}-T${String(i + 1).padStart(4, '0')}`;
+      // ±15% jitter autour du panier moyen, pour pas avoir un panier constant.
+      const jitter = 1 + (Math.random() - 0.5) * 0.3;
+      const ttc = +(perTicket * jitter).toFixed(2);
+      const ht = +(ttc / 1.055).toFixed(2);
+      rows.push({
+        date_vente: baseDate,
+        heure_vente: `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`,
+        numero_ticket: ticket,
+        code_barre: null,
+        designation: `Ticket démo ${tag} #${i + 1}`,
+        quantite: 1,
+        prix_ht: ht,
+        prix_ttc: ttc,
+        tva_taux: 5.5,
+        mode_paiement: ['CB', 'ESP', 'CB', 'CB'][i % 4],
+        raw_line: null,
+        imported_by: `SEED-COCKPIT-${tag}`,
+      });
+    }
+    // Reajuste la dernière ligne pour matcher pile le total demandé.
+    const sum = rows.reduce((s, r) => s + r.prix_ttc, 0);
+    const delta = +(totalTtc - sum).toFixed(2);
+    if (Math.abs(delta) > 0.01) {
+      rows[rows.length - 1].prix_ttc = +(rows[rows.length - 1].prix_ttc + delta).toFixed(2);
+      rows[rows.length - 1].prix_ht = +(rows[rows.length - 1].prix_ttc / 1.055).toFixed(2);
+    }
+    return rows;
+  }
+
+  const rowsJ1 = buildTickets(jminus1, 142, 38420, tagJ1);
+  const rowsJ8 = buildTickets(jminus8, 128, 34200, tagJ8);
+
+  // INSERT en deux temps pour éviter un payload massif.
+  for (const [label, rows] of [['J-1', rowsJ1], ['J-8', rowsJ8]]) {
+    const ins = await safeOp('ventes_cashmag_import', 'insert', () =>
+      sb.from('ventes_cashmag_import').insert(rows));
+    if (ins) {
+      track('ventes_cashmag_import', 'insert', rows.length);
+      const total = rows.reduce((s, r) => s + r.prix_ttc, 0);
+      log('ok', `${label}: ${rows.length} tickets inserted (total ${total.toFixed(2)}€ TTC)`);
+    }
+  }
+
+  // ── cockpit_targets pour J-1 (35000€) sur le depot principal ────
+  // Upsert (depot_id, jour) unique.
+  const targetPayload = {
+    depot_id: refs.depotParticulier.id,
+    jour: isoDate(jminus1),
+    target_ca: 35000,
+    note: '[SEED-DEMO] Target démo Otmane (vague 7)',
+  };
+  const targetIns = await safeOp('cockpit_targets', 'upsert', () =>
+    sb.from('cockpit_targets').upsert(targetPayload, { onConflict: 'depot_id,jour' }));
+  if (targetIns) {
+    track('cockpit_targets', 'insert', 1);
+    log('ok', `cockpit_targets ${isoDate(jminus1)} = 35000€ (depot ${refs.depotParticulier.nom})`);
+  }
+
+  // ── Trigger refresh MV via cron Vercel ──────────────────────────
+  // (le cron tape la SECURITY DEFINER function refresh_mv_ventes_quotidiennes)
+  const STOCK_URL = 'https://salam-stock.vercel.app';
+  const cronSecret = env.CRON_SECRET;
+  if (!DRY && cronSecret) {
+    try {
+      const res = await fetch(`${STOCK_URL}/api/cron/refresh-cockpit`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cronSecret}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        log('ok', `refresh-cockpit OK: ${JSON.stringify(body).slice(0, 200)}`);
+      } else {
+        log('warn', `refresh-cockpit failed: ${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+      }
+    } catch (e) {
+      log('warn', `refresh-cockpit error: ${e.message}`);
+    }
+  } else if (!cronSecret) {
+    log('warn', 'CRON_SECRET absent — refresh MV à déclencher manuellement (curl /api/cron/refresh-cockpit)');
+  }
+}
+
+// ── 7. HOTFIX-VAGUE7 : seed push_subscription test pour Otmane ───────
+//
+// Si push_subscriptions est vide pour Otmane (employe), on injecte un
+// endpoint factice pour que le test "création commande Drive → push reçu"
+// trouve au moins un destinataire. Endpoint Mozilla test (404 silencieux,
+// la cleanup expire-on-410 fera le ménage en prod).
+async function seedPushSubscriptionTest(refs) {
+  log('info', 'HOTFIX-VAGUE7: seed push_subscription test pour Otmane…');
+  const otmane = refs.employes.find((e) =>
+    (e.prenom || '').toLowerCase().includes('otmane') ||
+    (e.nom || '').toLowerCase().includes('otmane'));
+  if (!otmane) {
+    log('warn', 'Otmane employe introuvable — skip push sub seed');
+    report.skipped.push('push_subscriptions (no Otmane)');
+    return;
+  }
+  if (DRY) { log('info', `would seed push_sub for ${otmane.id}`); return; }
+
+  // Skip si Otmane a déjà au moins une subscription
+  const { data: existing } = await sb
+    .from('push_subscriptions')
+    .select('id')
+    .eq('employe_id', otmane.id)
+    .limit(1);
+  if (existing && existing.length > 0) {
+    log('info', `Otmane (${otmane.id}) a déjà ${existing.length} push sub(s) — skip`);
+    return;
+  }
+
+  const fakeEndpoint = `https://updates.push.services.mozilla.com/wpush/v2/SEED-DEMO-${otmane.id}`;
+  const ins = await safeOp('push_subscriptions', 'insert', () =>
+    sb.from('push_subscriptions').insert({
+      employe_id: otmane.id,
+      endpoint: fakeEndpoint,
+      keys_p256dh: 'BO_SEED_p256dh_test_demo_otmane_vague7_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      keys_auth: 'auth_seed_demo_otmane_v7',
+      user_agent: '[SEED-DEMO] iPhone 15 Safari',
+      enabled: true,
+    }));
+  if (ins) {
+    track('push_subscriptions', 'insert', 1);
+    log('ok', `push_sub démo seedée pour Otmane (${otmane.id})`);
+  }
+}
+
+// ── 8. Verify : compter ce qu'on a en base ──────────────────────────
 async function verify() {
   log('info', '─── VERIFY ───');
   const today = new Date().toISOString().slice(0, 10);
+  const jminus1 = new Date(); jminus1.setDate(jminus1.getDate() - 1);
+  const jminus8 = new Date(); jminus8.setDate(jminus8.getDate() - 8);
+  const isoDate = (d) => d.toISOString().slice(0, 10);
   const checks = [
     { name: 'PO Bigard draft today', q: () => sb.from('purchase_orders').select('id, numero_po, total_ht', { count: 'exact' }).eq('statut', 'brouillon').eq('date_creation', today) },
     { name: 'commandes_drive today', q: () => sb.from('commandes_drive').select('id, bay_label, statut', { count: 'exact' }).gte('created_at', today + 'T00:00:00') },
@@ -564,6 +741,11 @@ async function verify() {
     { name: 'sorties 72h', q: () => sb.from('sorties_stock').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 72*3600_000).toISOString()) },
     { name: 'réceptions 72h', q: () => sb.from('receptions').select('id', { count: 'exact' }).gte('created_at', new Date(Date.now() - 72*3600_000).toISOString()) },
     { name: 'lot traçabilité L2026-05-A23', q: () => sb.from('produits_lots').select('id, certifier_name, abattoir_nom', { count: 'exact' }).eq('id', 'L2026-05-A23') },
+    { name: 'ventes_cashmag J-1', q: () => sb.from('ventes_cashmag_import').select('id, prix_ttc', { count: 'exact' }).eq('date_vente', isoDate(jminus1)) },
+    { name: 'ventes_cashmag J-8', q: () => sb.from('ventes_cashmag_import').select('id, prix_ttc', { count: 'exact' }).eq('date_vente', isoDate(jminus8)) },
+    { name: 'mv_ventes_quotidiennes J-1', q: () => sb.from('mv_ventes_quotidiennes').select('jour, ca_ttc, nb_tickets').eq('jour', isoDate(jminus1)) },
+    { name: 'cockpit_targets J-1', q: () => sb.from('cockpit_targets').select('jour, target_ca').eq('jour', isoDate(jminus1)) },
+    { name: 'push_subscriptions actives', q: () => sb.from('push_subscriptions').select('id', { count: 'exact' }).eq('enabled', true) },
   ];
   for (const c of checks) {
     const r = await c.q();
@@ -581,6 +763,8 @@ async function verify() {
     await seedForecast(refs);
     await seedActivite(refs);
     await seedLotTracabilite(refs);
+    await seedCockpitVentes(refs);
+    await seedPushSubscriptionTest(refs);
     await verify();
 
     console.log('\n═══════════════════════════════════════');

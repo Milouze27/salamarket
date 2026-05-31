@@ -63,6 +63,12 @@ const ProductDetail = () => {
   const [justAdded, setJustAdded] = useState(false);
   const [heroFailed, setHeroFailed] = useState(false);
   const addedTimerRef = useRef<number | null>(null);
+  // Throttle leading-edge 200ms anti double-tap iOS (BUG-011 pattern
+  // — voir ProductCard.tsx:39). Sur PDP le risque est plus élevé : le
+  // bouton CTA est plus gros, plus visible, plus tapé → un double-tap
+  // accidentel empilait 2× la qty ou 2× la ligne weight (cas vécu :
+  // user voit "2 kg" alors qu'il a tapé une seule fois).
+  const lastAddAtRef = useRef<number>(0);
 
   // Re-init quand l'id change OU quand on charge le produit.
   // BUG-012 — défaut 1.0 kg (et plus product.estimatedWeightKg).
@@ -111,6 +117,15 @@ const ProductDetail = () => {
 
   const handleAdd = () => {
     if (!product) return;
+    // Bloque clic pendant l'animation "Ajouté !" (2s) — couvre les
+    // utilisateurs qui re-tapent par habitude pendant le feedback.
+    if (justAdded) return;
+    // Throttle leading-only 200ms — couvre double-tap iOS (touchend
+    // + click synthétique <50ms). Pas de trailing call : l'utilisateur
+    // peut retaper après la fenêtre, on bloque juste le burst.
+    const now = Date.now();
+    if (now - lastAddAtRef.current < 200) return;
+    lastAddAtRef.current = now;
     if (unitType === "weight") {
       // Une ligne par add (lineId aléatoire) ; le kg est mémorisé sur la ligne.
       addItem(product, { quantiteKg: kg });
@@ -319,9 +334,10 @@ const ProductDetail = () => {
 
         <button
           onClick={handleAdd}
-          disabled={!product.inStock}
+          disabled={!product.inStock || justAdded}
           className={cn(
-            "group flex-1 min-w-0 h-14 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white font-bold text-[15px] shadow-lg shadow-[#0E3B2E]/30 hover:shadow-xl hover:shadow-[#0E3B2E]/40 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
+            "group flex-1 min-w-0 h-14 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white font-bold text-[15px] shadow-lg shadow-[#0E3B2E]/30 hover:shadow-xl hover:shadow-[#0E3B2E]/40 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 px-3 disabled:cursor-not-allowed",
+            !product.inStock && "opacity-50 disabled:shadow-none",
             justAdded && "animate-success-pop",
           )}
         >

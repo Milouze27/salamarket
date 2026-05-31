@@ -3,7 +3,20 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 
-const PUBLIC_PATHS_SKIP_ONBOARDING = ["/lot/"];
+// Pages où l'onboarding doit être skip — soit pages publiques où il
+// gêne (trace lot), soit pages auth où il bloque l'accès aux flows de
+// connexion / création de compte / reset password. Si on ne skip pas
+// ces pages, un nouvel utilisateur tombant sur /connexion via deep
+// link voit l'overlay d'onboarding au lieu du formulaire — broken UX.
+const PUBLIC_PATHS_SKIP_ONBOARDING = [
+  "/lot/",
+  "/connexion",
+  "/inscription",
+  "/pro/login",
+  "/pro/inscription",
+  "/mot-de-passe-oublie",
+  "/reset-password",
+];
 
 // Lecture synchrone du flag "déjà onboardé". Si on lit localStorage dans
 // un useEffect, le 1er render renvoie null et la homepage s'affiche

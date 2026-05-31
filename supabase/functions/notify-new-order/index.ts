@@ -2,7 +2,9 @@
 // ─────────────────────────────────
 // Déclenchée par un Database Webhook Supabase configuré sur INSERT
 // public.orders. Envoie une notification Web Push à toutes les
-// subscriptions des utilisateurs ayant le rôle "admin" ou "employee".
+// subscriptions des employés actifs (admin, manager, caisse, reception,
+// preparation) — cf. JOIN push_subscriptions ↔ employes ci-dessous
+// (HOTFIX-VAGUE7).
 //
 // Env vars requises (Lovable Cloud → Edge Functions → Secrets) :
 //   - VAPID_PUBLIC_KEY
@@ -107,34 +109,50 @@ serve(async (req) => {
 
   const order = payload.record;
 
-  // Récupère toutes les subscriptions des admins + employees.
-  const { data: targetProfiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("id")
-    .in("role", ["admin", "employee"]);
-
-  if (profilesError) {
-    console.error("[notify-new-order] profiles query error:", profilesError);
-    return json({ error: profilesError.message }, 500);
-  }
-
-  const targetUserIds = (targetProfiles ?? []).map((p: { id: string }) => p.id);
-  console.log(`[notify-new-order] found ${targetUserIds.length} admin/employee profiles`);
-  if (targetUserIds.length === 0) {
-    return json({ sent: 0, reason: "no admin/employee profiles" });
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // HOTFIX-VAGUE7 — JOIN push_subscriptions → employes (PIN-based staff)
+  //
+  // Avant : on filtrait `profiles` puis on JOIN push_subscriptions.user_id.
+  // Problème : Stock V2 logge les staff par PIN (pas d'auth.users), donc
+  // les push subs sont créées avec `employe_id` non null et `user_id` NULL.
+  // → l'`in('user_id', targetUserIds)` ne matchait personne, les notifs
+  // ne partaient jamais.
+  //
+  // Solution : on cible directement `push_subscriptions` joint à `employes`
+  // (la source de vérité staff) en filtrant sur :
+  //   - employe.is_active = true
+  //   - employe.role ∈ whitelist (admin + manager + opérationnels)
+  //
+  // NB : "employee" est le rôle profils B2C (pas applicable ici). En
+  // employes.role on a ('reception','caisse','preparation','manager',
+  // 'admin'). On whitelist tout sauf rien, parce que toute personne
+  // active doit pouvoir être notifiée d'une nouvelle commande Drive.
+  // ─────────────────────────────────────────────────────────────────
+  const STAFF_ROLES_NOTIFIABLES = [
+    "admin",
+    "manager",
+    "caisse",
+    "reception",
+    "preparation",
+  ];
 
   const { data: subs, error: subsError } = await supabase
     .from("push_subscriptions")
-    .select("id, user_id, endpoint, keys_p256dh, keys_auth")
-    .in("user_id", targetUserIds);
+    .select(
+      "id, endpoint, keys_p256dh, keys_auth, employe_id, employes!inner(id, role, is_active)",
+    )
+    .eq("enabled", true)
+    .eq("employes.is_active", true)
+    .in("employes.role", STAFF_ROLES_NOTIFIABLES);
 
   if (subsError) {
     console.error("[notify-new-order] subs query error:", subsError);
     return json({ error: subsError.message }, 500);
   }
 
-  console.log(`[notify-new-order] found ${subs?.length ?? 0} push subscriptions`);
+  console.log(
+    `[notify-new-order] found ${subs?.length ?? 0} push subscriptions (staff actifs)`,
+  );
 
   if (!subs || subs.length === 0) {
     return json({ sent: 0, reason: "no subscriptions" });

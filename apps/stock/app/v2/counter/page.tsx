@@ -15,9 +15,9 @@
  * - Marche portrait iPad (768×1024) ET landscape TV (1920×1080).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock3 } from "lucide-react";
+import { ArrowDown, Clock3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface CounterRow {
@@ -212,32 +212,117 @@ export default function CounterPage() {
         </div>
       </header>
 
-      {/* Grid */}
-      <section className="px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] overflow-hidden">
-        {!loaded ? null : sorted.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div
-            className="grid gap-5 lg:gap-7 h-full content-start"
-            style={{
-              gridTemplateColumns:
-                "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
-            }}
-          >
-            <AnimatePresence initial={false}>
-              {sorted.map((row) => (
-                <BayCard key={row.id} row={row} />
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </section>
+      {/* Grid — overflow-y-auto pour absorber les pics (>12 commandes
+          prêtes simultanément). overflow-hidden masquait les bay au-delà
+          de la zone visible, ce qui était silencieusement dangereux :
+          un client en bay B5 ne voyait jamais son numéro affiché. Avec
+          le scroll + un badge "+N en attente", on garantit que
+          personne n'est invisible. */}
+      <CounterGrid sorted={sorted} loaded={loaded} />
 
       {/* Footer hint */}
-      <footer className="absolute bottom-4 inset-x-0 text-center text-white/30 text-[11px] tracking-[0.18em] uppercase font-semibold">
+      <footer className="absolute bottom-4 inset-x-0 text-center text-white/30 text-[11px] tracking-[0.18em] uppercase font-semibold pointer-events-none">
         Mise à jour automatique · Plein écran ⌃⌘F
       </footer>
     </main>
+  );
+}
+
+/**
+ * CounterGrid — grid scrollable avec badge overflow.
+ *
+ * Le badge "+N en attente" apparaît en bas-droite si la liste dépasse
+ * la zone visible. Mesuré via ResizeObserver + scroll listener pour
+ * être réactif au resize TV/iPad (rotation, fullscreen toggle).
+ */
+function CounterGrid({
+  sorted,
+  loaded,
+}: {
+  sorted: CounterRow[];
+  loaded: boolean;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [overflowCount, setOverflowCount] = useState(0);
+
+  // Compte les cards qui dépassent la zone visible. Utilise offsetTop
+  // sur chaque enfant — coûteux mais on a ≤30 cards typiquement et
+  // on ne recalcule qu'au scroll/resize/changement de liste.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const visibleBottom = el.scrollTop + el.clientHeight;
+      let hidden = 0;
+      const children = el.querySelectorAll<HTMLElement>("[data-bay-card]");
+      children.forEach((child) => {
+        const childBottom = child.offsetTop + child.offsetHeight;
+        // Tolérance 8px pour pas compter les cards "à la limite".
+        if (childBottom > visibleBottom + 8) hidden += 1;
+      });
+      setOverflowCount(hidden);
+    };
+
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [sorted.length, loaded]);
+
+  return (
+    <section className="px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] relative">
+      {!loaded ? null : sorted.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          <div
+            ref={containerRef}
+            className="h-full overflow-y-auto pr-1 -mr-1"
+            style={{ scrollbarColor: "rgba(255,255,255,0.2) transparent" }}
+          >
+            <div
+              className="grid gap-5 lg:gap-7 content-start pb-2"
+              style={{
+                gridTemplateColumns:
+                  "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
+              }}
+            >
+              <AnimatePresence initial={false}>
+                {sorted.map((row) => (
+                  <BayCard key={row.id} row={row} />
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Badge overflow — bottom-right au-dessus du footer hint.
+              Apparaît seulement s'il y a des cards masquées. */}
+          {overflowCount > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="absolute bottom-12 right-8 lg:right-14 z-10 pointer-events-none"
+            >
+              <div
+                className="inline-flex items-center gap-2 bg-[#C9A227] text-[#082A20] rounded-full px-4 py-2 font-extrabold shadow-lg shadow-[#C9A227]/40"
+                style={{ fontSize: "clamp(13px, 1.1vw, 18px)" }}
+              >
+                <ArrowDown className="w-4 h-4" aria-hidden />
+                +{overflowCount} en attente
+              </div>
+            </motion.div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -246,6 +331,7 @@ function BayCard({ row }: { row: CounterRow }) {
   return (
     <motion.div
       layout
+      data-bay-card
       initial={{ opacity: 0, x: 60, scale: 0.96 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: -40, scale: 0.94 }}

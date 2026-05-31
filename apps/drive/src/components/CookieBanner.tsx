@@ -107,14 +107,56 @@ export const CookieBanner = () => {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
       >
         <div className="pointer-events-auto mx-auto max-w-3xl rounded-2xl bg-[#082A20] text-[#FAF7EE] shadow-2xl ring-1 ring-[#C9A227]/30">
-          <div className="p-5 md:p-6 flex flex-col md:flex-row gap-4 md:items-center">
+          {/* ─── MOBILE COMPACT (≤25% viewport) ───────────────────────
+              Layout 1 ligne : icône + texte court + 2 boutons inline.
+              Padding p-3 pour minimiser la hauteur. Le bouton
+              "Préférences" reste accessible via lien underline pour
+              éviter de surcharger la barre tactile. */}
+          <div className="md:hidden p-3">
+            <div className="flex items-center gap-2.5">
+              <Cookie className="h-4 w-4 text-[#C9A227] shrink-0" aria-hidden />
+              <p id="cookie-banner-desc" className="text-[12px] leading-[1.35] text-[#FAF7EE]/90 flex-1 min-w-0">
+                Cookies pour mesurer l'audience.{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAnalytics(false);
+                    setMarketing(false);
+                    setShowPrefs(true);
+                  }}
+                  className="underline underline-offset-2 text-[#C9A227] hover:text-[#DDB31C] font-semibold"
+                >
+                  Détails
+                </button>
+              </p>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={refuseAll}
+                  className="h-9 px-3 rounded-lg text-[12px] font-semibold bg-transparent text-[#FAF7EE] ring-1 ring-[#FAF7EE]/30 hover:bg-[#FAF7EE]/10 active:scale-[0.96] transition"
+                >
+                  Refuser
+                </button>
+                <button
+                  type="button"
+                  onClick={acceptAll}
+                  className="h-9 px-3 rounded-lg text-[12px] font-bold bg-[#C9A227] text-[#082A20] hover:bg-[#DDB31C] active:scale-[0.96] transition"
+                >
+                  Accepter
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ─── DESKTOP (≥md) — layout original full ──────────────── */}
+          <div className="hidden md:flex p-6 flex-row gap-4 items-center">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <Cookie className="h-5 w-5 text-[#C9A227] shrink-0 mt-0.5" aria-hidden />
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#FAF7EE]">
                   Vos cookies, votre choix
                 </p>
-                <p id="cookie-banner-desc" className="text-[13px] leading-[1.55] text-[#FAF7EE]/75 mt-1">
+                <p className="text-[13px] leading-[1.55] text-[#FAF7EE]/75 mt-1">
                   Nous utilisons des cookies nécessaires au bon fonctionnement du site.
                   Avec votre accord, nous mesurons aussi l'audience pour améliorer le service.
                   Détails dans notre{" "}
@@ -128,7 +170,7 @@ export const CookieBanner = () => {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 md:flex-shrink-0">
+            <div className="flex flex-row gap-2 flex-shrink-0">
               <button
                 type="button"
                 onClick={refuseAll}

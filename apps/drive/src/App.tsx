@@ -37,6 +37,8 @@ const Checkout = lazy(() => import("./pages/Checkout.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const Account = lazy(() => import("./pages/Account.tsx"));
 const Orders = lazy(() => import("./pages/Orders.tsx"));
+const MotDePasseOublie = lazy(() => import("./pages/MotDePasseOublie.tsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings.tsx"));
 const EmployeeKanban = lazy(() => import("./pages/EmployeeKanban.tsx"));
@@ -136,6 +138,8 @@ const App = () => (
                 />
                 <Route path="/connexion" element={<Login />} />
                 <Route path="/inscription" element={<Signup />} />
+                <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route
                   path="/compte"
                   element={

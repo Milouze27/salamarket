@@ -28,9 +28,9 @@ interface ChatMsg {
 }
 
 const SUGGESTIONS = [
-  "Combien j'ai vendu de Coca cette semaine ?",
+  "Combien de merguez vendues cette semaine ?",
   "Quels produits sont en alerte stock ?",
-  "Top 5 produits du mois",
+  "Top 5 produits boucherie du mois",
   "Quelle est ma démarque actuelle ?",
   "Quels employés ont le score IA le plus bas ?",
 ];

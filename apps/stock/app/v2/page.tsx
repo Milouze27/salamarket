@@ -137,9 +137,6 @@ export default function V2HomePage() {
         />
       </motion.section>
 
-      {/* WEEKLY PICKS — rail horizontal "Cette semaine" */}
-      <WeeklyPicksRail />
-
       {/* SECONDARY ACTIONS — surfaces blanches, eyebrow numéroté */}
       <section className="px-5 mt-8">
         <EditorialEyebrow num="02" label="Autres opérations" />
@@ -255,6 +252,11 @@ export default function V2HomePage() {
           </div>
         </section>
       )}
+
+      {/* WEEKLY PICKS — rail horizontal "04 Cette semaine"
+          Placé en dernier pour respecter l'ordre numérique 01→02→03→04
+          (audit manuel a constaté 01→02→04→03 avant). */}
+      <WeeklyPicksRail />
 
       <p className="text-center text-[11px] text-text-tertiary mt-12">
         Salam Stock V2 · multi-dépôts Toulouse

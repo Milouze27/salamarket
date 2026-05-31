@@ -1,0 +1,954 @@
+{
+  "must_have_demo": [
+    {
+      "id": "db-edge-fn-refresh-cockpit-broken-column",
+      "title": "Fix edge fn refresh-cockpit-cache : colonne depot_id inexistante sur mv_ventes_quotidiennes",
+      "domain": "Supabase / DB",
+      "severity": "P0",
+      "effort_hours": 0.5,
+      "fix_strategy": "Retirer depot_id du SELECT dans supabase/functions/refresh-cockpit-cache/index.ts task 3. Sans fix le cockpit matin Otmane affiche CA stale.",
+      "consensus_reason": "3/3 juges MUST_DO P0. Demo blocker absolu cockpit Otmane.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/refresh-cockpit-cache/index.ts"
+      ]
+    },
+    {
+      "id": "db-edge-fn-notify-new-order-p256dh-auth",
+      "title": "Fix notify-new-order : colonnes p256dh/auth renommées keys_p256dh/keys_auth",
+      "domain": "Supabase / DB",
+      "severity": "P0",
+      "effort_hours": 0.25,
+      "fix_strategy": "Remplacer p256dh, auth par keys_p256dh, keys_auth lignes 129, 151-155. Tester avec commande live avant demo.",
+      "consensus_reason": "3/3 juges MUST_DO P0. Push 'nouvelle commande' = feature demo cle Drive→Stock.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/notify-new-order/index.ts"
+      ]
+    },
+    {
+      "id": "db-forecast-fn-code-barre-vs-ean",
+      "title": "Fix forecast-stockouts : produits.code_barre n'existe pas, c'est ean",
+      "domain": "Supabase / DB",
+      "severity": "P0",
+      "effort_hours": 0.25,
+      "fix_strategy": "Remplacer code_barre par ean lignes 209, 220, 287 de forecast-stockouts/index.ts. Hit GET pour seed initial. Sans fix forecast Ramadan = 'O produits critiques'.",
+      "consensus_reason": "3/3 juges MUST_DO P0. Forecast = pitch n°1 demo.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/forecast-stockouts/index.ts"
+      ]
+    },
+    {
+      "id": "db-edge-fn-casse-digest-prix-vente-ttc",
+      "title": "Fix casse-weekly-digest : prix_vente_ttc inexistant, utiliser prix_drive_cents/100",
+      "domain": "Supabase / DB",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Remplacer prix_vente_ttc par coalesce(prix_drive_cents/100.0, 0) dans edge fn + migration v_casse_baseline_28j. Sans fix le digest casse plante en SELECT.",
+      "consensus_reason": "2/3 juges MUST_DO P0 (technical risk + maintenance). Bug runtime certain.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/casse-weekly-digest/index.ts",
+        "/Users/mac/salamarket/supabase/migrations/20260530000008_casse_baseline.sql"
+      ]
+    },
+    {
+      "id": "db-sync-trigger-completed-status-violation",
+      "title": "Fix sync_stock_statut_to_drive trigger : mapping completed→picked_up et canceled→cancelled",
+      "domain": "Supabase / DB",
+      "severity": "P0",
+      "effort_hours": 0.5,
+      "fix_strategy": "Migration 0041_fix_sync_stock_drive_status_mapping.sql : CREATE OR REPLACE FUNCTION qui remplace 'completed'→'picked_up' et 'canceled'→'cancelled'. Tester UPDATE manuel.",
+      "consensus_reason": "3/3 juges MUST_DO P0. Sequence 'pret→retire' va planter en CHECK violation, demo arretee net.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/migrations/_archive/0009_sync_drive_orders.sql"
+      ]
+    },
+    {
+      "id": "db-rls-permissive-anon-all-everywhere",
+      "title": "Lockdown RLS : remplacer anon_all par policies granulaires sur 25+ tables (lots halal, PIN staff, BDL, factures)",
+      "domain": "Security / DB",
+      "severity": "P0",
+      "effort_hours": 4,
+      "fix_strategy": "Migration 0040_lockdown_rls.sql : (a) read-only anon pour catalogue public, (b) authenticated + role check via current_user_role() pour staff, (c) service_role exclusif pour PII. Verifier que SELECT POS continue de marcher.",
+      "consensus_reason": "3/3 juges MUST_DO P0. RGPD nuclear + Otmane verifie cote technique = drapeau rouge SaaS pitch.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/migrations/_archive/0007_write_policies.sql",
+        "/Users/mac/salamarket/supabase/migrations/20260530000007_staff_pointage.sql"
+      ]
+    },
+    {
+      "id": "db-employes-pin-code-plaintext",
+      "title": "Hash PIN staff (bcrypt) + fonction verify_pin SECURITY DEFINER",
+      "domain": "Security / DB",
+      "severity": "P0",
+      "effort_hours": 4,
+      "fix_strategy": "Migration 0045_hash_pin_codes.sql : ALTER ADD COLUMN pin_hash, backfill crypt(pin_code, gen_salt('bf', 10)), drop pin_code, creer verify_pin() SECURITY DEFINER, RLS strict SELECT employes (sans pin_hash) limite managers.",
+      "consensus_reason": "2/3 juges MUST_DO P0 (technical risk + maintenance). PIN clair + RLS permissive = compromission immediate POS.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/migrations/_archive/0001_init.sql",
+        "/Users/mac/salamarket/apps/stock/lib/db/index.ts"
+      ]
+    },
+    {
+      "id": "sec-xss-assistant-ia-dangerouslysethtml",
+      "title": "Fix XSS Assistant IA : escape HTML dans md() avant injection dangerouslySetInnerHTML",
+      "domain": "Security",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Soit DOMPurify.sanitize(md(text)), soit escape & < > AVANT d'appliquer **gras** et br. Page admin-only mais cible attaquant principale.",
+      "consensus_reason": "3/3 juges MUST_DO P0. 1h fix triviale, XSS admin = exfiltration session + ANTHROPIC_API_KEY.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/v2/admin/assistant-ia/page.tsx"
+      ]
+    },
+    {
+      "id": "sec-api-email-send-anonyme-spam-relay",
+      "title": "Auth header x-internal-token sur /api/email/send (open spam relay Resend)",
+      "domain": "Security",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Check x-internal-token compare a INTERNAL_API_SECRET en debut POST. Toutes routes internes (po/send, casse-weekly-digest, etc.) ajoutent ce header.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Spam relay = ban Resend = casse digest + PO send.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/email/send/route.ts"
+      ]
+    },
+    {
+      "id": "sec-api-assistant-no-auth-claude-quota-burn",
+      "title": "Auth + rate-limit sur /api/assistant (burn quota Claude + exfiltration data business)",
+      "domain": "Security",
+      "severity": "P0",
+      "effort_hours": 2,
+      "fix_strategy": "Check x-internal-secret header + rate-limit 30 req/h par IP (Vercel KV ou in-memory). Logger tous appels avec IP.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Burn quota Claude + leak chiffres business Otmane.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/assistant/route.ts"
+      ]
+    },
+    {
+      "id": "stock-mode-demo-local-banner-loud",
+      "title": "Verifier env Vercel Supabase + condition NODE_ENV banniere 'MODE DEMO LOCAL'",
+      "domain": "Design / UX",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Verifier NEXT_PUBLIC_SUPABASE_URL et anon key set sur Vercel salam-stock. Garder banniere pour dev seulement (NODE_ENV === 'development'). Test demo PWA standalone iPhone 24h avant.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Banniere orange devant Otmane = premiere impression cassee.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/components/v2/V2Shell.tsx",
+        "/Users/mac/salamarket/apps/stock/lib/db.ts"
+      ]
+    },
+    {
+      "id": "devx-stock-build-broken-7-routes",
+      "title": "Fix 7 routes Stock v2 cassees SSR prerender (sonner Toaster + module resolution)",
+      "domain": "DevX / CI",
+      "severity": "P0",
+      "effort_hours": 4,
+      "fix_strategy": "Diagnostiquer chaque route v2 : ajouter 'use client' dans composants qui importent sonner, ou bouger Toaster dans layout client wrapper. Verifier transpilePackages: ['@salamarket/shared'].",
+      "consensus_reason": "2/3 juges MUST_DO P0. Routes prod = 500/page blanche si Otmane navigue dessus.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/v2/",
+        "/Users/mac/salamarket/apps/stock/next.config.mjs"
+      ]
+    },
+    {
+      "id": "drive-notfound-placeholder-shadcn",
+      "title": "Refonte NotFound Drive : remplacer placeholder shadcn anglais par template brand sapin/or FR",
+      "domain": "Design / UX",
+      "severity": "P0",
+      "effort_hours": 1.5,
+      "fix_strategy": "Cloner structure NotFound Stock : header gradient sapin + eyebrow '404 · introuvable' + titre FR + deux cards actions (retour catalogue + nous contacter) sur fond creme. Reuse AppHeader showBack.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. URL mistapee pendant demo = 'Oops! Page not found' anglais shadcn = casse perception premium.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/pages/NotFound.tsx",
+        "/Users/mac/salamarket/apps/stock/app/not-found.tsx"
+      ]
+    },
+    {
+      "id": "cro-lot-trace-never-promoted",
+      "title": "Promouvoir /lot/:id depuis PDP boucherie + OrderConfirmation (moat halal QR live)",
+      "domain": "CRO / UX",
+      "severity": "P0",
+      "effort_hours": 2,
+      "fix_strategy": "(1) Section 'Tracabilite halal' PDP boucherie/charcuterie avec lien demo /lot/L2026-05-A23. (2) OrderConfirmation : 'Votre QR tracabilite halal sera imprime sur votre ticket'. (3) Footer icon 'Tracabilite halal' avec lien demo.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Tracabilite halal QR = feature pitch principale Otmane/Ahmed le 10 juin. Moat invisible sinon.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/pages/ProductDetail.tsx",
+        "/Users/mac/salamarket/apps/drive/src/pages/OrderConfirmation.tsx",
+        "/Users/mac/salamarket/apps/drive/src/pages/LotPublic.tsx"
+      ]
+    },
+    {
+      "id": "cron-no-matview-refresh-scheduled",
+      "title": "Activer crons MV refresh + forecast-stockouts + dlc-scan (Supabase Dashboard ou Vercel)",
+      "domain": "Ops / Cron",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Supabase Dashboard → Cron : refresh-cockpit-cache 02h Paris, forecast-stockouts toutes 6h, dlc-scan toutes 1h. Si Free plan, creer /api/cron/refresh-cockpit, /forecast, /dlc-scan Vercel avec Bearer CRON_SECRET.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Cockpit + forecast Ramadan + DLC = features demo cible. Sans cron = vapor.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/refresh-cockpit-cache/index.ts",
+        "/Users/mac/salamarket/supabase/functions/forecast-stockouts/index.ts",
+        "/Users/mac/salamarket/apps/stock/vercel.json"
+      ]
+    },
+    {
+      "id": "pwa-stock-no-sw-registration-onload",
+      "title": "Auto-register service worker Stock au boot (SWRegister client component dans layout)",
+      "domain": "PWA",
+      "severity": "P0",
+      "effort_hours": 1,
+      "fix_strategy": "Ajouter useEffect dans layout client (SWRegister client component) qui appelle navigator.serviceWorker.register('/sw.js') au mount, garde par 'serviceWorker' in navigator.",
+      "consensus_reason": "3/3 juges MUST_DO P0/P1. Sans SW auto, push iOS 16.4+ pas arme, Otmane doit cliquer toggle notif avant que push 'nouvelle commande' marche.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/layout.tsx",
+        "/Users/mac/salamarket/apps/stock/lib/hooks/usePushSubscription.ts"
+      ]
+    },
+    {
+      "id": "perf-drive-supabase-storage-no-transform",
+      "title": "Helper cdnImage() avec ?width=600&quality=80 sur images Supabase Storage (LCP iPhone x3)",
+      "domain": "Performance",
+      "severity": "P1",
+      "effort_hours": 2,
+      "fix_strategy": "Creer src/lib/imageUrl.ts cdnImage(url, {width, quality}). Brancher ProductCard (600), WeeklyPicks (800), Cart (80), ProductDetail (1200). Doublon SEO CWV.",
+      "consensus_reason": "3/3 juges MUST_DO P1. LCP catalogue Drive 4-6s iPhone 4G = premiere impression desastreuse.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/components/ProductCard.tsx",
+        "/Users/mac/salamarket/apps/drive/src/hooks/useProducts.ts"
+      ]
+    },
+    {
+      "id": "perf-drive-products-hero-too-large",
+      "title": "Audit + cleanup .jpg lourds /public/products/ (escalope, saumon, merguez 2.4MB)",
+      "domain": "Performance",
+      "severity": "P1",
+      "effort_hours": 1,
+      "fix_strategy": "Audit grep + SELECT image_url FROM products WHERE image_url LIKE '%.jpg'. Supprimer .jpg, garder .webp <250KB. Verifier hero/slide-X-essentiels.jpg.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Si URL DB pointe encore .jpg 2.4MB = demo iPhone bloquee sur hero.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/public/products/",
+        "/Users/mac/salamarket/apps/drive/public/hero/"
+      ]
+    },
+    {
+      "id": "perf-drive-react-query-no-stale-time",
+      "title": "QueryClient defaultOptions : staleTime 60s + gcTime 5min + refetchOnWindowFocus false",
+      "domain": "Performance",
+      "severity": "P1",
+      "effort_hours": 0.5,
+      "fix_strategy": "new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, gcTime: 300_000, refetchOnWindowFocus: false, retry: 1 } } }). Catalogue stable = 0 risque, gain UX enorme.",
+      "consensus_reason": "3/3 juges MUST_DO P1. 30min fix evite spinner 400ms a chaque retour home.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/App.tsx"
+      ]
+    },
+    {
+      "id": "arch-stock-no-error-boundaries",
+      "title": "Ajouter app/error.tsx + app/v2/error.tsx + app/v2/loading.tsx Stock (Next 14 natif)",
+      "domain": "Architecture",
+      "severity": "P1",
+      "effort_hours": 4,
+      "fix_strategy": "app/error.tsx global (UI degradee + bouton refresh + log), app/v2/error.tsx scoped, app/v2/loading.tsx skeleton. Bonus loading.tsx sur reception/[id], po/[id], lots/[id].",
+      "consensus_reason": "3/3 juges MUST_DO P1. Si crash composant Stock pendant demo = page blanche Otmane = perte confiance Ahmed.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/layout.tsx",
+        "/Users/mac/salamarket/apps/drive/src/components/ErrorBoundary.tsx"
+      ]
+    },
+    {
+      "id": "db-no-cron-scheduled-pg-cron",
+      "title": "Verifier pg_cron Supabase plan + setup crons (ou Vercel fallback)",
+      "domain": "Ops / Cron",
+      "severity": "P1",
+      "effort_hours": 0.5,
+      "fix_strategy": "Verifier plan Supabase (Pro requis pg_cron). Si OK migration 0049_enable_pg_cron.sql + cron.schedule. Si Free, switch sur Vercel cron /api/cron/* endpoints.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Sans cron Pro = mensonge pitch 'MV se rafraichit toute seule'.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/functions/auto-generate-pos/index.ts",
+        "/Users/mac/salamarket/supabase/config.toml"
+      ]
+    },
+    {
+      "id": "cron-casse-digest-not-registered",
+      "title": "Enregistrer cron casse-weekly-digest dans vercel.json (lundi 06h)",
+      "domain": "Ops / Cron",
+      "severity": "P1",
+      "effort_hours": 0.25,
+      "fix_strategy": "Ajouter dans apps/stock/vercel.json crons[] : { path: '/api/cron/casse-weekly-digest', schedule: '0 6 * * 1' }. Verifier CASSE_DIGEST_RECIPIENTS env.",
+      "consensus_reason": "3/3 juges MUST_DO P1. 15min - sans cron vercel.json le digest ne tourne JAMAIS = mensonge pitch.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/vercel.json",
+        "/Users/mac/salamarket/apps/stock/app/api/cron/casse-weekly-digest/route.ts"
+      ]
+    },
+    {
+      "id": "obs-no-sentry-error-tracking",
+      "title": "Installer Sentry sur Drive + Stock + edge fn (error tracking prod)",
+      "domain": "Observability",
+      "severity": "P1",
+      "effort_hours": 4,
+      "fix_strategy": "@sentry/nextjs apps/stock (auto-instrumentation API + middleware) + @sentry/react apps/drive. Wrap ErrorBoundary pour captureException. SENTRY_DSN Vercel + tracesSampleRate 0.1 prod / 1.0 preview.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Crash live demo invisible sinon, debug impossible.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/components/ErrorBoundary.tsx",
+        "/Users/mac/salamarket/apps/stock/app/api/stripe/webhook/route.ts"
+      ]
+    },
+    {
+      "id": "obs-no-uptime-monitoring",
+      "title": "Setup Better Uptime / UptimeRobot (5 endpoints toutes 3min, alerte SMS Otmane + dev)",
+      "domain": "Observability",
+      "severity": "P1",
+      "effort_hours": 1,
+      "fix_strategy": "Check 5 endpoints : salamarket-drive.vercel.app, salam-stock.vercel.app, /api/stripe/webhook OPTIONS, fn supabase/notify-new-order (HEAD), URL Supabase health. Alertes SMS.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Downtime Vercel/Supabase invisible sinon = catastrophe demo.",
+      "file_refs": [
+        "/Users/mac/salamarket/vercel.json"
+      ]
+    },
+    {
+      "id": "pay-no-applepay-googlepay",
+      "title": "Activer Apple Pay / Google Pay (automatic_payment_methods + Stripe domain association)",
+      "domain": "Payments",
+      "severity": "P1",
+      "effort_hours": 2,
+      "fix_strategy": "create-payment-intent : remplacer params par { automatic_payment_methods: { enabled: true } }. Stripe Dashboard wallet domain. Heberger /.well-known/apple-developer-merchantid-domain-association.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Demo PWA iPhone Otmane - Apple Pay = wow moment + double conv.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/stripe/create-payment-intent/route.ts",
+        "/Users/mac/salamarket/supabase/functions/create-checkout-session/index.ts"
+      ]
+    },
+    {
+      "id": "pay-3ds-not-tested",
+      "title": "Test E2E manuel Stripe 3DS cards avant demo (4000 0027 6000 3184 etc.)",
+      "domain": "Payments",
+      "severity": "P1",
+      "effort_hours": 2,
+      "fix_strategy": "Tester cards Stripe 3DS auth required, auth failed, 4242 success direct. Verifier return_url callback. Logger Sentry event 'stripe_3ds_redirect'.",
+      "consensus_reason": "3/3 juges MUST_DO P1. ~50% paiements FR necessitent 3DS, paiement demo = catastrophe si plante.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/components/DriveStripePayment.tsx"
+      ]
+    },
+    {
+      "id": "pay-test-mode-hardcoded-blocker",
+      "title": "STRIPE_FORCE_TEST_MODE soft check + assertEnv au boot (placeholder = throw)",
+      "domain": "Payments",
+      "severity": "P1",
+      "effort_hours": 1,
+      "fix_strategy": "Remplacer check strict par STRIPE_FORCE_TEST_MODE=1 env var. assertEnv() instrumentation.ts qui throw si NODE_ENV=production + cle PLACEHOLDER/TODO/CHANGEME.",
+      "consensus_reason": "3/3 juges MUST_DO P1/P2. Bloque vraie demo paiement Otmane + evite incidents silencieux.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/lib/stripe.ts",
+        "/Users/mac/salamarket/apps/stock/.env.local.example"
+      ]
+    },
+    {
+      "id": "pwa-no-status-bar-bg-match-on-stock",
+      "title": "Fix status bar iPhone Stock : black-translucent → default (texte blanc illisible sur creme)",
+      "domain": "PWA",
+      "severity": "P1",
+      "effort_hours": 0.5,
+      "fix_strategy": "Changer appleWebApp.statusBarStyle 'black-translucent' → 'default' dans app/layout.tsx. Test rapide iPhone reel obligatoire.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Heure/batterie blanc invisible sur creme = signal amateurisme.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/layout.tsx",
+        "/Users/mac/salamarket/apps/stock/app/globals.css"
+      ]
+    },
+    {
+      "id": "pwa-stock-maxscale-blocks-zoom",
+      "title": "Supprimer maximumScale=1 viewport Stock (a11y zoom Ahmed owner)",
+      "domain": "PWA / A11y",
+      "severity": "P1",
+      "effort_hours": 0.1,
+      "fix_strategy": "Supprimer maximumScale: 1 de export viewport app/layout.tsx (garder initialScale: 1). Test pinch.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Ahmed (owner age) peut vouloir zoomer cockpit, WCAG 2.1 SC 1.4.4.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/layout.tsx"
+      ]
+    },
+    {
+      "id": "legal-mentions-cgv-rgpd-pages",
+      "title": "Pages legales : Mentions / CGV / Politique confidentialite / Cookies + CookieBanner",
+      "domain": "Legal / SEO / CRO",
+      "severity": "P1",
+      "effort_hours": 4,
+      "fix_strategy": "4 routes MDX statiques (About, CGV, Mentions, Confidentialite) avec SIRET 802 773 812, K&A FOOD, hebergeur Vercel+Supabase, RGPD. Footer global avec liens. Checkbox CGV bloquante signup. CookieBanner avec localStorage.cookieConsent.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Cluster 3 findings (cro-no-mentions, seo-no-about, sec-rgpd-cookie). Obligation legale LCEN + drapeau rouge Otmane entrepreneur.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/src/App.tsx",
+        "/Users/mac/salamarket/apps/drive/src/pages/Signup.tsx"
+      ]
+    },
+    {
+      "id": "seo-stock-app-should-be-fully-noindex",
+      "title": "Noindex Stock app : robots.txt + metadata noindex (eviter fuite forecast Ramadan + concurrentiel)",
+      "domain": "SEO / Security",
+      "severity": "P1",
+      "effort_hours": 1,
+      "fix_strategy": "apps/stock/app/layout.tsx metadata: { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } }. /apps/stock/public/robots.txt : User-agent: * Disallow: /. Header X-Robots-Tag.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Leak info concurrent forecast Ramadan = risque reel pre-signature SaaS.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/layout.tsx",
+        "/Users/mac/salamarket/apps/stock/public"
+      ]
+    },
+    {
+      "id": "seo-og-image-static-r2-not-product-specific",
+      "title": "Remplacer OG image preview Lovable.dev par PNG brand Salamarket 1200x630",
+      "domain": "SEO / Branding",
+      "severity": "P1",
+      "effort_hours": 0.5,
+      "fix_strategy": "Remplacer URL Lovable random par /public/og/og-default.png (hero boucherie + logo + tagline). Mettre dans index.html og:image.",
+      "consensus_reason": "3/3 juges MUST_DO P1. 15min - share lien WhatsApp pendant demo = image Lovable = casse pro.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/drive/index.html"
+      ]
+    },
+    {
+      "id": "sec-cron-secret-optional-bypass",
+      "title": "Inverser pattern check CRON_SECRET (fail-secure : refuser si absent)",
+      "domain": "Security",
+      "severity": "P1",
+      "effort_hours": 1,
+      "fix_strategy": "Pattern : if (!secret) return 503. Ou utiliser header x-vercel-cron natif Vercel : if (req.headers.get('x-vercel-cron') !== '1' && !bearerOk) return 401. Verifier CRON_SECRET en CI.",
+      "consensus_reason": "3/3 juges MUST_DO P1. Routes cron sans CRON_SECRET = DoS trivial + spam Resend.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/cron/inventaire-tournant/route.ts",
+        "/Users/mac/salamarket/apps/stock/app/api/forecast/recompute/route.ts"
+      ]
+    },
+    {
+      "id": "sec-no-csp-no-hsts-headers",
+      "title": "Headers securite : CSP (Report-Only d'abord) + HSTS + X-Frame-Options",
+      "domain": "Security",
+      "severity": "P1",
+      "effort_hours": 2,
+      "fix_strategy": "next.config.mjs headers() + drive/vercel.json : HSTS max-age 63072000, X-Frame-Options DENY, CSP default-src 'self' + script-src js.stripe.com + connect-src supabase + anthropic. CSP-Report-Only d'abord pour tester.",
+      "consensus_reason": "2/3 juges MUST_DO P1 (demo + technical). Defense profondeur + signal pro pour Otmane audit.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/next.config.mjs",
+        "/Users/mac/salamarket/apps/drive/vercel.json"
+      ]
+    },
+    {
+      "id": "db-no-pitr-backup-documented",
+      "title": "Verifier plan Supabase backups + pg_dump snapshot avant demo",
+      "domain": "Ops",
+      "severity": "P2",
+      "effort_hours": 0.5,
+      "fix_strategy": "Verifier Supabase Dashboard Daily Backups ON (Pro = 7j retention). Documenter docs/operations/backup.md. Avant demo : pg_dump vers ~/Desktop/demo-backup/supabase-snapshot-2026-06-09.sql.",
+      "consensus_reason": "3/3 juges MUST_DO P2. Assurance contre incident prep demo, doublon avec cron-no-backup-strategy.",
+      "file_refs": [
+        "/Users/mac/salamarket/docs/demo/2026-06-10-script-otmane.md"
+      ]
+    },
+    {
+      "id": "db-sync-trigger-name-based-matching-fragile",
+      "title": "sync_drive_order_to_stock : match par produit_id UUID au lieu du nom (eviter Produit inconnu Kanban)",
+      "domain": "Supabase / DB",
+      "severity": "P1",
+      "effort_hours": 3,
+      "fix_strategy": "Migration 0048_sync_by_uuid_not_name.sql : exiger produit_id dans orders.items JSONB. Trigger WHERE id = (item->>'produit_id')::uuid. Alerte staff si fallback placeholder utilise.",
+      "consensus_reason": "2/3 juges MUST_DO P1. Typo nom produit Drive → Kanban 'Produit inconnu' demo.",
+      "file_refs": [
+        "/Users/mac/salamarket/supabase/migrations/_archive/0021_fix_drive_sync_a_preparer_and_lignes.sql"
+      ]
+    },
+    {
+      "id": "arch-stock-api-routes-no-zod",
+      "title": "Zod validation routes API Stock critiques demo (/api/bdl/*, /api/po/*, /api/assistant)",
+      "domain": "Architecture",
+      "severity": "P1",
+      "effort_hours": 6,
+      "fix_strategy": "Creer /lib/validate/schemas.ts avec un Zod schema par route (scanCartonSchema, finalizeBdlSchema, etc.) + wrapper validateBody(req, schema). Prioriser routes script demo.",
+      "consensus_reason": "2/3 juges MUST_DO P1. Crash 500 silencieux scan-carton si capteur defaillant pendant demo.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/bdl/scan-carton/route.ts",
+        "/Users/mac/salamarket/apps/stock/app/api/assistant/route.ts"
+      ]
+    },
+    {
+      "id": "pay-no-receipt-email",
+      "title": "Stripe receipt_email param sur PaymentIntent (recu auto client)",
+      "domain": "Payments",
+      "severity": "P2",
+      "effort_hours": 0.5,
+      "fix_strategy": "create-payment-intent : ajouter { receipt_email: client_email } (recup commandes_drive.client_email). Stripe Dashboard Branding (logo, couleurs sapin/or).",
+      "consensus_reason": "3/3 juges MUST_DO/NICE_TO_HAVE P2. 30min easy win, evite appels client 'pas de facture'.",
+      "file_refs": [
+        "/Users/mac/salamarket/apps/stock/app/api/stripe/create-payment-intent/route.ts"
+      ]
+    }
+  ],
+  "nice_to_have_demo": [
+    {
+      "id": "da-pro-admin-slate-amber-off-brand",
+      "title": "Migrer DA /pro et /admin/* vers palette Salam sapin/or (search/replace 8 fichiers)",
+      "domain": "Design / UX",
+      "effort_hours": 6,
+      "reason": "Otmane manager Stock pas dans /pro mais peut cliquer par curiosite. Si temps disponible vague 5."
+    },
+    {
+      "id": "status-pills-tailwind-rainbow",
+      "title": "Standardiser STATUS_CONFIG sur palette Salam (extraire packages/shared/status-config.ts)",
+      "domain": "Design / UX",
+      "effort_hours": 2.5,
+      "reason": "Visible si Otmane ouvre Orders/Kanban Drive. Easy win mutualisation cross-app."
+    },
+    {
+      "id": "halal-seal-not-in-product-detail-hero",
+      "title": "Halal seal pulsant overlay top-right sur ProductDetail boucherie/charcuterie",
+      "domain": "Design / UX",
+      "effort_hours": 2,
+      "reason": "Renforce moat halal au moment cle PDP boucherie. Composant deja existant a reuse."
+    },
+    {
+      "id": "cro-trust-no-halal-cert-on-cart-checkout",
+      "title": "Trust bar sticky halal/livraison sur Cart + Slots + Checkout",
+      "domain": "CRO",
+      "effort_hours": 1.5,
+      "reason": "Moat halal visible aux moments cles paiement. Composant unique reuse 3 pages."
+    },
+    {
+      "id": "reduced-motion-not-fully-honored",
+      "title": "Honorer prefers-reduced-motion sur view-transitions Drive + framer Stock",
+      "domain": "A11y",
+      "effort_hours": 3,
+      "reason": "A11y obligatoire FR + audit conformite SaaS B2B."
+    },
+    {
+      "id": "cro-min-order-revealed-too-late",
+      "title": "Barre progression min 15€ sur StickyCartCTA + microcopy EditorialIntro",
+      "domain": "CRO",
+      "effort_hours": 1,
+      "reason": "Si panier demo prepare >15€ pas perçu. 1h fix safe."
+    },
+    {
+      "id": "cro-no-social-proof-homepage",
+      "title": "Section temoignages '03 / Ils nous font confiance' + widget Google Reviews",
+      "domain": "CRO",
+      "effort_hours": 3,
+      "reason": "Levier confiance demo halal local. 3 temoignages + 4.8 etoiles mocke OK."
+    },
+    {
+      "id": "pwa-stock-no-install-prompt",
+      "title": "Porter InstallPrompt Drive vers Stock (push iOS requiert standalone)",
+      "domain": "PWA",
+      "effort_hours": 2,
+      "reason": "Composant deja existant Drive. On peut installer manuellement Otmane mais prompt = signe pro."
+    },
+    {
+      "id": "pwa-haptic-only-on-scan-and-flyingchip",
+      "title": "Helper packages/shared/haptics.ts + appliquer sur OrderConfirmation + add-to-cart + push",
+      "domain": "PWA",
+      "effort_hours": 1.5,
+      "reason": "Wow moment iPhone PWA pour demo. Helper additif safe."
+    },
+    {
+      "id": "loading-skeleton-fragmented-inline",
+      "title": "Extraire composant SkeletonShimmer cross-pages (Orders, Account, ProductDetail)",
+      "domain": "Design / UX",
+      "effort_hours": 2,
+      "reason": "Duplication 6+ fichiers = dette simplification immediate."
+    },
+    {
+      "id": "perf-drive-fonts-render-blocking",
+      "title": "Self-host Plus Jakarta Sans .woff2 (subset latin, weight 700 preload)",
+      "domain": "Performance / PWA",
+      "effort_hours": 1.5,
+      "reason": "FOUT visible cold start + offline-ready PWA. Risque FOUT pre-demo si mal fait."
+    },
+    {
+      "id": "sec-anon-key-fallback-hardcoded-source",
+      "title": "Supprimer fallback anon key hardcodee client.ts + throw au boot si env manquant",
+      "domain": "Security",
+      "effort_hours": 1,
+      "reason": "Easy fix avant demo + verifier Vercel preview env vars d'abord."
+    },
+    {
+      "id": "cron-no-backup-strategy",
+      "title": "Doc backup strategy Supabase + script pg_dump hebdo local",
+      "domain": "Ops",
+      "effort_hours": 2,
+      "reason": "Doublon avec db-no-pitr-backup mais doc separee. Faire ensemble dans vague backup."
+    },
+    {
+      "id": "pay-error-messages-fr",
+      "title": "Dict mapping erreurs Stripe FR (stripe-errors-fr.ts) 10 codes principaux",
+      "domain": "Payments / UX",
+      "effort_hours": 1.5,
+      "reason": "UX polish paiement. 'Card declined' anglais = cheap perception."
+    },
+    {
+      "id": "db-v-productions-kpi-broken-columns",
+      "title": "Fix vue v_productions_kpi (colonnes quantite_reelle_consommee, cout_unitaire_ht)",
+      "domain": "Supabase / DB",
+      "effort_hours": 1.5,
+      "reason": "Si Otmane clique /labo par curiosite = crash visible."
+    },
+    {
+      "id": "splash-stock-only-fr-cli-typography",
+      "title": "Refonte hierarchie SplashScreen Stock (suivre pattern OnboardingFlow Drive)",
+      "domain": "Design",
+      "effort_hours": 1.5,
+      "reason": "1er frame PWA standalone iPhone. 2s mais signe brand."
+    },
+    {
+      "id": "pwa-stock-manifest-start-url-mismatch",
+      "title": "Resserrer scope manifest Stock /v2 + start_url ?utm_source=pwa",
+      "domain": "PWA",
+      "effort_hours": 0.5,
+      "reason": "30min safe, propre pour demo iPhone Otmane."
+    },
+    {
+      "id": "db-rls-realtime-messages-policy-fragile",
+      "title": "COALESCE current_user_role() pour eviter NULL silencieux realtime staff",
+      "domain": "Supabase / DB",
+      "effort_hours": 0.25,
+      "reason": "15min fix defensif, robustesse staff notifications."
+    },
+    {
+      "id": "perf-drive-bundle-no-manual-chunks",
+      "title": "manualChunks Vite : react-vendor, tanstack, supabase, radix, icons",
+      "domain": "Performance",
+      "effort_hours": 1.5,
+      "reason": "Cache invalidation deploiement ameliore. Risque si cycles deps."
+    },
+    {
+      "id": "perf-drive-invoicepdf-defer-import",
+      "title": "Lazy load @react-pdf/renderer (1.4MB chunk) sur /pro/factures",
+      "domain": "Performance",
+      "effort_hours": 1,
+      "reason": "Easy lazy load. Pro pas dans script demo Otmane."
+    },
+    {
+      "id": "perf-stock-no-image-loading-attrs",
+      "title": "loading=lazy decoding=async sur tous <img> Stock",
+      "domain": "Performance",
+      "effort_hours": 1,
+      "reason": "Additif pur safe. Gain marginal mais hygiene."
+    },
+    {
+      "id": "devx-no-typecheck-scripts",
+      "title": "Ajouter scripts typecheck Drive/Stock (tsc --noEmit)",
+      "domain": "DevX",
+      "effort_hours": 1,
+      "reason": "DX immediat + futur CI gate rapide 5s."
+    },
+    {
+      "id": "cro-no-b2c-b2b-segmentation-onboarding",
+      "title": "Lien discret 'Restaurateur ?' onboarding + header + footer Pro",
+      "domain": "CRO",
+      "effort_hours": 2,
+      "reason": "Ahmed Nasri = persona B2B Pro restaurateur cible demo."
+    },
+    {
+      "id": "cro-checkout-no-progress-stepper",
+      "title": "Mini-stepper 3 dots Cart/Slots/Checkout dans AppHeader",
+      "domain": "CRO",
+      "effort_hours": 1.5,
+      "reason": "Signe app finie, additif AppHeader simple."
+    }
+  ],
+  "post_demo": [
+    {
+      "id": "arch-stock-zero-server-components",
+      "title": "Migration 31/31 pages Stock vers Server Components Next 14",
+      "domain": "Architecture",
+      "effort_hours": 24,
+      "reason": "Refacto architectural majeur, dette a payer post-demo pour scaling SaaS."
+    },
+    {
+      "id": "arch-stock-god-component-reception-bdl",
+      "title": "Refacto reception/[id]/page.tsx 1576 lignes 24 useState en 4 sous-composants",
+      "domain": "Architecture",
+      "effort_hours": 12,
+      "reason": "Page critique BDL demo - GELER avant demo, refacto post-demo obligatoire."
+    },
+    {
+      "id": "arch-stock-no-react-query",
+      "title": "Installer @tanstack/react-query Stock + migrer pages data-heavy",
+      "domain": "Architecture",
+      "effort_hours": 16,
+      "reason": "Refonte data layer, regression certaine pre-demo. Post-demo prioritaire."
+    },
+    {
+      "id": "arch-stock-no-form-lib",
+      "title": "Migrer modals BDL/reception/sortie vers react-hook-form + zod",
+      "domain": "Architecture",
+      "effort_hours": 8,
+      "reason": "Forms actuels fonctionnent en useState, refacto risque casse pre-demo."
+    },
+    {
+      "id": "db-produits-vs-products-architectural-debt",
+      "title": "Unification produits/products (table unique avec view rétrocompat)",
+      "domain": "Supabase / DB",
+      "effort_hours": 8,
+      "reason": "Migration FK risque casse, 16 produits demo deja synchros."
+    },
+    {
+      "id": "db-ventes-cashmag-no-depot-id",
+      "title": "Ajouter depot_id sur ventes_cashmag_import + backfill mapping CashMag",
+      "domain": "Supabase / DB",
+      "effort_hours": 3,
+      "reason": "Si Otmane demande breakdown CA par depot - mock acceptable demo."
+    },
+    {
+      "id": "i18n-arabic-rtl-zero-opportunity-cost-high",
+      "title": "i18n FR/AR + RTL Drive (react-i18next + Tailwind logical properties)",
+      "domain": "i18n / SEO",
+      "effort_hours": 24,
+      "reason": "24h chantier - cible halal toulousaine arabophones, post-demo phase 2."
+    },
+    {
+      "id": "seo-no-dynamic-meta-spa-shell-locked",
+      "title": "react-helmet-async + SSR/SSG prerender routes publiques (vite-react-ssg)",
+      "domain": "SEO",
+      "effort_hours": 6,
+      "reason": "Demo n'a pas besoin SEO, post-demo critique acquisition organique."
+    },
+    {
+      "id": "seo-sitemap-missing-zero-discoverability",
+      "title": "Script gen-sitemap.mjs post-build + robots.txt",
+      "domain": "SEO",
+      "effort_hours": 2,
+      "reason": "Gain SEO post-demo seulement."
+    },
+    {
+      "id": "seo-jsonld-product-localbusiness-organization-missing",
+      "title": "JSON-LD LocalBusiness + Product + BreadcrumbList",
+      "domain": "SEO",
+      "effort_hours": 3,
+      "reason": "Local SEO Toulouse = canal acquisition #1 post-demo."
+    },
+    {
+      "id": "seo-no-local-business-google-my-business-hint",
+      "title": "Setup Google My Business K&A FOOD + footer NAP coherent + sameAs",
+      "domain": "SEO",
+      "effort_hours": 3,
+      "reason": "Local SEO local commerce. ROI immediat acquisition post-demo."
+    },
+    {
+      "id": "cro-no-guest-checkout",
+      "title": "Guest checkout email+phone uniquement (compte cree en background)",
+      "domain": "CRO",
+      "effort_hours": 6,
+      "reason": "6h refonte ProtectedRoute, risque casser flow paiement demo."
+    },
+    {
+      "id": "cro-no-product-reviews-system",
+      "title": "Systeme reviews produits (table product_reviews + trigger invitation)",
+      "domain": "CRO",
+      "effort_hours": 12,
+      "reason": "Reviews = chantier post-demo, mockup verbal OK."
+    },
+    {
+      "id": "cro-cart-abandonment-no-email-recovery",
+      "title": "Edge function cron scan carts >50€ inactifs 2h → email Resend",
+      "domain": "Growth",
+      "effort_hours": 8,
+      "reason": "8h chantier, post-demo growth phase 2."
+    },
+    {
+      "id": "cro-orders-no-favorites-wishlist",
+      "title": "Table favorites + bouton coeur ProductCard + page /favoris",
+      "domain": "CRO",
+      "effort_hours": 8,
+      "reason": "Wishlist B2B Pro Ahmed restaurateur, mockup pour pitch verbal demo."
+    },
+    {
+      "id": "notif-no-transactional-emails-client",
+      "title": "4 templates HTML emails transactionnels (confirmation, prete, refund, retrait)",
+      "domain": "Notifications",
+      "effort_hours": 6,
+      "reason": "Email lifecycle post-demo. Base email infra reutilisable."
+    },
+    {
+      "id": "notif-whatsapp-stub-only",
+      "title": "WhatsApp Business API + Twilio sandbox demo / Meta Cloud API prod",
+      "domain": "Notifications",
+      "effort_hours": 6,
+      "reason": "K&A WhatsApp Business approval lent. Pitch verbal demo."
+    },
+    {
+      "id": "notif-no-lifecycle-emails-marketing",
+      "title": "Flows lifecycle (welcome, abandoned cart, win-back J+30, NPS J+2)",
+      "domain": "Growth",
+      "effort_hours": 10,
+      "reason": "Phase 2 growth post-MVP."
+    },
+    {
+      "id": "pay-no-refund-flow",
+      "title": "Endpoint /api/stripe/refund + UI admin manager",
+      "domain": "Payments",
+      "effort_hours": 4,
+      "reason": "Refund admin = roadmap operations post-demo."
+    },
+    {
+      "id": "pay-no-idempotency-key",
+      "title": "Idempotency-Key Stripe sur create/capture PI",
+      "domain": "Payments",
+      "effort_hours": 1,
+      "reason": "Couvert 90% par DB check, racy window minime."
+    },
+    {
+      "id": "pay-webhook-no-retry-handling",
+      "title": "Distinguer codes erreur webhook Stripe (400/500/200 selon type)",
+      "domain": "Payments",
+      "effort_hours": 2,
+      "reason": "Granular catch post-demo, evite events perdus."
+    },
+    {
+      "id": "sec-pin-auth-client-side-plaintext",
+      "title": "Route /api/auth/pin-login + cookie HttpOnly + restreindre policy SELECT employes",
+      "domain": "Security",
+      "effort_hours": 6,
+      "reason": "Couvert partiellement par hash PIN. Bloqueur prod SaaS, court terme verifier cote client suffit."
+    },
+    {
+      "id": "sec-no-rate-limit-anywhere",
+      "title": "Setup @upstash/ratelimit + @vercel/kv sur login PIN + /api/email + /api/assistant + /api/vision-*",
+      "domain": "Security",
+      "effort_hours": 4,
+      "reason": "Rate-limit infra essentielle SaaS post-demo. Risque attaque pendant demo faible."
+    },
+    {
+      "id": "sec-rgpd-no-data-export-no-deletion",
+      "title": "Routes /api/me/export + /api/me/delete (RGPD Art. 17/20)",
+      "domain": "Security / RGPD",
+      "effort_hours": 6,
+      "reason": "Traitement manuel acceptable court terme, post-demo conformite."
+    },
+    {
+      "id": "sec-no-2fa-admin-stock-pin-4digits",
+      "title": "Step-up auth PIN modal actions sensibles + WebAuthn TouchID iPhone",
+      "domain": "Security",
+      "effort_hours": 8,
+      "reason": "Refonte login 8h hors fenetre, roadmap post-demo SaaS."
+    },
+    {
+      "id": "sec-no-audit-log-staff-actions",
+      "title": "Table audit_log + triggers operations sensibles (DELETE PO, UPDATE stock, validation BDL)",
+      "domain": "Security / Compliance",
+      "effort_hours": 6,
+      "reason": "Compliance Art. 30 RGPD + tracabilite interne. Post-demo SaaS."
+    },
+    {
+      "id": "sec-supabase-session-localstorage-xss-risk",
+      "title": "Migration session Supabase localStorage → cookies HttpOnly (Drive Vite SPA)",
+      "domain": "Security",
+      "effort_hours": 12,
+      "reason": "Migration majeure SPA Vite, chantier post-demo prioriser XSS d'abord."
+    },
+    {
+      "id": "devx-no-ci-pipeline",
+      "title": "Setup .github/workflows/ci.yml (build-drive + build-stock + test-drive + branch protection)",
+      "domain": "DevX / CI",
+      "effort_hours": 3,
+      "reason": "Filet securite absolu post-demo. Gel des PR avant demo suffit."
+    },
+    {
+      "id": "devx-stock-zero-tests",
+      "title": "Installer Vitest Stock + 5 tests smoke fonctions pures (qr-lot, hijri, forecast)",
+      "domain": "DevX / Tests",
+      "effort_hours": 6,
+      "reason": "Base test pyramid post-demo. Code chaud demo deja teste manuellement."
+    },
+    {
+      "id": "devx-no-e2e-playwright",
+      "title": "5 specs E2E Playwright (catalogue Drive, checkout Stripe, scan QR, cockpit, alerte DLC)",
+      "domain": "DevX / Tests",
+      "effort_hours": 8,
+      "reason": "Setup 8h, smoke test manuel script demo 9 juin suffit."
+    },
+    {
+      "id": "devx-drive-tsconfig-noop-strict",
+      "title": "Activer strict TS progressivement (commencer noImplicitAny, puis strictNullChecks par dossier)",
+      "domain": "DevX / TS",
+      "effort_hours": 5,
+      "reason": "Cascade erreurs pre-demo trop risque. Post-demo progressif."
+    },
+    {
+      "id": "devx-no-pre-commit-hooks",
+      "title": "Husky pre-commit (lint + test) + pre-push (build) + commitlint conventional",
+      "domain": "DevX",
+      "effort_hours": 1,
+      "reason": "Post-demo, risque ralentir hotfix demo."
+    },
+    {
+      "id": "devx-no-monorepo-tooling",
+      "title": "Installer turbo + turbo.json + Vercel Remote Cache",
+      "domain": "DevX",
+      "effort_hours": 3,
+      "reason": "CI/build x2-3 plus rapide post-demo."
+    },
+    {
+      "id": "arch-shared-package-underused",
+      "title": "Extraire vers packages/shared : types Supabase, formatEUR, CATEGORY_EMOJI, hijri, qr-lot",
+      "domain": "Architecture",
+      "effort_hours": 8,
+      "reason": "Prerequis SaaS multi-magasin. Refacto post-demo."
+    },
+    {
+      "id": "arch-stock-type-cast-escape-hatches",
+      "title": "Generer types Supabase + supprimer 12 'as unknown as'",
+      "domain": "Architecture",
+      "effort_hours": 6,
+      "reason": "Bombes runtime, refacto progressif post-demo."
+    },
+    {
+      "id": "perf-drive-sw-no-precache",
+      "title": "Migrer SW Drive vers vite-plugin-pwa workbox (precache + runtime cache)",
+      "domain": "Performance / PWA",
+      "effort_hours": 4,
+      "reason": "Risque casser SW push handler pre-demo, refonte post-demo."
+    },
+    {
+      "id": "perf-stock-no-next-dynamic",
+      "title": "Dynamic import RevenueChart + framer + AdminMenu/CommandPalette dans V2Shell",
+      "domain": "Performance",
+      "effort_hours": 3,
+      "reason": "Cockpit demo critique, risque hydration mismatch pre-demo."
+    },
+    {
+      "id": "perf-stock-framer-motion-overhead",
+      "title": "Audit 43 fichiers framer-motion + migrer decoratifs vers CSS keyframes",
+      "domain": "Performance",
+      "effort_hours": 5,
+      "reason": "Refacto risque casser animations cockpit demo."
+    },
+    {
+      "id": "obs-no-product-analytics",
+      "title": "Installer PostHog Drive + Stock (events product_viewed, add_to_cart, checkout, order)",
+      "domain": "Observability",
+      "effort_hours": 3,
+      "reason": "Pertinent post-MVP avec vrais utilisateurs."
+    },
+    {
+      "id": "obs-logs-no-structured-format",
+      "title": "Wrapper logger structure JSON + integration Sentry breadcrumbs",
+      "domain": "Observability",
+      "effort_hours": 3,
+      "reason": "Faire ensemble avec Sentry post-demo."
+    },
+    {
+      "id": "db-migration-folder-chaos",
+      "title": "Cleanup migrations : supprimer .OBSOLETE, renommer _archive en timestamps coherents",
+      "domain": "Supabase / DB",
+      "effort_hours": 2,
+      "reason": "Bombe latente db reset. Post-demo avant SaaS onboarding 2e instance."
+    },
+    {
+      "id": "db-seq-facture-bound-2026",
+      "title": "Refactor gen_facture_numero : sequence dynamique annee courante",
+      "domain": "Supabase / DB",
+      "effort_hours": 1.5,
+      "reason": "Bug 1er janvier 2027, 7 mois pour fixer."
+    }
+  ],
+  "total_must_hours": 62.85,
+  "recommended_execution_plan": "**Vague 4 — Execution plan (62.85h must_have, à faire en 6-8 jours avant le 10 juin 2026)**\n\n**Wave A — Quick DB/Edge fn fixes (parallel, ~3.5h)** — JOUR 1 MATIN\n- Agent 1 : 4 edge fn fixes (cockpit, notify, forecast, casse-digest) = 2h, isolés sur fichiers différents\n- Agent 2 : migration trigger sync_stock_statut + verifier pg_cron plan Supabase = 1h\n- Agent 3 : verifier env Vercel Stock + couper banniere demo local = 1h\n\n**Wave B — Security blockers (parallel, ~13h)** — JOUR 1 APREM + JOUR 2\n- Agent 1 : Migration RLS lockdown 25+ tables (4h) — staging test obligatoire\n- Agent 2 : Migration hash PIN bcrypt + verify_pin SECURITY DEFINER (4h)\n- Agent 3 : Fix XSS assistant + auth /api/email/send + auth /api/assistant + CRON_SECRET fail-secure (5h)\n\n**Wave C — Demo blockers UX (parallel, ~12h)** — JOUR 2-3\n- Agent 1 : Refonte NotFound Drive (1.5h) + status bar Stock (0.5h) + maximumScale (0.1h) + register SW Stock (1h) + OG image brand (0.5h) = 3.6h\n- Agent 2 : Promouvoir /lot/:id PDP + OrderConfirmation (2h) + halal seal PDP (NTH si temps) + trust bar Cart (NTH si temps) = 2h\n- Agent 3 : Fix 7 routes Stock v2 SSR (4h) + arch-stock-error-boundaries (4h) = 8h\n\n**Wave D — Performance (parallel, ~5h)** — JOUR 3-4\n- Agent 1 : cdnImage + cleanup .jpg lourds + React Query staleTime (3.5h)\n- Agent 2 : Pages legales MDX + CookieBanner + checkbox CGV (4h)\n- Agent 3 : Noindex Stock app + headers CSP/HSTS (3h)\n\n**Wave E — Crons & Ops (parallel, ~8h)** — JOUR 4-5\n- Agent 1 : Activer crons MV Supabase Dashboard + cron casse-digest vercel.json + sync trigger UUID (4.5h)\n- Agent 2 : Sentry Drive + Stock + edge fn (4h)\n- Agent 3 : Better Uptime setup + pg_dump backup snapshot (1.5h)\n\n**Wave F — Payments (sequential, ~6.5h)** — JOUR 5-6\n- Agent 1 : Apple Pay automatic_payment_methods + Stripe domain assoc (2h)\n- Agent 2 : STRIPE_FORCE_TEST_MODE + assertEnv boot (1h)\n- Agent 3 : Test E2E manuel 3DS cards (2h) + receipt_email param (0.5h)\n\n**Wave G — Architecture critique (sequential, ~6h)** — JOUR 6-7\n- Agent 1 : Zod validation routes /api/bdl/* + /api/po/* + /api/assistant (6h)\n\n**Wave H — Smoke test demo (sequential, ~3h)** — JOUR 8 (veille 9 juin)\n- Lancer script demo end-to-end PWA standalone iPhone Otmane + grand ecran TV\n- Tester scenarios : catalogue Drive, panier, Stripe sandbox, scan QR halal /lot/, cockpit Stock, forecast Ramadan, alerte DLC, push 'nouvelle commande'\n- Vérifier toutes les crons execution récente dans Supabase Dashboard\n- pg_dump snapshot final\n\n**Rationale ordering :** DB/edge fn d'abord (blockers absolus), sécurité après (peut casser flows), UX/perf en parallel (isolés), crons/ops dernier (dépend tout fonctionner), payments en dernier (sandbox test). Total ~52h work + 11h buffer/smoke = 8 jours / 4 agents parallel = ~16h/jour cumulé, faisable confortablement avec 2-3 agents Opus simultanés.\n\n**STOP RULES :** Si une vague A-C dépasse +50% du temps estimé, escalader pour decision NICE_TO_HAVE downgrade. NE PAS toucher reception/[id]/page.tsx (1576 lignes) avant demo — geler le fichier.",
+  "summary_per_domain": "## Synthèse par domaine\n\n**Design / UX / Motion** — Les surfaces client-facing Drive et Stock V2 atteignent un niveau premium éditorial cohérent (sapin/or, halal seal, view-transitions, skeletons). Trois fractures critiques pour la démo : NotFound Drive en placeholder shadcn anglais (P0 demo blocker si URL mistapée), sous-domaines /pro et /admin/* en DA slate/amber off-brand, status pills Tailwind rainbow cassent la palette Salam. Bannière 'MODE DEMO LOCAL' Stock = première impression cassée si env Vercel mal configuré (P0). Polish reste : reduced-motion, haptic, typography modulaire, splash Stock — tout post-démo sauf NotFound + bannière.\n\n**Performance** — Drive Vite bundle 696KB monolithique + InvoicePDF 1.4MB eager + images Supabase Storage sans transform (LCP 4-6s iPhone 4G), fonts Google render-blocking, React Query sans staleTime. Stock encore plus lourd : 4.8MB main dev, framer-motion dans 43 fichiers eager, recharts non lazy. P1 doit : cdnImage Supabase transform (LCP/3) + cleanup .jpg 2.4MB + React Query defaultOptions = ~3.5h pour diviser LCP iPhone par 2-3 avant démo. manualChunks Vite et next/dynamic Stock = post-démo (risque hydration mismatch).\n\n**React/Next Architecture** — Drive propre (Zustand selectors granulaires, lazy loading routes, React Query, ErrorBoundary). Stock a 2 dettes structurelles majeures : (1) 31/31 pages 'use client', zéro Server Components, 1 seule Server Action (perte 30-40% bundle client + duplication fetch), (2) god components — reception/[id]/page.tsx = 1576 lignes / 24 useState (page critique BDL demo). P1 obligatoire avant démo : error.tsx/loading.tsx Next 14 (page blanche sinon si crash), Zod validation routes /api/bdl/* (crash silencieux scan-carton). Refacto god components + RSC + React Query = chantiers 24-48h post-démo.\n\n**Supabase / DB** — Riche (40 migrations, 36 tables, 9 edge fn, RLS) mais 4 bugs schéma qui CASSENT la démo si déclenchés : refresh-cockpit-cache lit `depot_id` inexistant (cockpit stale), notify-new-order lit `p256dh/auth` au lieu de `keys_p256dh/keys_auth` (zéro push), forecast-stockouts lit `code_barre` au lieu de `ean` (forecast vide = pitch n°1 raté), trigger sync_stock_statut_to_drive utilise `completed/canceled` vs CHECK `picked_up/cancelled` (séquence pickup démo plante). RLS catastrophique : 25+ tables business avec policy `anon ALL using (true)` + PIN staff en plaintext = compromission via anon key bundled — drapeau rouge Otmane audit. Cron non activé : sans pg_cron Pro ou Vercel cron, cockpit/forecast/digest = vapor.\n\n**PWA & Mobile Native UX** — Drive PWA sérieux (manifest, splash maison, install prompt iOS, push iOS 16.4+, safe-area). Stock brut : SW non auto-registered au boot (push 'nouvelle commande' ne marche pas sans toggle manuel = P0 demo blocker), maximumScale=1 bloque pinch zoom (Ahmed owner âgé), status bar black-translucent illisible blanc sur creme cockpit Stock. Update prompt Drive manquant + cache version non bustée. Self-host fonts + workbox vite-plugin-pwa = post-démo. Install prompt Stock optionnel (peut installer manuellement Otmane).\n\n**CRO / Conversion / Trust** — Funnel Drive techniquement solide (Cart→Slots→Checkout gardes), mais 2 trous critiques démo : (1) page /lot/:id (moat halal QR live) JAMAIS promue depuis PDP/checkout — feature pitch principale Otmane invisible, (2) zéro mentions légales/CGV/RGPD = drapeau rouge entrepreneur Otmane + obligation légale LCEN. Trust signals halal présents au hero mais absents Cart/Slots/Checkout (moment trust critique). Min order 15€ révélé trop tard, pas de social proof homepage. Cluster avec Security/SEO sur pages légales = 4h obligatoires.\n\n**SEO + i18n FR/AR** — Drive SPA Vite ne sert que index.html statique aux crawlers (toutes routes mêmes meta, zéro long-tail produit/catégorie). Aucun sitemap, JSON-LD, canonical, slugs SEO. OG image figée preview Lovable.dev (drapeau rouge brand si share WhatsApp démo). Stock pas noindex = leak forecast Ramadan/concurrentiel — P1 obligatoire. i18n AR/RTL pour cible halal toulousaine arabophones = 24h post-démo phase 2. Migration react-helmet-async + SSR/SSG + JSON-LD + sitemap = chantier 6-12h post-démo.\n\n**Security** — 8 tables business avec RLS `anon ALL` (P0 catastrophique) + PIN staff plaintext (P0) + XSS Assistant IA dangerouslySetInnerHTML (P0 1h fix) + /api/email/send open spam relay Resend (P0 1h) + /api/assistant burn quota Claude + exfiltration data business (P0 2h) + CRON_SECRET optionnel = DoS trivial (P1 1h). Aucun rate-limit, aucun CSP/HSTS, aucune mention légale. Cluster RGPD/CGV avec CRO. Hash PIN + RLS lockdown + XSS fix + auth routes API = ~14h obligatoires (Otmane va auditer côté technique avant signature SaaS).\n\n**Testing / CI/CD / DevX** — Drive : 5 tests Vitest (drive-pesee, TVA, KPI) ~898 lignes. Stock : 0 test pour ~4500 fichiers TS. Zéro CI pipeline, zéro hooks, zéro Playwright, zéro Storybook, zéro Dependabot. tsconfig Drive strict effectivement OFF (strictNullChecks, noImplicitAny, noUnusedLocals tous false). 7 routes Stock v2 cassées SSR prerender (P0 démo blocker). Démo dépend de 'gel des PR' + smoke test manuel veille démo. Tout post-démo sauf : fix 7 routes Stock (4h obligatoire) + scripts typecheck Drive/Stock (1h easy win).\n\n**SRE/Ops + Payments + Notifications** — Zéro observability prod (Sentry + uptime monitoring obligatoires P1). Stripe Drive solide (signature webhook + idempotence + rollback) mais bloqué sk_test_ par garde-fou (P1 STRIPE_FORCE_TEST_MODE), pas d'Apple Pay/Google Pay (P1 — démo PWA iPhone), pas de receipt email, pas de refund flow, 3DS jamais testé (P1 cards Stripe). Notifications éclatées : Resend pour casse digest + PO, web-push staff, mais ZERO email transactionnel client. Cron casse-weekly-digest pas dans vercel.json = ne tourne jamais (P1 15min fix). WhatsApp stub seulement. Lifecycle marketing post-démo."
+}

@@ -32,8 +32,9 @@
 -- - CREATE OR REPLACE FUNCTION
 -- ════════════════════════════════════════════════════════════════
 
--- pgcrypto pour crypt() et gen_salt()
-create extension if not exists pgcrypto;
+-- pgcrypto pour crypt() et gen_salt() — installé dans le schema "extensions"
+-- sur Supabase managed. On qualifie chaque appel pour éviter search_path issues.
+create extension if not exists pgcrypto with schema extensions;
 
 -- ─── 1) Ajouter pin_hash ───────────────────────────────────────────
 alter table public.employes
@@ -49,7 +50,7 @@ begin
        and column_name  = 'pin_code'
   ) then
     update public.employes
-       set pin_hash = crypt(pin_code, gen_salt('bf', 10))
+       set pin_hash = extensions.crypt(pin_code, extensions.gen_salt('bf', 10))
      where pin_hash is null
        and pin_code is not null;
   end if;
@@ -98,12 +99,13 @@ begin
   end if;
 
   -- Trouve l'employé actif dont le hash matche
+  -- extensions.crypt qualifié car search_path = public ici
   select id
     into v_employe_id
     from public.employes
    where is_active = true
      and pin_hash is not null
-     and pin_hash = crypt(p_pin, pin_hash)
+     and pin_hash = extensions.crypt(p_pin, pin_hash)
    limit 1;
 
   return v_employe_id;

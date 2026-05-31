@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 :root {
+  /* L'app est volontairement light-only par défaut (mode "atelier nuit"
+     est un opt-in via ThemeToggle, jamais déclenché par l'OS). Sans
+     ce hint, iOS/Android tinte les scrollbars + form controls + autofill
+     en sombre quand le user a prefers-color-scheme:dark sur son téléphone,
+     ce qui pète notre palette cream/sapin. */
+  color-scheme: light;
   --bg-cream: #FAF7EE;
   --bg-card: #FFFFFF;
   --primary-green: #0E3B2E;
@@ -573,6 +579,52 @@ body.theme-nuit .input-field {
   color: #F4E9C4;
 }
 body.theme-nuit .input-field::placeholder { color: #6A6655; }
+
+/* ──────────────────────────────────────────────────────────────────────
+   Mode nuit — patch contraste cards/bottom-nav
+   Une grande partie des composants (cards cockpit, RamadanCard, AlertCard,
+   bottom nav pill, sheets, etc.) utilise Tailwind `bg-white` en dur (pas
+   var(--bg-card)), ce qui rend ces surfaces aveuglantes en mode nuit sur
+   le bg sapin abyssal. Override ciblé : on remappe `bg-white` vers
+   `--bg-card` (#0E2A20) en nuit, et on durcit le texte secondary pour
+   garder un contraste WCAG AA. Bordures rule passent en sapin lointain
+   pour ne pas se voir comme des silhouettes blanches.
+
+   Note : `!important` est nécessaire parce que Tailwind compile bg-white
+   en `background-color:#fff` à la fin du fichier généré. Le scope
+   `body.theme-nuit` reste suffisamment précis pour ne JAMAIS déclencher
+   en mode jour (qui reste le défaut absolu).
+   ────────────────────────────────────────────────────────────────────── */
+body.theme-nuit .bg-white,
+body.theme-nuit [class*="bg-white/"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary);
+}
+
+/* Texte intérieur des cards : tout ce qui était hardcodé en text-primary
+   sapin (#0E3B2E, #0F1A14) devient cream pour rester lisible. */
+body.theme-nuit .bg-white .text-text-primary,
+body.theme-nuit .bg-white [class*="text-[#0E3B2E"],
+body.theme-nuit .bg-white [class*="text-[#0F1A14"],
+body.theme-nuit .bg-white [class*="text-primary-dark"] {
+  color: var(--text-primary) !important;
+}
+
+/* Borders des cards : passer en sapin foncé pour disparaitre dans le bg. */
+body.theme-nuit [class*="border-rule"],
+body.theme-nuit [class*="border-[#E8E4D8"] {
+  border-color: var(--border-light) !important;
+}
+
+/* Bottom nav text : `text-text-secondary` devient cream-muddy sur la pill
+   dark (qui est maintenant bg-card). Force un cream lisible. */
+body.theme-nuit nav [class*="text-text-secondary"],
+body.theme-nuit nav [class*="text-text-tertiary"] {
+  color: #B8C2A8 !important;
+}
+body.theme-nuit nav [class*="text-primary-dark"] {
+  color: #F4E9C4 !important;
+}
 
 /* ──────────────────────────────────────────────────────────────────────
    MOVE 4 — Density compact

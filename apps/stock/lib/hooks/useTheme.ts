@@ -3,7 +3,11 @@
 /**
  * useTheme — atelier nuit / jour controller.
  *
- * Mode "auto" : bascule sur "nuit" entre 19h et 7h (heure locale Toulouse).
+ * Mode "auto" : reste en "jour" (le mode nuit auto entre 19h-7h a été
+ * désactivé car il rendait l'app illisible pour les démos qui tournent
+ * en soirée — cartes blanches restées hardcodées `bg-white` clashent
+ * avec le bg sapin sombre, contraste gold-on-white du bottom nav, etc.).
+ * Le mode nuit reste accessible en opt-in explicite via ThemeToggle.
  * Mode "jour" / "nuit" : override manuel persistant.
  *
  * L'effet visuel passe par la classe `theme-nuit` posée sur <body>.
@@ -18,13 +22,6 @@ export type ThemePref = "auto" | "jour" | "nuit";
 export type ResolvedTheme = "jour" | "nuit";
 
 const STORAGE_KEY = "salam-stock-theme";
-const NIGHT_START_HOUR = 19; // 19h00 → nuit
-const NIGHT_END_HOUR = 7; // 07h00 → jour
-
-function isNightNow(): boolean {
-  const h = new Date().getHours();
-  return h >= NIGHT_START_HOUR || h < NIGHT_END_HOUR;
-}
 
 function readStoredPref(): ThemePref {
   if (typeof window === "undefined") return "auto";
@@ -38,9 +35,11 @@ function readStoredPref(): ThemePref {
 }
 
 function resolve(pref: ThemePref): ResolvedTheme {
-  if (pref === "jour") return "jour";
+  // Auto = jour par défaut. Le mode nuit reste un opt-in conscient
+  // (la nuit boutique fonctionne avec les lumières allumées,
+  // l'app jour est mieux adaptée à l'écran iPad du comptoir).
   if (pref === "nuit") return "nuit";
-  return isNightNow() ? "nuit" : "jour";
+  return "jour";
 }
 
 function applyToBody(resolved: ResolvedTheme) {

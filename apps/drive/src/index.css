@@ -8,6 +8,13 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* L'app Drive est volontairement light-only (cream + sapin + or).
+       Sans ce hint, iOS/Android tinte les scrollbars + form controls +
+       autofill en sombre quand prefers-color-scheme:dark côté OS,
+       ce qui crée des champs noir/blanc sur fond cream. Le meta
+       color-scheme dans index.html fait la même chose côté HTML head ;
+       CSS-side ici pour défense en profondeur. */
+    color-scheme: light;
     /* Tokens shadcn remappés sur la palette BRAND Salamarket
        (sapin #0E3B2E, or #C9A227, crème #FAF7EE). Toute primitive
        shadcn (Button, Badge, Alert…) qui consomme hsl(var(--primary))

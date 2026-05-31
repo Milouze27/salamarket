@@ -1,14 +1,15 @@
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme();
-
+  // Drive est volontairement light-only (palette cream + sapin + or).
+  // Force theme="light" pour que les toasts ne s'inversent JAMAIS en
+  // dark quand le user a prefers-color-scheme:dark sur son téléphone
+  // (sinon toast noir/blanc débarque sur fond cream — clash visuel).
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className="toaster group"
       position="top-center"
       offset="calc(env(safe-area-inset-top) + 12px)"

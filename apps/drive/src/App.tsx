@@ -16,22 +16,25 @@ import { StickyCartCTA } from "@/components/StickyCartCTA";
 import { CookieBanner } from "@/components/CookieBanner";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
-// pénaliser le 1st paint sur l'écran d'accueil et le flow de commande.
+// pénaliser le 1st paint sur l'écran d'accueil et la connexion. Le
+// reste (PDP, panier, paiement, etc.) est lazy : un user qui arrive
+// sur la home doit pouvoir scroller le catalogue avant que le code des
+// pages secondaires ne soit téléchargé.
 import Index from "./pages/Index.tsx";
-import ProductDetail from "./pages/ProductDetail.tsx";
-import Cart from "./pages/Cart.tsx";
+import Login from "./pages/Login.tsx";
+import Signup from "./pages/Signup.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
-// Routes secondaires — lazy load. Évite ~400-500 KB sur le bundle initial.
-// Le user qui arrive sur la home n'a pas besoin du JS de l'admin / Stripe /
-// auth tant qu'il n'y va pas.
+// Routes secondaires — lazy load. Évite ~400-500 KB sur le bundle
+// initial. Stripe / Supabase admin / auth pages restent invisibles
+// tant que le user ne navigue pas dessus.
+const ProductDetail = lazy(() => import("./pages/ProductDetail.tsx"));
+const Cart = lazy(() => import("./pages/Cart.tsx"));
 const Slots = lazy(() => import("./pages/Slots.tsx"));
 const DriveAuPoids = lazy(() => import("./pages/DriveAuPoids.tsx"));
 const LotPublic = lazy(() => import("./pages/LotPublic.tsx"));
 const Checkout = lazy(() => import("./pages/Checkout.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
-const Login = lazy(() => import("./pages/Login.tsx"));
-const Signup = lazy(() => import("./pages/Signup.tsx"));
 const Account = lazy(() => import("./pages/Account.tsx"));
 const Orders = lazy(() => import("./pages/Orders.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));

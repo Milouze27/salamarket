@@ -96,8 +96,14 @@ const Index = () => {
   const cartCount = useCartCount();
   const bottomPad = cartCount > 0 ? "pb-[150px] md:pb-0" : "pb-20 md:pb-0";
 
+  // BUG-007 : `overflow-x-hidden` au root pour empêcher tout overflow
+  // horizontal sous 360px (constaté +4px sur iPhone SE 320px). Le footer
+  // poster "Indépendant." en clamp(48px, 12vw, 180px) est ~288px de large
+  // à 48px contre 272px utiles (320 − px-6×2) — c'est intentionnellement
+  // visuellement débordant mais on borne le viewport pour pas créer de
+  // scroll horizontal parasite (qui décale tout et casse les sticky).
   return (
-    <div className={`min-h-dvh bg-[#FAF7EE] ${bottomPad}`}>
+    <div className={`min-h-dvh bg-[#FAF7EE] overflow-x-hidden ${bottomPad}`}>
       <Header searchValue={searchInput} onSearchChange={setSearchInput} />
 
       {showVitrine && <EditorialIntro />}

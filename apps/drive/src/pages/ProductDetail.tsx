@@ -64,14 +64,16 @@ const ProductDetail = () => {
   const [heroFailed, setHeroFailed] = useState(false);
   const addedTimerRef = useRef<number | null>(null);
 
-  // Re-init quand l'id change OU quand on charge le produit (pour qu'on
-  // initialise kg à estimated_weight_kg s'il existe).
+  // Re-init quand l'id change OU quand on charge le produit.
+  // BUG-012 — défaut 1.0 kg (et plus product.estimatedWeightKg).
+  // Le 5 kg utilisé en initial était trop élevé pour un parcours panier
+  // standard : on standardise à 1 kg et le client ajuste via le stepper.
   useEffect(() => {
     setQty(1);
     setBracketIndex(0);
     setJustAdded(false);
     if (product) {
-      setKg(product.estimatedWeightKg ?? 1);
+      setKg(1);
     }
   }, [id, product]);
 
@@ -203,8 +205,12 @@ const ProductDetail = () => {
           step={STEP_KG}
           value={kg}
           onChange={(e) => {
-            const v = Number(e.target.value);
-            if (Number.isNaN(v)) return;
+            // BUG-012 — parseFloat avec replace virgule (locale fr) puis
+            // clamp [MIN_KG..MAX_KG] + arrondi au dixième. Évite les NaN
+            // et les valeurs hors-borne (ex. "999.99" → clamp 5).
+            const raw = e.target.value.replace(",", ".");
+            const v = parseFloat(raw);
+            if (!Number.isFinite(v)) return;
             setKg(Math.min(MAX_KG, Math.max(MIN_KG, Math.round(v * 10) / 10)));
           }}
           className="w-20 text-center text-base font-bold tabular-nums text-[#0E3B2E] bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40 rounded-md py-0.5"
@@ -264,10 +270,23 @@ const ProductDetail = () => {
     </div>
   );
 
-  // CTA bloc — partagé desktop & mobile (avec quelques tweaks d'espacement)
+  // CTA bloc — partagé desktop & mobile.
+  //
+  // BUG-007 (iPhone SE 320px) : sur viewport étroit avec unitType=unit,
+  // on a stepper(~140px) + CTA(flex-1) + gap dans un parent ~280px utile
+  // (320 − padding 5×2). Si le prix ou le label dépassait, le bouton
+  // sortait. Mitigations :
+  //   1. `min-w-0` sur le bouton flex-1 pour qu'il puisse rétrécir sous
+  //      son contenu (sans, flexbox respecte la min-content width du
+  //      texte interne — c'est ça qui débordait).
+  //   2. Le label est dans un <span> truncate avec gap-1.5 serré ; on
+  //      ne masque rien, on accepte juste qu'il puisse se tronquer en
+  //      "Ajouter au pa…" plutôt que casser le layout.
+  //   3. Quand compact (sticky mobile), gap-2 au lieu de gap-3.
+  //   4. Padding interne réduit pour libérer de la largeur de label.
   const CtaCluster = ({ compact = false }: { compact?: boolean }) => (
-    <div className="flex flex-col gap-3">
-      <div className={cn("flex items-center gap-3", compact ? "" : "")}>
+    <div className="flex flex-col gap-3 min-w-0">
+      <div className={cn("flex items-center min-w-0", compact ? "gap-2" : "gap-3")}>
         {/* Stepper unités OU stepper kg OU rien si bracket (les cards font le job) */}
         {unitType === "unit" && (
           <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-1 border border-[#0E3B2E]/15 shrink-0">
@@ -302,7 +321,7 @@ const ProductDetail = () => {
           onClick={handleAdd}
           disabled={!product.inStock}
           className={cn(
-            "group flex-1 h-14 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white font-bold text-[15px] shadow-lg shadow-[#0E3B2E]/30 hover:shadow-xl hover:shadow-[#0E3B2E]/40 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
+            "group flex-1 min-w-0 h-14 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white font-bold text-[15px] shadow-lg shadow-[#0E3B2E]/30 hover:shadow-xl hover:shadow-[#0E3B2E]/40 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none",
             justAdded && "animate-success-pop",
           )}
         >
@@ -312,22 +331,22 @@ const ProductDetail = () => {
               <span>Ajouté !</span>
             </>
           ) : (
-            <>
-              <span>
+            <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
+              <span className="truncate">
                 {product.inStock ? "Ajouter au panier" : "Indisponible"}
               </span>
               {product.inStock && (
                 <>
-                  <span className="opacity-50">·</span>
-                  <span className="tabular-nums">{formatPrice(totalCents)}</span>
+                  <span className="opacity-50 shrink-0">·</span>
+                  <span className="tabular-nums shrink-0">{formatPrice(totalCents)}</span>
                   <ArrowRight
                     size={16}
-                    className="transition-transform group-hover:translate-x-0.5"
+                    className="transition-transform group-hover:translate-x-0.5 shrink-0"
                     aria-hidden
                   />
                 </>
               )}
-            </>
+            </span>
           )}
         </button>
       </div>
@@ -596,13 +615,18 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Sticky bottom MOBILE UNIQUEMENT */}
+      {/* Sticky bottom MOBILE UNIQUEMENT.
+          BUG-007 : px-5 (20px chaque côté) sur viewport 320px laissait
+          ~280px utile. Stepper(~140) + CTA(flex-1) + gap empilés = label
+          du bouton souvent tronqué dès le premier caractère long. On
+          bascule sur px-3 → sm:px-5 : 12px sur iPhone SE, 20px à partir
+          de 640px. La BottomNav (en dessous) suit la même règle. */}
       <div
         className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-border md:hidden"
         style={{ bottom: 0 }}
       >
         <div
-          className="max-w-2xl mx-auto px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="max-w-2xl mx-auto px-3 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
           <CtaCluster compact />
         </div>

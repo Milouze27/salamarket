@@ -12,9 +12,14 @@ export const useProducts = () => {
   return useQuery<Product[]>({
     queryKey: ["products"],
     queryFn: async () => {
+      // BUG-002 — on filtre côté serveur les produits en rupture pour
+      // éviter qu'ils s'affichent dans le catalogue. La PDP les charge
+      // toujours (via useProduct) pour pouvoir afficher l'état "Indispo"
+      // si quelqu'un arrive en deep-link sur un produit OOS.
       const { data, error } = await supabase
         .from("products")
         .select(PRODUCT_COLUMNS)
+        .eq("in_stock", true)
         .order("category", { ascending: true })
         .order("name", { ascending: true });
 

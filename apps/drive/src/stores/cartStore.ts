@@ -37,9 +37,21 @@ const MAX_QTY = 99;
 const MAX_KG = 5;
 const MIN_KG = 0.1;
 
-const clampKg = (kg: number): number => {
-  if (Number.isNaN(kg)) return MIN_KG;
-  return Math.min(MAX_KG, Math.max(MIN_KG, Math.round(kg * 10) / 10));
+// BUG-012 — clamp + round-to-1-decimal défensif. On parse depuis
+// number OU string (le navigateur peut envoyer "1,2" en locale fr).
+// parseFloat + replace gère "1,2" / "999,99" ; on coupe ensuite à
+// [MIN_KG..MAX_KG] et on arrondit au dixième pour éviter les NaN
+// flottants type 1.2300000000000002 qui pourrissent l'affichage.
+const clampKg = (kg: number | string): number => {
+  let n: number;
+  if (typeof kg === "string") {
+    n = parseFloat(kg.replace(",", "."));
+  } else {
+    n = kg;
+  }
+  if (!Number.isFinite(n)) return MIN_KG;
+  const rounded = Math.round(n * 10) / 10;
+  return Math.min(MAX_KG, Math.max(MIN_KG, rounded));
 };
 
 const makeLineId = (): string => {
@@ -88,6 +100,11 @@ export const useCartStore = create<CartState>()(
       items: [],
 
       addItem: (product, options) => {
+        // BUG-002 — refuse l'ajout au panier d'un produit en rupture.
+        // Le filtre useProducts coupe normalement les OOS du catalogue,
+        // mais on garde la garde côté store pour couvrir tous les chemins
+        // d'appel (suggestions PDP, deep-link, panier persistant).
+        if (!product.inStock) return;
         const unitType = resolveUnitType(product);
 
         if (unitType === "unit") {
@@ -120,9 +137,12 @@ export const useCartStore = create<CartState>()(
         }
 
         if (unitType === "weight") {
-          const kg = clampKg(
-            options?.quantiteKg ?? product.estimatedWeightKg ?? 1,
-          );
+          // BUG-012 — default 1.0 kg si le client n'a pas saisi de poids.
+          // On ne fallback PLUS sur product.estimatedWeightKg (qui pouvait
+          // initialiser à 5kg, perçu comme excessif). L'estimation reste
+          // proposée à l'utilisateur en UI (PDP KgStepper) mais le store
+          // se cale toujours sur 1kg si rien n'est passé.
+          const kg = clampKg(options?.quantiteKg ?? 1);
           set((state) => ({
             items: [
               ...state.items,

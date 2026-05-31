@@ -213,12 +213,15 @@ const Cart = () => {
                               max={5}
                               step={0.1}
                               value={item.quantiteKg ?? 0}
-                              onChange={(e) =>
-                                updateQuantiteKg(
-                                  item.lineId,
-                                  Number(e.target.value),
-                                )
-                              }
+                              onChange={(e) => {
+                                // BUG-012 — parseFloat + replace virgule
+                                // (locale fr) ; updateQuantiteKg clampe à
+                                // [0.1..5] et arrondit au dixième.
+                                const raw = e.target.value.replace(",", ".");
+                                const v = parseFloat(raw);
+                                if (!Number.isFinite(v)) return;
+                                updateQuantiteKg(item.lineId, v);
+                              }}
                               className="w-16 px-2 py-1.5 text-base font-semibold text-[#0E3B2E] tabular-nums bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
                               aria-label={`Poids estimé de ${item.product.name} en kg`}
                             />

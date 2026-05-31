@@ -33,6 +33,10 @@ export const ProductCard = ({ product }: Props) => {
   const addItem = useCartStore((s) => s.addItem);
   const { triggerFly } = useFlyingChip();
   const addBtnRef = useRef<HTMLButtonElement>(null);
+  // Throttle anti-spam (BUG-011) : un tap iOS peut générer deux events
+  // (touchend + click synthétique) à <50ms d'écart, ce qui empilait
+  // 2 unités d'un coup. On bloque les ajouts sub-200ms après le précédent.
+  const lastAddAtRef = useRef<number>(0);
   const [imgFailed, setImgFailed] = useState(() =>
     isPlaceholderUrl(product.imageUrl),
   );
@@ -41,13 +45,24 @@ export const ProductCard = ({ product }: Props) => {
   // Pour weight & weight_bracket on n'ajoute pas directement depuis la
   // card — l'utilisateur doit choisir un poids/bracket → open detail.
   const isVariable = unitType === "weight" || unitType === "weight_bracket";
+  // BUG-002 — bloque l'ajout direct depuis la card si le produit est OOS.
+  // Le filtre useProducts coupe normalement les OOS du catalogue mais on
+  // garde le garde-fou ici au cas où (et la PDP affiche le badge "Rupture").
+  const isOutOfStock = !product.inStock;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     if (isVariable) {
       navigate(`/produit/${product.id}`);
       return;
     }
+    // Throttle leading-only 200ms (BUG-011) — couvre double-tap iOS +
+    // clics rageux. Pas de trailing call : l'utilisateur peut toujours
+    // retaper après la fenêtre, on bloque juste le burst.
+    const now = Date.now();
+    if (now - lastAddAtRef.current < 200) return;
+    lastAddAtRef.current = now;
     // Fly the chip BEFORE state update — chip captures the source position
     // and is independent of the React re-render that follows addItem().
     triggerFly(addBtnRef.current, {
@@ -120,7 +135,7 @@ export const ProductCard = ({ product }: Props) => {
             Halal
           </span>
         )}
-        {isVariable && (
+        {isVariable && !isOutOfStock && (
           <span
             className="absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FBF6E2]/95 backdrop-blur text-[#3E2E0A] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
             aria-label="Vente au poids variable"
@@ -130,15 +145,37 @@ export const ProductCard = ({ product }: Props) => {
           </span>
         )}
 
+        {/* BUG-002 — badge "Rupture" si !inStock. On le pose en top-right
+            (même slot que Au poids, mutuellement exclusifs) et on grise
+            l'image via un overlay subtil pour signaler visuellement
+            l'indispo sans masquer le produit. */}
+        {isOutOfStock && (
+          <>
+            <span
+              className="absolute top-2 right-2 z-10 inline-flex items-center gap-0.5 pl-1.5 pr-1.5 h-[20px] rounded-full bg-red-50/95 backdrop-blur text-red-700 text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-red-200"
+              aria-label="Produit en rupture de stock"
+            >
+              Rupture
+            </span>
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-white/45 pointer-events-none"
+            />
+          </>
+        )}
+
         <button
           ref={addBtnRef}
           onClick={handleAdd}
+          disabled={isOutOfStock}
           aria-label={
-            isVariable
-              ? `Choisir ${product.name}`
-              : `Ajouter ${product.name} au panier`
+            isOutOfStock
+              ? `${product.name} indisponible`
+              : isVariable
+                ? `Choisir ${product.name}`
+                : `Ajouter ${product.name} au panier`
           }
-          className="absolute bottom-2.5 right-2.5 w-11 h-11 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center shadow-lg shadow-[#0E3B2E]/35 hover:bg-[#082A20] hover:scale-105 active:scale-90 transition-all"
+          className="absolute bottom-2.5 right-2.5 w-11 h-11 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center shadow-lg shadow-[#0E3B2E]/35 hover:bg-[#082A20] hover:scale-105 active:scale-90 transition-all disabled:bg-[#0F1A14]/30 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-[#0F1A14]/30"
         >
           <Plus size={20} strokeWidth={2.4} aria-hidden />
         </button>

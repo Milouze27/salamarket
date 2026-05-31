@@ -196,15 +196,19 @@ export default function AssistantIAPage() {
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shadow-card">
                   <Bot className="w-4 h-4" />
                 </div>
-                <div className="bg-white border border-rule rounded-[18px] px-4 py-3 shadow-card">
+                <div
+                  className="bg-white border border-rule rounded-[18px] px-4 py-3 shadow-card"
+                  aria-live="polite"
+                  aria-label="L'assistant réfléchit"
+                >
                   <div className="flex gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+                    <span className="w-2 h-2 rounded-full bg-primary motion-safe:animate-bounce" />
                     <span
-                      className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                      className="w-2 h-2 rounded-full bg-primary motion-safe:animate-bounce"
                       style={{ animationDelay: "120ms" }}
                     />
                     <span
-                      className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                      className="w-2 h-2 rounded-full bg-primary motion-safe:animate-bounce"
                       style={{ animationDelay: "240ms" }}
                     />
                   </div>

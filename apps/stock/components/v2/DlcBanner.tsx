@@ -144,7 +144,7 @@ export function DlcBanner() {
   return (
     <Link
       href="/v2/admin/alertes-dlc"
-      className={`flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border ${p.bg} ${p.border} active:scale-[0.99] transition-transform`}
+      className={`flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border ${p.bg} ${p.border} card-tappable outline-none focus-visible:ring-2 focus-visible:ring-primary/30`}
       aria-label={`${counts.total} lots en alerte DLC — voir détails`}
     >
       <span className="relative flex items-center justify-center shrink-0">

@@ -100,7 +100,7 @@ export function WeeklyPicksRail() {
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div
                   key={`sk-${i}`}
-                  className="shrink-0 w-[136px] h-[180px] rounded-[18px] skeleton"
+                  className="shrink-0 w-[148px] h-[188px] rounded-[18px] skeleton"
                 />
               ))
             : items.map((p, i) => (

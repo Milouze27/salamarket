@@ -5,7 +5,8 @@
  */
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-cream">
+    <div role="status" aria-busy="true" className="min-h-screen bg-cream">
+      <span className="sr-only">Chargement…</span>
       <div className="mx-auto w-full max-w-[460px] min-h-screen relative bg-cream">
         {/* Header skeleton — gradient sapin identique au shell */}
         <header className="bg-gradient-to-b from-[#0E3B2E] to-[#082A20] safe-top">

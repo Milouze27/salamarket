@@ -324,8 +324,9 @@ export function V2Shell({
                       <Link
                         key={it.href}
                         href={it.href}
+                        aria-label={it.fullLabel ?? it.label}
                         aria-current={active ? "page" : undefined}
-                        className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0"
+                        className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                       >
                         {active && (
                           <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full bg-gold" />
@@ -358,8 +359,9 @@ export function V2Shell({
                     type="button"
                     onClick={() => setSheetOpen(true)}
                     aria-label="Ouvrir le menu"
+                    aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
-                    className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0"
+                    className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   >
                     <span className="inline-flex items-center justify-center w-9 h-9 rounded-full">
                       <MoreHorizontal
@@ -470,5 +472,6 @@ export function V2Shell({
         </AnimatePresence>
       </div>
     </div>
+    </MotionConfig>
   );
 }

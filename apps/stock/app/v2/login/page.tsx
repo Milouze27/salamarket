@@ -125,6 +125,8 @@ export default function V2LoginPage() {
           <motion.div
             animate={shake ? { x: [-8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
             transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+            role="group"
+            aria-label={`Code PIN, ${pin.length} chiffre${pin.length > 1 ? "s" : ""} sur 4`}
             className="flex justify-center gap-3.5 mb-9"
           >
             {[0, 1, 2, 3].map((i) => {
@@ -136,7 +138,7 @@ export default function V2LoginPage() {
                     scale: filled ? [1, 1.18, 1] : 1,
                   }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className={`w-13 h-13 w-[52px] h-[52px] rounded-2xl border-2 flex items-center justify-center transition-colors ${
+                  className={`w-[52px] h-[52px] rounded-2xl border-2 flex items-center justify-center transition-colors ${
                     filled
                       ? "bg-gold border-gold"
                       : "bg-white/8 border-white/20"
@@ -197,6 +199,7 @@ export default function V2LoginPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
+                role="status"
                 className="mt-6 flex items-center justify-center gap-2 text-gold text-sm font-semibold"
               >
                 <span className="w-3.5 h-3.5 rounded-full border-2 border-gold/25 border-t-gold animate-spin" />

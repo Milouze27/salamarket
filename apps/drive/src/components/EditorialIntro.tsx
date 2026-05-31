@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { HalalSeal } from "@/components/HalalSeal";
 
 // Hero éditorial poster — typographie dominante + photo magazine
 // + pagination éditoriale "01" qui anchor la séquence du home.
@@ -77,23 +78,18 @@ export const EditorialIntro = () => {
                 </span>
               </div>
 
-              {/* Sceau Halal certifié — circulaire, signature visuelle */}
+              {/* Sceau Halal certifié — circulaire, signature visuelle.
+                  Composant partagé <HalalSeal> (DSN-17) pour un rendu
+                  pixel-identique avec l'onboarding. sm en mobile, md ≥768px. */}
               <div className="absolute top-5 right-5 md:top-7 md:right-7 z-10">
-                <div className="relative w-[88px] h-[88px] md:w-[110px] md:h-[110px] rounded-full bg-[#FAF7EE] shadow-xl shadow-[#082A20]/30 flex flex-col items-center justify-center text-center">
-                  <span
-                    aria-hidden
-                    className="halal-seal-ring absolute inset-[6px] rounded-full border-[1.5px] border-[#C9A227]/55"
-                  />
-                  <span className="relative text-[9px] md:text-[10px] uppercase tracking-[0.18em] font-bold text-[#C9A227] leading-tight">
-                    Halal
-                  </span>
-                  <span className="relative text-[14px] md:text-[16px] font-extrabold text-[#0E3B2E] leading-tight tracking-[-0.02em]">
-                    Certifié
-                  </span>
-                  <span className="relative text-[8px] md:text-[9px] uppercase tracking-[0.22em] font-semibold text-[#0E3B2E]/55 mt-0.5">
-                    Salamarket
-                  </span>
-                </div>
+                <HalalSeal
+                  size="sm"
+                  className="md:hidden shadow-xl shadow-[#082A20]/30"
+                />
+                <HalalSeal
+                  size="md"
+                  className="hidden md:flex shadow-xl shadow-[#082A20]/30"
+                />
               </div>
 
               {/* Bloc poster bas-gauche : kicker + titre éditorial + CTA

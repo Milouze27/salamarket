@@ -97,9 +97,9 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
         {/* Greeting hero — blanc sur sapin. Tracking-[-0.02em] resserre le
             titre pour densité éditoriale; subtitle 15px (vs 16px) garde
             la hiérarchie h1 > p sans casser la lisibilité mobile. */}
-        <h1 className="relative text-[28px] font-bold text-white leading-[1.1] tracking-[-0.02em]">
-          {greet}
-          {firstName ? `, ${firstName}` : ""}
+        <h1 className="relative font-bold text-white leading-[1.1] tracking-[-0.02em] flex items-baseline gap-[0.3ch] min-w-0" style={{ fontSize: "clamp(24px, 7vw, 30px)" }}>
+          <span className="shrink-0">{greet}{firstName ? "," : ""}</span>
+          {firstName && <span className="truncate min-w-0">{firstName}</span>}
         </h1>
         <p className="relative text-[15px] leading-[1.4] text-white/80 mt-1.5">
           {user

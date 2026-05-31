@@ -90,11 +90,23 @@ const Index = () => {
   // mode catalogue pur, plus efficace.
   const showVitrine = category === "all" && !debouncedSearch;
 
-  // Padding bas dynamique : BottomNav (~56+safe) + StickyCartCTA (~64+8)
-  // empilés = ~150px sur iPhone avec home indicator + panier rempli.
-  // pb-20 (80px) masquait les derniers produits / la fin du footer.
+  // Padding bas additif basé sur les hauteurs RÉELLES du stack fixe plutôt
+  // qu'un magic number heuristique :
+  //   BottomNav = 56px + env(safe-area-inset-bottom)
+  //   StickyCartCTA = 64px + 8px d'offset (bottom: safe + 56 + 8) — visible
+  //     seulement panier non vide.
+  //   + respiration pour que le dernier produit ET la fin du footer soient
+  //     entièrement révélés au scroll-to-bottom (mémoire user : la nav ne
+  //     doit jamais cacher de contenu utile), panier vide ET rempli.
+  // calc() encaisse le home indicator iOS sans estimation. md:0 = desktop
+  // n'a ni BottomNav ni StickyCartCTA (composants md:hidden).
   const cartCount = useCartCount();
-  const bottomPad = cartCount > 0 ? "pb-[150px] md:pb-0" : "pb-20 md:pb-0";
+  // Tailwind arbitrary value : espaces du calc() échappés en `_`. md:pb-0
+  // car desktop n'affiche ni BottomNav ni StickyCartCTA (md:hidden).
+  const bottomPad =
+    cartCount > 0
+      ? "pb-[calc(env(safe-area-inset-bottom)_+_56px_+_72px_+_24px)] md:pb-0"
+      : "pb-[calc(env(safe-area-inset-bottom)_+_56px_+_16px)] md:pb-0";
 
   // BUG-007 : `overflow-x-hidden` au root pour empêcher tout overflow
   // horizontal sous 360px (constaté +4px sur iPhone SE 320px). Le footer
@@ -236,7 +248,7 @@ const Index = () => {
           <h2
             className="font-extrabold text-[#FAF7EE]"
             style={{
-              fontSize: "clamp(48px, 12vw, 180px)",
+              fontSize: "clamp(40px, 11vw, 180px)",
               lineHeight: 0.95,
               letterSpacing: "-0.04em",
             }}

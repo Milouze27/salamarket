@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
+import { lazyWithRetry } from "@/lib/lazy-with-retry";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -8,12 +9,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { RoleProtectedRoute } from "@/components/RoleProtectedRoute";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteChrome } from "@/components/RouteChrome";
+import { RoutedErrorBoundary } from "@/components/RoutedErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { OnboardingGate } from "@/components/OnboardingGate";
-import { BottomNav } from "@/components/BottomNav";
-import { StickyCartCTA } from "@/components/StickyCartCTA";
-import { CookieBanner } from "@/components/CookieBanner";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
 // pénaliser le 1st paint sur l'écran d'accueil et la connexion. Le
@@ -28,50 +27,50 @@ import NotFound from "./pages/NotFound.tsx";
 // Routes secondaires — lazy load. Évite ~400-500 KB sur le bundle
 // initial. Stripe / Supabase admin / auth pages restent invisibles
 // tant que le user ne navigue pas dessus.
-const ProductDetail = lazy(() => import("./pages/ProductDetail.tsx"));
-const Cart = lazy(() => import("./pages/Cart.tsx"));
-const Slots = lazy(() => import("./pages/Slots.tsx"));
-const DriveAuPoids = lazy(() => import("./pages/DriveAuPoids.tsx"));
-const LotPublic = lazy(() => import("./pages/LotPublic.tsx"));
-const Checkout = lazy(() => import("./pages/Checkout.tsx"));
-const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
-const Account = lazy(() => import("./pages/Account.tsx"));
-const Orders = lazy(() => import("./pages/Orders.tsx"));
-const MotDePasseOublie = lazy(() => import("./pages/MotDePasseOublie.tsx"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
-const Admin = lazy(() => import("./pages/Admin.tsx"));
-const AdminSettings = lazy(() => import("./pages/AdminSettings.tsx"));
-const EmployeeKanban = lazy(() => import("./pages/EmployeeKanban.tsx"));
+const ProductDetail = lazyWithRetry(() => import("./pages/ProductDetail.tsx"));
+const Cart = lazyWithRetry(() => import("./pages/Cart.tsx"));
+const Slots = lazyWithRetry(() => import("./pages/Slots.tsx"));
+const DriveAuPoids = lazyWithRetry(() => import("./pages/DriveAuPoids.tsx"));
+const LotPublic = lazyWithRetry(() => import("./pages/LotPublic.tsx"));
+const Checkout = lazyWithRetry(() => import("./pages/Checkout.tsx"));
+const OrderConfirmation = lazyWithRetry(() => import("./pages/OrderConfirmation.tsx"));
+const Account = lazyWithRetry(() => import("./pages/Account.tsx"));
+const Orders = lazyWithRetry(() => import("./pages/Orders.tsx"));
+const MotDePasseOublie = lazyWithRetry(() => import("./pages/MotDePasseOublie.tsx"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword.tsx"));
+const Admin = lazyWithRetry(() => import("./pages/Admin.tsx"));
+const AdminSettings = lazyWithRetry(() => import("./pages/AdminSettings.tsx"));
+const EmployeeKanban = lazyWithRetry(() => import("./pages/EmployeeKanban.tsx"));
 
 // Module Labo (recettes BOM + productions + marges) — admin + employee
-const LaboHome = lazy(() => import("./pages/labo/LaboHome.tsx"));
-const LaboRecettes = lazy(() => import("./pages/labo/Recettes.tsx"));
-const LaboRecetteDetail = lazy(() => import("./pages/labo/RecetteDetail.tsx"));
-const LaboRecetteNouvelle = lazy(() => import("./pages/labo/RecetteNouvelle.tsx"));
-const LaboProductions = lazy(() => import("./pages/labo/Productions.tsx"));
-const LaboProductionDetail = lazy(() => import("./pages/labo/ProductionDetail.tsx"));
-const LaboProductionNouvelle = lazy(() => import("./pages/labo/ProductionNouvelle.tsx"));
-const LaboMarges = lazy(() => import("./pages/labo/Marges.tsx"));
+const LaboHome = lazyWithRetry(() => import("./pages/labo/LaboHome.tsx"));
+const LaboRecettes = lazyWithRetry(() => import("./pages/labo/Recettes.tsx"));
+const LaboRecetteDetail = lazyWithRetry(() => import("./pages/labo/RecetteDetail.tsx"));
+const LaboRecetteNouvelle = lazyWithRetry(() => import("./pages/labo/RecetteNouvelle.tsx"));
+const LaboProductions = lazyWithRetry(() => import("./pages/labo/Productions.tsx"));
+const LaboProductionDetail = lazyWithRetry(() => import("./pages/labo/ProductionDetail.tsx"));
+const LaboProductionNouvelle = lazyWithRetry(() => import("./pages/labo/ProductionNouvelle.tsx"));
+const LaboMarges = lazyWithRetry(() => import("./pages/labo/Marges.tsx"));
 
 // Module Drive Pro — public (auth obligatoire au-delà de inscription/login)
-const ProInscription = lazy(() => import("./pages/pro/Inscription.tsx"));
-const ProLogin = lazy(() => import("./pages/pro/Login.tsx"));
-const ProCatalogue = lazy(() => import("./pages/pro/Catalogue.tsx"));
-const ProPanier = lazy(() => import("./pages/pro/Panier.tsx"));
-const ProCommandeDetail = lazy(() => import("./pages/pro/CommandeDetail.tsx"));
-const ProFactures = lazy(() => import("./pages/pro/Factures.tsx"));
-const ProCompte = lazy(() => import("./pages/pro/Compte.tsx"));
+const ProInscription = lazyWithRetry(() => import("./pages/pro/Inscription.tsx"));
+const ProLogin = lazyWithRetry(() => import("./pages/pro/Login.tsx"));
+const ProCatalogue = lazyWithRetry(() => import("./pages/pro/Catalogue.tsx"));
+const ProPanier = lazyWithRetry(() => import("./pages/pro/Panier.tsx"));
+const ProCommandeDetail = lazyWithRetry(() => import("./pages/pro/CommandeDetail.tsx"));
+const ProFactures = lazyWithRetry(() => import("./pages/pro/Factures.tsx"));
+const ProCompte = lazyWithRetry(() => import("./pages/pro/Compte.tsx"));
 
 // Module Drive Pro — admin (admin + manager)
-const AdminComptesPro = lazy(() => import("./pages/admin/ComptesPro.tsx"));
-const AdminCommandesPro = lazy(() => import("./pages/admin/CommandesPro.tsx"));
-const AdminFacturesPro = lazy(() => import("./pages/admin/FacturesPro.tsx"));
+const AdminComptesPro = lazyWithRetry(() => import("./pages/admin/ComptesPro.tsx"));
+const AdminCommandesPro = lazyWithRetry(() => import("./pages/admin/CommandesPro.tsx"));
+const AdminFacturesPro = lazyWithRetry(() => import("./pages/admin/FacturesPro.tsx"));
 
 // Pages légales — chargées lazy, faible traffic, jamais sur le chemin chaud
-const LegalAbout = lazy(() => import("./pages/legal/About.tsx"));
-const LegalMentions = lazy(() => import("./pages/legal/Mentions.tsx"));
-const LegalCGV = lazy(() => import("./pages/legal/CGV.tsx"));
-const LegalConfidentialite = lazy(() => import("./pages/legal/Confidentialite.tsx"));
+const LegalAbout = lazyWithRetry(() => import("./pages/legal/About.tsx"));
+const LegalMentions = lazyWithRetry(() => import("./pages/legal/Mentions.tsx"));
+const LegalCGV = lazyWithRetry(() => import("./pages/legal/CGV.tsx"));
+const LegalConfidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite.tsx"));
 
 // React Query — defaults raisonnés. Sans staleTime, chaque mount refetch
 // → flicker visuel + bande passante gaspillée + jank au focus window.
@@ -89,7 +88,7 @@ const queryClient = new QueryClient({
 });
 
 const RouteFallback = () => (
-  <div className="min-h-dvh bg-[#FAFAF7] flex items-center justify-center">
+  <div className="min-h-dvh bg-[#FAF7EE] flex items-center justify-center">
     <Loader2
       className="h-8 w-8 text-[#0F4C3A] animate-spin"
       aria-label="Chargement"
@@ -102,7 +101,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <ErrorBoundary>
+      <RoutedErrorBoundary>
         <BrowserRouter>
           <AuthProvider>
             <OnboardingGate />
@@ -328,7 +327,7 @@ const App = () => (
             <CookieBanner />
           </AuthProvider>
         </BrowserRouter>
-      </ErrorBoundary>
+      </RoutedErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );

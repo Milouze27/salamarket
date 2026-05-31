@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HalalSeal } from "@/components/HalalSeal";
 
 const EXIT_DURATION_MS = 300;
 
@@ -73,18 +74,13 @@ export const OnboardingFlow = ({ onDismiss }: OnboardingFlowProps) => {
         aria-hidden
       >
         <span className="absolute inset-0 -m-4 rounded-full bg-[radial-gradient(circle,rgba(212,169,60,0.30)_0%,transparent_70%)]" />
-        <div className="relative w-[120px] h-[120px] md:w-[140px] md:h-[140px] rounded-full bg-[#FAF7EE] flex flex-col items-center justify-center shadow-2xl shadow-[#082A20]/40">
-          <span className="halal-seal-ring absolute inset-[8px] rounded-full border-[1.5px] border-[#C9A227]/55" />
-          <span className="relative text-[11px] md:text-[12px] uppercase tracking-[0.22em] font-bold text-[#C9A227] leading-tight">
-            Halal
-          </span>
-          <span className="relative text-[18px] md:text-[20px] font-extrabold text-[#0E3B2E] leading-tight tracking-[-0.02em]">
-            Certifié
-          </span>
-          <span className="relative text-[9px] md:text-[10px] uppercase tracking-[0.24em] font-semibold text-[#0E3B2E]/55 mt-0.5">
-            Salamarket
-          </span>
-        </div>
+        {/* Sceau partagé <HalalSeal> (DSN-17) — pixel-identique au hero.
+            lg en mobile, xl ≥768px. */}
+        <HalalSeal size="lg" className="md:hidden shadow-2xl shadow-[#082A20]/40" />
+        <HalalSeal
+          size="xl"
+          className="hidden md:flex shadow-2xl shadow-[#082A20]/40"
+        />
       </div>
 
       {/* Phrase de bienvenue — display sobre, cream sur sapin nuit. */}

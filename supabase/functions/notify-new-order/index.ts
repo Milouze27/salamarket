@@ -126,7 +126,7 @@ serve(async (req) => {
 
   const { data: subs, error: subsError } = await supabase
     .from("push_subscriptions")
-    .select("id, user_id, endpoint, p256dh, auth")
+    .select("id, user_id, endpoint, keys_p256dh, keys_auth")
     .in("user_id", targetUserIds);
 
   if (subsError) {
@@ -148,11 +148,11 @@ serve(async (req) => {
   });
 
   const results = await Promise.allSettled(
-    subs.map((sub: { id: string; endpoint: string; p256dh: string; auth: string }) =>
+    subs.map((sub: { id: string; endpoint: string; keys_p256dh: string; keys_auth: string }) =>
       webpush.sendNotification(
         {
           endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
+          keys: { p256dh: sub.keys_p256dh, auth: sub.keys_auth },
         },
         notification,
       ),

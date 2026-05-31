@@ -120,7 +120,7 @@ serve(async (req) => {
     const t0 = Date.now();
     const { data, error } = await supabase
       .from("mv_ventes_quotidiennes")
-      .select("jour, depot_id, ca_ttc")
+      .select("jour, ca_ttc")
       .order("jour", { ascending: false })
       .limit(1);
     const r: RefreshResult = {

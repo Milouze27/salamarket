@@ -206,7 +206,7 @@ serve(async (req) => {
     await Promise.all([
       supabase
         .from("produits")
-        .select("id, nom, code_barre, categorie")
+        .select("id, nom, ean, categorie")
         .in("id", produitIds),
       supabase.from("depots").select("id, nom").in("id", depotIds),
       supabase
@@ -215,9 +215,9 @@ serve(async (req) => {
       supabase.from("hijri_demand_curve").select("phase, categorie, multiplicateur"),
     ]);
 
-  const prodMap = new Map<string, { nom: string; code_barre: string | null; categorie: string | null }>();
-  for (const p of (prods ?? []) as Array<{ id: string; nom: string; code_barre: string | null; categorie: string | null }>) {
-    prodMap.set(p.id, { nom: p.nom, code_barre: p.code_barre, categorie: p.categorie });
+  const prodMap = new Map<string, { nom: string; ean: string | null; categorie: string | null }>();
+  for (const p of (prods ?? []) as Array<{ id: string; nom: string; ean: string | null; categorie: string | null }>) {
+    prodMap.set(p.id, { nom: p.nom, ean: p.ean, categorie: p.categorie });
   }
   const depotMap = new Map<string, string>();
   for (const d of (depots ?? []) as Array<{ id: string; nom: string }>) {
@@ -270,8 +270,8 @@ serve(async (req) => {
       : null;
 
     let obs = 0;
-    if (prod.code_barre && ventesByEan.has(prod.code_barre)) {
-      obs = ventesByEan.get(prod.code_barre)! / 14;
+    if (prod.ean && ventesByEan.has(prod.ean)) {
+      obs = ventesByEan.get(prod.ean)! / 14;
     } else if (!prev) {
       const cat = categorieKey(prod.categorie);
       const range: [number, number] =
@@ -284,7 +284,7 @@ serve(async (req) => {
               : cat === "pates"
                 ? [1, 6]
                 : [0.5, 4];
-      obs = pseudoVelocity(prod.code_barre ?? s.produit_id, range[0], range[1]);
+      obs = pseudoVelocity(prod.ean ?? s.produit_id, range[0], range[1]);
     }
 
     const alpha = prev ? Number(prev.alpha) : 0.35;

@@ -24,6 +24,22 @@
     {
       "path": "/api/cron/monthly-report",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/casse-weekly-digest",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/refresh-cockpit",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/forecast",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/dlc-scan",
+      "schedule": "0 * * * *"
     }
   ]
 }

@@ -149,19 +149,19 @@ async function computeDigest(
   const [weekResp, prevResp] = await Promise.all([
     supabase
       .from("sorties_stock")
-      .select("depot_id, quantite, produits!inner(prix_vente_ttc)")
+      .select("depot_id, quantite, produits!inner(prix_drive_cents)")
       .in("type", CASSE_TYPES)
       .gte("created_at", startLastWeek.toISOString())
       .lte("created_at", endLastWeek.toISOString()),
     supabase
       .from("sorties_stock")
-      .select("depot_id, quantite, produits!inner(prix_vente_ttc)")
+      .select("depot_id, quantite, produits!inner(prix_drive_cents)")
       .in("type", CASSE_TYPES)
       .gte("created_at", startWeekBefore.toISOString())
       .lt("created_at", startLastWeek.toISOString()),
   ]);
 
-  type RawProd = { prix_vente_ttc: number | string | null };
+  type RawProd = { prix_drive_cents: number | string | null };
   type RawRow = {
     depot_id: string;
     quantite: number | string;
@@ -172,8 +172,8 @@ async function computeDigest(
     const arr = (rows as RawRow[] | null) ?? [];
     return arr.reduce((acc, r) => {
       const prod = Array.isArray(r.produits) ? r.produits[0] : r.produits;
-      const px = prod?.prix_vente_ttc ?? 0;
-      return acc + Number(r.quantite ?? 0) * Number(px);
+      const cents = prod?.prix_drive_cents ?? 0;
+      return acc + Number(r.quantite ?? 0) * (Number(cents) / 100);
     }, 0);
   };
 

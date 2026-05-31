@@ -69,14 +69,47 @@ export async function listEmployes(depotId?: string): Promise<Employe[]> {
 export async function loginByPin(pin: string): Promise<Employe | null> {
   const sb = supabase();
   if (sb) {
-    const { data, error } = await sb
-      .from("employes")
-      .select("*")
-      .eq("pin_code", pin)
-      .eq("is_active", true)
-      .maybeSingle();
-    if (error) throw error;
-    return (data as Employe) ?? null;
+    // SECURITY : on appelle la RPC verify_pin (SECURITY DEFINER) qui
+    // compare le PIN clair au bcrypt hash stocké côté DB. Aucun PIN
+    // ne sort jamais de la DB. Cf. migration 20260531000003_hash_pin_codes.sql.
+    const { data: employeId, error: rpcErr } = await sb.rpc("verify_pin", {
+      p_pin: pin,
+    });
+    if (rpcErr) {
+      // Fallback rétro-compat : la fonction verify_pin n'existe pas
+      // encore (migration 20260531000003 pas déployée). On retombe
+      // sur la query directe par pin_code clair.
+      //
+      // Si la migration EST déployée, pin_code est neutralisé à '0000'
+      // → ce fallback ne matchera PAS un PIN réel. Donc le fallback
+      // est sûr dans les deux scénarios.
+      const isMissingFn =
+        rpcErr.message?.includes("verify_pin") &&
+        (rpcErr.message?.includes("does not exist") ||
+          rpcErr.code === "42883");
+      if (!isMissingFn) {
+        console.error("[loginByPin] verify_pin error:", rpcErr);
+      }
+      const { data, error } = await sb
+        .from("employes")
+        .select("*")
+        .eq("pin_code", pin)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as Employe) ?? null;
+    }
+    if (!employeId) return null;
+    // Rehydrate la fiche employé via get_employe_safe (sans pin_hash exposé)
+    const { data: row, error: getErr } = await sb.rpc("get_employe_safe", {
+      p_id: employeId,
+    });
+    if (getErr) {
+      console.error("[loginByPin] get_employe_safe error:", getErr);
+      return null;
+    }
+    const row0 = Array.isArray(row) ? row[0] : row;
+    return (row0 as Employe) ?? null;
   }
   return SEED_EMPLOYES.find((e) => e.pin_code === pin && e.is_active) ?? null;
 }

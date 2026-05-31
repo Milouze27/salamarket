@@ -657,14 +657,14 @@ async function seedCockpitVentes(refs) {
     log('ok', `cockpit_targets ${isoDate(jminus1)} = 35000€ (depot ${refs.depotParticulier.nom})`);
   }
 
-  // ── Trigger refresh MV via cron Vercel ──────────────────────────
+  // ── Trigger refresh MV via cron Vercel (GET, pas POST) ─────────
   // (le cron tape la SECURITY DEFINER function refresh_mv_ventes_quotidiennes)
   const STOCK_URL = 'https://salam-stock.vercel.app';
   const cronSecret = env.CRON_SECRET;
   if (!DRY && cronSecret) {
     try {
       const res = await fetch(`${STOCK_URL}/api/cron/refresh-cockpit`, {
-        method: 'POST',
+        method: 'GET',
         headers: { Authorization: `Bearer ${cronSecret}` },
       });
       const body = await res.json().catch(() => ({}));
@@ -678,6 +678,18 @@ async function seedCockpitVentes(refs) {
     }
   } else if (!cronSecret) {
     log('warn', 'CRON_SECRET absent — refresh MV à déclencher manuellement (curl /api/cron/refresh-cockpit)');
+  }
+
+  // Fallback : appelle directement la RPC Postgres si l'endpoint Vercel
+  // est indispo (déploiement en cours, env manquant, etc.). C'est le
+  // même call qu'effectue le cron en interne.
+  if (!DRY) {
+    const { error: rpcErr } = await sb.rpc('refresh_mv_ventes_quotidiennes');
+    if (rpcErr) {
+      log('warn', `RPC refresh_mv_ventes_quotidiennes fail: ${rpcErr.message}`);
+    } else {
+      log('ok', 'RPC refresh_mv_ventes_quotidiennes OK (fallback direct)');
+    }
   }
 }
 

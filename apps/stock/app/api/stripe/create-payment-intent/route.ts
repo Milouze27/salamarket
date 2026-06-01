@@ -21,7 +21,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, auditLog } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase-server";
 import { computeMontantAutorise } from "@salamarket/shared";
 
@@ -113,20 +113,29 @@ export async function POST(req: Request) {
     }
   }
 
-  // 3. Calcule le montant estimé
-  let estimeTtc = estimeFromBody ?? 0;
-  if (estimeTtc <= 0) {
-    const lignes = cmd.commandes_drive_lignes ?? [];
-    estimeTtc = lignes.reduce((acc, l) => {
-      const ligneEstime = toNumber(l.montant_estime_ttc);
-      if (ligneEstime > 0) return acc + ligneEstime;
-      // Fallback : qté × PU (cas commande hors poids variable)
-      return acc + toNumber(l.quantite) * toNumber(l.prix_unitaire);
-    }, 0);
-    if (estimeTtc <= 0) {
-      // Dernier recours : total_ttc de la commande
-      estimeTtc = toNumber(cmd.total_ttc);
-    }
+  // 3. Calcule le montant estimé — TOUJOURS côté serveur.
+  // SÉCURITÉ (sec-payment-mocked-tamper) : le montant facturé est dérivé
+  // EXCLUSIVEMENT des données serveur (lignes de commande puis total_ttc).
+  // Le champ `montant_estime_ttc` du body client n'est JAMAIS utilisé pour
+  // GONFLER la charge : on l'autorise uniquement à la réduire (estimé client
+  // inférieur), plafonné au total serveur. Un client malveillant ne peut
+  // donc pas augmenter le montant pré-autorisé.
+  const lignes = cmd.commandes_drive_lignes ?? [];
+  let serverEstimeTtc = lignes.reduce((acc, l) => {
+    const ligneEstime = toNumber(l.montant_estime_ttc);
+    if (ligneEstime > 0) return acc + ligneEstime;
+    // Fallback : qté × PU (cas commande hors poids variable)
+    return acc + toNumber(l.quantite) * toNumber(l.prix_unitaire);
+  }, 0);
+  if (serverEstimeTtc <= 0) {
+    // Dernier recours : total_ttc de la commande (toujours serveur).
+    serverEstimeTtc = toNumber(cmd.total_ttc);
+  }
+
+  // Le body client ne peut que RÉDUIRE l'estimé serveur, jamais l'augmenter.
+  let estimeTtc = serverEstimeTtc;
+  if (estimeFromBody && estimeFromBody > 0 && estimeFromBody < serverEstimeTtc) {
+    estimeTtc = estimeFromBody;
   }
 
   if (estimeTtc <= 0) {
@@ -181,10 +190,23 @@ export async function POST(req: Request) {
     if (cmd.client_email) {
       createParams.receipt_email = cmd.client_email;
     }
-    paymentIntent = await stripe().paymentIntents.create(createParams);
+    // Idempotency-Key déterministe par (commande, montant) : un double-clic
+    // ou un retry réseau renvoie le MÊME PaymentIntent côté Stripe au lieu
+    // d'en créer un second → zéro double pré-autorisation. La clé inclut le
+    // montant pour qu'un ré-estimé légitime (poids différent) produise tout
+    // de même un nouveau PI plutôt qu'un conflit Stripe (amount mismatch).
+    paymentIntent = await stripe().paymentIntents.create(createParams, {
+      idempotencyKey: `pi_create_${commande_id}_${montantAutoriseCentimes}`,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erreur Stripe inconnue";
     console.error("[stripe/create-pi] échec Stripe :", e);
+    await auditLog({
+      action: "stripe.payment_intent.create_failed",
+      tableName: "commandes_drive",
+      recordId: commande_id,
+      details: { montant_autorise_cents: montantAutoriseCentimes, error: msg },
+    });
     return NextResponse.json(
       { error: "stripe_create_failed", detail: msg },
       { status: 500 },
@@ -217,6 +239,16 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+
+  await auditLog({
+    action: "stripe.payment_intent.authorized",
+    tableName: "commandes_drive",
+    recordId: commande_id,
+    details: {
+      payment_intent_id: paymentIntent.id,
+      montant_autorise_cents: montantAutoriseCentimes,
+    },
+  });
 
   return NextResponse.json({
     clientSecret: paymentIntent.client_secret,

@@ -21,7 +21,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, auditLog } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -163,15 +163,31 @@ export async function POST(req: Request) {
   const amountCentimes = Math.round(montantReelTtc * 100);
 
   // 5. Capture Stripe
+  // Idempotency-Key déterministe par (commande, montant capturé) : si le
+  // préparateur double-clique ou si le réseau retry, Stripe renvoie la
+  // capture déjà effectuée au lieu d'en tenter une seconde.
   let captured: Stripe.PaymentIntent;
   try {
     captured = await stripe().paymentIntents.capture(
       cmd.stripe_payment_intent_id,
       { amount_to_capture: amountCentimes },
+      { idempotencyKey: `pi_capture_${commande_id}_${amountCentimes}` },
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erreur Stripe inconnue";
     console.error("[stripe/capture] échec Stripe :", e);
+    await auditLog({
+      action: "stripe.payment_intent.capture_failed",
+      tableName: "commandes_drive",
+      recordId: commande_id,
+      actorId: user_id,
+      actorRole: role,
+      details: {
+        payment_intent_id: cmd.stripe_payment_intent_id,
+        montant_capture_cents: amountCentimes,
+        error: msg,
+      },
+    });
     return NextResponse.json(
       { error: "stripe_capture_failed", detail: msg },
       { status: 500 },
@@ -196,6 +212,19 @@ export async function POST(req: Request) {
       errUpd,
     );
   }
+
+  await auditLog({
+    action: "stripe.payment_intent.captured",
+    tableName: "commandes_drive",
+    recordId: commande_id,
+    actorId: user_id,
+    actorRole: role,
+    details: {
+      payment_intent_id: captured.id,
+      montant_capture_cents: amountCentimes,
+      db_update_ok: !errUpd,
+    },
+  });
 
   return NextResponse.json({
     paymentIntentId: captured.id,

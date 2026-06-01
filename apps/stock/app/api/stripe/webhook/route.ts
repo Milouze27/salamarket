@@ -25,7 +25,7 @@
  */
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { stripe, auditLog } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -33,7 +33,48 @@ export const dynamic = "force-dynamic";
 
 type WebhookResult =
   | { ok: true; updated: boolean }
-  | { ok: false; reason: string };
+  // `transient` distingue une panne récupérable (DB indispo → Stripe doit
+  // retry, on répond 500) d'une erreur définitive (commande introuvable →
+  // un retry ne changera rien, on ACK 200 pour stopper la boucle).
+  | { ok: false; reason: string; transient: boolean };
+
+/** Détecte si l'erreur Postgres/PostgREST = "table absente" (env legacy). */
+function isMissingTable(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  if (err.code === "PGRST205" || err.code === "42P01") return true;
+  const msg = (err.message || "").toLowerCase();
+  return msg.includes("does not exist") || msg.includes("could not find");
+}
+
+/**
+ * Idempotence sur event.id : Stripe livre AU MOINS une fois (retries), donc
+ * un même event peut arriver plusieurs fois. On enregistre chaque event.id
+ * traité dans audit_log et on refuse de ré-appliquer les effets de bord.
+ *
+ * Retour :
+ *   - "yes"   : déjà traité → ACK 200 sans rejouer.
+ *   - "no"    : jamais vu (ou table audit_log absente) → on traite.
+ *   - "error" : impossible de vérifier (panne transitoire) → 500 pour retry,
+ *               on préfère un retry à un double-traitement.
+ */
+async function alreadyProcessed(eventId: string): Promise<"yes" | "no" | "error"> {
+  try {
+    const { data, error } = await supabaseServer()
+      .from("audit_log")
+      .select("id")
+      .eq("action", "stripe.webhook.processed")
+      .eq("record_id", eventId)
+      .limit(1);
+    if (error) {
+      if (isMissingTable(error)) return "no"; // pas de table → on traite une fois
+      return "error";
+    }
+    return data && data.length > 0 ? "yes" : "no";
+  } catch {
+    // Client serveur indispo (env manquant) — on traite plutôt que bloquer.
+    return "no";
+  }
+}
 
 async function handlePaymentIntent(
   pi: Stripe.PaymentIntent,
@@ -52,20 +93,22 @@ async function handlePaymentIntent(
 
   const { data: rows, error } = await query.limit(1);
   if (error) {
+    // Panne DB transitoire → Stripe doit retry (500 en amont).
     console.error("[stripe/webhook] lookup commande échoué :", error);
-    return { ok: false, reason: "lookup_failed" };
+    return { ok: false, reason: "lookup_failed", transient: true };
   }
   const row = (rows ?? [])[0] as
     | { id: string; statut_paiement: string | null }
     | undefined;
   if (!row) {
+    // Définitif : un retry ne fera pas apparaître la commande. ACK 200.
     console.warn(
       "[stripe/webhook] commande introuvable pour PI",
       pi.id,
       "metadata.commande_id =",
       commandeId,
     );
-    return { ok: false, reason: "commande_introuvable" };
+    return { ok: false, reason: "commande_introuvable", transient: false };
   }
 
   if (opts.skipIfAlready && row.statut_paiement === opts.skipIfAlready) {
@@ -84,8 +127,9 @@ async function handlePaymentIntent(
     .eq("id", row.id);
 
   if (errUpd) {
+    // Panne DB transitoire pendant l'UPDATE → Stripe doit retry (500).
     console.error("[stripe/webhook] UPDATE échouée :", errUpd);
-    return { ok: false, reason: "update_failed" };
+    return { ok: false, reason: "update_failed", transient: true };
   }
 
   return { ok: true, updated: true };
@@ -123,33 +167,76 @@ export async function POST(req: Request) {
     );
   }
 
+  // Idempotence : si on a déjà traité cet event.id, on ACK sans rejouer.
+  const seen = await alreadyProcessed(event.id);
+  if (seen === "error") {
+    // Impossible de vérifier le dédup (panne transitoire) → 500 pour retry.
+    return NextResponse.json({ error: "dedup_unavailable" }, { status: 500 });
+  }
+  if (seen === "yes") {
+    return NextResponse.json({ received: true, duplicate: true });
+  }
+
+  let result: WebhookResult = { ok: true, updated: false };
   try {
     switch (event.type) {
       case "payment_intent.canceled": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await handlePaymentIntent(pi, "libere");
+        result = await handlePaymentIntent(pi, "libere");
         break;
       }
       case "payment_intent.payment_failed": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await handlePaymentIntent(pi, "echec");
+        result = await handlePaymentIntent(pi, "echec");
         break;
       }
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await handlePaymentIntent(pi, "capture", { skipIfAlready: "capture" });
+        result = await handlePaymentIntent(pi, "capture", {
+          skipIfAlready: "capture",
+        });
         break;
       }
       default:
-        // Event non géré : ack 200 quand même pour pas que Stripe retry
+        // Event non géré : ACK 200 (rien à faire), marqué traité plus bas.
         console.log("[stripe/webhook] event non géré :", event.type);
     }
   } catch (e) {
-    // On log mais on renvoie 200 pour éviter les retries en boucle sur
-    // un bug applicatif. Les pannes transitoires sont rattrapées par
-    // l'opérateur via le Dashboard Stripe.
+    // Exception inattendue = panne transitoire probable. On renvoie 500
+    // pour que Stripe retry (au lieu d'avaler en 200 et de perdre l'event).
     console.error("[stripe/webhook] handler a throw :", e);
+    await auditLog({
+      action: "stripe.webhook.error",
+      recordId: event.id,
+      details: { type: event.type, error: e instanceof Error ? e.message : "unknown" },
+    });
+    return NextResponse.json({ error: "handler_exception" }, { status: 500 });
   }
+
+  // Échec transitoire signalé par le handler → 500 pour retry Stripe.
+  if (!result.ok && result.transient) {
+    await auditLog({
+      action: "stripe.webhook.transient_error",
+      recordId: event.id,
+      details: { type: event.type, reason: result.reason },
+    });
+    return NextResponse.json(
+      { error: "transient_error", reason: result.reason },
+      { status: 500 },
+    );
+  }
+
+  // Succès OU échec définitif (commande introuvable / event non géré) :
+  // on marque l'event comme traité (idempotence) puis on ACK 200.
+  await auditLog({
+    action: "stripe.webhook.processed",
+    recordId: event.id,
+    tableName: "commandes_drive",
+    details: {
+      type: event.type,
+      outcome: result.ok ? "applied" : result.reason,
+    },
+  });
 
   return NextResponse.json({ received: true });
 }

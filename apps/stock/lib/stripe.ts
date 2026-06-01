@@ -20,8 +20,42 @@
  *   STRIPE_FORCE_TEST_MODE=1     # met à 1 pour forcer sk_test_ même en prod
  */
 import Stripe from "stripe";
+import { supabaseServer } from "@/lib/supabase-server";
 
 let _stripe: Stripe | null = null;
+
+/**
+ * Best-effort écriture dans `audit_log` (table créée par la migration
+ * 20260601000010_consent_audit_log). NE JAMAIS throw : si la table est
+ * absente (env legacy) ou si l'insert échoue (panne transitoire), on
+ * avale l'erreur pour ne JAMAIS bloquer le flux de paiement.
+ *
+ * Colonnes (cf. migration) : actor_id, actor_role, action, table_name,
+ * record_id, details (jsonb), ip, created_at (default now()).
+ */
+export async function auditLog(entry: {
+  action: string;
+  recordId?: string | null;
+  tableName?: string | null;
+  actorId?: string | null;
+  actorRole?: string | null;
+  details?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await supabaseServer()
+      .from("audit_log")
+      .insert({
+        action: entry.action,
+        record_id: entry.recordId ?? null,
+        table_name: entry.tableName ?? null,
+        actor_id: entry.actorId ?? null,
+        actor_role: entry.actorRole ?? null,
+        details: entry.details ?? {},
+      });
+  } catch {
+    // audit_log absente / panne transitoire — volontairement ignoré.
+  }
+}
 
 export function stripe(): Stripe {
   if (_stripe) return _stripe;

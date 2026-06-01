@@ -175,6 +175,16 @@ const ProductDetail = () => {
   const showHalalBadge =
     product?.category === "boucherie" || product?.category === "charcuterie";
 
+  // FUNC-04 — traçabilité par produit. Si le produit porte un lot courant
+  // (current_lot_id, ex. la barquette du jour pour la boucherie), le CTA
+  // pointe vers CE lot précis. Sinon on retombe sur le lot de démo générique.
+  // Accès optionnel typé large : le champ peut ne pas exister sur le type
+  // Product selon le mapping API, on ne casse pas la compilation.
+  const currentLotId =
+    (product as { current_lot_id?: string | null } | undefined)
+      ?.current_lot_id ?? null;
+  const traceabilityLotPath = `/lot/${currentLotId ?? "L2026-05-A23"}`;
+
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-[#FAF7EE]">
@@ -238,11 +248,18 @@ const ProductDetail = () => {
           step={STEP_KG}
           value={kg}
           onChange={(e) => {
-            // BUG-012 — parseFloat avec replace virgule (locale fr) puis
-            // clamp [MIN_KG..MAX_KG] + arrondi au dixième. Évite les NaN
-            // et les valeurs hors-borne (ex. "999.99" → clamp 5).
+            // BUG-012 — parse robuste du poids saisi à la main.
+            //  • virgule FR → point (clavier décimal iOS pose une virgule) ;
+            //  • on ne garde QUE le 1er nombre signé/décimal et on ignore
+            //    le reste (ex. "1.2.3" → 1.2, "1kg" → 1), évite les NaN ;
+            //  • Number.isFinite filtre vide / "-" / "." / texte ;
+            //  • valeur négative ou 0 → clamp MIN_KG (pas de poids ≤ 0) ;
+            //  • hors-borne haute → clamp MAX_KG (ex. "999" → 5) ;
+            //  • arrondi au dixième (pas étapp fournisseur = 100 g).
             const raw = e.target.value.replace(",", ".");
-            const v = parseFloat(raw);
+            const match = raw.match(/-?\d*\.?\d+/);
+            if (!match) return;
+            const v = parseFloat(match[0]);
             if (!Number.isFinite(v)) return;
             setKg(Math.min(MAX_KG, Math.max(MIN_KG, Math.round(v * 10) / 10)));
           }}
@@ -615,10 +632,10 @@ const ProductDetail = () => {
                   Chaque lot a son QR code unique pour vérifier l&apos;origine
                   et la certification.{" "}
                   <Link
-                    to="/lot/L2026-05-A23"
+                    to={traceabilityLotPath}
                     className="underline underline-offset-2 font-semibold text-[#0E3B2E] hover:text-[#082A20]"
                   >
-                    Voir un lot d&apos;exemple
+                    {currentLotId ? "Voir le lot de ce produit" : "Voir un lot d’exemple"}
                   </Link>
                 </p>
               </div>

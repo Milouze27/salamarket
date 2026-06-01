@@ -58,6 +58,13 @@ export const EditorialIntro = () => {
                 decoding="async"
                 width={1600}
                 height={2000}
+                /* Hors-ligne / asset manquant : on masque l'image cassée et
+                   on laisse le fond sapin (#082A20) du conteneur + le voile
+                   gradient porter le bloc poster/sceau, qui restent lisibles.
+                   Évite l'icône "image brisée" du navigateur dans le hero. */
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
                 className="absolute inset-0 w-full h-full object-cover"
               />
               {/* Voile bas renforcé pour lisibilité du titre + CTA

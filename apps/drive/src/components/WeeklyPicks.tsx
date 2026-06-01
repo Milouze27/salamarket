@@ -1,4 +1,5 @@
 import { ArrowRight, Plus } from "lucide-react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
@@ -12,6 +13,36 @@ import { cdnImage } from "@/lib/imageUrl";
 interface Props {
   products: Product[];
 }
+
+// Image d'un pick — gère le fallback runtime si l'image échoue à charger
+// (hors-ligne, URL CDN morte). Sans ça un produit avec une vraie URL mais
+// non mise en cache par le SW affichait l'icône "image cassée" du navigateur.
+// Aligné sur le même pattern onError que ProductCard / ProductDetail.
+const PickImage = ({
+  product,
+  idx,
+}: {
+  product: Product;
+  idx: number;
+}) => {
+  const [failed, setFailed] = useState(() => isPlaceholderUrl(product.imageUrl));
+  if (failed) {
+    return <ProductImageFallback category={product.category} size="lg" />;
+  }
+  return (
+    <img
+      src={cdnImage(product.imageUrl, { width: 800 })}
+      alt={product.name}
+      loading="eager"
+      fetchPriority={idx === 0 ? "high" : "auto"}
+      decoding="async"
+      width={800}
+      height={1000}
+      onError={() => setFailed(true)}
+      className="w-full h-full object-cover transition-transform duration-[700ms] ease-out group-hover:scale-[1.05]"
+    />
+  );
+};
 
 // Sélection bandeau horizontal — pas un slider promo, 3 produits curatés
 // avec un caption par rayon. Photo dominante 4:5, titre sobre, prix
@@ -123,20 +154,7 @@ export const WeeklyPicks = ({ products }: Props) => {
                 >
                   {/* Photo dominante 4:5 — pas de card frame, ombre subtile */}
                   <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-white shadow-[0_20px_40px_-24px_rgba(8,42,32,0.25)]">
-                    {isPlaceholderUrl(product.imageUrl) ? (
-                      <ProductImageFallback category={product.category} size="lg" />
-                    ) : (
-                    <img
-                      src={cdnImage(product.imageUrl, { width: 800 })}
-                      alt={product.name}
-                      loading="eager"
-                      fetchPriority={idx === 0 ? "high" : "auto"}
-                      decoding="async"
-                      width={800}
-                      height={1000}
-                      className="w-full h-full object-cover transition-transform duration-[700ms] ease-out group-hover:scale-[1.05]"
-                    />
-                    )}
+                    <PickImage product={product} idx={idx} />
                     {/* Numérotation pick — pose une intention de curation,
                         nichée bas-gauche, sous-jacent au "01/02/03" du
                         rythme catalogue. */}

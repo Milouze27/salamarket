@@ -101,8 +101,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <RoutedErrorBoundary>
-        <BrowserRouter>
+      <BrowserRouter>
+        <RoutedErrorBoundary>
           <AuthProvider>
             <OnboardingGate />
             <InstallPrompt />
@@ -324,8 +324,8 @@ const App = () => (
             </Suspense>
             <RouteChrome />
           </AuthProvider>
-        </BrowserRouter>
-      </RoutedErrorBoundary>
+        </RoutedErrorBoundary>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

@@ -12,21 +12,27 @@
  * "FORCÉ -0%" → staff ne savait pas quelle remise appliquer → démarque
  * impossible → casse comptable.
  *
- * Fix défensif côté TS : on enforce un plancher de remise par niveau,
- * indépendamment de ce que renvoie la vue. La règle SQL reste source de
- * vérité (cas où elle override avec un % plus agressif), mais on garantit
- * qu'un FORCÉ aura TOUJOURS au moins -50%.
+ * ⚠️ MISE À JOUR (migration 20260604000001_dlc_floor_and_casse_real_price) :
+ * la SOURCE SQL est désormais CORRECTE. La vue `v_dlc_alerts` applique le
+ * plancher par niveau directement en base via
+ *   greatest(public.dlc_remise_plancher(niveau), règle_catégorie)
+ * — le match catégorie est insensible à la casse/aux accents
+ * (unaccent(lower(...))) et le plancher s'applique MÊME sans règle dédiée.
+ * Conséquence : `v_dlc_alerts.remise_suggeree_pct` ne renvoie plus jamais 0%
+ * sur un niveau forcé/critique/attention. Vérifié live : lot cat 'boucherie'
+ * (minuscule) → forcé 50% (avant : 0%).
  *
- * Mapping métier (cf. CONTEXT.md `dlc_alert_level`) :
+ * Ce module TS reste comme FILET DE SÉCURITÉ (redondant, NON contradictoire) :
+ * il ne fait que reproduire le même plancher, donc si un appelant lit la vue
+ * et passe la valeur ici le résultat est identique. À conserver tant qu'on n'a
+ * pas audité tous les call sites — il ne peut plus diverger de la base.
+ *
+ * Mapping métier (cf. CONTEXT.md `dlc_alert_level`, identique côté SQL) :
  *   - forcé        → -50% (à démarquer aujourd'hui, sinon casse)
  *   - critique     → -40% (J-1, dernier appel)
  *   - attention    → -20% (J-2 / J-3, anticipation)
  *   - surveillance → -0%  (J-4 → J-7, simple alerte interne)
  *   - ok           → -0%  (rien à faire)
- *
- * Pourquoi pas amender la migration ? Les migrations sont gérées par
- * l'agent migrations-shared et tout patch SQL en parallèle créerait un
- * conflit. On garde la vue telle quelle et on enforce côté lecture.
  */
 
 export type DlcNiveau =

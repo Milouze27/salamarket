@@ -2,59 +2,38 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  Camera,
-  Check,
-  CheckCircle2,
-  Download,
-  FileText,
-  ImagePlus,
-  Loader2,
-  PackageCheck,
-  PackagePlus,
-  ScanBarcode,
-  Truck,
-  X,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
-import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { BarcodeScanner } from "@/components/reception/BarcodeScanner";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
+import { ReceptionHeader } from "@/components/v2/reception/ReceptionHeader";
+import { LigneList } from "@/components/v2/reception/LigneList";
+import { ValidationFooter } from "@/components/v2/reception/ValidationFooter";
+import { CartonLearnModal } from "@/components/v2/reception/CartonLearnModal";
+import { SurplusModal } from "@/components/v2/reception/SurplusModal";
+import { CreateProductModal } from "@/components/v2/reception/CreateProductModal";
+import type {
+  BdlDetail,
+  BdlLigne,
+  CartonSearchHit,
+  LearnCartonState,
+  SurplusState,
+} from "@/components/v2/reception/types";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
 
-interface BdlLigne {
-  id: string;
-  produit_id: string | null;
-  code_barre_attendu: string | null;
-  quantite_attendue: number;
-  quantite_recue: number;
-  statut: "attendu" | "recu" | "manquant" | "surplus";
-  produits?: { id: string; nom: string; ean: string | null; categorie: string | null } | null;
-}
-
-interface BdlDetail {
-  id: string;
-  numero_bdl: string;
-  numero_bdl_fournisseur: string | null;
-  fournisseur_id: string | null;
-  depot_destination_id: string | null;
-  date_livraison_prevue: string;
-  statut: "prevue" | "en_cours" | "receptionnee" | "litige";
-  photo_palette_url_1: string | null;
-  photo_palette_url_2: string | null;
-  photo_bdl_url: string | null;
-  notes: string | null;
-  fournisseurs: { id: string; nom: string } | null;
-  depots: { id: string; nom: string } | null;
-  bons_de_livraison_lignes: BdlLigne[];
-}
-
+/**
+ * Page réception d'un BDL — orchestrateur.
+ *
+ * ARCH-06 : ce fichier était un god component (~1575 lignes). La couche de
+ * présentation a été extraite vers components/v2/reception/* (header, liste,
+ * footer validation, 3 sheets). Tout l'état et la logique métier (scan, écarts,
+ * apprentissage carton, surplus, création produit, finalize, photos, push
+ * admin) restent ICI et descendent en props vers des sous-composants purs.
+ * Aucun changement de comportement.
+ */
 export default function BdlReceptionPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -71,25 +50,17 @@ export default function BdlReceptionPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Carton learning state — flow pour apprendre la liaison carton↔produit
-  const [learnCartonModal, setLearnCartonModal] = useState<{
-    code: string;
-    step: "qty" | "pick";
-    qty: number;
-  } | null>(null);
+  const [learnCartonModal, setLearnCartonModal] =
+    useState<LearnCartonState | null>(null);
   const [cartonScannerOpen, setCartonScannerOpen] = useState(false);
   const [cartonSearchQuery, setCartonSearchQuery] = useState("");
   const [cartonSearchResults, setCartonSearchResults] = useState<
-    Array<{ id: string; nom: string; ean: string | null; categorie: string | null }>
+    CartonSearchHit[]
   >([]);
 
   // Surplus modal state — EAN connu du catalogue mais hors BDL
-  const [surplusModal, setSurplusModal] = useState<
-    | { code: string; produitNom: string; produitId: string }
-    | null
-  >(null);
+  const [surplusModal, setSurplusModal] = useState<SurplusState | null>(null);
   const [surplusQty, setSurplusQty] = useState(1);
-  const [surplusPhoto, setSurplusPhoto] = useState<string | null>(null);
-  const [surplusPhotoOpen, setSurplusPhotoOpen] = useState(false);
   const [adminIds, setAdminIds] = useState<string[]>([]);
 
   // Create-product modal state — EAN totalement inconnu (pas en catalogue)
@@ -193,14 +164,7 @@ export default function BdlReceptionPage() {
         .select("id, nom, ean, categorie")
         .or(`nom.ilike.%${q}%,marque.ilike.%${q}%,ean.ilike.%${q}%`)
         .limit(15);
-      setCartonSearchResults(
-        (data ?? []) as Array<{
-          id: string;
-          nom: string;
-          ean: string | null;
-          categorie: string | null;
-        }>
-      );
+      setCartonSearchResults((data ?? []) as CartonSearchHit[]);
     }, 220);
     return () => clearTimeout(t);
   }, [cartonSearchQuery, learnCartonModal]);
@@ -741,337 +705,38 @@ export default function BdlReceptionPage() {
       {/* Header — sticky désactivé pour éviter collision avec V2Shell
           sticky top-0 z-30 (le shell header reste fixe en haut, on
           laisse celui-ci scroller naturellement). */}
-      <header className="px-5 pt-5 pb-3 bg-cream border-b border-rule">
-        <BackButton href="/v2/reception" />
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="label-caps text-primary">BDL · {bdl.fournisseurs?.nom ?? "—"}</p>
-            <h1 className="text-[22px] font-extrabold text-text-primary mt-0.5">
-              {bdl.numero_bdl}
-            </h1>
-            <p className="text-[12px] text-text-secondary mt-0.5">
-              Livraison <b>{bdl.depots?.nom ?? "—"}</b> ·{" "}
-              {new Date(bdl.date_livraison_prevue).toLocaleDateString("fr-FR", {
-                day: "2-digit",
-                month: "long",
-              })}
-            </p>
-            {/* N° BDL fournisseur — éditable inline */}
-            {editingNumFourn ? (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <input
-                  value={numFournDraft}
-                  onChange={(e) => setNumFournDraft(e.target.value)}
-                  placeholder="N° BDL fournisseur"
-                  className="flex-1 bg-white border border-rule rounded-lg px-2.5 py-1 text-[12px] font-mono"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void saveNumeroFournisseur();
-                    if (e.key === "Escape") setEditingNumFourn(false);
-                  }}
-                />
-                <button
-                  onClick={() => void saveNumeroFournisseur()}
-                  className="bg-primary text-white text-[11px] font-bold px-2.5 py-1 rounded-lg"
-                >
-                  OK
-                </button>
-                <button
-                  onClick={() => setEditingNumFourn(false)}
-                  className="text-text-tertiary text-[11px] px-1"
-                >
-                  ×
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setNumFournDraft(bdl.numero_bdl_fournisseur ?? "");
-                  setEditingNumFourn(true);
-                }}
-                className="inline-flex items-center gap-1.5 mt-1.5 text-[11px] font-mono"
-              >
-                {bdl.numero_bdl_fournisseur ? (
-                  <>
-                    <span className="text-text-tertiary">N° BDL fourn :</span>
-                    <span className="font-bold text-text-primary">
-                      {bdl.numero_bdl_fournisseur}
-                    </span>
-                    <span className="text-[10px] text-text-tertiary">(éditer)</span>
-                  </>
-                ) : (
-                  <span className="italic text-primary">
-                    + Saisir N° BDL fournisseur
-                  </span>
-                )}
-              </button>
-            )}
-          </div>
-          <span
-            className={`text-[10.5px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap ${
-              bdl.statut === "receptionnee"
-                ? "bg-success-soft text-success"
-                : bdl.statut === "en_cours"
-                  ? "bg-gold-soft text-primary-dark"
-                  : bdl.statut === "litige"
-                    ? "bg-danger-soft text-danger"
-                    : "bg-cream text-text-tertiary"
-            }`}
-          >
-            {bdl.statut === "receptionnee"
-              ? "Réceptionnée"
-              : bdl.statut === "en_cours"
-                ? "En cours"
-                : bdl.statut === "litige"
-                  ? "Litige"
-                  : "Prévue"}
-          </span>
-        </div>
+      <ReceptionHeader
+        bdl={bdl}
+        progression={progression}
+        editingNumFourn={editingNumFourn}
+        numFournDraft={numFournDraft}
+        onNumFournDraftChange={setNumFournDraft}
+        onStartEditNumFourn={() => {
+          setNumFournDraft(bdl.numero_bdl_fournisseur ?? "");
+          setEditingNumFourn(true);
+        }}
+        onSaveNumFourn={() => void saveNumeroFournisseur()}
+        onCancelEditNumFourn={() => setEditingNumFourn(false)}
+      />
 
-        {/* Progression */}
-        <div className="mt-3">
-          <div className="flex items-baseline justify-between mb-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
-              Progression
-            </span>
-            <span className="text-[13px] font-extrabold tabular text-text-primary">
-              {progression.scanned} / {progression.total} unités
-            </span>
-          </div>
-          <div className="h-2.5 rounded-full bg-cream overflow-hidden">
-            <motion.div
-              className="h-full bg-primary"
-              initial={{ width: 0 }}
-              animate={{ width: `${progression.pct}%` }}
-              transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Liste des lignes attendues */}
-      <section className="px-5 mt-4 pb-[200px]">
-        <p className="label-caps text-text-tertiary mb-2">
-          Produits attendus ({bdl.bons_de_livraison_lignes.length})
-        </p>
-        <div className="space-y-2">
-          {bdl.bons_de_livraison_lignes.map((l) => {
-            const isRecu = l.statut === "recu";
-            const isSurplus = l.statut === "surplus";
-            return (
-              <motion.div
-                key={l.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`bg-white border rounded-2xl p-3 flex items-center gap-3 ${
-                  isRecu
-                    ? "border-success/40"
-                    : isSurplus
-                      ? "border-danger/40"
-                      : "border-rule"
-                }`}
-              >
-                <span
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    isRecu
-                      ? "bg-success-soft text-success"
-                      : isSurplus
-                        ? "bg-danger-soft text-danger"
-                        : "bg-cream text-text-tertiary"
-                  }`}
-                >
-                  {isRecu ? (
-                    <CheckCircle2 className="w-5 h-5" />
-                  ) : isSurplus ? (
-                    <AlertTriangle className="w-5 h-5" />
-                  ) : (
-                    <PackagePlus className="w-5 h-5" />
-                  )}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13.5px] font-bold text-text-primary truncate">
-                    {l.produits?.nom ?? "Produit (sans nom)"}
-                  </p>
-                  <p className="text-[11px] text-text-tertiary mono mt-0.5">
-                    {l.code_barre_attendu ?? l.produits?.ean ?? "—"}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p
-                    className={`text-[14px] font-extrabold tabular ${
-                      isRecu
-                        ? "text-success"
-                        : isSurplus
-                          ? "text-danger"
-                          : "text-text-primary"
-                    }`}
-                  >
-                    {l.quantite_recue} / {l.quantite_attendue}
-                  </p>
-                  <p
-                    className={`text-[10.5px] uppercase font-bold tracking-wide mt-0.5 ${
-                      isRecu
-                        ? "text-success"
-                        : isSurplus
-                          ? "text-danger"
-                          : "text-text-tertiary"
-                    }`}
-                  >
-                    {isRecu
-                      ? "Reçu"
-                      : isSurplus
-                        ? "Surplus"
-                        : l.statut === "manquant"
-                          ? "Manquant"
-                          : "À scanner"}
-                  </p>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Photos palette + photo BDL papier (preuve archivée) */}
-        <div className="mt-6">
-          <p className="label-caps text-text-tertiary mb-2">
-            Photos palette (obligatoires)
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            {[1, 2].map((slot) => {
-              const url =
-                slot === 1
-                  ? bdl.photo_palette_url_1
-                  : bdl.photo_palette_url_2;
-              return (
-                <button
-                  key={slot}
-                  onClick={() => {
-                    setPhotoSlot(slot as 1 | 2);
-                    setPhotoOpen(true);
-                  }}
-                  className="relative aspect-[4/3] rounded-2xl border-2 border-dashed border-primary/30 overflow-hidden bg-cream active:scale-95 transition-transform"
-                >
-                  {url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      alt={`Palette ${slot}`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-primary gap-1">
-                      <ImagePlus className="w-5 h-5" />
-                      <span className="text-[11px] font-bold">
-                        Photo côté {slot}
-                      </span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Photo BDL papier (optionnelle, preuve en cas de litige) */}
-          <p className="label-caps text-text-tertiary mt-5 mb-2">
-            Photo du BDL papier (optionnelle)
-          </p>
-          <button
-            onClick={() => {
-              setPhotoSlot(3);
-              setPhotoOpen(true);
-            }}
-            className="relative w-full aspect-[16/6] rounded-2xl border-2 border-dashed border-text-tertiary/30 overflow-hidden bg-white active:scale-[0.99] transition-transform"
-          >
-            {bdl.photo_bdl_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={bdl.photo_bdl_url}
-                alt="BDL papier"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center gap-2 text-text-secondary">
-                <ImagePlus className="w-4 h-4" />
-                <span className="text-[12px] font-bold">
-                  Scanner ou photographier le BDL du fournisseur
-                </span>
-              </div>
-            )}
-          </button>
-        </div>
-      </section>
+      {/* Liste des lignes attendues + zone photos */}
+      <LigneList
+        bdl={bdl}
+        onOpenPhotoSlot={(slot) => {
+          setPhotoSlot(slot);
+          setPhotoOpen(true);
+        }}
+      />
 
       {/* Floating actions — diffèrent selon le statut */}
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
-          {bdl.statut === "receptionnee" ? (
-            <>
-              {/* BR PDF — disponible une fois la réception validée */}
-              <a
-                href={`/api/cashbox/bon-reception-pdf?bdl_id=${bdl.id}`}
-                target="_blank"
-                rel="noopener"
-                className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="w-11 h-11 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
-                    <FileText className="w-5 h-5" />
-                  </span>
-                  <span className="text-left">
-                    <span className="block label-caps text-gold">BON DE RÉCEPTION</span>
-                    <span className="block font-bold text-[15px]">
-                      Télécharger le BR PDF
-                    </span>
-                  </span>
-                </span>
-                <Download className="w-5 h-5 text-gold" />
-              </a>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setScannerOpen(true)}
-                className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
-              >
-                <span className="flex items-center gap-3">
-                  <span className="w-11 h-11 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
-                    <ScanBarcode className="w-6 h-6" />
-                  </span>
-                  <span className="text-left">
-                    <span className="block label-caps text-gold">SCANNER</span>
-                    <span className="block font-bold text-[15px]">
-                      Scanner produit suivant
-                    </span>
-                  </span>
-                </span>
-                <PackagePlus className="w-5 h-5 text-gold" />
-              </button>
-
-              <button
-                onClick={finalize}
-                disabled={submitting}
-                className={`w-full rounded-[20px] py-3.5 px-4 flex items-center justify-between transition-colors disabled:opacity-50 ${
-                  allRecu
-                    ? "bg-success text-white shadow-card"
-                    : "bg-white border border-rule text-text-primary"
-                }`}
-              >
-                <span className="text-left">
-                  <span className="block text-[10px] font-bold uppercase tracking-[0.12em]">
-                    {submitting ? "Validation…" : "Valider la réception"}
-                  </span>
-                  <span className="block text-[13px] font-extrabold mt-0.5">
-                    {allRecu
-                      ? "Toutes les lignes traitées · BR PDF généré ensuite"
-                      : `${progression.scanned}/${progression.total} unités traitées`}
-                  </span>
-                </span>
-                <PackageCheck className="w-5 h-5" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <ValidationFooter
+        bdl={bdl}
+        progression={progression}
+        allRecu={allRecu}
+        submitting={submitting}
+        onScan={() => setScannerOpen(true)}
+        onFinalize={() => void finalize()}
+      />
 
       {/* Scanner modal */}
       <BarcodeScanner
@@ -1098,478 +763,51 @@ export default function BdlReceptionPage() {
       />
 
       {/* Carton learn modal — apprentissage liaison carton↔produit */}
-      <AnimatePresence>
-        {learnCartonModal && !cartonScannerOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center"
-          >
-            <motion.div
-              initial={{ y: 60 }}
-              animate={{ y: 0 }}
-              exit={{ y: 60 }}
-              transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-start gap-3">
-                <span className="w-12 h-12 rounded-2xl bg-gold-soft text-primary-dark flex items-center justify-center shrink-0">
-                  <PackageCheck className="w-6 h-6" />
-                </span>
-                <div className="flex-1">
-                  <p className="label-caps text-primary">Apprentissage carton</p>
-                  <h3 className="text-[18px] font-extrabold text-text-primary mt-1">
-                    {learnCartonModal.step === "qty"
-                      ? "Combien d'unités ?"
-                      : "Quel produit est dedans ?"}
-                  </h3>
-                  <p className="text-[11px] font-mono bg-cream text-text-tertiary inline-block px-2 py-1 rounded-lg mt-2">
-                    Carton : {learnCartonModal.code}
-                  </p>
-                </div>
-                <button onClick={() => setLearnCartonModal(null)}>
-                  <X className="w-5 h-5 text-text-tertiary" />
-                </button>
-              </div>
-
-              {learnCartonModal.step === "qty" && (
-                <>
-                  <p className="text-[12.5px] text-text-secondary mt-3 leading-relaxed">
-                    Indique combien d&apos;unités sont dans ce carton. La
-                    prochaine fois que ce code-barre sera scanné, on
-                    multipliera automatiquement.
-                  </p>
-                  <div className="mt-5 flex items-center gap-3">
-                    <button
-                      onClick={() =>
-                        setLearnCartonModal({
-                          ...learnCartonModal,
-                          qty: Math.max(0, learnCartonModal.qty - 1),
-                        })
-                      }
-                      className="w-12 h-12 rounded-2xl bg-cream border border-rule font-bold text-xl"
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      value={learnCartonModal.qty || ""}
-                      onChange={(e) =>
-                        setLearnCartonModal({
-                          ...learnCartonModal,
-                          qty: Math.max(0, parseInt(e.target.value || "0", 10)),
-                        })
-                      }
-                      onFocus={(e) => {
-                        // Scroll vers le centre quand le clavier iOS
-                        // s'ouvre (sinon il cache le champ).
-                        setTimeout(
-                          () =>
-                            e.target.scrollIntoView({
-                              block: "center",
-                              behavior: "smooth",
-                            }),
-                          340
-                        );
-                      }}
-                      inputMode="numeric"
-                      placeholder="ex: 24"
-                      className="flex-1 input-field text-center text-2xl font-extrabold"
-                    />
-                    <button
-                      onClick={() =>
-                        setLearnCartonModal({
-                          ...learnCartonModal,
-                          qty: learnCartonModal.qty + 1,
-                        })
-                      }
-                      className="w-12 h-12 rounded-2xl bg-cream border border-rule font-bold text-xl"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setLearnCartonModal({
-                        ...learnCartonModal,
-                        step: "pick",
-                      })
-                    }
-                    disabled={learnCartonModal.qty <= 0}
-                    className="w-full mt-5 bg-primary text-white rounded-2xl py-3.5 font-bold disabled:opacity-50"
-                  >
-                    Suivant — identifier le produit interne
-                  </button>
-                </>
-              )}
-
-              {learnCartonModal.step === "pick" && (
-                <>
-                  <p className="text-[12.5px] text-text-secondary mt-3 leading-relaxed">
-                    {learnCartonModal.qty} unités dans le carton. Scanne ou
-                    cherche le produit qui est dedans.
-                  </p>
-                  <button
-                    onClick={() => setCartonScannerOpen(true)}
-                    className="w-full mt-3 bg-primary text-white rounded-2xl py-3 inline-flex items-center justify-center gap-2 font-bold"
-                  >
-                    <ScanBarcode className="w-5 h-5" />
-                    Scanner un produit interne
-                  </button>
-                  <div className="mt-3">
-                    <input
-                      type="text"
-                      value={cartonSearchQuery}
-                      onChange={(e) => setCartonSearchQuery(e.target.value)}
-                      placeholder="Ou cherche par nom (Cristaline, Coca…)"
-                      className="input-field"
-                    />
-                    <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
-                      {cartonSearchResults.map((p) => (
-                        <button
-                          key={p.id}
-                          onClick={() => void bindCartonToProduct(p.id, p.nom)}
-                          className="w-full text-left p-2 rounded-xl active:bg-cream"
-                        >
-                          <p className="text-sm font-bold text-text-primary truncate">
-                            {p.nom}
-                          </p>
-                          <p className="text-[11px] text-text-tertiary font-mono">
-                            {p.ean ?? "—"}
-                            {p.categorie && (
-                              <span className="ml-2">· {p.categorie}</span>
-                            )}
-                          </p>
-                        </button>
-                      ))}
-                      {cartonSearchQuery.length >= 2 &&
-                        cartonSearchResults.length === 0 && (
-                          <p className="text-xs text-text-tertiary text-center py-3">
-                            Aucun résultat
-                          </p>
-                        )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() =>
-                      setLearnCartonModal({
-                        ...learnCartonModal,
-                        step: "qty",
-                      })
-                    }
-                    className="w-full mt-3 text-text-secondary text-sm font-bold py-2"
-                  >
-                    ← Modifier la quantité
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <CartonLearnModal
+        state={learnCartonModal}
+        cartonScannerOpen={cartonScannerOpen}
+        searchQuery={cartonSearchQuery}
+        searchResults={cartonSearchResults}
+        onClose={() => setLearnCartonModal(null)}
+        onChangeState={(next) => setLearnCartonModal(next)}
+        onOpenCartonScanner={() => setCartonScannerOpen(true)}
+        onSearchQueryChange={setCartonSearchQuery}
+        onBindProduct={(id, nom) => void bindCartonToProduct(id, nom)}
+      />
 
       {/* Surplus modal */}
-      <AnimatePresence>
-        {surplusModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center"
-          >
-            <motion.div
-              initial={{ y: 60 }}
-              animate={{ y: 0 }}
-              exit={{ y: 60 }}
-              transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
-            >
-              <div className="flex items-start gap-3">
-                <span className="w-12 h-12 rounded-2xl bg-danger-soft text-danger flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-6 h-6" />
-                </span>
-                <div className="flex-1">
-                  <p className="label-caps text-danger">Produit non commandé</p>
-                  <h3 className="text-[18px] font-extrabold text-text-primary mt-1">
-                    {surplusModal.produitNom}
-                  </h3>
-                  <p className="text-[11px] font-mono bg-cream text-text-tertiary inline-block px-2 py-1 rounded-lg mt-2">
-                    {surplusModal.code}
-                  </p>
-                </div>
-                <button onClick={() => setSurplusModal(null)}>
-                  <X className="w-5 h-5 text-text-tertiary" />
-                </button>
-              </div>
-              <p className="text-[13px] text-text-secondary mt-4">
-                Ce produit ne figure pas sur le bon de livraison du fournisseur.
-                Tu peux signaler le surplus à Otmane et Ahmed pour facturation
-                au fournisseur ou retour marchandise.
-              </p>
-              <div className="mt-5">
-                <label className="label-caps text-text-tertiary block mb-1.5">
-                  Quantité reçue en plus
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSurplusQty((q) => Math.max(1, q - 1))}
-                    className="w-12 h-12 rounded-2xl bg-cream font-bold text-xl text-text-primary"
-                  >
-                    −
-                  </button>
-                  <input
-                    type="number"
-                    value={surplusQty}
-                    onChange={(e) =>
-                      setSurplusQty(Math.max(1, parseInt(e.target.value || "1", 10)))
-                    }
-                    inputMode="numeric"
-                    className="flex-1 input-field text-center text-2xl font-extrabold"
-                  />
-                  <button
-                    onClick={() => setSurplusQty((q) => q + 1)}
-                    className="w-12 h-12 rounded-2xl bg-cream font-bold text-xl text-text-primary"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={() => void submitSurplus()}
-                className="w-full mt-5 bg-danger text-white rounded-[18px] py-4 px-5 flex items-center justify-center gap-2 font-bold shadow-card-lg active:scale-[0.99]"
-              >
-                <Truck className="w-4 h-4" />
-                Signaler à Otmane et Ahmed
-              </button>
-              <button
-                onClick={() => setSurplusModal(null)}
-                className="w-full mt-2 text-text-secondary text-[13px] font-semibold py-2"
-              >
-                Annuler
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SurplusModal
+        state={surplusModal}
+        qty={surplusQty}
+        onClose={() => setSurplusModal(null)}
+        onQtyChange={setSurplusQty}
+        onSubmit={() => void submitSurplus()}
+      />
 
       {/* Create-product modal — EAN totalement inconnu */}
-      <AnimatePresence>
-        {createModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center"
-          >
-            <motion.div
-              initial={{ y: 60 }}
-              animate={{ y: 0 }}
-              exit={{ y: 60 }}
-              transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-start gap-3">
-                <span className="w-12 h-12 rounded-2xl bg-gold-soft text-primary-dark flex items-center justify-center shrink-0">
-                  <PackagePlus className="w-6 h-6" />
-                </span>
-                <div className="flex-1">
-                  <p className="label-caps text-primary">Code inconnu</p>
-                  <h3 className="text-[18px] font-extrabold text-text-primary mt-1">
-                    Carton ou unité ?
-                  </h3>
-                  <p className="text-[11px] font-mono bg-cream text-text-tertiary inline-block px-2 py-1 rounded-lg mt-2">
-                    {createModal.code}
-                  </p>
-                </div>
-                <button onClick={() => setCreateModal(null)}>
-                  <X className="w-5 h-5 text-text-tertiary" />
-                </button>
-              </div>
-
-              <p className="text-[12.5px] text-text-secondary mt-3 leading-relaxed">
-                Indique d&apos;abord le type pour faciliter la suite.
-              </p>
-
-              {/* Choix Carton vs Unité — 2 cards égales */}
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => {
-                    setLearnCartonModal({
-                      code: createModal.code,
-                      step: "qty",
-                      qty: 0,
-                    });
-                    setCreateModal(null);
-                  }}
-                  className="bg-gold-soft text-primary-dark rounded-2xl py-5 flex flex-col items-center gap-2 border-2 border-gold/30 active:scale-95 transition-transform"
-                >
-                  <PackageCheck className="w-7 h-7" />
-                  <span className="font-extrabold text-[14px]">Carton</span>
-                  <span className="text-[10.5px] font-medium opacity-80">
-                    plusieurs unités
-                  </span>
-                </button>
-                <button
-                  onClick={() => {
-                    // Auto-focus le nom après 50ms (laisse le DOM se peindre)
-                    setTimeout(() => {
-                      document
-                        .getElementById("create-prod-nom-input")
-                        ?.focus();
-                    }, 50);
-                  }}
-                  className="bg-cream text-primary rounded-2xl py-5 flex flex-col items-center gap-2 border-2 border-rule active:scale-95 transition-transform"
-                >
-                  <PackagePlus className="w-7 h-7" />
-                  <span className="font-extrabold text-[14px]">Unité</span>
-                  <span className="text-[10.5px] font-medium opacity-80">
-                    1 produit
-                  </span>
-                </button>
-              </div>
-
-              <p className="text-[11px] text-text-tertiary text-center mt-4 mb-2">
-                Pour 1 unité, remplis la fiche ci-dessous · Pour un carton,
-                tap le bouton or
-              </p>
-
-              {/* Bascule carton — bouton secondaire texte (au cas où user a déjà tap unité) */}
-              <button
-                onClick={() => {
-                  setLearnCartonModal({
-                    code: createModal.code,
-                    step: "qty",
-                    qty: 0,
-                  });
-                  setCreateModal(null);
-                }}
-                className="hidden"
-              >
-                <PackageCheck className="w-5 h-5" />
-                C&apos;est un carton (pas une unité)
-              </button>
-
-              <div className="mt-5 space-y-3">
-                <label className="block">
-                  <span className="label-caps text-text-tertiary block mb-1.5">
-                    Nom du produit
-                  </span>
-                  <input
-                    id="create-prod-nom-input"
-                    value={newProdNom}
-                    onChange={(e) => setNewProdNom(e.target.value)}
-                    onFocus={(e) => {
-                      // Scroll le champ vers le centre pour éviter
-                      // que le clavier iOS le cache (340ms = durée
-                      // approximative d'ouverture du clavier).
-                      setTimeout(
-                        () =>
-                          e.target.scrollIntoView({
-                            block: "center",
-                            behavior: "smooth",
-                          }),
-                        340
-                      );
-                    }}
-                    placeholder="ex : Bricks tunisiens x10"
-                    className="input-field"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="label-caps text-text-tertiary block mb-1.5">
-                    Catégorie
-                  </span>
-                  <select
-                    value={newProdCategorie}
-                    onChange={(e) => setNewProdCategorie(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="Boucherie">Boucherie</option>
-                    <option value="Charcuterie">Charcuterie</option>
-                    <option value="Épicerie">Épicerie</option>
-                    <option value="Frais">Frais</option>
-                    <option value="Surgelés">Surgelés</option>
-                    <option value="Boissons">Boissons</option>
-                    <option value="Hygiène">Hygiène</option>
-                  </select>
-                </label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="block">
-                    <span className="label-caps text-text-tertiary block mb-1.5">
-                      Prix unitaire (€)
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={newProdPrix}
-                      onChange={(e) => setNewProdPrix(e.target.value)}
-                      placeholder="ex : 4.90"
-                      className="input-field tabular"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="label-caps text-text-tertiary block mb-1.5">
-                      Qté reçue
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setNewProdQty((q) => Math.max(1, q - 1))}
-                        className="w-10 h-12 rounded-2xl bg-cream font-bold text-lg text-text-primary"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        value={newProdQty}
-                        onChange={(e) =>
-                          setNewProdQty(
-                            Math.max(1, parseInt(e.target.value || "1", 10))
-                          )
-                        }
-                        inputMode="numeric"
-                        className="flex-1 input-field text-center text-lg font-extrabold tabular"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setNewProdQty((q) => q + 1)}
-                        className="w-10 h-12 rounded-2xl bg-cream font-bold text-lg text-text-primary"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                onClick={() => void submitCreateProduct()}
-                disabled={creatingProd}
-                className="w-full mt-5 bg-primary text-white rounded-[18px] py-4 px-5 flex items-center justify-center gap-2 font-bold shadow-card-lg active:scale-[0.99] disabled:opacity-50"
-              >
-                {creatingProd ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4" />
-                )}
-                {creatingProd
-                  ? "Création…"
-                  : "Créer la fiche et ajouter au BDL"}
-              </button>
-              <button
-                onClick={() => setCreateModal(null)}
-                className="w-full mt-2 text-text-secondary text-[13px] font-semibold py-2"
-              >
-                Annuler
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <CreateProductModal
+        code={createModal?.code ?? null}
+        nom={newProdNom}
+        categorie={newProdCategorie}
+        prix={newProdPrix}
+        qty={newProdQty}
+        creating={creatingProd}
+        onClose={() => setCreateModal(null)}
+        onSwitchToCarton={() => {
+          if (!createModal) return;
+          setLearnCartonModal({
+            code: createModal.code,
+            step: "qty",
+            qty: 0,
+          });
+          setCreateModal(null);
+        }}
+        onNomChange={setNewProdNom}
+        onCategorieChange={setNewProdCategorie}
+        onPrixChange={setNewProdPrix}
+        onQtyChange={setNewProdQty}
+        onSubmit={() => void submitCreateProduct()}
+      />
     </V2Shell>
   );
 }

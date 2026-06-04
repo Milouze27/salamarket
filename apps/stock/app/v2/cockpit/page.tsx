@@ -39,7 +39,9 @@ import { HeroKpi } from "@/components/cockpit/hero-kpi";
 import { AlertCard, AlertCardRow } from "@/components/cockpit/alert-card";
 import { RamadanCard } from "@/components/cockpit/ramadan-card";
 import { CompetitorCard } from "@/components/cockpit/competitor-card";
+import { MorningBriefCard } from "@/components/cockpit/morning-brief";
 import type { CockpitSnapshot } from "@/app/api/cockpit/snapshot/route";
+import type { CockpitBriefing } from "@/app/api/cockpit/briefing/route";
 
 function formatEur(n: number): string {
   return new Intl.NumberFormat("fr-FR", {
@@ -67,6 +69,12 @@ export default function CockpitPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // MYTH-02 — copilote "3 choses avant 10h". Le brief est calculé une
+  // fois par matin (cache sessionStorage clé date+dépôt) pour ne PAS
+  // relancer le scoreur + l'IA à chaque render/refresh.
+  const [briefing, setBriefing] = useState<CockpitBriefing | null>(null);
+  const [briefLoading, setBriefLoading] = useState(true);
+
   const loadSnapshot = useCallback(async () => {
     try {
       // HOTFIX vague 7 : /api/cockpit/snapshot exige x-internal-secret.
@@ -86,9 +94,55 @@ export default function CockpitPage() {
     }
   }, [depot]);
 
+  // Brief du matin — chargé séparément du snapshot (il fait son propre
+  // appel snapshot côté serveur + reformulation IA, ce qui peut prendre
+  // quelques secondes). On le cache par session/matin. `force` saute le
+  // cache (bouton Sync). Résilient : un échec n'impacte pas le cockpit.
+  const loadBriefing = useCallback(
+    async (force = false) => {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const cacheKey = `cockpit-brief:${todayKey}:${depot?.id ?? "all"}`;
+      if (!force && typeof window !== "undefined") {
+        try {
+          const cached = window.sessionStorage.getItem(cacheKey);
+          if (cached) {
+            setBriefing(JSON.parse(cached) as CockpitBriefing);
+            setBriefLoading(false);
+            return;
+          }
+        } catch {
+          /* cache illisible → on recalcule */
+        }
+      }
+      setBriefLoading(true);
+      try {
+        const { loadCockpitBriefing } = await import("@/lib/actions/cockpit");
+        const r = await loadCockpitBriefing(depot?.id);
+        if (r.ok && r.data) {
+          setBriefing(r.data);
+          if (typeof window !== "undefined") {
+            try {
+              window.sessionStorage.setItem(cacheKey, JSON.stringify(r.data));
+            } catch {
+              /* quota plein → tant pis, pas de cache */
+            }
+          }
+        }
+        // Échec silencieux : le brief reste null → la card affiche le
+        // skeleton puis disparaît si vraiment rien. Pas de crash cockpit.
+      } catch {
+        /* le briefing ne casse JAMAIS le cockpit */
+      } finally {
+        setBriefLoading(false);
+      }
+    },
+    [depot],
+  );
+
   useEffect(() => {
     void loadSnapshot();
-  }, [loadSnapshot]);
+    void loadBriefing();
+  }, [loadSnapshot, loadBriefing]);
 
   // Realtime : si une casse est saisie pendant qu'Otmane regarde la page,
   // on rafraîchit le snapshot. Channel scope minimal pour pas spammer.
@@ -120,6 +174,7 @@ export default function CockpitPage() {
   function handleRefresh() {
     setRefreshing(true);
     void loadSnapshot();
+    void loadBriefing(true); // force = recalcule le brief (saute le cache matin)
   }
 
   // Fallback hijri si snap pas encore chargé (pour ne PAS attendre le réseau
@@ -175,6 +230,24 @@ export default function CockpitPage() {
         transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
         className="px-4 sm:px-5 md:px-8 flex flex-col gap-4 max-w-7xl mx-auto w-full"
       >
+        {/* ZONE 0 — Brief du matin (MYTH-02 copilote). En HAUT, avant les KPI :
+            les 3 actions calculées pendant la nuit, deep-linkées. On masque
+            la card uniquement si le brief a fini de charger ET qu'il n'y a
+            ni action ni message zen (cas d'échec total → on ne pollue pas). */}
+        {(briefLoading ||
+          briefing === null ||
+          briefing.actions.length > 0 ||
+          briefing.zen_message !== null) && (
+          <MorningBriefCard
+            prenom={prenom}
+            actions={briefing?.actions ?? []}
+            zenMessage={briefing?.zen_message ?? null}
+            iaReformule={briefing?.ia_reformule ?? false}
+            loading={briefLoading && briefing === null}
+            onAction={(href) => router.push(href)}
+          />
+        )}
+
         {/* ZONE 1 — Hero KPI (full width sur desktop pour rester impact-first) */}
         <HeroKpi
           prenom={prenom}

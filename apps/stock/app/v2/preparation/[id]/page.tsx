@@ -11,10 +11,12 @@ import {
   CreditCard,
   Loader2,
   PackageMinus,
+  Route,
   Scale,
   ScanBarcode,
   ShoppingBag,
   Snowflake,
+  TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -86,6 +88,30 @@ const ZONE_EMOJI: Record<"particulier" | "professionnel" | "traiteur", string> =
     traiteur: "🍽️",
   };
 
+/** Formate un poids en kg, virgule française, 2 décimales max. */
+function formatKg(kg: number): string {
+  return kg.toLocaleString("fr-FR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Formate un montant € à 2 décimales (virgule française). */
+function formatEur(eur: number): string {
+  return eur.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Libellé court de la conséquence métier d'un écart de pesée. */
+const ECART_ACTION_LABEL: Record<EcartAction, string> = {
+  auto_accept: "accepté",
+  preparator_decision: "à confirmer",
+  client_notify: "client informé",
+  client_validation_required: "validation client",
+};
+
 export default function V2PreparationDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -154,6 +180,28 @@ export default function V2PreparationDetailPage() {
     return order
       .map((z) => ({ zone: z, items: buckets.get(z) ?? [] }))
       .filter((g) => g.items.length > 0);
+  }, [lignes]);
+
+  /** Ordre de picking conseillé, adapté aux familles réellement présentes
+   *  dans la commande (chaîne du froid d'abord). On n'affiche que les
+   *  étapes correspondant à des produits effectivement à préparer. */
+  const pickingOrder = useMemo(() => {
+    const hasCold = lignes.some((l) =>
+      COLD_CATEGORIES.has(l.produit?.categorie ?? ""),
+    );
+    const hasTraiteur = lignes.some(
+      (l) => (l.zone_preparation ?? "particulier") === "traiteur",
+    );
+    const hasSec = lignes.some(
+      (l) =>
+        !COLD_CATEGORIES.has(l.produit?.categorie ?? "") &&
+        (l.zone_preparation ?? "particulier") !== "traiteur",
+    );
+    const steps: string[] = [];
+    if (hasCold) steps.push("Frais/congelé d'abord (chaîne du froid)");
+    if (hasSec) steps.push("puis sec");
+    if (hasTraiteur) steps.push("puis traiteur");
+    return steps;
   }, [lignes]);
 
   const handleScanRef = useRef<((c: string) => void) | undefined>(undefined);
@@ -437,6 +485,22 @@ export default function V2PreparationDetailPage() {
         </button>
       </section>
 
+      {pickingOrder.length > 1 && (
+        <section className="px-5 mt-4">
+          <div className="flex items-start gap-2.5 rounded-2xl border border-rule bg-cream px-3.5 py-3">
+            <span className="shrink-0 mt-0.5 text-primary" aria-hidden>
+              <Route className="w-4 h-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="label-caps text-text-tertiary">Ordre conseillé</p>
+              <p className="text-[13px] leading-snug text-text-secondary mt-0.5">
+                {pickingOrder.join(", ")}.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="px-5 mt-5 space-y-4">
         {groupedByZone.map((group) => (
           <div key={group.zone}>
@@ -449,67 +513,67 @@ export default function V2PreparationDetailPage() {
               {group.items.map((l, i) => {
                 const cold = COLD_CATEGORIES.has(l.produit?.categorie ?? "");
                 const done = l.statut_preparation !== "en_attente";
+                const weight = isWeightLine(l);
                 return (
                   <motion.div
                     key={l.id}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    className={`bg-white border rounded-2xl p-3 flex items-center gap-3 ${
-                      done ? "opacity-60 border-rule" : "border-rule"
-                    }`}
+                    className={`bg-white border rounded-2xl p-3 ${
+                      weight ? "flex flex-col gap-3" : "flex items-center gap-3"
+                    } ${done ? "opacity-60 border-rule" : "border-rule"}`}
                   >
-                    <ProductThumbnail
-                      nom={l.produit?.nom ?? "?"}
-                      categorie={l.produit?.categorie}
-                      size={48}
-                      rounded="xl"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-bold truncate ${done ? "line-through" : ""}`}
-                      >
-                        {l.produit?.nom ?? "Produit"}
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <ClientTypeBadge
-                          size="sm"
-                          type={
-                            (l.produit?.client_type as
-                              | ClientType
-                              | undefined) ??
-                            (l.zone_preparation === "professionnel"
-                              ? "pro"
-                              : l.zone_preparation === "traiteur"
-                                ? "traiteur"
-                                : "particulier")
-                          }
-                        />
-                        <span className="text-[11px] text-text-tertiary inline-flex items-center gap-1">
-                          Qté {l.quantite}
-                          {cold && (
-                            <span className="inline-flex items-center gap-0.5 text-text-secondary ml-1">
-                              <Snowflake className="w-3 h-3" />
-                              Frais
-                            </span>
-                          )}
-                        </span>
+                    <div className="flex items-center gap-3 w-full">
+                      <ProductThumbnail
+                        nom={l.produit?.nom ?? "?"}
+                        categorie={l.produit?.categorie}
+                        size={48}
+                        rounded="xl"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm font-bold truncate ${done ? "line-through" : ""}`}
+                        >
+                          {l.produit?.nom ?? "Produit"}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <ClientTypeBadge
+                            size="sm"
+                            type={
+                              (l.produit?.client_type as
+                                | ClientType
+                                | undefined) ??
+                              (l.zone_preparation === "professionnel"
+                                ? "pro"
+                                : l.zone_preparation === "traiteur"
+                                  ? "traiteur"
+                                  : "particulier")
+                            }
+                          />
+                          <span className="text-[11px] text-text-tertiary inline-flex items-center gap-1">
+                            Qté {l.quantite}
+                            {cold && (
+                              <span className="inline-flex items-center gap-0.5 text-text-secondary ml-1">
+                                <Snowflake className="w-3 h-3" />
+                                Frais
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    {/* — Ligne UNIT : scan / manquant / Check classique — */}
-                    {!isWeightLine(l) && l.statut_preparation === "prepare" && (
-                      <span className="text-success">
-                        <Check className="w-5 h-5" />
-                      </span>
-                    )}
-                    {!isWeightLine(l) &&
-                      l.statut_preparation === "manquant" && (
+                      {/* — Ligne UNIT : scan / manquant / Check classique — */}
+                      {!weight && l.statut_preparation === "prepare" && (
+                        <span className="text-success">
+                          <Check className="w-5 h-5" />
+                        </span>
+                      )}
+                      {!weight && l.statut_preparation === "manquant" && (
                         <span className="badge badge-danger text-[10px]">
                           Manquant
                         </span>
                       )}
-                    {!isWeightLine(l) &&
-                      l.statut_preparation === "en_attente" && (
+                      {!weight && l.statut_preparation === "en_attente" && (
                         <button
                           onClick={() => setMissingPhotoFor(l.id)}
                           className="text-xs font-bold text-danger px-2 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
@@ -518,8 +582,9 @@ export default function V2PreparationDetailPage() {
                           Manquant
                         </button>
                       )}
-                    {/* — Ligne WEIGHT/BRACKET : pesée Stripe — */}
-                    {isWeightLine(l) && (
+                    </div>
+                    {/* — Ligne WEIGHT/BRACKET : pesée Stripe (pleine largeur) — */}
+                    {weight && (
                       <WeightLineRow
                         ligne={l}
                         onChange={(patch) =>
@@ -603,14 +668,22 @@ function WeightLineRow({
   const ut = ligne.produit?.unit_type ?? "unit";
   const estimeTtc =
     ligne.montant_estime_ttc ?? ligne.prix_unitaire * ligne.quantite;
-  const reelTtcLive =
+  // Poids estimé : on remonte le montant estimé au prix/kg pour l'afficher
+  // (purement informatif, n'entre PAS dans le calcul de capture).
+  const ppk = ligne.produit?.price_per_kg ?? 0;
+  const estimeKg = ut === "weight" && ppk > 0 ? estimeTtc / ppk : null;
+  const reelKg =
     ut === "weight"
       ? (() => {
           const kg = parseFloat(ligne.weighedKg ?? "");
-          if (!Number.isFinite(kg) || kg <= 0) return null;
-          const ppk = ligne.produit?.price_per_kg ?? 0;
-          return ppk > 0 ? ppk * kg : null;
+          return Number.isFinite(kg) && kg > 0 ? kg : null;
         })()
+      : null;
+  const reelTtcLive =
+    ut === "weight"
+      ? reelKg != null && ppk > 0
+        ? ppk * reelKg
+        : null
       : ut === "weight_bracket"
         ? ligne.prix_unitaire
         : null;
@@ -622,75 +695,188 @@ function WeightLineRow({
     reelTtcLive != null ? Number((reelTtcLive - estimeTtc).toFixed(2)) : 0;
   const action: EcartAction | null =
     reelTtcLive != null ? determineEcartAction(pct, eurEcart) : null;
+  const needsClientValidation = action === "client_validation_required";
+
+  // Confirmation explicite de l'écart fort (> 20 %) par l'employé. Réinitialisé
+  // dès que la saisie de poids change (cf. effet ci-dessous).
+  const [confirmedHighEcart, setConfirmedHighEcart] = useState(false);
+  // Retour haptique discret la 1re fois qu'un écart fort est détecté.
+  const buzzedRef = useRef(false);
+  useEffect(() => {
+    if (needsClientValidation) {
+      if (!buzzedRef.current) {
+        buzzedRef.current = true;
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate([90, 40, 90]);
+        }
+      }
+    } else {
+      buzzedRef.current = false;
+      if (confirmedHighEcart) setConfirmedHighEcart(false);
+    }
+  }, [needsClientValidation, confirmedHighEcart]);
+  // Toute nouvelle saisie de poids invalide la confirmation précédente.
+  useEffect(() => {
+    setConfirmedHighEcart(false);
+    buzzedRef.current = false;
+  }, [ligne.weighedKg]);
+
+  const ecartBadgeClass =
+    action === "auto_accept"
+      ? "bg-success-soft text-success"
+      : action === "preparator_decision"
+        ? "bg-gold-soft text-primary-dark"
+        : action === "client_notify"
+          ? "bg-warning-soft text-warning"
+          : "bg-danger-soft text-danger";
+  const ecartTextClass =
+    action === "auto_accept"
+      ? "text-success"
+      : action === "preparator_decision"
+        ? "text-primary-dark"
+        : action === "client_notify"
+          ? "text-warning"
+          : "text-danger";
+
+  const saveBlocked = needsClientValidation && !confirmedHighEcart;
 
   return (
-    <div className="flex flex-col items-end gap-1.5 min-w-[140px]">
-      {/* Champ saisie selon le type */}
-      {ut === "weight" && (
-        <div className="flex items-center gap-1">
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            placeholder="kg"
-            value={ligne.weighedKg ?? ""}
-            onChange={(e) => onChange({ weighedKg: e.target.value })}
-            className="w-20 px-2 py-1 rounded-lg border border-rule text-base text-right tabular bg-cream focus:outline-none focus:border-primary"
-            aria-label={`Poids pesé ${ligne.produit?.nom ?? ""}`}
-          />
-          <span className="text-[10px] text-text-tertiary">kg</span>
-        </div>
-      )}
-      {ut === "weight_bracket" && (
-        <div className="text-[11px] text-text-secondary text-right">
-          <span className="font-semibold text-primary">
-            {ligne.produit?.poids_min_kg}-{ligne.produit?.poids_max_kg} kg
+    <div className="w-full flex flex-col gap-2.5">
+      {/* — Saisie + estimé/réel côte à côte — */}
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        {/* Estimé vs réel en badges lisibles */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex flex-col rounded-xl border border-rule bg-cream px-2.5 py-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
+              Estimé
+            </span>
+            <span className="text-[13px] font-bold tabular-nums text-text-secondary">
+              {estimeKg != null
+                ? `${formatKg(estimeKg)} kg`
+                : `${formatEur(estimeTtc)} €`}
+            </span>
           </span>
-          <span className="ml-1">· {ligne.prix_unitaire.toFixed(2)} €</span>
+          {ut === "weight" && (
+            <span className="inline-flex flex-col rounded-xl border border-rule bg-cream px-2.5 py-1.5">
+              <span className="text-[10px] uppercase tracking-wide text-text-tertiary">
+                Réel
+              </span>
+              <span className="text-[13px] font-bold tabular-nums text-text-primary">
+                {reelKg != null ? `${formatKg(reelKg)} kg` : "· kg"}
+              </span>
+            </span>
+          )}
+          {/* Écart % coloré + libellé conséquence */}
+          {action && (
+            <span className="inline-flex flex-col">
+              <span
+                className={
+                  "inline-flex items-center gap-1 text-[12px] font-extrabold tabular-nums px-2 py-1 rounded-full " +
+                  ecartBadgeClass
+                }
+              >
+                {pct >= 0 ? "+" : ""}
+                {pct.toFixed(0)}%
+              </span>
+              <span
+                className={
+                  "text-[10px] font-semibold mt-0.5 text-center " +
+                  ecartTextClass
+                }
+              >
+                {ECART_ACTION_LABEL[action]}
+              </span>
+            </span>
+          )}
+        </div>
+
+        {/* Champ saisie / bornes bracket */}
+        {ut === "weight" && (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              placeholder="0,00"
+              value={ligne.weighedKg ?? ""}
+              onChange={(e) => onChange({ weighedKg: e.target.value })}
+              className="w-24 px-3 py-2.5 rounded-xl border border-rule text-base text-right tabular-nums bg-cream focus:outline-none focus:border-primary"
+              aria-label={`Poids pesé ${ligne.produit?.nom ?? ""}`}
+            />
+            <span className="text-[11px] text-text-tertiary">kg</span>
+          </div>
+        )}
+        {ut === "weight_bracket" && (
+          <div className="text-[12px] text-text-secondary text-right">
+            <span className="font-semibold text-primary tabular-nums">
+              {ligne.produit?.poids_min_kg}-{ligne.produit?.poids_max_kg} kg
+            </span>
+            <span className="ml-1 tabular-nums">
+              · {formatEur(ligne.prix_unitaire)} €
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* — Bannière validation client (écart > 20 %) — */}
+      {needsClientValidation && !ligne.saved && (
+        <div className="rounded-xl border border-danger bg-danger-soft px-3 py-3">
+          <p className="text-[13px] font-bold text-danger inline-flex items-center gap-1.5">
+            <TriangleAlert className="w-4 h-4 shrink-0" />
+            Écart &gt; 20 % : le client doit valider.
+          </p>
+          <p className="text-[12px] text-text-secondary mt-1">
+            Estimé {formatEur(estimeTtc)} € · réel {formatEur(reelTtcLive ?? 0)}{" "}
+            € ({eurEcart >= 0 ? "+" : ""}
+            {formatEur(eurEcart)} €). Confirmes-tu cet écart ?
+          </p>
+          {confirmedHighEcart ? (
+            <p className="text-[12px] font-semibold text-success mt-2 inline-flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" />
+              Écart confirmé, tu peux enregistrer.
+            </p>
+          ) : (
+            <div className="flex gap-2 mt-2.5">
+              <button
+                onClick={() => setConfirmedHighEcart(true)}
+                className="flex-1 min-h-[44px] rounded-xl bg-danger text-white text-sm font-bold px-3"
+              >
+                Oui, confirmer
+              </button>
+              <button
+                onClick={() => onChange({ weighedKg: "" })}
+                className="flex-1 min-h-[44px] rounded-xl border border-rule bg-white text-text-primary text-sm font-bold px-3"
+              >
+                Non, repeser
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Badge écart live */}
-      {action && (
-        <span
-          className={
-            "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full " +
-            (action === "auto_accept"
-              ? "bg-success-soft text-success"
-              : action === "preparator_decision"
-                ? "bg-gold-soft text-primary-dark"
-                : action === "client_notify"
-                  ? "bg-warning-soft text-warning"
-                  : "bg-danger-soft text-danger")
-          }
-          title={`Écart ${pct.toFixed(1)}% (${eurEcart >= 0 ? "+" : ""}${eurEcart} €) — action ${action}`}
-        >
-          {pct >= 0 ? "+" : ""}
-          {pct.toFixed(1)}%
-        </span>
-      )}
-
-      {/* Bouton Enregistrer / état saved */}
-      {ligne.saved ? (
-        <span className="text-[10px] text-success inline-flex items-center gap-1">
-          <Check className="w-3 h-3" />
-          Pesée enregistrée
-        </span>
-      ) : (
-        <button
-          onClick={() => void onSave()}
-          disabled={ligne.saving || reelTtcLive == null}
-          className="text-[11px] font-bold text-white bg-primary px-2 py-1 rounded-lg disabled:opacity-50 inline-flex items-center gap-1"
-        >
-          {ligne.saving ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <Scale className="w-3 h-3" />
-          )}
-          Enregistrer
-        </button>
-      )}
+      {/* — Bouton Enregistrer / état saved — */}
+      <div className="flex justify-end">
+        {ligne.saved ? (
+          <span className="text-[12px] text-success inline-flex items-center gap-1 font-semibold">
+            <Check className="w-4 h-4" />
+            Pesée enregistrée
+          </span>
+        ) : (
+          <button
+            onClick={() => void onSave()}
+            disabled={ligne.saving || reelTtcLive == null || saveBlocked}
+            className="min-h-[44px] text-sm font-bold text-white bg-primary px-4 rounded-xl disabled:opacity-50 inline-flex items-center gap-1.5"
+          >
+            {ligne.saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Scale className="w-4 h-4" />
+            )}
+            Enregistrer
+          </button>
+        )}
+      </div>
     </div>
   );
 }

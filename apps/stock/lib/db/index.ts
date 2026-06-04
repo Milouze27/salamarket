@@ -61,17 +61,14 @@ export async function listEmployes(depotId?: string): Promise<Employe[]> {
     // 20260531000021_employes_public_view.sql).
     // Les call sites server-side (api/**) qui ont besoin de pin_hash
     // utilisent supabaseServer() (service_role) qui bypasse RLS.
-    let q = sb
-      .from("employes_public")
-      .select("*")
-      .eq("is_active", true);
+    let q = sb.from("employes_public").select("*").eq("is_active", true);
     if (depotId) q = q.eq("depot_principal_id", depotId);
     const { data, error } = await q.order("nom");
     if (error) throw error;
     return (data ?? []) as Employe[];
   }
   return SEED_EMPLOYES.filter(
-    (e) => e.is_active && (!depotId || e.depot_principal_id === depotId)
+    (e) => e.is_active && (!depotId || e.depot_principal_id === depotId),
   );
 }
 
@@ -112,14 +109,14 @@ export async function loginByPin(pin: string): Promise<Employe | null> {
 /* ────────────────── Produits & Stock par dépôt ────────────────── */
 
 export async function listProduitsInDepot(
-  depotId: string
+  depotId: string,
 ): Promise<ProduitInDepot[]> {
   const sb = supabase();
   if (sb) {
     const { data, error } = await sb
       .from("stock_par_depot")
       .select(
-        "id, depot_id, quantite, prix_vente, is_visible, produit:produits(*)"
+        "id, depot_id, quantite, prix_vente, is_visible, produit:produits(*)",
       )
       .eq("depot_id", depotId)
       .eq("is_visible", true);
@@ -137,7 +134,9 @@ export async function listProduitsInDepot(
     });
   }
   // local fallback: join SEED_PRODUITS with SEED_STOCK
-  const stock = SEED_STOCK.filter((s) => s.depot_id === depotId && s.is_visible);
+  const stock = SEED_STOCK.filter(
+    (s) => s.depot_id === depotId && s.is_visible,
+  );
   return stock
     .map((s) => {
       const p = SEED_PRODUITS.find((x) => x.id === s.produit_id);
@@ -185,7 +184,7 @@ export async function searchProduits(query: string): Promise<Produit[]> {
     (p) =>
       p.nom.toLowerCase().includes(q) ||
       (p.marque?.toLowerCase().includes(q) ?? false) ||
-      (p.ean?.includes(q) ?? false)
+      (p.ean?.includes(q) ?? false),
   ).slice(0, 20);
 }
 
@@ -352,7 +351,7 @@ export async function addReceptionLigne(input: {
 
 export async function validateReception(
   receptionId: string,
-  opts?: { vide?: boolean }
+  opts?: { vide?: boolean },
 ): Promise<void> {
   const vide = opts?.vide === true;
   const sb = supabase();
@@ -376,7 +375,10 @@ export async function validateReception(
       produit_id: string;
       quantite_calculee: number;
     }>) {
-      totals.set(l.produit_id, (totals.get(l.produit_id) ?? 0) + l.quantite_calculee);
+      totals.set(
+        l.produit_id,
+        (totals.get(l.produit_id) ?? 0) + l.quantite_calculee,
+      );
     }
     for (const [produitId, qty] of totals) {
       // upsert stock row
@@ -390,8 +392,7 @@ export async function validateReception(
         await sb
           .from("stock_par_depot")
           .update({
-            quantite:
-              (existing as { quantite: number }).quantite + qty,
+            quantite: (existing as { quantite: number }).quantite + qty,
             updated_at: new Date().toISOString(),
           })
           .eq("id", (existing as { id: string }).id);
@@ -413,10 +414,12 @@ export async function validateReception(
   // Local fallback: bump SEED_STOCK in-memory.
   const rec = localReceptions.find((r) => r.id === receptionId);
   if (!rec) return;
-  const lignes = localReceptionLignes.filter((l) => l.reception_id === receptionId);
+  const lignes = localReceptionLignes.filter(
+    (l) => l.reception_id === receptionId,
+  );
   for (const l of lignes) {
     const stock = SEED_STOCK.find(
-      (s) => s.produit_id === l.produit_id && s.depot_id === rec.depot_id
+      (s) => s.produit_id === l.produit_id && s.depot_id === rec.depot_id,
     );
     if (stock) {
       stock.quantite += l.quantite_calculee;
@@ -524,13 +527,13 @@ export async function createSortie(input: {
       input.depot_id,
       -input.quantite,
       isCasse ? "casse" : "sortie",
-      { lotId, referenceId: sortieId, actorId: input.employe_id }
+      { lotId, referenceId: sortieId, actorId: input.employe_id },
     );
     return data as SortieStock;
   }
   localSorties.push(row);
   const stock = SEED_STOCK.find(
-    (s) => s.produit_id === input.produit_id && s.depot_id === input.depot_id
+    (s) => s.produit_id === input.produit_id && s.depot_id === input.depot_id,
   );
   if (stock) stock.quantite = Math.max(0, stock.quantite - input.quantite);
   return row;
@@ -622,20 +625,21 @@ export async function createTransfert(input: {
     if (error) {
       console.error("[createTransfert] INSERT trace error:", error);
       throw new Error(
-        `Stock transféré mais trace non enregistrée : ${error.message}`
+        `Stock transféré mais trace non enregistrée : ${error.message}`,
       );
     }
     return data as TransfertInterDepot;
   }
   localTransferts.push(row);
   const sStock = SEED_STOCK.find(
-    (s) => s.produit_id === input.produit_id && s.depot_id === input.depot_source_id
+    (s) =>
+      s.produit_id === input.produit_id && s.depot_id === input.depot_source_id,
   );
   if (sStock) sStock.quantite = Math.max(0, sStock.quantite - input.quantite);
   let dStock = SEED_STOCK.find(
     (s) =>
       s.produit_id === input.produit_id &&
-      s.depot_id === input.depot_destination_id
+      s.depot_id === input.depot_destination_id,
   );
   if (!dStock) {
     dStock = {
@@ -675,7 +679,11 @@ async function adjustStock(
     | "casse"
     | "inventaire"
     | "correction" = "correction",
-  opts?: { lotId?: string | null; referenceId?: string | null; actorId?: string | null }
+  opts?: {
+    lotId?: string | null;
+    referenceId?: string | null;
+    actorId?: string | null;
+  },
 ): Promise<number | null> {
   const sb = supabase();
   if (!sb) return null; // mode démo : le caller met à jour SEED_STOCK lui-même
@@ -706,7 +714,7 @@ export async function listTransferts(opts?: {
       .limit(limit);
     if (opts?.depotId) {
       q = q.or(
-        `depot_source_id.eq.${opts.depotId},depot_destination_id.eq.${opts.depotId}`
+        `depot_source_id.eq.${opts.depotId},depot_destination_id.eq.${opts.depotId}`,
       );
     }
     const { data, error } = await q;
@@ -718,7 +726,7 @@ export async function listTransferts(opts?: {
     list = list.filter(
       (t) =>
         t.depot_source_id === opts.depotId ||
-        t.depot_destination_id === opts.depotId
+        t.depot_destination_id === opts.depotId,
     );
   return list
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -750,13 +758,13 @@ export async function listInventairesDuJour(opts?: {
     (i) =>
       i.date_assignation === today &&
       (!opts?.depotId || i.depot_id === opts.depotId) &&
-      (!opts?.employeId || i.employe_assigne_id === opts.employeId)
+      (!opts?.employeId || i.employe_assigne_id === opts.employeId),
   );
 }
 
 export async function assignInventairesPourDepot(
   depotId: string,
-  count = 5
+  count = 5,
 ): Promise<InventaireTournant[]> {
   const today = new Date().toISOString().slice(0, 10);
   const employes = await listEmployes(depotId);
@@ -825,7 +833,7 @@ export async function listInventairesHistorique(opts?: {
 
 export async function completeInventaire(
   inventaireId: string,
-  quantiteComptee: number
+  quantiteComptee: number,
 ): Promise<InventaireTournant | null> {
   const sb = supabase();
   if (sb) {
@@ -970,14 +978,11 @@ const SEED_COMMANDE_LIGNES: CommandeDriveLigne[] = [
 ];
 
 export async function listCommandesDrive(
-  statut?: CommandeDrive["statut"]
+  statut?: CommandeDrive["statut"],
 ): Promise<CommandeDrive[]> {
   const sb = supabase();
   if (sb) {
-    let q = sb
-      .from("commandes_drive")
-      .select("*")
-      .order("creneau_retrait");
+    let q = sb.from("commandes_drive").select("*").order("creneau_retrait");
     if (statut) q = q.eq("statut", statut);
     const { data, error } = await q;
     if (error) throw error;
@@ -989,7 +994,7 @@ export async function listCommandesDrive(
 }
 
 export async function listLignesPourCommande(
-  commandeId: string
+  commandeId: string,
 ): Promise<CommandeDriveLigne[]> {
   const sb = supabase();
   if (sb) {
@@ -1001,6 +1006,41 @@ export async function listLignesPourCommande(
     return data as CommandeDriveLigne[];
   }
   return SEED_COMMANDE_LIGNES.filter((l) => l.commande_id === commandeId);
+}
+
+/**
+ * Résout nom + catégorie pour un lot d'IDs produits en une seule requête.
+ * Sert aux agrégations (ex. top produits drive) qui n'ont que les
+ * `produit_id` des lignes et veulent un libellé lisible plutôt qu'un UUID.
+ * Retourne une Map id → { nom, categorie } pour un lookup O(1) côté UI.
+ */
+export async function listProduitsNomsByIds(
+  ids: string[],
+): Promise<Map<string, { nom: string; categorie: string | null }>> {
+  const uniq = Array.from(new Set(ids.filter(Boolean)));
+  const out = new Map<string, { nom: string; categorie: string | null }>();
+  if (uniq.length === 0) return out;
+  const sb = supabase();
+  if (sb) {
+    const { data, error } = await sb
+      .from("produits")
+      .select("id, nom, categorie")
+      .in("id", uniq);
+    if (error) throw error;
+    for (const p of (data ?? []) as Array<{
+      id: string;
+      nom: string;
+      categorie: string | null;
+    }>) {
+      out.set(p.id, { nom: p.nom, categorie: p.categorie ?? null });
+    }
+    return out;
+  }
+  for (const id of uniq) {
+    const p = SEED_PRODUITS.find((x) => x.id === id);
+    if (p) out.set(id, { nom: p.nom, categorie: p.categorie ?? null });
+  }
+  return out;
 }
 
 /**
@@ -1027,7 +1067,11 @@ export async function listLignesPourCommandeAvecUnitType(
       .eq("commande_id", commandeId);
     if (error) throw error;
     type Row = CommandeDriveLigne & {
-      produits?: { unit_type?: ProduitUnitType | null; nom?: string | null; categorie?: string | null } | null;
+      produits?: {
+        unit_type?: ProduitUnitType | null;
+        nom?: string | null;
+        categorie?: string | null;
+      } | null;
     };
     return ((data ?? []) as Row[]).map((r) => ({
       ...r,
@@ -1040,7 +1084,12 @@ export async function listLignesPourCommandeAvecUnitType(
   return SEED_COMMANDE_LIGNES.filter((l) => l.commande_id === commandeId).map(
     (l) => {
       const p = SEED_PRODUITS.find((x) => x.id === l.produit_id);
-      return { ...l, produit_unit_type: null, produit_nom: p?.nom ?? null, produit_categorie: p?.categorie ?? null };
+      return {
+        ...l,
+        produit_unit_type: null,
+        produit_nom: p?.nom ?? null,
+        produit_categorie: p?.categorie ?? null,
+      };
     },
   );
 }
@@ -1077,7 +1126,7 @@ export async function listRevenueByDay(opts?: {
       .from("commandes_drive")
       .select(
         "id, created_at, statut, total_ttc, " +
-          "commandes_drive_lignes(zone_preparation, quantite, prix_unitaire)"
+          "commandes_drive_lignes(zone_preparation, quantite, prix_unitaire)",
       )
       .gte("created_at", startIso)
       .neq("statut", "annule");
@@ -1120,11 +1169,11 @@ export async function listRevenueByDay(opts?: {
       const weekendBoost = dayOfWeek === 6 || dayOfWeek === 0 ? 1.25 : 1;
       prevP = Math.max(
         80,
-        prevP + (rand() - 0.4) * 90 + Math.sin(idx / 3) * 30
+        prevP + (rand() - 0.4) * 90 + Math.sin(idx / 3) * 30,
       );
       prevPro = Math.max(
         40,
-        prevPro + (rand() - 0.5) * 55 + Math.cos(idx / 4) * 20
+        prevPro + (rand() - 0.5) * 55 + Math.cos(idx / 4) * 20,
       );
       b.particulier = Math.round(prevP * weekendBoost);
       b.pro = Math.round(prevPro * weekendBoost);
@@ -1192,10 +1241,10 @@ export async function listDriveRevenueByDay(opts?: {
       const weekendBoost = dayOfWeek === 6 || dayOfWeek === 0 ? 1.35 : 1;
       prev = Math.max(
         60,
-        prev + (rand() - 0.42) * 110 + Math.sin(idx / 2.5) * 40
+        prev + (rand() - 0.42) * 110 + Math.sin(idx / 2.5) * 40,
       );
       b.ca = Math.round(prev * weekendBoost);
-      b.commandes = Math.max(1, Math.round(prev / 25 * weekendBoost));
+      b.commandes = Math.max(1, Math.round((prev / 25) * weekendBoost));
     });
   }
 
@@ -1213,7 +1262,7 @@ export async function updateLignePreparation(
       CommandeDriveLigne,
       "statut_preparation" | "prepare_par_employe_id" | "prepare_at"
     >
-  >
+  >,
 ): Promise<void> {
   const sb = supabase();
   if (sb) {
@@ -1226,7 +1275,7 @@ export async function updateLignePreparation(
 
 export async function setCommandeStatut(
   commandeId: string,
-  statut: CommandeDrive["statut"]
+  statut: CommandeDrive["statut"],
 ): Promise<void> {
   const sb = supabase();
   if (sb) {

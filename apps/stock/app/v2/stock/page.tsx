@@ -20,6 +20,7 @@ import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { StockEditModal } from "@/components/v2/StockEditModal";
 import { PriceTag } from "@/components/v2/PriceTag";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { EmptyState } from "@/components/v2/EmptyState";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot, listDepots } from "@/lib/db";
 import type { Depot } from "@/lib/types/db";
@@ -333,11 +334,19 @@ export default function V2StockPage() {
               </div>
             ))}
           </section>
-          {filtered.length === 0 && (
-            <div className="px-5 py-10 text-center text-text-secondary">
-              Aucun produit ne correspond à la recherche.
-            </div>
-          )}
+          {filtered.length === 0 &&
+            (items.length === 0 && cat === "Tout" && !query.trim() ? (
+              <EmptyState
+                icon={Package}
+                title="Aucun produit dans ce dépôt"
+                description="Commence par une réception de marchandise ou change de dépôt."
+                cta={{ label: "Nouvelle réception", href: "/v2/reception" }}
+              />
+            ) : (
+              <div className="px-5 py-10 text-center text-text-secondary">
+                Aucun produit ne correspond à la recherche.
+              </div>
+            ))}
         </>
       ) : (
         // ─── VUE REGROUPÉE 3 DÉPÔTS ─────────────────────────────

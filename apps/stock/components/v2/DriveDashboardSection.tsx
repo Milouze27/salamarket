@@ -4,10 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   PackageOpen,
+  ShieldCheck,
   ShoppingBag,
+  Timer,
   TrendingUp,
   Wifi,
   XCircle,
@@ -16,6 +19,7 @@ import {
   listCommandesDrive,
   listDriveRevenueByDay,
   listLignesPourCommande,
+  listProduitsNomsByIds,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import type {
@@ -98,14 +102,47 @@ function formatCreneau(iso: string) {
   );
 }
 
+/**
+ * Écart signé en minutes entre le créneau et maintenant.
+ * Positif = créneau futur (temps restant), négatif = créneau dépassé (retard).
+ */
+function minutesUntil(iso: string, nowMs: number): number {
+  return Math.round((new Date(iso).getTime() - nowMs) / 60_000);
+}
+
+/** Libellé court "dans 12 min" / "il y a 8 min" / "il y a 1 h 05". */
+function formatDelta(deltaMin: number): string {
+  const late = deltaMin < 0;
+  const abs = Math.abs(deltaMin);
+  let body: string;
+  if (abs < 60) {
+    body = `${abs} min`;
+  } else {
+    const h = Math.floor(abs / 60);
+    const m = abs % 60;
+    body = m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+  }
+  return late ? `il y a ${body}` : `dans ${body}`;
+}
+
+/** Seuil "imminent" : commande à retirer dans les 30 prochaines minutes. */
+const IMMINENT_WINDOW_MIN = 30;
+
 export function DriveDashboardSection() {
   const [commandes, setCommandes] = useState<CommandeAggreg[]>([]);
   const [revenue, setRevenue] = useState<DriveRevenueDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [liveStatus, setLiveStatus] = useState<"connecting" | "live" | "offline">(
-    "connecting"
-  );
+  const [liveStatus, setLiveStatus] = useState<
+    "connecting" | "live" | "offline"
+  >("connecting");
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  // Résolution id produit → { nom, categorie } pour afficher le top en clair.
+  const [produitNoms, setProduitNoms] = useState<
+    Map<string, { nom: string; categorie: string | null }>
+  >(new Map());
+  // Horloge interne : fait avancer les calculs de retard/imminence même
+  // sans nouvel event Realtime (un créneau bascule "en retard" tout seul).
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   /**
    * Fetch combiné commandes + CA par jour. Appelé au mount ET à chaque
@@ -113,24 +150,34 @@ export function DriveDashboardSection() {
    */
   const refetch = useCallback(async () => {
     try {
-      const [enPrep, pret, retire, annule] = await Promise.all([
+      const [aPreparer, enPrep, pret, retire, annule] = await Promise.all([
+        listCommandesDrive("a_preparer"),
         listCommandesDrive("en_preparation"),
         listCommandesDrive("pret"),
         listCommandesDrive("retire"),
         listCommandesDrive("annule"),
       ]);
-      const all = [...enPrep, ...pret, ...retire, ...annule];
+      const all = [...aPreparer, ...enPrep, ...pret, ...retire, ...annule];
       const enriched = await Promise.all(
         all.map(async (c) => ({
           ...c,
           lignes: await listLignesPourCommande(c.id),
-        }))
+        })),
       );
       setCommandes(enriched);
+
+      // Résout les noms des produits référencés par les lignes actives,
+      // en une requête `.in('id', ids)` (pas par commande).
+      const ids = enriched
+        .filter((c) => c.statut !== "annule")
+        .flatMap((c) => c.lignes.map((l) => l.produit_id));
+      const noms = await listProduitsNomsByIds(ids).catch(() => new Map());
+      setProduitNoms(noms);
 
       const rev = await listDriveRevenueByDay({ days: 90 }).catch(() => []);
       setRevenue(rev);
       setLastUpdate(new Date());
+      setNowMs(Date.now());
     } finally {
       setLoading(false);
     }
@@ -141,11 +188,19 @@ export function DriveDashboardSection() {
     void refetch();
   }, [refetch]);
 
+  // Tick horloge 30s : recalcule retards/imminence sans refetch réseau.
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
   // Subscription Supabase Realtime sur commandes_drive + lignes
   // Quand une nouvelle commande arrive (INSERT) ou change (UPDATE),
   // on re-fetch tout le bloc (commandes + revenue). Debounce 600ms
   // pour éviter les rafales sur un import en bulk.
-  const refetchDebouncedRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refetchDebouncedRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const scheduleRefetch = useCallback(() => {
     if (refetchDebouncedRef.current) clearTimeout(refetchDebouncedRef.current);
     refetchDebouncedRef.current = setTimeout(() => {
@@ -164,12 +219,12 @@ export function DriveDashboardSection() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commandes_drive" },
-        () => scheduleRefetch()
+        () => scheduleRefetch(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commandes_drive_lignes" },
-        () => scheduleRefetch()
+        () => scheduleRefetch(),
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") setLiveStatus("live");
@@ -210,7 +265,7 @@ export function DriveDashboardSection() {
       .filter(
         (c) =>
           c.statut !== "annule" &&
-          new Date(c.created_at).toDateString() === today
+          new Date(c.created_at).toDateString() === today,
       )
       .reduce((s, c) => s + Number(c.total_ttc), 0);
   }, [commandes]);
@@ -237,7 +292,30 @@ export function DriveDashboardSection() {
       .slice(0, 5);
   }, [commandes]);
 
-  // Top 5 produits (par quantité totale)
+  // Suivi retrait : retards, imminences (≤30 min) et file des urgences.
+  // Concerne les commandes pas encore prêtes ni retirées/annulées.
+  const pickupTracking = useMemo(() => {
+    const open = commandes.filter(
+      (c) => c.statut === "a_preparer" || c.statut === "en_preparation",
+    );
+    let enRetard = 0;
+    let imminent = 0;
+    const urgentes = open
+      .map((c) => ({ c, delta: minutesUntil(c.creneau_retrait, nowMs) }))
+      .sort((a, b) => a.delta - b.delta); // plus en retard / plus urgent d'abord
+    for (const { delta } of urgentes) {
+      if (delta < 0) enRetard++;
+      else if (delta <= IMMINENT_WINDOW_MIN) imminent++;
+    }
+    return {
+      enRetard,
+      imminent,
+      urgentes: urgentes.slice(0, 5),
+      hasOpen: open.length > 0,
+    };
+  }, [commandes, nowMs]);
+
+  // Top 5 produits (par quantité totale), résolus en noms + catégorie.
   const topProduits = useMemo(() => {
     const byProduit = new Map<string, number>();
     for (const c of commandes) {
@@ -245,21 +323,30 @@ export function DriveDashboardSection() {
       for (const l of c.lignes) {
         byProduit.set(
           l.produit_id,
-          (byProduit.get(l.produit_id) ?? 0) + Number(l.quantite)
+          (byProduit.get(l.produit_id) ?? 0) + Number(l.quantite),
         );
       }
     }
     return Array.from(byProduit.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-  }, [commandes]);
+      .slice(0, 5)
+      .map(([produitId, qty]) => {
+        const info = produitNoms.get(produitId);
+        return {
+          produitId,
+          qty,
+          nom: info?.nom ?? null,
+          categorie: info?.categorie ?? null,
+        };
+      });
+  }, [commandes, produitNoms]);
 
   const recent = useMemo(
     () =>
       [...commandes]
         .sort((a, b) => b.created_at.localeCompare(a.created_at))
         .slice(0, 8),
-    [commandes]
+    [commandes],
   );
 
   if (loading) {
@@ -384,6 +471,114 @@ export function DriveDashboardSection() {
         </motion.div>
       </section>
 
+      {/* Suivi retrait : retard / imminence (SLA) */}
+      <section className="px-5 mt-7">
+        <p className="section-eyebrow mb-3">
+          <Timer className="w-3 h-3" />
+          En retard &amp; à venir
+        </p>
+        <div className="bg-white border border-rule rounded-[20px] p-4 shadow-card">
+          {/* Chips compteurs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {pickupTracking.enRetard > 0 ? (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-extrabold tabular"
+                style={{
+                  background: "var(--danger-soft)",
+                  color: "var(--danger)",
+                }}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2.4} />
+                {pickupTracking.enRetard} en retard
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-bold"
+                style={{
+                  background: "var(--success-soft)",
+                  color: "var(--success)",
+                }}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.4} />
+                Aucun retard
+              </span>
+            )}
+            {pickupTracking.imminent > 0 && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-extrabold tabular"
+                style={{
+                  background: "var(--accent-gold-soft)",
+                  color: "var(--accent-gold)",
+                }}
+              >
+                <Clock className="w-3.5 h-3.5" strokeWidth={2.4} />
+                {pickupTracking.imminent} imminente
+                {pickupTracking.imminent > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+
+          {/* File des urgences */}
+          {pickupTracking.urgentes.length > 0 ? (
+            <ul className="mt-3.5 -mb-1 divide-y divide-rule">
+              {pickupTracking.urgentes.map(({ c, delta }) => {
+                const late = delta < 0;
+                const imminent = !late && delta <= IMMINENT_WINDOW_MIN;
+                const tone = late
+                  ? "var(--danger)"
+                  : imminent
+                    ? "var(--accent-gold)"
+                    : "var(--text-secondary)";
+                return (
+                  <li
+                    key={c.id}
+                    className="flex items-center gap-3 py-2.5 first:pt-0"
+                  >
+                    <span
+                      className="inline-flex w-8 h-8 rounded-lg items-center justify-center shrink-0"
+                      style={{
+                        background: late
+                          ? "var(--danger-soft)"
+                          : imminent
+                            ? "var(--accent-gold-soft)"
+                            : "var(--surface-2)",
+                        color: tone,
+                      }}
+                    >
+                      {late ? (
+                        <AlertTriangle className="w-4 h-4" strokeWidth={2.2} />
+                      ) : (
+                        <Clock className="w-4 h-4" strokeWidth={2.2} />
+                      )}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-text-primary leading-tight truncate">
+                        {c.numero_commande}
+                      </p>
+                      <p className="text-[11px] text-text-secondary mt-0.5 truncate">
+                        {c.client_nom}
+                      </p>
+                    </div>
+                    <p
+                      className="text-[12.5px] font-extrabold tabular shrink-0 text-right"
+                      style={{ color: tone }}
+                    >
+                      {formatDelta(delta)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-[12px] text-text-secondary mt-3">
+              {pickupTracking.hasOpen
+                ? "Toutes les commandes en cours sont dans les temps."
+                : "Aucune commande en cours de préparation."}
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* Créneaux à venir 24h */}
       {upcomingSlots.length > 0 && (
         <section className="px-5 mt-7">
@@ -393,10 +588,7 @@ export function DriveDashboardSection() {
           </p>
           <div className="bg-white border border-rule rounded-[20px] divide-y divide-rule overflow-hidden">
             {upcomingSlots.map(([creneau, cmds]) => {
-              const total = cmds.reduce(
-                (s, c) => s + Number(c.total_ttc),
-                0
-              );
+              const total = cmds.reduce((s, c) => s + Number(c.total_ttc), 0);
               return (
                 <div
                   key={creneau}
@@ -431,7 +623,7 @@ export function DriveDashboardSection() {
             Top 5 produits commandés
           </p>
           <div className="bg-white border border-rule rounded-[20px] divide-y divide-rule overflow-hidden">
-            {topProduits.map(([produitId, qty], idx) => (
+            {topProduits.map(({ produitId, qty, nom, categorie }, idx) => (
               <div
                 key={produitId}
                 className="flex items-center gap-3 px-4 py-3"
@@ -445,19 +637,22 @@ export function DriveDashboardSection() {
                 >
                   {idx + 1}
                 </span>
-                <p className="text-[13px] font-bold text-text-primary truncate flex-1 mono">
-                  {produitId.slice(0, 8)}…
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-text-primary leading-tight truncate">
+                    {nom ?? `Produit ${produitId.slice(0, 8)}`}
+                  </p>
+                  {categorie && (
+                    <p className="text-[11px] text-text-secondary mt-0.5 truncate">
+                      {categorie}
+                    </p>
+                  )}
+                </div>
                 <p className="text-[14px] font-extrabold text-primary tabular shrink-0">
-                  ×{qty}
+                  &times;{qty}
                 </p>
               </div>
             ))}
           </div>
-          <p className="text-[10.5px] text-text-tertiary text-center mt-2">
-            (ID produit Supabase. Le nom complet viendra dans une prochaine
-            itération.)
-          </p>
         </section>
       )}
 
@@ -472,10 +667,7 @@ export function DriveDashboardSection() {
             const meta = STATUT_META[c.statut];
             const Icon = meta.icon;
             return (
-              <div
-                key={c.id}
-                className="flex items-center gap-3 px-4 py-3"
-              >
+              <div key={c.id} className="flex items-center gap-3 px-4 py-3">
                 <span
                   className={`inline-flex w-9 h-9 rounded-xl items-center justify-center ${meta.bg} ${meta.fg} shrink-0`}
                 >

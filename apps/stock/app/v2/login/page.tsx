@@ -185,6 +185,12 @@ export default function V2LoginPage() {
           >
             Saisis tes 4 chiffres pour ouvrir ta session.
           </p>
+          <p
+            className="text-[12.5px] mt-1.5"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            Saisis les 4 chiffres de ta carte employé (fournis par Otmane).
+          </p>
         </header>
 
         <div className="flex-1 px-6 pt-2 flex flex-col">

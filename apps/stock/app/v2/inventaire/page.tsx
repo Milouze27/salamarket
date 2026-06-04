@@ -52,6 +52,13 @@ export default function V2InventairePage() {
       // Auto-assign 5 produits if none yet for today (the cron does this in prod).
       if (invs.length === 0) {
         invs = await assignInventairesPourDepot(depot.id, 5);
+        if (invs.length > 0) {
+          // id stable par dépôt+jour → ne se ré-affiche pas en boucle (reload)
+          toast.success(
+            `Inventaire du jour : ${invs.length} produits assignés aléatoirement pour une couverture équitable.`,
+            { id: `inv-assigned-${depot.id}-${new Date().toDateString()}` },
+          );
+        }
       }
       const stock = await listProduitsInDepot(depot.id);
       const merged: Row[] = invs.map((i) => ({

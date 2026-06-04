@@ -102,32 +102,56 @@ export async function POST() {
   };
   const picks: Picked[] = [];
 
+  // CERTIF-OK : un fournisseur n'est éligible que si actif ET certif
+  // halal ni manquante ni expirée. "expiree"/"manquante" → JAMAIS commander.
+  const CERTIF_OK = new Set(["ok", "expire_30j", "expire_60j"]);
+  const fournisseurEligible = (f: any): boolean =>
+    Boolean(f?.actif) && CERTIF_OK.has(certifAlerte(f?.certif_expire_le));
+
+  // ML-5 — lignes qu'on REFUSE de router : ni le principal ni aucun
+  // backup n'a une certif halal valide. On ne crée AUCUN PO vers un
+  // fournisseur à certif expirée. On remonte la ligne pour audit.
+  type Blocked = {
+    produit_id: string;
+    depot_id: string;
+    fournisseur_id: string | null;
+    fournisseur_nom: string;
+    certif_alerte: string;
+    raison: string;
+  };
+  const blockedLines: Blocked[] = [];
+
   for (const c of candidates) {
     const liens = byProduit.get(c.produit_id) ?? [];
     if (liens.length === 0) continue; // pas de fournisseur connu → skip
 
     const principal = liens.find((l) => l.est_principal) ?? liens[0];
-    const principalOk = principal.fournisseurs?.actif &&
-      ["ok", "expire_30j", "expire_60j"].includes(
-        certifAlerte(principal.fournisseurs?.certif_expire_le)
-      );
+    const principalOk = fournisseurEligible(principal.fournisseurs);
 
     let chosen = principal;
-    let blocked = false;
 
     if (!principalOk) {
       const backup = liens.find(
-        (l) =>
-          l !== principal &&
-          l.fournisseurs?.actif &&
-          ["ok", "expire_30j", "expire_60j"].includes(
-            certifAlerte(l.fournisseurs?.certif_expire_le)
-          )
+        (l) => l !== principal && fournisseurEligible(l.fournisseurs)
       );
       if (backup) {
+        // On bascule sur un fournisseur dont la certif halal EST valide.
         chosen = backup;
       } else {
-        blocked = true; // pas de backup → on crée quand même mais bloqué
+        // Aucune source halal valide → on NE commande PAS. Le moat
+        // interdit de générer un PO vers un fournisseur certif expirée :
+        // même en brouillon, ça ne doit pas exister comme document
+        // envoyable. On consigne la ligne pour qu'Otmane arbitre.
+        blockedLines.push({
+          produit_id: c.produit_id,
+          depot_id: c.depot_id,
+          fournisseur_id: principal.fournisseur_id ?? null,
+          fournisseur_nom: principal.fournisseurs?.nom ?? "",
+          certif_alerte: certifAlerte(principal.fournisseurs?.certif_expire_le),
+          raison:
+            "Certificat halal du fournisseur principal expiré ou manquant, aucun fournisseur de secours certifié.",
+        });
+        continue;
       }
     }
 
@@ -142,7 +166,7 @@ export async function POST() {
       fournisseur_nom: chosen.fournisseurs?.nom ?? "",
       reference_fourn: chosen.reference_fourn ?? null,
       prix_achat_ht: Number(chosen.prix_achat_ht) || 0,
-      blocked,
+      blocked: false,
     });
   }
 
@@ -224,7 +248,9 @@ export async function POST() {
       created++;
     }
 
-    // Insert toutes les lignes du groupe
+    // Insert toutes les lignes du groupe. À ce stade, toute ligne
+    // routée vers un PO a un fournisseur dont la certif halal est
+    // valide (les lignes bloquées ont été écartées en amont).
     const lignesPayload = g.lignes.map((l) => ({
       po_id: poId,
       produit_id: l.produit_id,
@@ -232,9 +258,7 @@ export async function POST() {
       quantite_commandee: l.qty,
       prix_achat_ht: l.prix_achat_ht,
       tva_pct: 5.5,
-      notes: l.blocked
-        ? "⚠ Principal et backup en KO certif — ligne conservée pour audit, à arbitrer manuellement."
-        : null,
+      notes: null,
     }));
     if (lignesPayload.length > 0) {
       await sb.from("purchase_order_lignes").insert(lignesPayload);
@@ -247,6 +271,12 @@ export async function POST() {
     updated,
     candidates: candidates.length,
     groups: groups.size,
+    // ML-5 — réassorts NON commandés faute de fournisseur halal valide.
+    // Otmane voit exactement quoi débloquer (renouveler la certif ou
+    // référencer un fournisseur de secours certifié) avant de pouvoir
+    // commander ces produits. Le moat halal vit ici.
+    blocked_count: blockedLines.length,
+    blocked_lines: blockedLines,
     elapsed_ms: Date.now() - startedAt,
   });
 }

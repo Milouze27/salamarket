@@ -44,6 +44,7 @@ import {
   Loader2,
   PackageCheck,
   ScanBarcode,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
@@ -58,6 +59,7 @@ import { TemperatureInput } from "@/components/reception/temperature-input";
 import { SignOffModal } from "@/components/reception/sign-off-modal";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
+import { certifAlerte } from "@/lib/types/po";
 
 interface BdlLigne {
   id: string;
@@ -87,7 +89,14 @@ interface BdlDetail {
   temperature_reception_c: number | null;
   temperature_seuil_max_c: number | null;
   ecart_valeur_eur: number | null;
-  fournisseurs: { id: string; nom: string } | null;
+  fournisseurs: {
+    id: string;
+    nom: string;
+    certif_organisme: string | null;
+    certif_numero: string | null;
+    certif_expire_le: string | null;
+    actif: boolean | null;
+  } | null;
   depots: { id: string; nom: string } | null;
   bons_de_livraison_lignes: BdlLigne[];
 }
@@ -109,6 +118,9 @@ export default function BdlScanFirstPage() {
     pdf_url: string;
     push_sent: boolean;
   } | null>(null);
+  // ML-5 — le comptable doit acquitter explicitement un certif halal
+  // expiré/manquant du fournisseur avant de pouvoir clôturer la réception.
+  const [certifAck, setCertifAck] = useState(false);
 
   // Buffer température : on n'écrit en DB qu'au blur (évite 10 updates/sec)
   const tempDebounceRef = useRef<number | null>(null);
@@ -129,7 +141,7 @@ export default function BdlScanFirstPage() {
          date_livraison_prevue, statut,
          photo_palette_url_1, photo_palette_url_2, photo_bdl_url,
          temperature_reception_c, temperature_seuil_max_c, ecart_valeur_eur,
-         fournisseurs (id, nom),
+         fournisseurs (id, nom, certif_organisme, certif_numero, certif_expire_le, actif),
          depots (id, nom),
          bons_de_livraison_lignes (
            id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue,
@@ -224,6 +236,15 @@ export default function BdlScanFirstPage() {
   );
   const preambleOk = tempOk && photosOk;
 
+  // ─── ML-5 — Certif halal du fournisseur du BDL ────────────────
+  // "expiree" / "manquante" → bloquant : on ne réceptionne pas une
+  // marchandise dont la certif halal n'est plus à jour sans que le
+  // comptable le reconnaisse explicitement (traçabilité du risque).
+  const certifEtat = certifAlerte(bdl?.fournisseurs?.certif_expire_le);
+  const certifBloquant =
+    certifEtat === "expiree" || certifEtat === "manquante";
+  const certifExpireLe = bdl?.fournisseurs?.certif_expire_le ?? null;
+
   // ─── Scan handler — délégué au serveur ────────────────────────
   const handleScan = useCallback(
     async (code: string): Promise<ScanFeedback> => {
@@ -231,27 +252,64 @@ export default function BdlScanFirstPage() {
       if (!bdlId) {
         return { kind: "miss", code, label: "BDL non chargé", ts };
       }
-      try {
-        const r = await fetch("/api/bdl/scan-carton", {
+      // Un appel scan, avec re-essai optionnel forcé au-delà du plafond
+      // 150 % (ML-10). Le serveur renvoie kind:"blocked" sans rien écrire ;
+      // on demande alors confirmation EXPLICITE au staff avant de renvoyer
+      // confirm_over:true. Refus = no-op (le sur-comptage n'est pas écrit).
+      const callScan = (confirmOver: boolean) =>
+        fetch("/api/bdl/scan-carton", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             bdl_id: bdlId,
             ean: code,
             employe_id: employe?.id ?? null,
+            ...(confirmOver ? { confirm_over: true } : {}),
           }),
         });
-        const data = (await r.json()) as {
-          kind: "ok" | "warn" | "miss" | "surplus" | "unknown";
+      try {
+        let r = await callScan(false);
+        let data = (await r.json()) as {
+          kind: "ok" | "warn" | "miss" | "surplus" | "unknown" | "blocked";
           label: string;
           sub?: string;
+          requires_confirm?: boolean;
+          quantite_si_confirme?: number;
+          quantite_attendue?: number;
         };
+
+        if (data.kind === "blocked") {
+          const attendu = data.quantite_attendue ?? "?";
+          const siConfirme = data.quantite_si_confirme ?? "?";
+          const ok =
+            typeof window !== "undefined" &&
+            window.confirm(
+              `Sur-comptage détecté (>150 %).\n` +
+                `${data.label}\n` +
+                `Confirmer ${siConfirme}/${attendu} reçus ? ` +
+                `Annule si c'est un double scan.`
+            );
+          if (!ok) {
+            return {
+              kind: "warn",
+              code,
+              label: "Scan ignoré (sur-comptage)",
+              sub: data.sub,
+              ts,
+            };
+          }
+          r = await callScan(true);
+          data = (await r.json()) as typeof data;
+        }
+
         // Re-pull en arrière-plan (n'attend pas pour ne pas freezer le scan)
         void fetchBdl();
         const kind: "ok" | "warn" | "miss" =
           data.kind === "ok"
             ? "ok"
-            : data.kind === "warn" || data.kind === "surplus"
+            : data.kind === "warn" ||
+                data.kind === "surplus" ||
+                data.kind === "blocked"
               ? "warn"
               : "miss";
         return {
@@ -631,6 +689,44 @@ export default function BdlScanFirstPage() {
       {/* ─── ACTIONS FLOTTANTES ───────────────────────────────── */}
       <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
+          {/* ML-5 — Avertissement BLOQUANT certif halal fournisseur.
+              Tant que le comptable n'a pas acquitté, la finalisation est
+              désactivée. La marchandise est comptée physiquement, mais le
+              risque halal est tracé et reconnu explicitement. */}
+          {!isClos && certifBloquant && (
+            <div className="bg-danger-soft border border-danger/50 rounded-2xl px-4 py-3 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <ShieldAlert className="w-5 h-5 text-danger mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-danger">
+                    {certifEtat === "expiree"
+                      ? "Certificat halal expiré"
+                      : "Certificat halal manquant"}
+                  </p>
+                  <p className="text-[12.5px] font-semibold leading-snug text-text-primary mt-0.5">
+                    {bdl?.fournisseurs?.nom ?? "Ce fournisseur"}
+                    {certifEtat === "expiree" && certifExpireLe
+                      ? ` — expiré le ${new Date(certifExpireLe).toLocaleDateString("fr-FR")}`
+                      : ""}
+                    . Réception à valider explicitement (risque halal tracé).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCertifAck((v) => !v)}
+                className={`w-full rounded-xl py-2.5 px-3 text-[12.5px] font-bold transition-colors ${
+                  certifAck
+                    ? "bg-danger text-white"
+                    : "bg-white border border-danger/50 text-danger"
+                }`}
+              >
+                {certifAck
+                  ? "✓ Risque halal acquitté — réception déblocable"
+                  : "J'acquitte le risque halal et autorise la réception"}
+              </button>
+            </div>
+          )}
           {isClos ? (
             <>
               <a
@@ -694,9 +790,9 @@ export default function BdlScanFirstPage() {
 
               <button
                 onClick={() => setSignOffOpen(true)}
-                disabled={!preambleOk}
+                disabled={!preambleOk || (certifBloquant && !certifAck)}
                 className={`w-full rounded-[20px] py-3.5 px-4 flex items-center justify-between transition-colors disabled:opacity-40 ${
-                  preambleOk
+                  preambleOk && !(certifBloquant && !certifAck)
                     ? progression.scanned > 0
                       ? "bg-success text-white shadow-card"
                       : "bg-white border border-rule text-text-primary"
@@ -708,8 +804,9 @@ export default function BdlScanFirstPage() {
                     Finaliser la réception
                   </span>
                   <span className="block text-[13px] font-extrabold mt-0.5">
-                    {progression.scanned}/{progression.total} unités · récap +
-                    push
+                    {certifBloquant && !certifAck
+                      ? "Acquitte le certif halal pour finaliser"
+                      : `${progression.scanned}/${progression.total} unités · récap + push`}
                   </span>
                 </span>
                 <PackageCheck className="w-5 h-5" />

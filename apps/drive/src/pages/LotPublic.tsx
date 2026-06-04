@@ -7,7 +7,9 @@ import {
   Loader2,
   MapPin,
   PackageCheck,
+  ShieldAlert,
   ShieldCheck,
+  ShieldQuestion,
   Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -176,10 +178,23 @@ const LotPublic = () => {
     };
   }, [id]);
 
-  const certifValid = useMemo(() => {
-    if (!lot?.certifier_valid_until) return null;
-    return new Date(lot.certifier_valid_until) >= new Date();
+  // ─── État du certificat halal — le cœur du moat ─────────────────
+  // Trois états distincts, JAMAIS un faux "validé" :
+  //   • "valide"   : date renseignée ET dans le futur (≥ aujourd'hui)
+  //   • "expire"   : date renseignée ET dans le passé → bandeau ROUGE
+  //   • "inconnu"  : pas de date enregistrée → état neutre, surtout pas vert
+  // Comparaison à minuit (start of day) : un certif qui expire AUJOURD'HUI
+  // est traité comme encore valide jusqu'à la fin de la journée.
+  const certifState = useMemo<"valide" | "expire" | "inconnu">(() => {
+    const raw = lot?.certifier_valid_until;
+    if (!raw) return "inconnu";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const exp = new Date(`${raw}${raw.length === 10 ? "T00:00:00" : ""}`);
+    if (Number.isNaN(exp.getTime())) return "inconnu";
+    return exp >= today ? "valide" : "expire";
   }, [lot]);
+  const certifExpired = certifState === "expire";
 
   // ─── Loading ────────────────────────────────────────────────
   if (loading) {
@@ -316,18 +331,79 @@ const LotPublic = () => {
         className="max-w-md mx-auto px-6 -mt-6 pb-12 space-y-5"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 3rem)" }}
       >
+        {/* ─── Bandeau ROUGE : certificat expiré (intégrité du moat) ─
+            Si le certificat de traçabilité halal du lot est expiré à la
+            date de consultation, on l'annonce franchement EN PREMIER.
+            On ne masque jamais l'expiration derrière un sceau vert. */}
+        {certifExpired && (
+          <div
+            role="alert"
+            className="p-5 rounded-2xl flex items-start gap-3"
+            style={{
+              background: "rgba(229,72,61,0.10)",
+              border: `1.5px solid ${BRAND.colors.destructive}`,
+            }}
+          >
+            <ShieldAlert
+              className="w-6 h-6 shrink-0 mt-0.5"
+              style={{ color: BRAND.colors.destructive }}
+            />
+            <div className="min-w-0">
+              <p
+                className="text-[11px] font-bold tracking-[0.16em] uppercase mb-1"
+                style={{ color: BRAND.colors.destructive }}
+              >
+                Certificat expiré
+              </p>
+              <p
+                className="text-[14px] font-bold leading-snug mb-1"
+                style={{ color: BRAND.colors.text }}
+              >
+                Certificat de traçabilité expiré le{" "}
+                {formatDate(lot.certifier_valid_until)}
+              </p>
+              <p
+                className="text-[13px] leading-relaxed"
+                style={{ color: BRAND.colors.muted }}
+              >
+                La validité du certificat halal de ce lot n&apos;est plus à jour
+                dans notre registre. Contactez le magasin avant tout achat.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ─── 1. Certification halal ─────────────────────── */}
         <Section
           eyebrow="01 — Certification"
-          title="Halal vérifié"
-          icon={<ShieldCheck className="w-5 h-5" />}
+          title={
+            certifExpired
+              ? "Certificat expiré"
+              : certifState === "inconnu"
+                ? "Validité non renseignée"
+                : "Halal vérifié"
+          }
+          icon={
+            certifExpired ? (
+              <ShieldAlert className="w-5 h-5" />
+            ) : certifState === "inconnu" ? (
+              <ShieldQuestion className="w-5 h-5" />
+            ) : (
+              <ShieldCheck className="w-5 h-5" />
+            )
+          }
+          iconColor={
+            certifExpired ? BRAND.colors.destructive : undefined
+          }
         >
           <div className="flex items-start gap-4">
             <div
               className="shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center font-extrabold text-lg"
               style={{
-                background: BRAND.colors.accentSoft,
-                color: "#8B6F0E",
+                background: certifExpired
+                  ? "rgba(229,72,61,0.10)"
+                  : BRAND.colors.accentSoft,
+                color: certifExpired ? BRAND.colors.destructive : "#8B6F0E",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -337,24 +413,39 @@ const LotPublic = () => {
               <p className="font-bold text-[15px] leading-snug">
                 {lot.certifier_name ?? "Certificateur halal"}
               </p>
-              {lot.certifier_valid_until && (
+              {lot.certifier_valid_until ? (
                 <div className="mt-2 flex items-center gap-2">
                   <span
                     className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
                     style={{
-                      background:
-                        certifValid === false
-                          ? "rgba(229,72,61,0.12)"
-                          : "rgba(45,122,79,0.12)",
-                      color:
-                        certifValid === false
-                          ? BRAND.colors.destructive
-                          : BRAND.colors.success,
+                      background: certifExpired
+                        ? "rgba(229,72,61,0.12)"
+                        : "rgba(45,122,79,0.12)",
+                      color: certifExpired
+                        ? BRAND.colors.destructive
+                        : BRAND.colors.success,
                     }}
                   >
-                    <BadgeCheck className="w-3.5 h-3.5" />
-                    {certifValid === false ? "Expiré" : "Valide"} jusqu&apos;au{" "}
+                    {certifExpired ? (
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                    ) : (
+                      <BadgeCheck className="w-3.5 h-3.5" />
+                    )}
+                    {certifExpired ? "Expiré le" : "Valide jusqu'au"}{" "}
                     {formatDate(lot.certifier_valid_until)}
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "rgba(120,120,120,0.12)",
+                      color: BRAND.colors.muted,
+                    }}
+                  >
+                    <ShieldQuestion className="w-3.5 h-3.5" />
+                    Validité non renseignée
                   </span>
                 </div>
               )}
@@ -434,31 +525,60 @@ const LotPublic = () => {
         )}
 
         {/* ─── Bloc trust ─────────────────────────────────── */}
-        <section
-          className="p-5 rounded-2xl text-center"
-          style={{
-            background: BRAND.colors.accentSoft,
-            border: `1px solid ${BRAND.colors.borderMedium}`,
-          }}
-        >
-          <ShieldCheck
-            className="w-6 h-6 mx-auto mb-2"
-            style={{ color: "#8B6F0E" }}
-          />
-          <p
-            className="text-[11px] font-bold tracking-[0.18em] uppercase mb-2"
-            style={{ color: "#8B6F0E" }}
+        {certifExpired ? (
+          <section
+            className="p-5 rounded-2xl text-center"
+            style={{
+              background: "rgba(229,72,61,0.08)",
+              border: `1px solid ${BRAND.colors.destructive}`,
+            }}
           >
-            Preuve auto-vérifiable
-          </p>
-          <p
-            className="text-[13px] leading-relaxed"
-            style={{ color: BRAND.colors.text }}
+            <ShieldAlert
+              className="w-6 h-6 mx-auto mb-2"
+              style={{ color: BRAND.colors.destructive }}
+            />
+            <p
+              className="text-[11px] font-bold tracking-[0.18em] uppercase mb-2"
+              style={{ color: BRAND.colors.destructive }}
+            >
+              Certificat à renouveler
+            </p>
+            <p
+              className="text-[13px] leading-relaxed"
+              style={{ color: BRAND.colors.text }}
+            >
+              Cette page reste publique et la traçabilité du lot est conservée,
+              mais le certificat halal a expiré. Contactez le magasin pour
+              connaître son statut à jour avant tout achat.
+            </p>
+          </section>
+        ) : (
+          <section
+            className="p-5 rounded-2xl text-center"
+            style={{
+              background: BRAND.colors.accentSoft,
+              border: `1px solid ${BRAND.colors.borderMedium}`,
+            }}
           >
-            Cette page est publique et auto-vérifiable. Le QR est imprimé sur
-            votre ticket. Conservez-le pour preuve halal.
-          </p>
-        </section>
+            <ShieldCheck
+              className="w-6 h-6 mx-auto mb-2"
+              style={{ color: "#8B6F0E" }}
+            />
+            <p
+              className="text-[11px] font-bold tracking-[0.18em] uppercase mb-2"
+              style={{ color: "#8B6F0E" }}
+            >
+              Preuve auto-vérifiable
+            </p>
+            <p
+              className="text-[13px] leading-relaxed"
+              style={{ color: BRAND.colors.text }}
+            >
+              Cette page est publique et auto-vérifiable. Le QR est imprimé sur
+              votre ticket. Conservez-le pour preuve halal.
+            </p>
+          </section>
+        )}
 
         {/* ─── Footer ─────────────────────────────────────── */}
         <footer className="text-center pt-4">
@@ -480,11 +600,13 @@ function Section({
   eyebrow,
   title,
   icon,
+  iconColor,
   children,
 }: {
   eyebrow: string;
   title: string;
   icon: React.ReactNode;
+  iconColor?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -515,7 +637,7 @@ function Section({
           className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
           style={{
             background: BRAND.colors.bg,
-            color: BRAND.colors.primary,
+            color: iconColor ?? BRAND.colors.primary,
           }}
         >
           {icon}

@@ -11,13 +11,18 @@
  *   4. Si EAN totalement inconnu → réponse `unknown` (page ouvre modal
  *      création produit)
  *   5. Si la nouvelle quantité reçue crée un écart > 2 % de l'attendu
- *      sur cette ligne, push iPhone admins immédiate
+ *      sur cette ligne — DANS LES DEUX SENS (surplus OU manque) — push
+ *      iPhone admins immédiate (ML-10)
+ *   6. Plafond 150 % (ML-10) : si le scan ferait dépasser 1,5× l'attendu,
+ *      réponse `blocked` SANS écriture tant que `confirm_over` n'est pas
+ *      vrai (double comptage / scan en boucle probable)
  *
  * Body JSON :
- *   { bdl_id: uuid, ean: string, employe_id?: uuid, lot_id?: string }
+ *   { bdl_id: uuid, ean: string, employe_id?: uuid, lot_id?: string,
+ *     confirm_over?: boolean }   // force l'écriture au-delà de 150 %
  *
  * Réponse :
- *   { kind: "ok" | "warn" | "miss" | "surplus" | "unknown",
+ *   { kind: "ok" | "warn" | "miss" | "surplus" | "unknown" | "blocked",
  *     label: string,         // texte court pour le bandeau scanner
  *     sub?: string,
  *     ligne_id?: uuid,
@@ -25,18 +30,22 @@
  *     produit_nom?: string,
  *     quantite_recue?: number,
  *     quantite_attendue?: number,
+ *     quantite_si_confirme?: number,  // (blocked) qté si confirm_over
+ *     requires_confirm?: boolean,     // (blocked) re-POST avec confirm_over
  *     ecart_qte?: number,
  *     push_sent?: boolean }
  *
- * Pourquoi serveur et pas client : on veut un seul endroit où la règle
- * "écart > X % → push instantanée" vit, et écrire `scan_timeline` de
- * manière atomique (via la fonction SQL `bdl_ligne_push_event`).
+ * Pourquoi serveur et pas client : on veut un seul endroit où les règles
+ * "écart > X % → push instantanée" et "sur-comptage > 150 % → blocage"
+ * vivent, et écrire `scan_timeline` de manière atomique (via la fonction
+ * SQL `bdl_ligne_push_event`).
  */
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { validateBody } from "@/lib/validate/helper";
 import { scanCartonSchema } from "@/lib/validate/schemas";
+import { certifAlerte } from "@/lib/types/po";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +75,12 @@ interface LigneRow {
 // Aligné sur le sign-off : 2 % d'écart valeur ou quantité.
 const PUSH_THRESHOLD_PCT = 0.02;
 
+// Plafond de sur-réception (ML-10). Au-delà de 150 % de la quantité
+// attendue sur une ligne, on suspecte une erreur de scan (double comptage,
+// scan en boucle). On BLOQUE l'incrément tant que le staff n'a pas confirmé
+// explicitement (confirm_over: true). Évite de gonfler le stock par erreur.
+const OVER_RECEIPT_CAP_RATIO = 1.5;
+
 export async function POST(req: Request) {
   const parsed = await validateBody(req, scanCartonSchema);
   if (!parsed.ok) return parsed.response;
@@ -75,10 +90,13 @@ export async function POST(req: Request) {
   const sb = supabaseServer();
 
   // ─── 1. Charge le BDL minimal (pour le contexte fournisseur/numero) ─
+  // On embarque la certif halal du fournisseur : à la réception, un
+  // certif expiré/manquant doit lever un avertissement BLOQUANT que le
+  // comptable valide explicitement (traçabilité du risque — ML-5).
   const { data: bdlData, error: bdlErr } = await sb
     .from("bons_de_livraison")
     .select(
-      "id, numero_bdl, depot_destination_id, fournisseur_id, fournisseurs(nom)"
+      "id, numero_bdl, depot_destination_id, fournisseur_id, fournisseurs(nom, certif_organisme, certif_numero, certif_expire_le, actif)"
     )
     .eq("id", body.bdl_id)
     .single();
@@ -93,8 +111,41 @@ export async function POST(req: Request) {
     numero_bdl: string;
     depot_destination_id: string;
     fournisseur_id: string | null;
-    fournisseurs: { nom: string } | null;
+    fournisseurs: {
+      nom: string;
+      certif_organisme: string | null;
+      certif_numero: string | null;
+      certif_expire_le: string | null;
+      actif: boolean | null;
+    } | null;
   };
+
+  // ─── 1bis. Statut certif halal du fournisseur du BDL ────────────────
+  // "expiree" (date passée) ou "manquante" (aucune date) → bloquant.
+  // On l'attache à CHAQUE réponse de scan : tant que le certif n'est pas
+  // à jour, l'écran de réception affiche un avertissement persistant que
+  // le comptable doit acquitter (la marchandise est physiquement comptée,
+  // mais le risque halal est tracé et reconnu).
+  const certifAlerteFournisseur = certifAlerte(
+    bdl.fournisseurs?.certif_expire_le
+  );
+  const certifBloquant =
+    certifAlerteFournisseur === "expiree" ||
+    certifAlerteFournisseur === "manquante";
+  const certifWarn = certifBloquant
+    ? {
+        certif_block: true,
+        certif_alerte: certifAlerteFournisseur,
+        certif_label:
+          certifAlerteFournisseur === "expiree"
+            ? `Certificat halal expiré — ${bdl.fournisseurs?.nom ?? "fournisseur"}`
+            : `Certificat halal manquant — ${bdl.fournisseurs?.nom ?? "fournisseur"}`,
+        certif_sub:
+          "Réception à valider explicitement par le comptable (risque halal tracé).",
+        certif_expire_le: bdl.fournisseurs?.certif_expire_le ?? null,
+        fournisseur_nom: bdl.fournisseurs?.nom ?? null,
+      }
+    : { certif_block: false as const };
 
   // ─── 2. Marque le BDL "en_cours" + scan_started_at si premier scan ─
   await sb
@@ -141,6 +192,7 @@ export async function POST(req: Request) {
       label: "EAN inconnu",
       sub: "Crée la fiche produit côté app",
       code: ean,
+      ...certifWarn,
     });
   }
 
@@ -174,6 +226,7 @@ export async function POST(req: Request) {
       produit_nom: produitNom,
       qty_delta: qtyDelta,
       is_carton: isCarton,
+      ...certifWarn,
     });
   }
 
@@ -182,6 +235,35 @@ export async function POST(req: Request) {
   const ecartApres = nouvelleQte - ligne.quantite_attendue;
   const recuComplet = nouvelleQte >= ligne.quantite_attendue;
   const surplusLine = ecartApres > 0;
+
+  // ─── 6bis. Plafond 150 % (ML-10) : blocage avant écriture ───────
+  // Si ce scan ferait passer la ligne au-delà de 150 % de l'attendu, on
+  // suspecte un double comptage / scan en boucle. On NE TOUCHE PAS la base
+  // tant que le staff n'a pas confirmé (confirm_over: true). Sinon on
+  // gonflerait silencieusement le stock — chiffres faux.
+  if (
+    ligne.quantite_attendue > 0 &&
+    nouvelleQte > ligne.quantite_attendue * OVER_RECEIPT_CAP_RATIO &&
+    !body.confirm_over
+  ) {
+    return NextResponse.json({
+      kind: "blocked",
+      label: `Sur-comptage ? ${produitNom}`,
+      sub: `${nouvelleQte}/${ligne.quantite_attendue} (>150 %). Confirme si c'est exact.`,
+      code: ean,
+      ligne_id: ligne.id,
+      produit_id: produitId,
+      produit_nom: produitNom,
+      quantite_recue: ligne.quantite_recue,
+      quantite_attendue: ligne.quantite_attendue,
+      quantite_si_confirme: nouvelleQte,
+      ecart_qte: ecartApres,
+      is_carton: isCarton,
+      qty_delta: qtyDelta,
+      requires_confirm: true,
+      ...certifWarn,
+    });
+  }
 
   // statut compatible avec l'enum existante du legacy
   const nouveauStatut: "attendu" | "recu" | "surplus" = surplusLine
@@ -233,14 +315,39 @@ export async function POST(req: Request) {
   }
 
   // ─── 7. Push admin si écart > 2 % de la qty attendue sur cette ligne ─
+  // ML-10 : on pousse l'alerte dans LES DEUX SENS.
+  //  - écart POSITIF (surplus) : sur-livraison à valider.
+  //  - écart NÉGATIF (manque) : reçu < attendu = vol/perte/erreur
+  //    fournisseur. On ne pousse le manque que lorsque la ligne est
+  //    considérée RÉCEPTIONNÉE (recuComplet : on a atteint ou dépassé
+  //    l'attendu) — sinon chaque scan d'une ligne en cours (qui démarre
+  //    forcément sous l'attendu) spammerait Otmane. Le tag par ligne
+  //    coalesce de toute façon les notifications successives.
+  //  Note : le manque DÉFINITIF d'une ligne jamais complétée est rattrapé
+  //  à la clôture par /api/bdl/finalize (écart total valorisé).
+  // Manque "définitif au scan" : la ligne reste sous l'attendu ET un scan
+  // de plus du même conditionnement la ferait dépasser le plafond 150 %
+  // → il n'y a plus de carton/unité légitime à attendre, donc le déficit
+  // observé est réel (carton court, vol, erreur fournisseur). Sans cette
+  // borne, on pousserait à chaque scan d'une ligne encore en cours.
+  const manqueDefinitif =
+    ligne.quantite_attendue > 0 &&
+    ecartApres < 0 &&
+    qtyDelta > 0 &&
+    nouvelleQte + qtyDelta > ligne.quantite_attendue * OVER_RECEIPT_CAP_RATIO;
+
   let pushSent = false;
   if (ligne.quantite_attendue > 0) {
     const ratio = Math.abs(ecartApres) / ligne.quantite_attendue;
-    if (ratio > PUSH_THRESHOLD_PCT && surplusLine) {
+    const alerteEcart =
+      ratio > PUSH_THRESHOLD_PCT && (surplusLine || manqueDefinitif);
+    if (alerteEcart) {
+      const signe = ecartApres >= 0 ? `+${ecartApres}` : `${ecartApres}`;
+      const sens = ecartApres > 0 ? "surplus" : "manque";
       try {
         await pushAdminsServer(req, {
-          title: `Écart scan ${bdl.fournisseurs?.nom ?? "BDL"}`,
-          body: `${produitNom} : ${nouvelleQte}/${ligne.quantite_attendue} (+${ecartApres}). Bdl ${bdl.numero_bdl}.`,
+          title: `Écart ${sens} ${bdl.fournisseurs?.nom ?? "BDL"}`,
+          body: `${produitNom} : ${nouvelleQte}/${ligne.quantite_attendue} (${signe}). Bdl ${bdl.numero_bdl}.`,
           url: `/v2/reception/${bdl.id}/scan-first`,
           tag: `bdl-ecart-${ligne.id}`,
         });
@@ -252,12 +359,15 @@ export async function POST(req: Request) {
   }
 
   // ─── 8. Réponse client ──────────────────────────────────────────
-  const kind: "ok" | "warn" = surplusLine ? "warn" : "ok";
+  // warn dès qu'il y a un écart à signaler (surplus OU manque définitif).
+  const kind: "ok" | "warn" = surplusLine || manqueDefinitif ? "warn" : "ok";
   const label = surplusLine
     ? `Surplus : ${produitNom}`
-    : isCarton
-      ? `Carton OK · ${produitNom}`
-      : `OK · ${produitNom}`;
+    : manqueDefinitif
+      ? `Manque : ${produitNom}`
+      : isCarton
+        ? `Carton OK · ${produitNom}`
+        : `OK · ${produitNom}`;
   const sub = `${nouvelleQte}/${ligne.quantite_attendue}${isCarton ? ` (carton ×${qtyDelta})` : ""}${pushSent ? " · push Otmane" : ""}`;
 
   return NextResponse.json({
@@ -274,6 +384,7 @@ export async function POST(req: Request) {
     is_carton: isCarton,
     qty_delta: qtyDelta,
     push_sent: pushSent,
+    ...certifWarn,
   });
 }
 

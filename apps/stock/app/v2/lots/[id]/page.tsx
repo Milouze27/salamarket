@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   ArrowUpRight,
+  Award,
   BadgeCheck,
   CalendarDays,
   Copy,
@@ -84,7 +85,7 @@ export default function V2LotDetailPage() {
 
   const publicUrl = useMemo(
     () => (lotId ? generateLotQrUrl(lotId) : ""),
-    [lotId]
+    [lotId],
   );
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function V2LotDetailPage() {
           qr_url, notes,
           produits ( id, nom, marque, categorie ),
           fournisseurs ( id, nom, siret )
-        `
+        `,
         )
         .eq("id", lotId)
         .maybeSingle();
@@ -157,6 +158,24 @@ export default function V2LotDetailPage() {
     toast.success("Lien copié");
   }
 
+  /**
+   * PDF-02 — ouvre le certificat de traçabilité halal A4 (route serveur
+   * api/lots/[id]/certificat-pdf). Le PDF s'ouvre inline dans un nouvel
+   * onglet, prêt à imprimer / encadrer.
+   */
+  function openCertificat() {
+    if (!lotId) return;
+    const href = `/api/lots/${encodeURIComponent(lotId)}/certificat-pdf`;
+    const win = window.open(href, "_blank", "noopener,noreferrer");
+    if (!win) {
+      toast.error("Popup bloquée — autorise les popups pour le certificat.");
+      return;
+    }
+    // Le PDF est généré côté serveur dans l'onglet ouvert : on annonce
+    // l'ouverture (pas un succès de génération, qu'on ne peut pas observer ici).
+    toast.success("Ouverture du certificat halal…");
+  }
+
   function printLabel() {
     if (!qrSvg) {
       toast.error("QR pas encore prêt — réessaie dans 1s.");
@@ -168,7 +187,8 @@ export default function V2LotDetailPage() {
       return;
     }
     const productNom = lot?.produits?.nom ?? "—";
-    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette lot ${lotId}</title>
+    win.document
+      .write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette lot ${lotId}</title>
 <style>
   @page { size: 62mm 80mm; margin: 0; }
   body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0F1A14; padding: 6mm; box-sizing: border-box; }
@@ -204,7 +224,10 @@ export default function V2LotDetailPage() {
           <p className="body-md text-text-secondary mt-1">
             {lot.produits.nom}
             {lot.produits.marque && (
-              <span className="text-text-tertiary"> · {lot.produits.marque}</span>
+              <span className="text-text-tertiary">
+                {" "}
+                · {lot.produits.marque}
+              </span>
             )}
           </p>
         )}
@@ -225,9 +248,9 @@ export default function V2LotDetailPage() {
               Lot introuvable
             </p>
             <p className="text-[13px] text-text-secondary">
-              Le lot <code className="tabular-nums">{lotId}</code> n&apos;est pas
-              dans <code>produits_lots</code>. Vérifie la migration 0031 et le
-              seed.
+              Le lot <code className="tabular-nums">{lotId}</code> n&apos;est
+              pas dans <code>produits_lots</code>. Vérifie la migration 0031 et
+              le seed.
             </p>
           </div>
         </div>
@@ -273,22 +296,39 @@ export default function V2LotDetailPage() {
                 <span className="truncate tabular-nums">{publicUrl}</span>
                 <Copy className="w-4 h-4 text-text-secondary shrink-0" />
               </button>
-              <div className="grid grid-cols-2 gap-2 w-full">
+              {/* PDF-02 — Certificat halal A4 : le moat, CTA primaire */}
+              <button
+                type="button"
+                onClick={openCertificat}
+                className="btn-gold w-full inline-flex items-center justify-center gap-2 min-h-[48px] py-3.5 rounded-xl text-[14px] font-bold"
+              >
+                <Award className="w-4 h-4" />
+                Imprimer le certificat halal
+              </button>
+              <div className="grid grid-cols-3 gap-2 w-full">
                 <button
                   type="button"
                   onClick={printLabel}
-                  className="btn-gold inline-flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-xl text-[13px]"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
                 >
                   <Printer className="w-4 h-4" />
-                  Imprimer
+                  Étiquette
+                </button>
+                <button
+                  type="button"
+                  onClick={copyUrl}
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
+                >
+                  <Copy className="w-4 h-4" />
+                  Lien
                 </button>
                 <a
                   href={publicUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] py-3 rounded-xl bg-primary text-white text-[13px] font-bold active:opacity-90"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-primary text-white text-[12.5px] font-bold active:opacity-90"
                 >
-                  Page publique
+                  Public
                   <ArrowUpRight className="w-4 h-4" />
                 </a>
               </div>
@@ -302,11 +342,7 @@ export default function V2LotDetailPage() {
             icon={<ShieldCheck className="w-5 h-5" />}
           >
             <DataRow label="Certificateur" value={lot.certifier_name} />
-            <DataRow
-              label="Identifiant"
-              value={lot.certifier_id}
-              mono
-            />
+            <DataRow label="Identifiant" value={lot.certifier_id} mono />
             {lot.certifier_valid_until && (
               <div className="flex items-center gap-2 py-1.5">
                 <span
@@ -317,7 +353,9 @@ export default function V2LotDetailPage() {
                   }`}
                 >
                   <BadgeCheck className="w-3.5 h-3.5" />
-                  {certifValid === false ? "Expiré" : "Valide"} jusqu&apos;au{" "}
+                  {certifValid === false
+                    ? "Expiré"
+                    : "Valide"} jusqu&apos;au{" "}
                   {formatDate(lot.certifier_valid_until)}
                 </span>
               </div>
@@ -344,8 +382,15 @@ export default function V2LotDetailPage() {
             title="Approvisionnement"
             icon={<Factory className="w-5 h-5" />}
           >
-            <DataRow label="Fournisseur" value={lot.fournisseurs?.nom ?? null} />
-            <DataRow label="SIRET" value={lot.fournisseurs?.siret ?? null} mono />
+            <DataRow
+              label="Fournisseur"
+              value={lot.fournisseurs?.nom ?? null}
+            />
+            <DataRow
+              label="SIRET"
+              value={lot.fournisseurs?.siret ?? null}
+              mono
+            />
             <DataRow label="Lot fournisseur" value={lot.supplier_lot} mono />
             {lot.quantite_recue != null && (
               <DataRow
@@ -356,10 +401,7 @@ export default function V2LotDetailPage() {
             {/* TODO : quantité restante — requiert jointure
                 commandes_drive_lignes + sorties_stock par lot_id
                 (Phase 1 post-démo). */}
-            <DataRow
-              label="Quantité restante"
-              value="— (Phase 1)"
-            />
+            <DataRow label="Quantité restante" value="— (Phase 1)" />
           </Section>
 
           {/* Réception magasin */}
@@ -372,7 +414,9 @@ export default function V2LotDetailPage() {
               label="Date de réception"
               value={formatDate(lot.date_reception)}
             />
-            {lot.dlc && <DataRow label="DLC" value={formatDate(lot.dlc)} accent />}
+            {lot.dlc && (
+              <DataRow label="DLC" value={formatDate(lot.dlc)} accent />
+            )}
             {lot.ddm && <DataRow label="DDM" value={formatDate(lot.ddm)} />}
           </Section>
 

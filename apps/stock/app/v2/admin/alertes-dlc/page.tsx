@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Loader2,
   PackageX,
+  Printer,
   Tag,
   TrendingDown,
 } from "lucide-react";
@@ -179,6 +180,64 @@ export default function AlertesDlcPage() {
     setActing(null);
   }
 
+  /**
+   * PDF-03 — Imprimer l'étiquette PROMO DLC en 1 tap : prix barré +
+   * prix soldé (remise DLC), pour coller sur le produit démarqué.
+   * Le prix de base est récupéré depuis stock_par_depot.prix_vente.
+   */
+  async function printPromo(a: DlcAlert) {
+    setActing(`promo:${a.lot_id}`);
+    try {
+      const sb = supabase();
+      let prixTtc = 0;
+      let prixKg: number | null = null;
+      if (sb) {
+        const { data: stockRow } = await sb
+          .from("stock_par_depot")
+          .select("prix_vente")
+          .eq("produit_id", a.produit_id)
+          .not("prix_vente", "is", null)
+          .order("prix_vente", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        prixTtc = (stockRow?.prix_vente as number | null) ?? 0;
+        const { data: prod } = await sb
+          .from("produits")
+          .select("price_per_kg")
+          .eq("id", a.produit_id)
+          .maybeSingle();
+        prixKg = (prod?.price_per_kg as number | null) ?? null;
+      }
+      if (prixTtc <= 0) {
+        toast.error(
+          "Prix de vente introuvable pour ce produit — renseigne-le avant d'imprimer la promo.",
+        );
+        return;
+      }
+      const { buildPromoDlcPdf } = await import("@/lib/labels/gondole");
+      const blob = await buildPromoDlcPdf({
+        produitNom: a.produit_nom,
+        prixTtc,
+        prixKg,
+        dlc: a.dlc,
+        lot: a.lot_id,
+        remisePct: a.remise_suggeree_pct,
+      });
+      const url = URL.createObjectURL(blob);
+      const a2 = document.createElement("a");
+      a2.href = url;
+      a2.download = `promo-dlc-${a.lot_id}.pdf`;
+      a2.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Promo -${a.remise_suggeree_pct}% générée — ${a.produit_nom}`);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur génération promo");
+    } finally {
+      setActing(null);
+    }
+  }
+
   async function forceAllDemarque() {
     const forces = alerts.filter((a) => a.niveau_alerte === "forcé");
     if (forces.length === 0) {
@@ -335,18 +394,32 @@ export default function AlertesDlcPage() {
                   </div>
 
                   {a.remise_suggeree_pct > 0 && (
-                    <button
-                      onClick={() => void applyRemise(a)}
-                      disabled={isActing}
-                      className="w-full min-h-[44px] mt-3 bg-primary text-white rounded-[14px] py-3 text-[14px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
-                    >
-                      {isActing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Tag className="w-4 h-4" />
-                      )}
-                      Appliquer la remise -{a.remise_suggeree_pct}%
-                    </button>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <button
+                        onClick={() => void applyRemise(a)}
+                        disabled={isActing || acting === `promo:${a.lot_id}`}
+                        className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                      >
+                        {isActing ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Tag className="w-4 h-4" />
+                        )}
+                        Remise -{a.remise_suggeree_pct}%
+                      </button>
+                      <button
+                        onClick={() => void printPromo(a)}
+                        disabled={isActing || acting === `promo:${a.lot_id}`}
+                        className="min-h-[44px] bg-[#A8231A] text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                      >
+                        {acting === `promo:${a.lot_id}` ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Printer className="w-4 h-4" />
+                        )}
+                        Imprimer promo
+                      </button>
+                    </div>
                   )}
                 </li>
               );

@@ -6,15 +6,18 @@ import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDownToLine,
-  ArrowLeft,
   ArrowUpRight,
   Bell,
   Boxes,
   Building2,
+  CalendarClock,
   ClipboardCheck,
+  FileText,
+  MonitorSmartphone,
   Repeat2,
   Sparkles,
   TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
@@ -170,7 +173,7 @@ export default function V2AdminDashboardPage() {
       <PageAccentStripe accent="or-sapin" />
       <header className="px-4 sm:px-5 pt-7">
         <BackButton />
-        <EditorialEyebrow num="01" label="Dashboard" className="mt-3" />
+        <EditorialEyebrow num="01" label="Cockpit admin" className="mt-3" />
         <h1 className="h1-display mt-3">
           Dashboard <span className="gold">global</span>.
         </h1>
@@ -180,7 +183,7 @@ export default function V2AdminDashboardPage() {
             : "Activité drive client : commandes, créneaux, top produits."}
         </p>
 
-        {/* Hero — assistant IA (action principale admin) */}
+        {/* Hero — assistant IA (action principale admin, entrée unique) */}
         <div className="mt-5">
           <HeroActionCard
             href="/v2/admin/assistant-ia"
@@ -192,83 +195,11 @@ export default function V2AdminDashboardPage() {
           />
         </div>
 
-        {/* DLC alerts bandeau */}
-        <div className="mt-4">
-          <DlcBanner />
-        </div>
-
-        {/* Counter screen preview */}
-        <div className="mt-4">
-          <CounterPreview />
-        </div>
-
-        {/* Raccourcis comptables */}
-        <div className="flex flex-wrap gap-2 mt-4">
-          <a
-            href="/v2/admin/recap-fiscal"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-gold-bright" />
-            Récap fiscal du jour
-          </a>
-          <a
-            href="/v2/admin/rapport-mensuel"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-            Rapport mensuel
-          </a>
-          <a
-            href="/v2/admin/import-cashmag"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-warning" />
-            Import Cashmag
-          </a>
-          <a
-            href="/v2/admin/bons-reception"
-            className="inline-flex items-center gap-2 bg-white border border-rule rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-success" />
-            BR émis
-          </a>
-          <a
-            href="/v2/admin/alertes"
-            className="inline-flex items-center gap-2 bg-danger text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-            Alertes IA
-          </a>
-          <a
-            href="/v2/admin/alertes-dlc"
-            className="inline-flex items-center gap-2 bg-warning text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-            Alertes DLC
-          </a>
-          <a
-            href="/v2/counter"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-white rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-gold animate-pulse" />
-            Counter retrait
-          </a>
-          <a
-            href="/v2/admin/assistant-ia"
-            className="inline-flex items-center gap-2 bg-gradient-to-br from-primary to-primary-dark text-gold rounded-full px-4 min-h-[44px] md:min-h-0 md:py-1.5 py-2 text-[12.5px] md:text-[11.5px] font-bold shadow-card active:scale-[0.98] transition-transform"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-gold" />
-            Assistant IA
-          </a>
-        </div>
-
         {/* TOGGLE Stock / Drive */}
         <div
           role="tablist"
           aria-label="Vue dashboard"
-          className="inline-flex bg-white border border-rule rounded-full p-1 mt-4 shadow-card"
+          className="inline-flex bg-card-bg border border-rule rounded-full p-1 mt-5 shadow-card"
         >
           {(["stock", "drive"] as const).map((v) => {
             const active = view === v;
@@ -280,7 +211,7 @@ export default function V2AdminDashboardPage() {
                 onClick={() => setView(v)}
                 className={`px-5 min-h-[44px] md:min-h-0 md:py-1.5 py-2 rounded-full text-[13px] md:text-[12.5px] font-bold transition-colors min-w-[96px] ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-text-ondark"
                     : "text-text-secondary"
                 }`}
               >
@@ -296,7 +227,7 @@ export default function V2AdminDashboardPage() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="bg-white border border-rule rounded-[20px] p-4 space-y-3"
+              className="bg-card-bg border border-rule rounded-[20px] p-4 space-y-3 shadow-card"
             >
               <div className="flex items-center gap-3">
                 <div className="skeleton w-10 h-10" />
@@ -322,14 +253,53 @@ export default function V2AdminDashboardPage() {
       ) : (
         /* ───────── VUE STOCK ───────── */
         <>
+          {/* ═══ PLAN 02 — OPÉRER : raccourcis terrain ═══ */}
+          <EditorialEyebrow num="02" label="Opérer" className="px-4 sm:px-5 mt-7" />
+
+          {/* DLC alerts bandeau */}
+          <div className="px-4 sm:px-5 mt-3">
+            <DlcBanner />
+          </div>
+
+          {/* Counter screen preview */}
+          <div className="px-4 sm:px-5 mt-4">
+            <CounterPreview />
+          </div>
+
+          {/* Raccourcis terrain — destinations absentes du menu admin (drawer) */}
+          <section className="px-4 sm:px-5 mt-4 flex flex-wrap gap-2">
+            <OpChip
+              href="/v2/admin/bons-reception"
+              label="BR émis"
+              icon={FileText}
+              accent="success"
+            />
+            <OpChip
+              href="/v2/admin/alertes-dlc"
+              label="Alertes DLC"
+              icon={CalendarClock}
+              accent="warning"
+            />
+            <OpChip
+              href="/v2/counter"
+              label="Counter retrait"
+              icon={MonitorSmartphone}
+              accent="primary"
+              external
+            />
+          </section>
+
+          {/* ═══ PLAN 03 — PILOTER : activité, dépôts, alertes ═══ */}
+          <EditorialEyebrow num="03" label="Piloter" className="px-4 sm:px-5 mt-8" />
+
           {/* ┌─ ACTIVITÉ — CA temps réel ─┐ */}
-          <p className="px-4 sm:px-5 mt-6 section-eyebrow flex items-center gap-1.5">
+          <p className="px-4 sm:px-5 mt-3 section-eyebrow flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3" />
             Activité du jour
             <span
               aria-hidden
               title="Données live"
-              className="inline-block w-1.5 h-1.5 rounded-full bg-[#2D7A4F] animate-pulse ml-1"
+              className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse ml-1"
             />
           </p>
           <section className="px-4 sm:px-5 mt-2">
@@ -354,22 +324,23 @@ export default function V2AdminDashboardPage() {
                     ease: [0.22, 0.61, 0.36, 1],
                     delay: idx * 0.05,
                   }}
-                  className="bg-white border border-rule rounded-[20px] shadow-card overflow-hidden active:scale-[0.99] transition-transform cursor-pointer"
+                  className="bg-card-bg border border-rule rounded-[20px] shadow-card overflow-hidden active:scale-[0.99] transition-transform cursor-pointer"
                   onClick={() => router.push(`/v2/stock?depot=${s.depot.id}`)}
                   role="link"
                   aria-label={`Voir le stock du dépôt ${s.depot.nom}`}
                 >
-                  {/* C2-F — ruban couleur identifiant le dépôt */}
+                  {/* C2-F — ruban couleur identifiant le dépôt (tokens : se
+                      ré-éclaire en dark, garde la hiérarchie d'identité). */}
                   <div
                     aria-hidden
                     className="h-1.5 w-full"
                     style={{
                       background:
                         s.depot.nom === "Particulier"
-                          ? "#C9A227"
+                          ? "var(--accent-gold)"
                           : s.depot.nom === "Professionnel"
-                            ? "#0E3B2E"
-                            : "#0A2A20",
+                            ? "var(--primary-green)"
+                            : "var(--primary-green-dark)",
                     }}
                   />
                   <div className="p-4">
@@ -377,10 +348,10 @@ export default function V2AdminDashboardPage() {
                     <span
                       className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                         isEntrepot
-                          ? "bg-[#0A2A20] text-[#C9A227]"
+                          ? "bg-primary-dark text-gold-bright"
                           : s.depot.nom === "Particulier"
-                            ? "bg-[#FAEDC5] text-[#0E3B2E]"
-                            : "bg-[#0E3B2E] text-white"
+                            ? "bg-gold-soft text-gold-bright"
+                            : "bg-primary text-text-ondark"
                       }`}
                     >
                       <Building2 className="w-4 h-4" strokeWidth={2.2} />
@@ -396,7 +367,7 @@ export default function V2AdminDashboardPage() {
                       </p>
                     </div>
                     {isEntrepot && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0A2A20] text-[#C9A227] rounded-full px-2 py-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-primary-dark text-gold-bright rounded-full px-2 py-0.5">
                         Back-office
                       </span>
                     )}
@@ -438,7 +409,7 @@ export default function V2AdminDashboardPage() {
             {!showAllDepots && stats.length > 3 && (
               <button
                 onClick={() => setShowAllDepots(true)}
-                className="w-full bg-cream border border-rule rounded-2xl py-3 text-sm font-bold text-primary inline-flex items-center justify-center gap-1.5"
+                className="w-full bg-card-bg border border-rule rounded-2xl py-3 text-sm font-bold text-primary inline-flex items-center justify-center gap-1.5 shadow-card active:scale-[0.99] transition-transform"
               >
                 Voir les {stats.length - 3} autre{stats.length - 3 > 1 ? "s" : ""} dépôt{stats.length - 3 > 1 ? "s" : ""}
               </button>
@@ -526,7 +497,7 @@ export default function V2AdminDashboardPage() {
                 {flaggedSorties.length > 4 && (
                   <a
                     href="/v2/admin/alertes"
-                    className="block bg-cream border border-rule rounded-2xl p-3 text-center text-[12px] font-bold text-danger active:scale-[0.99] transition-transform"
+                    className="block bg-card-bg border border-rule rounded-2xl p-3 text-center text-[12px] font-bold text-danger active:scale-[0.99] transition-transform"
                   >
                     +{flaggedSorties.length - 4} autre
                     {flaggedSorties.length - 4 > 1 ? "s" : ""} alerte
@@ -567,7 +538,7 @@ export default function V2AdminDashboardPage() {
                       <span
                         aria-hidden
                         title="Données live"
-                        className="inline-block w-1.5 h-1.5 rounded-full bg-[#2D7A4F] animate-pulse"
+                        className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse"
                       />
                     </p>
                     {hidden > 0 && (
@@ -580,7 +551,7 @@ export default function V2AdminDashboardPage() {
                     )}
                   </div>
                   {merged.length === 0 ? (
-                    <div className="bg-white border border-rule rounded-2xl p-6 text-center">
+                    <div className="bg-card-bg border border-rule rounded-2xl p-6 text-center shadow-card">
                       <Sparkles className="w-6 h-6 text-text-tertiary mx-auto mb-2" />
                       <p className="text-sm font-bold text-text-primary">
                         Aucun mouvement sur les dernières 24h
@@ -591,12 +562,12 @@ export default function V2AdminDashboardPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="bg-white border border-rule rounded-2xl divide-y divide-rule overflow-hidden">
+                    <div className="bg-card-bg border border-rule rounded-2xl divide-y divide-rule overflow-hidden shadow-card">
                       {visible.map((row, i) => (
                         <a
                           key={i}
                           href="/v2/admin/activite"
-                          className="block active:bg-cream transition-colors cursor-pointer"
+                          className="block active:bg-[color:var(--surface-2)] transition-colors cursor-pointer"
                           aria-label="Voir le détail dans l'activité complète"
                         >
                           <ActivityRow
@@ -609,7 +580,7 @@ export default function V2AdminDashboardPage() {
                       {hidden > 0 && (
                         <a
                           href="/v2/admin/activite"
-                          className="block bg-cream p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
+                          className="block bg-[color:var(--surface-2)] p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
                         >
                           +{hidden} autre{hidden > 1 ? "s" : ""} mouvement
                           {hidden > 1 ? "s" : ""} — Tout consulter →
@@ -646,7 +617,7 @@ export default function V2AdminDashboardPage() {
                   </a>
                 )}
               </div>
-              <div className="bg-white border border-rule rounded-2xl divide-y divide-rule overflow-hidden">
+              <div className="bg-card-bg border border-rule rounded-2xl divide-y divide-rule overflow-hidden shadow-card">
                 {recentInventaires.slice(0, 4).map((inv) => {
                   const d = depots.find((x) => x.id === inv.depot_id);
                   const e = employes.find((x) => x.id === inv.employe_assigne_id);
@@ -654,7 +625,7 @@ export default function V2AdminDashboardPage() {
                     <a
                       key={inv.id}
                       href="/v2/inventaire"
-                      className="p-3 flex items-center gap-3 active:bg-cream transition-colors"
+                      className="p-3 flex items-center gap-3 active:bg-[color:var(--surface-2)] transition-colors"
                       aria-label={`Ouvrir l'inventaire ${d?.nom ?? ""}`}
                     >
                       <div className="flex-1 min-w-0">
@@ -690,7 +661,7 @@ export default function V2AdminDashboardPage() {
                 {recentInventaires.length > 4 && (
                   <a
                     href="/v2/inventaire/historique"
-                    className="block bg-cream p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
+                    className="block bg-[color:var(--surface-2)] p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
                   >
                     +{recentInventaires.length - 4} autre
                     {recentInventaires.length - 4 > 1 ? "s" : ""} inventaire
@@ -702,8 +673,9 @@ export default function V2AdminDashboardPage() {
             </section>
           )}
 
-          {/* ┌─ COMMUNICATION — notifs, emails, accès édition ─┐ */}
-          <p className="px-4 sm:px-5 mt-8 section-eyebrow">
+          {/* ═══ PLAN 04 — ADMINISTRER : notifs, emails, accès édition ═══ */}
+          <EditorialEyebrow num="04" label="Administrer" className="px-4 sm:px-5 mt-9" />
+          <p className="px-4 sm:px-5 mt-3 section-eyebrow">
             <Bell className="w-3 h-3" />
             Communication & notifs
           </p>
@@ -723,6 +695,51 @@ export default function V2AdminDashboardPage() {
         </>
       )}
     </V2Shell>
+  );
+}
+
+/**
+ * OpChip — raccourci terrain dark-native pour le plan OPÉRER.
+ *
+ * Surface-1 (card standard dark), bordure hairline, icône dans un carré
+ * teinté par l'accent status, label gras. L'accent (or/danger/success/
+ * warning/primary) reste un liseré + une icône colorée — jamais un fill
+ * de grande surface (doctrine MYTHOS dark).
+ */
+function OpChip({
+  href,
+  label,
+  icon: Icon,
+  accent,
+  external,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  accent: "gold" | "danger" | "success" | "warning" | "primary";
+  external?: boolean;
+}) {
+  const tint: Record<typeof accent, string> = {
+    gold: "bg-gold-soft text-gold-bright",
+    danger: "bg-danger-soft text-danger",
+    success: "bg-success-soft text-success",
+    warning: "bg-warning-soft text-warning",
+    primary: "bg-[color:var(--primary-green-soft)] text-primary",
+  };
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className="inline-flex items-center gap-2 bg-card-bg border border-rule rounded-full pl-2 pr-4 min-h-[44px] md:min-h-0 md:py-1.5 py-1.5 text-[12.5px] md:text-[11.5px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform"
+    >
+      <span
+        aria-hidden
+        className={`inline-flex w-7 h-7 rounded-full items-center justify-center shrink-0 ${tint[accent]}`}
+      >
+        <Icon className="w-3.5 h-3.5" strokeWidth={2.3} />
+      </span>
+      {label}
+    </a>
   );
 }
 
@@ -751,7 +768,7 @@ function Stat({
         )}
       </p>
       <p
-        className={`text-[15px] font-extrabold mt-1 tracking-tight ${gold ? "text-[#C9A227]" : "text-text-primary"}`}
+        className={`text-[15px] font-extrabold mt-1 tracking-tight ${gold ? "text-gold-bright" : "text-text-primary"}`}
         style={{ fontVariantNumeric: "tabular-nums" }}
       >
         {value}
@@ -762,8 +779,16 @@ function Stat({
             data={spark}
             width={64}
             height={16}
-            color={gold ? "#C9A227" : "#0E3B2E"}
-            fillColor={gold ? "#F4E9C4" : "#D9E5DD"}
+            color={
+              gold
+                ? "var(--accent-gold-bright)"
+                : "var(--primary-green)"
+            }
+            fillColor={
+              gold
+                ? "var(--accent-gold-soft)"
+                : "var(--primary-green-soft)"
+            }
           />
         </div>
       )}

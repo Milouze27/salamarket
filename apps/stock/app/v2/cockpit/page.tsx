@@ -23,13 +23,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  AlertTriangle,
-  Clock,
-  Flame,
-  PackageX,
-  RefreshCw,
-} from "lucide-react";
+import { AlertTriangle, Clock, Flame, PackageX, RefreshCw } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { useV2 } from "@/lib/v2-store";
@@ -186,9 +180,9 @@ export default function CockpitPage() {
   const hijriEnCours = snap?.hijri.en_cours ?? hijriLocal.en_cours;
   const hijriProchainLib =
     snap?.hijri.prochain_libelle ?? hijriLocal.prochain?.libelle ?? null;
-  const hijriJours =
-    snap?.hijri.jours_jusqua ?? hijriLocal.jours_jusqua;
-  const hijriImpact = snap?.hijri.impact_ca ?? hijriLocal.prochain?.impact_ca ?? null;
+  const hijriJours = snap?.hijri.jours_jusqua ?? hijriLocal.jours_jusqua;
+  const hijriImpact =
+    snap?.hijri.impact_ca ?? hijriLocal.prochain?.impact_ca ?? null;
   const hijriDateDebut = hijriLocal.prochain?.date_debut ?? null;
   const fenetreHijri = hijriLocal.fenetre_90j.map((x) => ({
     libelle: x.event.libelle,
@@ -264,142 +258,145 @@ export default function CockpitPage() {
         {/* Grille responsive des autres cards — empilées sur mobile,
             2 cols sur tablette, 3 cols sur desktop. BUG-006 fix. */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* ZONE 2 — Calendrier hijri */}
-        <RamadanCard
-          message={hijriMessage}
-          joursJusqua={hijriJours}
-          libelle={hijriProchainLib}
-          dateDebutIso={hijriDateDebut}
-          enCours={hijriEnCours}
-          impactCa={hijriImpact}
-          fenetre={fenetreHijri}
-          onSeasonalTap={() => router.push("/v2/admin/ramadan")}
-        />
+          {/* ZONE 2 — Calendrier hijri */}
+          <RamadanCard
+            message={hijriMessage}
+            joursJusqua={hijriJours}
+            libelle={hijriProchainLib}
+            dateDebutIso={hijriDateDebut}
+            enCours={hijriEnCours}
+            impactCa={hijriImpact}
+            fenetre={fenetreHijri}
+            onSeasonalTap={() => router.push("/v2/admin/ramadan")}
+          />
 
-        {/* ZONE 3 — DLC */}
-        <AlertCard
-          icon={Clock}
-          tone={snap && snap.dlc.count_critique > 0 ? "danger" : "warn"}
-          eyebrow={`${snap?.dlc.count_total ?? 0} réfs en DLC courte`}
-          title={
-            snap && snap.dlc.count_total > 0
-              ? `${snap.dlc.count_total} produits à remiser aujourd'hui`
-              : "Aucune DLC critique"
-          }
-          metric={snap ? formatEur(snap.dlc.valeur_eur) : undefined}
-          hint={
-            snap && snap.dlc.valeur_eur > 0
-              ? `Valeur estimée de remise — ${snap.dlc.count_critique} en J-1 / forcés`
-              : undefined
-          }
-          onTap={
-            snap && snap.dlc.count_total > 0
-              ? () => router.push("/v2/admin/alertes-dlc")
-              : undefined
-          }
-        >
-          {snap?.dlc.top.slice(0, 3).map((d) => (
-            <AlertCardRow
-              key={d.lot_id}
-              label={d.produit_nom}
-              meta={`${d.jours_restants <= 0 ? "Périmé" : `J-${d.jours_restants}`} · ${d.remise_suggeree_pct}% remise`}
-              value={
-                d.quantite_recue
-                  ? `${d.quantite_recue} u`
-                  : `${d.niveau_alerte}`
-              }
-              accent={
-                d.niveau_alerte === "forcé" || d.niveau_alerte === "critique"
+          {/* ZONE 3 — DLC */}
+          <AlertCard
+            icon={Clock}
+            tone={snap && snap.dlc.count_critique > 0 ? "danger" : "warn"}
+            eyebrow={`${snap?.dlc.count_total ?? 0} réfs en DLC courte`}
+            title={
+              snap && snap.dlc.count_total > 0
+                ? `${snap.dlc.count_total} produits à remiser aujourd'hui`
+                : "Aucune DLC critique"
+            }
+            metric={snap ? formatEur(snap.dlc.valeur_eur) : undefined}
+            hint={
+              snap && snap.dlc.valeur_eur > 0
+                ? `Valeur estimée de remise — ${snap.dlc.count_critique} en J-1 / forcés`
+                : undefined
+            }
+            onTap={
+              snap && snap.dlc.count_total > 0
+                ? () => router.push("/v2/admin/alertes-dlc")
+                : undefined
+            }
+          >
+            {snap?.dlc.top.slice(0, 3).map((d) => (
+              <AlertCardRow
+                key={d.lot_id}
+                label={d.produit_nom}
+                meta={`${d.jours_restants <= 0 ? "Périmé" : `J-${d.jours_restants}`} · ${d.remise_suggeree_pct}% remise`}
+                value={
+                  d.quantite_recue
+                    ? `${d.quantite_recue} u`
+                    : `${d.niveau_alerte}`
+                }
+                accent={
+                  d.niveau_alerte === "forcé" || d.niveau_alerte === "critique"
+                    ? "danger"
+                    : "warn"
+                }
+              />
+            ))}
+          </AlertCard>
+
+          {/* ZONE 4 — Stockout prédictif */}
+          <AlertCard
+            icon={PackageX}
+            tone={snap && snap.stockout.count_out > 0 ? "danger" : "warn"}
+            eyebrow={`${snap?.stockout.count_total ?? 0} SKU sous tension`}
+            title={
+              snap && snap.stockout.count_total > 0
+                ? `${snap.stockout.count_total} produits vont taper rupture`
+                : "Stock sain partout"
+            }
+            metric={
+              snap && snap.stockout.count_out > 0
+                ? `${snap.stockout.count_out}`
+                : undefined
+            }
+            hint={
+              snap && snap.stockout.top[0]
+                ? `Phase ${snap.stockout.top[0].phase_courante} · ×${snap.stockout.top[0].multiplicateur.toFixed(2)}`
+                : undefined
+            }
+            onTap={
+              snap && snap.stockout.count_total > 0
+                ? () => router.push("/v2/admin")
+                : undefined
+            }
+          >
+            {snap?.stockout.top.slice(0, 3).map((s) => (
+              <AlertCardRow
+                key={`${s.produit_id}-${s.depot_nom}`}
+                label={s.produit_nom}
+                meta={`${s.depot_nom} · stock ${s.stock_actuel}`}
+                value={
+                  s.days_cover === null
+                    ? "⚠"
+                    : s.days_cover < 1
+                      ? "rupture"
+                      : `${s.days_cover.toFixed(1)} j`
+                }
+                accent={
+                  s.tier === "out" || s.tier === "blocker"
+                    ? "danger"
+                    : s.tier === "crit"
+                      ? "warn"
+                      : "neutral"
+                }
+              />
+            ))}
+          </AlertCard>
+
+          {/* ZONE 5 — Casse 24h */}
+          {snap?.casse_24h && snap.casse_24h.nb_evenements > 0 && (
+            <AlertCard
+              icon={Flame}
+              tone={
+                snap.casse_24h.delta_pct !== null &&
+                snap.casse_24h.delta_pct > 30
                   ? "danger"
                   : "warn"
               }
-            />
-          ))}
-        </AlertCard>
-
-        {/* ZONE 4 — Stockout prédictif */}
-        <AlertCard
-          icon={PackageX}
-          tone={snap && snap.stockout.count_out > 0 ? "danger" : "warn"}
-          eyebrow={`${snap?.stockout.count_total ?? 0} SKU sous tension`}
-          title={
-            snap && snap.stockout.count_total > 0
-              ? `${snap.stockout.count_total} produits vont taper rupture`
-              : "Stock sain partout"
-          }
-          metric={
-            snap && snap.stockout.count_out > 0
-              ? `${snap.stockout.count_out}`
-              : undefined
-          }
-          hint={
-            snap && snap.stockout.top[0]
-              ? `Phase ${snap.stockout.top[0].phase_courante} · ×${snap.stockout.top[0].multiplicateur.toFixed(2)}`
-              : undefined
-          }
-          onTap={
-            snap && snap.stockout.count_total > 0
-              ? () => router.push("/v2/admin")
-              : undefined
-          }
-        >
-          {snap?.stockout.top.slice(0, 3).map((s) => (
-            <AlertCardRow
-              key={`${s.produit_id}-${s.depot_nom}`}
-              label={s.produit_nom}
-              meta={`${s.depot_nom} · stock ${s.stock_actuel}`}
-              value={
-                s.days_cover === null
-                  ? "⚠"
-                  : s.days_cover < 1
-                    ? "rupture"
-                    : `${s.days_cover.toFixed(1)} j`
+              eyebrow="Casse soirée"
+              title={
+                snap.casse_24h.delta_pct !== null &&
+                snap.casse_24h.delta_pct > 0
+                  ? `Casse hier soir +${snap.casse_24h.delta_pct.toFixed(0)}%`
+                  : "Casse hier soir"
               }
-              accent={
-                s.tier === "out" || s.tier === "blocker"
-                  ? "danger"
-                  : s.tier === "crit"
-                    ? "warn"
-                    : "neutral"
+              metric={formatEur(snap.casse_24h.total_eur_24h)}
+              hint={
+                snap.casse_24h.top_categorie
+                  ? `Surtout sur ${snap.casse_24h.top_categorie} · vs ${formatEur(snap.casse_24h.total_eur_7j_avg)} moy. 7j`
+                  : `${snap.casse_24h.nb_evenements} événements`
               }
+              onTap={() => router.push("/v2/sortie")}
             />
-          ))}
-        </AlertCard>
+          )}
 
-        {/* ZONE 5 — Casse 24h */}
-        {snap?.casse_24h && snap.casse_24h.nb_evenements > 0 && (
-          <AlertCard
-            icon={Flame}
-            tone={
-              snap.casse_24h.delta_pct !== null && snap.casse_24h.delta_pct > 30
-                ? "danger"
-                : "warn"
-            }
-            eyebrow="Casse soirée"
-            title={
-              snap.casse_24h.delta_pct !== null && snap.casse_24h.delta_pct > 0
-                ? `Casse hier soir +${snap.casse_24h.delta_pct.toFixed(0)}%`
-                : "Casse hier soir"
-            }
-            metric={formatEur(snap.casse_24h.total_eur_24h)}
-            hint={
-              snap.casse_24h.top_categorie
-                ? `Surtout sur ${snap.casse_24h.top_categorie} · vs ${formatEur(snap.casse_24h.total_eur_7j_avg)} moy. 7j`
-                : `${snap.casse_24h.nb_evenements} événements`
-            }
-            onTap={() => router.push("/v2/sortie")}
+          {/* ZONE 6 — Competitor intel */}
+          <CompetitorCard
+            rows={snap?.competitor ?? []}
+            onAddRelevé={() => {
+              // Démo : route placeholder, l'orchestrateur branchera plus tard.
+              router.push("/v2/admin");
+            }}
           />
-        )}
-
-        {/* ZONE 6 — Competitor intel */}
-        <CompetitorCard
-          rows={snap?.competitor ?? []}
-          onAddRelevé={() => {
-            // Démo : route placeholder, l'orchestrateur branchera plus tard.
-            router.push("/v2/admin");
-          }}
-        />
-        </div>{/* /grid responsive */}
+        </div>
+        {/* /grid responsive */}
 
         {/* Footer : warnings dev/admin */}
         {snap && snap.warnings.length > 0 && (
@@ -407,7 +404,8 @@ export default function CockpitPage() {
             className="rounded-[16px] p-3 flex items-start gap-2.5 border"
             style={{
               background: "var(--warning-soft)",
-              borderColor: "color-mix(in srgb, var(--warning) 22%, transparent)",
+              borderColor:
+                "color-mix(in srgb, var(--warning) 22%, transparent)",
             }}
           >
             <AlertTriangle
@@ -437,6 +435,17 @@ export default function CockpitPage() {
           >
             <p className="font-bold mb-1">Snapshot indisponible</p>
             <p className="text-[12px]">{error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                void loadSnapshot();
+              }}
+              className="mt-2.5 inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[12px] font-bold text-[var(--text-primary)] active:scale-[0.97] transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.4} />
+              Réessayer
+            </button>
           </div>
         )}
 

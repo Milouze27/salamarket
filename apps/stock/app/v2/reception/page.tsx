@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -81,6 +81,7 @@ export default function V2ReceptionPage() {
   const [bdlToday, setBdlToday] = useState<BdlSummary[]>([]);
   const [bdlEnCours, setBdlEnCours] = useState<BdlSummary[]>([]);
   const [bdlLoading, setBdlLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showLibre, setShowLibre] = useState(false);
   const [fournisseur, setFournisseur] = useState("");
   const [numeroBl, setNumeroBl] = useState("");
@@ -108,48 +109,69 @@ export default function V2ReceptionPage() {
   const [learnScannerOpen, setLearnScannerOpen] = useState(false);
 
   // ─── Fetch BDL today + en cours ─────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const sb = supabase();
-      if (!sb) {
-        if (!cancelled) setBdlLoading(false);
-        return;
-      }
-      const today = new Date().toISOString().slice(0, 10);
-      try {
-        const { data, error } = await sb
-          .from("bons_de_livraison")
-          .select(
-            `id, numero_bdl, date_livraison_prevue, statut,
-             fournisseurs (nom), depots (nom),
-             bons_de_livraison_lignes (quantite_attendue, quantite_recue)`,
-          )
-          .or(`date_livraison_prevue.eq.${today},statut.eq.en_cours`)
-          .neq("statut", "receptionnee")
-          .order("date_livraison_prevue", { ascending: true });
-        if (cancelled) return;
-        if (error) {
-          // Table peut ne pas exister si migration 0012 non appliquée
-          if (!error.message.includes("does not exist")) {
-            console.warn("[BDL] fetch error:", error.message);
-          }
+  const cancelledRef = useRef(false);
+  const load = useCallback(async () => {
+    setBdlLoading(true);
+    const sb = supabase();
+    if (!sb) {
+      if (!cancelledRef.current) setBdlLoading(false);
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const { data, error } = await sb
+        .from("bons_de_livraison")
+        .select(
+          `id, numero_bdl, date_livraison_prevue, statut,
+           fournisseurs (nom), depots (nom),
+           bons_de_livraison_lignes (quantite_attendue, quantite_recue)`,
+        )
+        .or(`date_livraison_prevue.eq.${today},statut.eq.en_cours`)
+        .neq("statut", "receptionnee")
+        .order("date_livraison_prevue", { ascending: true });
+      if (cancelledRef.current) return;
+      if (error) {
+        // Table peut ne pas exister si migration 0012 non appliquée
+        if (error.message.includes("does not exist")) {
+          // Migration non appliquée : pas une vraie erreur réseau, on
+          // affiche juste l'état vide (réception libre reste possible).
           setBdlToday([]);
           setBdlEnCours([]);
+          setLoadError(null);
         } else {
-          const rows = (data ?? []) as unknown as BdlSummary[];
-          setBdlToday(rows.filter((b) => b.statut === "prevue"));
-          setBdlEnCours(rows.filter((b) => b.statut === "en_cours"));
+          console.warn("[BDL] fetch error:", error.message);
+          setBdlToday([]);
+          setBdlEnCours([]);
+          setLoadError(
+            "Impossible de charger les livraisons. Vérifie ta connexion.",
+          );
         }
-      } finally {
-        if (!cancelled) setBdlLoading(false);
+      } else {
+        const rows = (data ?? []) as unknown as BdlSummary[];
+        setBdlToday(rows.filter((b) => b.statut === "prevue"));
+        setBdlEnCours(rows.filter((b) => b.statut === "en_cours"));
+        setLoadError(null);
       }
+    } catch (e) {
+      if (cancelledRef.current) return;
+      console.warn("[BDL] fetch exception:", e);
+      setBdlToday([]);
+      setBdlEnCours([]);
+      setLoadError(
+        "Impossible de charger les livraisons. Vérifie ta connexion.",
+      );
+    } finally {
+      if (!cancelledRef.current) setBdlLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    cancelledRef.current = false;
     void load();
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [load]);
 
   // Avoid stale-closure on the scanner callback
   const scansRef = useRef(scans);
@@ -489,6 +511,21 @@ export default function V2ReceptionPage() {
 
       {step === "intake" && !showLibre && (
         <>
+          {/* ─── BANNIÈRE ERREUR DE CHARGEMENT ────────────────────── */}
+          {loadError && (
+            <section className="px-5 mt-6">
+              <div className="rounded-2xl border border-danger/40 bg-danger-soft p-4">
+                <p className="text-sm font-bold text-danger">{loadError}</p>
+                <button
+                  onClick={() => void load()}
+                  className="mt-3 inline-flex items-center justify-center h-10 px-4 rounded-full bg-danger text-white text-[13px] font-bold press-btn"
+                >
+                  Réessayer
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* ─── BDL EN COURS ─────────────────────────────────────── */}
           {bdlEnCours.length > 0 && (
             <section className="px-5 mt-6">
@@ -575,7 +612,7 @@ export default function V2ReceptionPage() {
           <button
             onClick={() => setShowLibre(false)}
             type="button"
-            className="inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 mb-2 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary press-btn"
+            className="inline-flex items-center gap-1.5 h-11 pl-3 pr-5 mb-2 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary press-btn"
           >
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cream">
               <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.4} />

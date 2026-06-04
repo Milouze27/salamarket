@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -52,7 +52,7 @@ function formatHeureFr(iso: string | null) {
 function yesterdayIsoParis() {
   const now = new Date();
   const paris = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
+    now.toLocaleString("en-US", { timeZone: "Europe/Paris" }),
   );
   paris.setDate(paris.getDate() - 1);
   return paris.toISOString().slice(0, 10);
@@ -63,25 +63,36 @@ export default function RecapFiscalPage() {
   const [date, setDate] = useState(yesterdayIsoParis());
   const [summary, setSummary] = useState<DailyZSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloaded, setDownloaded] = useState<{ filename: string } | null>(null);
+  const [downloaded, setDownloaded] = useState<{ filename: string } | null>(
+    null,
+  );
+  const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // Debounce 300ms : le date-picker peut déclencher plusieurs changements
+    // rapides (clavier, flèches) → on évite de spammer l'API daily-z.
     setLoading(true);
-    fetch(`/api/cashbox/daily-z?date=${date}`)
-      .then((r) => r.json())
-      .then((data: DailyZSummary | { error: string }) => {
-        if ("error" in data) {
-          toast.error(data.error, { id: "z-error" });
+    if (fetchTimer.current) clearTimeout(fetchTimer.current);
+    fetchTimer.current = setTimeout(() => {
+      fetch(`/api/cashbox/daily-z?date=${date}`)
+        .then((r) => r.json())
+        .then((data: DailyZSummary | { error: string }) => {
+          if ("error" in data) {
+            toast.error(data.error, { id: "z-error" });
+            setSummary(null);
+          } else {
+            setSummary(data);
+          }
+        })
+        .catch((e) => {
+          toast.error(e instanceof Error ? e.message : "Erreur");
           setSummary(null);
-        } else {
-          setSummary(data);
-        }
-      })
-      .catch((e) => {
-        toast.error(e instanceof Error ? e.message : "Erreur");
-        setSummary(null);
-      })
-      .finally(() => setLoading(false));
+        })
+        .finally(() => setLoading(false));
+    }, 300);
+    return () => {
+      if (fetchTimer.current) clearTimeout(fetchTimer.current);
+    };
   }, [date]);
 
   async function downloadPdf() {
@@ -100,7 +111,7 @@ export default function RecapFiscalPage() {
           : r.strategy === "newtab"
             ? "PDF ouvert dans Safari"
             : "PDF téléchargé",
-        { id: "z-pdf" }
+        { id: "z-pdf" },
       );
       setDownloaded({ filename });
     } else if (r.strategy === "cancelled") {
@@ -126,7 +137,7 @@ export default function RecapFiscalPage() {
           : r.strategy === "newtab"
             ? "CSV ouvert dans Safari"
             : "CSV téléchargé",
-        { id: "z-csv" }
+        { id: "z-csv" },
       );
       setDownloaded({ filename });
     } else if (r.strategy === "cancelled") {
@@ -204,8 +215,8 @@ export default function RecapFiscalPage() {
               Aucune vente Drive le {formatDateFr(date)}
             </p>
             <p className="text-xs text-text-secondary mt-1.5">
-              Si tu attends des données, vérifie que les commandes sont
-              bien synchronisées via le trigger Supabase (0009 sync).
+              Si tu attends des données, vérifie que les commandes sont bien
+              synchronisées via le trigger Supabase (0009 sync).
             </p>
           </div>
         ) : (
@@ -269,11 +280,7 @@ export default function RecapFiscalPage() {
 
             {/* CA */}
             <div className="space-y-1.5">
-              <Row
-                label="CA TTC"
-                value={formatEurFr(summary.ca_ttc)}
-                bold
-              />
+              <Row label="CA TTC" value={formatEurFr(summary.ca_ttc)} bold />
               <Row label="CA HT" value={formatEurFr(summary.ca_ht)} />
             </div>
 
@@ -344,8 +351,7 @@ export default function RecapFiscalPage() {
 
             <p className="text-center text-[10.5px] text-text-secondary leading-relaxed">
               Document non fiscal au sens NF525.
-              <br />
-              À conserver pour la comptabilité.
+              <br />À conserver pour la comptabilité.
             </p>
           </motion.div>
         )}

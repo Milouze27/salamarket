@@ -109,6 +109,7 @@ export default function BdlScanFirstPage() {
 
   const [bdl, setBdl] = useState<BdlDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [photoSlot, setPhotoSlot] = useState<1 | 2 | 3 | null>(null);
@@ -302,7 +303,8 @@ export default function BdlScanFirstPage() {
         }
 
         // Re-pull en arrière-plan (n'attend pas pour ne pas freezer le scan)
-        void fetchBdl();
+        setRefreshing(true);
+        void fetchBdl().finally(() => setRefreshing(false));
         const kind: "ok" | "warn" | "miss" =
           data.kind === "ok"
             ? "ok"
@@ -485,8 +487,14 @@ export default function BdlScanFirstPage() {
           {/* Progression compacte */}
           <div className="mt-3">
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary">
+              <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary">
                 Progression
+                {refreshing && (
+                  <Loader2
+                    className="w-3 h-3 animate-spin text-text-tertiary"
+                    aria-label="Mise à jour…"
+                  />
+                )}
               </span>
               <span className="text-[13px] font-extrabold tabular text-text-primary">
                 {progression.scanned} / {progression.total} unités ·{" "}

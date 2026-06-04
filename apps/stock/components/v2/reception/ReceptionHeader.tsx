@@ -64,12 +64,14 @@ export function ReceptionHeader({
               />
               <button
                 onClick={onSaveNumFourn}
+                aria-label="Confirmer"
                 className="bg-primary text-white text-[11px] font-bold px-2.5 py-1 rounded-lg"
               >
                 OK
               </button>
               <button
                 onClick={onCancelEditNumFourn}
+                aria-label="Annuler"
                 className="text-text-tertiary text-[11px] px-1"
               >
                 ×
@@ -86,7 +88,9 @@ export function ReceptionHeader({
                   <span className="font-bold text-text-primary">
                     {bdl.numero_bdl_fournisseur}
                   </span>
-                  <span className="text-[10px] text-text-tertiary">(éditer)</span>
+                  <span className="text-[10px] text-text-tertiary">
+                    (éditer)
+                  </span>
                 </>
               ) : (
                 <span className="italic text-primary">

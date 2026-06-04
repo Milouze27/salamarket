@@ -34,10 +34,7 @@ import {
   type CommandeDriveLigneWithUnitType,
 } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
-import type {
-  CommandeDrive,
-  ZonePreparationDrive,
-} from "@/lib/types/db";
+import type { CommandeDrive, ZonePreparationDrive } from "@/lib/types/db";
 
 interface CommandeWithLignes extends CommandeDrive {
   lignes: CommandeDriveLigneWithUnitType[];
@@ -66,13 +63,13 @@ interface BatchCategory {
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  Boucherie: "\u{1F969}",   // 🥩
+  Boucherie: "\u{1F969}", // 🥩
   Charcuterie: "\u{1F356}", // 🍖
-  "Surgelés": "\u{1F9CA}",  // 🧊
-  Frais: "\u{2744}\u{FE0F}",// ❄️
-  "Épicerie": "\u{1F6D2}",  // 🛒
-  Epicerie: "\u{1F6D2}",    // 🛒
-  Boissons: "\u{1F95B}",    // 🥛
+  Surgelés: "\u{1F9CA}", // 🧊
+  Frais: "\u{2744}\u{FE0F}", // ❄️
+  Épicerie: "\u{1F6D2}", // 🛒
+  Epicerie: "\u{1F6D2}", // 🛒
+  Boissons: "\u{1F95B}", // 🥛
   "Fruits & Légumes": "\u{1F966}", // 🥦
 };
 
@@ -243,7 +240,9 @@ function formatRelativeToCreneau(creneauIso: string): string {
     if (lateMin < 60) return `Retard ${lateMin}min`;
     const h = Math.floor(lateMin / 60);
     const m = lateMin % 60;
-    return m === 0 ? `Retard ${h}h` : `Retard ${h}h${String(m).padStart(2, "0")}`;
+    return m === 0
+      ? `Retard ${h}h`
+      : `Retard ${h}h${String(m).padStart(2, "0")}`;
   }
   if (diffMin < 60) return `Dans ${diffMin}min`;
   const h = Math.floor(diffMin / 60);
@@ -287,7 +286,7 @@ export default function V2PreparationKanbanPage() {
       cmds.map(async (c) => ({
         ...c,
         lignes: await listLignesPourCommandeAvecUnitType(c.id),
-      }))
+      })),
     );
     // Filtres :
     //  - statut != 'annule' (commande annulée par client ou admin)
@@ -320,14 +319,14 @@ export default function V2PreparationKanbanPage() {
         { event: "*", schema: "public", table: "commandes_drive" },
         () => {
           void reload();
-        }
+        },
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commandes_drive_lignes" },
         () => {
           void reload();
-        }
+        },
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") setIsLive(true);
@@ -427,9 +426,8 @@ export default function V2PreparationKanbanPage() {
       // Send "commande prête" email — fire-and-forget via server action
       // (passe l'INTERNAL_API_SECRET côté serveur).
       if (target === "pret" && cmd.client_email) {
-        const { sendOperationalEmail } = await import(
-          "@/lib/actions/email-send"
-        );
+        const { sendOperationalEmail } =
+          await import("@/lib/actions/email-send");
         sendOperationalEmail({
           to: cmd.client_email,
           subject: "Votre commande Salamarket est prête !",
@@ -514,7 +512,9 @@ export default function V2PreparationKanbanPage() {
       </header>
 
       {loading ? (
-        <p className="px-5 py-10 text-center text-text-secondary">Chargement…</p>
+        <p className="px-5 py-10 text-center text-text-secondary">
+          Chargement…
+        </p>
       ) : viewMode === "kanban" ? (
         /* ────────────────── KANBAN VIEW ────────────────── */
         <div className="px-5 mt-5 space-y-6 pb-12">
@@ -539,14 +539,14 @@ export default function V2PreparationKanbanPage() {
                     {items.map((cmd) => {
                       const totalLignes = cmd.lignes.length;
                       const prepares = cmd.lignes.filter(
-                        (l) => l.statut_preparation === "prepare"
+                        (l) => l.statut_preparation === "prepare",
                       ).length;
                       const types = Array.from(
                         new Set(
                           cmd.lignes.map((l) =>
-                            clientTypeFromZone(l.zone_preparation)
-                          )
-                        )
+                            clientTypeFromZone(l.zone_preparation),
+                          ),
+                        ),
                       );
                       const isFinal = col.key === "retire";
                       // Drive au poids — badges Stripe + nb à peser
@@ -636,7 +636,11 @@ export default function V2PreparationKanbanPage() {
                                   className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-cream text-primary px-2 py-0.5 rounded-full"
                                 >
                                   <Lock className="w-3 h-3" aria-hidden />
-                                  Pré-aut. {(cmd.montant_autorise_ttc ?? cmd.total_ttc).toFixed(0)} €
+                                  Pré-aut.{" "}
+                                  {(
+                                    cmd.montant_autorise_ttc ?? cmd.total_ttc
+                                  ).toFixed(0)}{" "}
+                                  €
                                 </span>
                               ) : isCapture ? (
                                 <span
@@ -644,7 +648,11 @@ export default function V2PreparationKanbanPage() {
                                   className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-success-soft text-success px-2 py-0.5 rounded-full"
                                 >
                                   <Check className="w-3 h-3" aria-hidden />
-                                  Capt. {(cmd.montant_capture_ttc ?? cmd.total_ttc).toFixed(0)} €
+                                  Capt.{" "}
+                                  {(
+                                    cmd.montant_capture_ttc ?? cmd.total_ttc
+                                  ).toFixed(0)}{" "}
+                                  €
                                 </span>
                               ) : (
                                 <PriceTag
@@ -696,9 +704,7 @@ export default function V2PreparationKanbanPage() {
               </p>
               <p className="text-[11px] font-bold text-[#6B7280]">
                 {totalBatchProducts > 0
-                  ? `${Math.round(
-                      (pickedCount / totalBatchProducts) * 100,
-                    )}%`
+                  ? `${Math.round((pickedCount / totalBatchProducts) * 100)}%`
                   : "0%"}
               </p>
             </div>
@@ -887,7 +893,7 @@ export default function V2PreparationKanbanPage() {
 
           {/* Bottom CTA */}
           {totalBatchProducts > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white border-t border-[#E8E4D8] px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="fixed cta-above-nav left-0 right-0 z-[60] bg-white border-t border-[#E8E4D8] px-5 py-4">
               <button
                 onClick={() => setViewMode("kanban")}
                 className="w-full bg-[#0E3B2E] text-white rounded-full py-3.5 px-5 flex items-center justify-center gap-2 text-[14px] font-bold active:scale-[0.99] transition-transform"

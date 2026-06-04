@@ -77,7 +77,7 @@ export default function V2InventairePage() {
     if (!employe) return;
 
     const mineAssigned = rows.filter(
-      (r) => r.statut === "assigne" && r.employe_assigne_id === employe.id
+      (r) => r.statut === "assigne" && r.employe_assigne_id === employe.id,
     );
     const fillable = mineAssigned.filter((r) => {
       const raw = (counts[r.id] ?? "").trim();
@@ -96,7 +96,7 @@ export default function V2InventairePage() {
     if (fillable.length === 0) {
       toast.error(
         `Compte au moins un produit (sur ${mineAssigned.length}) avant de valider.`,
-        { id: "inv-empty" }
+        { id: "inv-empty" },
       );
       return;
     }
@@ -107,7 +107,7 @@ export default function V2InventairePage() {
         typeof window !== "undefined" &&
         window.confirm(
           `Tu as compté ${fillable.length} produit${fillable.length > 1 ? "s" : ""} sur ${mineAssigned.length}. ` +
-            "Valider partiellement ?\n\nLes produits non comptés resteront à compter plus tard."
+            "Valider partiellement ?\n\nLes produits non comptés resteront à compter plus tard.",
         );
       if (!ok) return;
     }
@@ -137,12 +137,12 @@ export default function V2InventairePage() {
           url: "/v2/inventaire/historique",
           tag: `inv-done-${Date.now()}`,
           urgent: lowConf,
-        })
+        }),
       );
       if (lowConf) {
         toast.warning(
           `Inventaire ${progress} validé · conformité ${conf.toFixed(1)}% · Otmane + Ahmed notifiés.`,
-          { id: "inv-done" }
+          { id: "inv-done" },
         );
         // HOTFIX vague 7 : server action injecte x-internal-secret.
         try {
@@ -164,13 +164,15 @@ export default function V2InventairePage() {
       } else {
         toast.success(
           `Inventaire ${progress} validé · conformité ${conf.toFixed(1)}% · admin notifié.`,
-          { id: "inv-done" }
+          { id: "inv-done" },
         );
       }
       await load();
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "Erreur lors de la validation");
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de la validation",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -181,7 +183,11 @@ export default function V2InventairePage() {
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />
-        <EditorialEyebrow num="01" label="Inventaire tournant" className="mt-3" />
+        <EditorialEyebrow
+          num="01"
+          label="Inventaire tournant"
+          className="mt-3"
+        />
         <h1 className="h1-display mt-3">
           <span className="gold">{rows.length}</span> produit
           {rows.length > 1 ? "s" : ""} à compter.
@@ -204,14 +210,16 @@ export default function V2InventairePage() {
           <div className="bg-gold-soft rounded-2xl p-3 flex items-start gap-2 text-xs text-primary-dark">
             <Sparkles className="w-4 h-4 mt-0.5 shrink-0" />
             <p>
-              Les produits sont tirés au sort parmi le catalogue du dépôt
-              actif. Compte physiquement, saisis la quantité, valide.
+              Les produits sont tirés au sort parmi le catalogue du dépôt actif.
+              Compte physiquement, saisis la quantité, valide.
             </p>
           </div>
           {mine.map((r, i) => {
             const isMine = r.employe_assigne_id === employe?.id;
             const c = parseInt(counts[r.id] ?? "", 10);
-            const ecart = !Number.isNaN(c) ? c - (r.quantite_attendue ?? 0) : null;
+            const ecart = !Number.isNaN(c)
+              ? c - (r.quantite_attendue ?? 0)
+              : null;
             return (
               <motion.div
                 key={r.id}
@@ -249,7 +257,9 @@ export default function V2InventairePage() {
                       </p>
                     </div>
                     <div>
-                      <p className="label-caps text-text-tertiary text-right">COMPTÉ</p>
+                      <p className="label-caps text-text-tertiary text-right">
+                        COMPTÉ
+                      </p>
                       <input
                         type="number"
                         min={0}
@@ -258,7 +268,7 @@ export default function V2InventairePage() {
                         onChange={(e) =>
                           setCounts((c) => ({ ...c, [r.id]: e.target.value }))
                         }
-                        className="w-20 mt-0.5 text-center bg-cream border border-rule rounded-xl py-1.5 text-lg font-bold"
+                        className="w-20 mt-0.5 text-center bg-cream border border-rule rounded-xl py-2.5 min-h-[44px] text-lg font-bold"
                       />
                     </div>
                   </div>
@@ -268,7 +278,11 @@ export default function V2InventairePage() {
                     {r.quantite_comptee !== null && (
                       <span>
                         Compté : <strong>{r.quantite_comptee}</strong> · écart{" "}
-                        <strong className={r.ecart === 0 ? "text-success" : "text-warning"}>
+                        <strong
+                          className={
+                            r.ecart === 0 ? "text-success" : "text-warning"
+                          }
+                        >
                           {r.ecart > 0 ? "+" : ""}
                           {r.ecart}
                         </strong>
@@ -276,12 +290,15 @@ export default function V2InventairePage() {
                     )}
                   </div>
                 )}
-                {ecart !== null && ecart !== 0 && r.statut === "assigne" && isMine && (
-                  <p className="text-[11px] text-warning font-bold mt-2">
-                    Écart prévu : {ecart > 0 ? "+" : ""}
-                    {ecart}
-                  </p>
-                )}
+                {ecart !== null &&
+                  ecart !== 0 &&
+                  r.statut === "assigne" &&
+                  isMine && (
+                    <p className="text-[11px] text-warning font-bold mt-2">
+                      Écart prévu : {ecart > 0 ? "+" : ""}
+                      {ecart}
+                    </p>
+                  )}
               </motion.div>
             );
           })}
@@ -293,7 +310,7 @@ export default function V2InventairePage() {
           {(() => {
             const mineAssigned = rows.filter(
               (r) =>
-                r.statut === "assigne" && r.employe_assigne_id === employe?.id
+                r.statut === "assigne" && r.employe_assigne_id === employe?.id,
             );
             const filledCount = mineAssigned.filter((r) => {
               const raw = (counts[r.id] ?? "").trim();
@@ -308,9 +325,7 @@ export default function V2InventairePage() {
                 onClick={validateAll}
                 disabled={submitting || nothingAssigned}
                 className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors ${
-                  noneFilled
-                    ? "bg-warning text-white"
-                    : "bg-primary text-white"
+                  noneFilled ? "bg-warning text-white" : "bg-primary text-white"
                 }`}
               >
                 <div className="text-left">

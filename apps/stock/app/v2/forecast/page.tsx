@@ -262,9 +262,9 @@ export default function ForecastPage() {
           Ruptures <span className="gold">imminentes</span>
         </h1>
         <p className="body-md text-text-secondary mt-2 max-w-prose">
-          Lissage Holt sur 14 jours × courbe de demande hijri.
-          L&apos;algo ajuste la vélocité par phase Ramadan / Aïd avant de
-          calculer les jours de couverture.
+          Lissage Holt sur 14 jours × courbe de demande hijri. L&apos;algo
+          ajuste la vélocité par phase Ramadan / Aïd avant de calculer les jours
+          de couverture.
         </p>
       </header>
 
@@ -338,7 +338,11 @@ export default function ForecastPage() {
           icon={<Sparkles className="w-4 h-4" />}
           eyebrow="DERNIER CALCUL"
           value={lastComputedLabel}
-          label={rows.length > 0 ? `${rows.length} couples surveillés` : "Aucun calcul"}
+          label={
+            rows.length > 0
+              ? `${rows.length} couples surveillés`
+              : "Aucun calcul"
+          }
         />
       </section>
 
@@ -351,7 +355,7 @@ export default function ForecastPage() {
             className="pill-filter min-h-[44px] md:min-h-0"
             data-active={allDepots}
           >
-            {allDepots ? "Tous dépôts" : depot?.nom ?? "Dépôt courant"}
+            {allDepots ? "Tous dépôts" : (depot?.nom ?? "Dépôt courant")}
           </button>
           <button
             type="button"
@@ -394,12 +398,17 @@ export default function ForecastPage() {
       {/* Liste */}
       <section className="px-4 sm:px-5 mt-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {loading ? (
-          <div className="bg-white border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
+          <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
         ) : filteredRows.length === 0 ? (
-          <EmptyState onRecompute={() => void handleRecompute()} recomputing={recomputing} hasRows={rows.length > 0} filter={filter} />
+          <EmptyState
+            onRecompute={() => void handleRecompute()}
+            recomputing={recomputing}
+            hasRows={rows.length > 0}
+            filter={filter}
+          />
         ) : (
           <ul className="space-y-2.5">
             {filteredRows.map((r) => {
@@ -437,7 +446,9 @@ export default function ForecastPage() {
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-[18px] font-extrabold tabular leading-none ${style.daysColor}`}>
+                      <p
+                        className={`text-[18px] font-extrabold tabular leading-none ${style.daysColor}`}
+                      >
                         {formatDays(r.days_cover)}
                       </p>
                       <p className="text-[10px] font-bold uppercase tracking-wide text-text-tertiary mt-1">
@@ -448,12 +459,21 @@ export default function ForecastPage() {
 
                   <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-rule">
                     <Stat label="Stock" value={`${r.stock_actuel}`} />
-                    <Stat label="Vitesse" value={`${r.velocity_adj.toFixed(1)} /j`} />
-                    <Stat label="Reco" value={`${rec.qty} ${rec.unit}`} strong />
+                    <Stat
+                      label="Vitesse"
+                      value={`${r.velocity_adj.toFixed(1)} /j`}
+                    />
+                    <Stat
+                      label="Reco"
+                      value={`${rec.qty} ${rec.unit}`}
+                      strong
+                    />
                   </div>
 
                   {r.reason && (
-                    <p className={`mt-3 text-[12px] leading-snug rounded-xl px-3 py-2 ${style.bg} text-text-primary`}>
+                    <p
+                      className={`mt-3 text-[12px] leading-snug rounded-xl px-3 py-2 ${style.bg} text-text-primary`}
+                    >
                       {r.reason}
                     </p>
                   )}
@@ -507,8 +527,8 @@ function EmptyState({
         Pas encore de calcul de stockout
       </p>
       <p className="text-xs text-text-secondary mt-1 max-w-[34ch] mx-auto">
-        Lance un premier recompute pour initialiser les niveaux Holt et
-        peupler la vue.
+        Lance un premier recompute pour initialiser les niveaux Holt et peupler
+        la vue.
       </p>
       <button
         type="button"
@@ -602,7 +622,9 @@ function KpiCard({
           {eyebrow}
         </span>
       </div>
-      <p className={`text-[24px] font-extrabold tabular leading-tight mt-2 ${palette.value}`}>
+      <p
+        className={`text-[24px] font-extrabold tabular leading-tight mt-2 ${palette.value}`}
+      >
         {value}
       </p>
       <p className="text-[11px] text-text-secondary mt-0.5">{label}</p>

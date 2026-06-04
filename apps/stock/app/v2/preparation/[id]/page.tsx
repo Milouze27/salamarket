@@ -21,7 +21,10 @@ import { motion } from "framer-motion";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
-import { ClientTypeBadge, type ClientType } from "@/components/v2/ClientTypeBadge";
+import {
+  ClientTypeBadge,
+  type ClientType,
+} from "@/components/v2/ClientTypeBadge";
 import { useV2 } from "@/lib/v2-store";
 import { BarcodeScanner } from "@/components/reception/BarcodeScanner";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
@@ -62,19 +65,26 @@ interface EnrichedLigne extends CommandeDriveLigne {
   saving?: boolean;
 }
 
-const COLD_CATEGORIES = new Set(["Surgelés", "Frais", "Boucherie", "Charcuterie"]);
+const COLD_CATEGORIES = new Set([
+  "Surgelés",
+  "Frais",
+  "Boucherie",
+  "Charcuterie",
+]);
 
-const ZONE_LABEL: Record<"particulier" | "professionnel" | "traiteur", string> = {
-  particulier: "Zone Particulier",
-  professionnel: "Zone Professionnel",
-  traiteur: "Zone Traiteur",
-};
+const ZONE_LABEL: Record<"particulier" | "professionnel" | "traiteur", string> =
+  {
+    particulier: "Zone Particulier",
+    professionnel: "Zone Professionnel",
+    traiteur: "Zone Traiteur",
+  };
 
-const ZONE_EMOJI: Record<"particulier" | "professionnel" | "traiteur", string> = {
-  particulier: "🛒",
-  professionnel: "🏢",
-  traiteur: "🍽️",
-};
+const ZONE_EMOJI: Record<"particulier" | "professionnel" | "traiteur", string> =
+  {
+    particulier: "🛒",
+    professionnel: "🏢",
+    traiteur: "🍽️",
+  };
 
 export default function V2PreparationDetailPage() {
   const router = useRouter();
@@ -93,14 +103,20 @@ export default function V2PreparationDetailPage() {
   }, [params?.id]);
 
   async function load(id: string) {
-    const [cmds, deps] = await Promise.all([listCommandesDrive(), listDepots()]);
+    const [cmds, deps] = await Promise.all([
+      listCommandesDrive(),
+      listDepots(),
+    ]);
     const cmd = cmds.find((c) => c.id === id) ?? null;
     setCommande(cmd);
     setDepots(deps);
     if (!cmd) return;
     const ls = await listLignesPourCommande(id);
     // Enrich with produits + sort: cold first, then by depot
-    const allByDepot = new Map<string, Awaited<ReturnType<typeof listProduitsInDepot>>>();
+    const allByDepot = new Map<
+      string,
+      Awaited<ReturnType<typeof listProduitsInDepot>>
+    >();
     const depotIds = Array.from(new Set(ls.map((l) => l.depot_id)));
     for (const dId of depotIds) {
       allByDepot.set(dId, await listProduitsInDepot(dId));
@@ -149,10 +165,12 @@ export default function V2PreparationDetailPage() {
       return;
     }
     const ligne = lignes.find(
-      (l) => l.produit_id === p.id && l.statut_preparation === "en_attente"
+      (l) => l.produit_id === p.id && l.statut_preparation === "en_attente",
     );
     if (!ligne) {
-      toast.warning(`${p.nom} n'est pas (ou plus) à préparer pour cette commande.`);
+      toast.warning(
+        `${p.nom} n'est pas (ou plus) à préparer pour cette commande.`,
+      );
       return;
     }
     if (!employe) return;
@@ -175,8 +193,8 @@ export default function V2PreparationDetailPage() {
               prepare_par_employe_id: employeUuid,
               prepare_at: new Date().toISOString(),
             }
-          : l
-      )
+          : l,
+      ),
     );
     toast.success(`${p.nom} préparé`);
   };
@@ -199,8 +217,8 @@ export default function V2PreparationDetailPage() {
               prepare_par_employe_id: employeUuid,
               prepare_at: new Date().toISOString(),
             }
-          : l
-      )
+          : l,
+      ),
     );
     toast.warning("Marqué manquant. Photo de l'étagère enregistrée.");
     void photoUrl;
@@ -238,7 +256,9 @@ export default function V2PreparationDetailPage() {
     }
     const ut = l.produit?.unit_type ?? "unit";
     const quantiteReelle =
-      ut === "weight" ? parseFloat(l.weighedKg ?? "0") : (l.weighedBracket ?? 0) + 1;
+      ut === "weight"
+        ? parseFloat(l.weighedKg ?? "0")
+        : (l.weighedBracket ?? 0) + 1;
     setLignes((prev) =>
       prev.map((x) => (x.id === l.id ? { ...x, saving: true } : x)),
     );
@@ -285,7 +305,9 @@ export default function V2PreparationDetailPage() {
           (isWeightLine(l) && !l.saved && l.quantite_reelle_pesee == null),
       );
       if (notDone.length > 0) {
-        toast.error(`${notDone.length} ligne(s) pas encore pesée(s)/préparée(s)`);
+        toast.error(
+          `${notDone.length} ligne(s) pas encore pesée(s)/préparée(s)`,
+        );
         return;
       }
       const res = await finalizePreparation({
@@ -293,7 +315,8 @@ export default function V2PreparationDetailPage() {
         user_id: getUserUuid(employe?.id ?? null),
         lignes: lignes.map((l) => ({
           id: l.id,
-          montant_estime_ttc: l.montant_estime_ttc ?? l.prix_unitaire * l.quantite,
+          montant_estime_ttc:
+            l.montant_estime_ttc ?? l.prix_unitaire * l.quantite,
           montant_reel_ttc:
             l.montant_reel_ttc ??
             computeMontantReel(l) ??
@@ -315,7 +338,9 @@ export default function V2PreparationDetailPage() {
       return;
     }
     // Flow legacy (sans Stripe pré-auto)
-    const remaining = lignes.filter((l) => l.statut_preparation === "en_attente");
+    const remaining = lignes.filter(
+      (l) => l.statut_preparation === "en_attente",
+    );
     if (remaining.length > 0) {
       toast.error(`${remaining.length} ligne(s) encore en attente`);
       return;
@@ -339,9 +364,7 @@ export default function V2PreparationDetailPage() {
     // (passe l'INTERNAL_API_SECRET côté serveur, /api/email/send n'accepte
     //  plus de POST anonyme depuis le navigateur).
     if (commande.client_email) {
-      const { sendOperationalEmail } = await import(
-        "@/lib/actions/email-send"
-      );
+      const { sendOperationalEmail } = await import("@/lib/actions/email-send");
       sendOperationalEmail({
         to: commande.client_email,
         subject: "Votre commande Salamarket est prête !",
@@ -352,7 +375,9 @@ export default function V2PreparationDetailPage() {
         }),
       }).catch(() => {});
     }
-    toast.success(`Commande ${commande.numero_commande} prête. Client notifié.`);
+    toast.success(
+      `Commande ${commande.numero_commande} prête. Client notifié.`,
+    );
     router.replace("/v2/preparation");
   }
 
@@ -370,7 +395,9 @@ export default function V2PreparationDetailPage() {
   const sumReelEur = lignes.reduce((s, l) => {
     if (isWeightLine(l)) {
       const m =
-        l.montant_reel_ttc ?? computeMontantReel(l) ?? l.prix_unitaire * l.quantite;
+        l.montant_reel_ttc ??
+        computeMontantReel(l) ??
+        l.prix_unitaire * l.quantite;
       return s + m;
     }
     return s + l.prix_unitaire * l.quantite;
@@ -395,7 +422,8 @@ export default function V2PreparationDetailPage() {
           {commande.numero_commande}
         </h1>
         <p className="body-md text-text-secondary mt-1">
-          {commande.client_nom} · retrait à {formatHeure(commande.creneau_retrait)}
+          {commande.client_nom} · retrait à{" "}
+          {formatHeure(commande.creneau_retrait)}
         </p>
       </header>
 
@@ -438,14 +466,18 @@ export default function V2PreparationDetailPage() {
                       rounded="xl"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold truncate ${done ? "line-through" : ""}`}>
+                      <p
+                        className={`text-sm font-bold truncate ${done ? "line-through" : ""}`}
+                      >
                         {l.produit?.nom ?? "Produit"}
                       </p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <ClientTypeBadge
                           size="sm"
                           type={
-                            (l.produit?.client_type as ClientType | undefined) ??
+                            (l.produit?.client_type as
+                              | ClientType
+                              | undefined) ??
                             (l.zone_preparation === "professionnel"
                               ? "pro"
                               : l.zone_preparation === "traiteur"
@@ -456,7 +488,7 @@ export default function V2PreparationDetailPage() {
                         <span className="text-[11px] text-text-tertiary inline-flex items-center gap-1">
                           Qté {l.quantite}
                           {cold && (
-                            <span className="inline-flex items-center gap-0.5 text-blue-600 ml-1">
+                            <span className="inline-flex items-center gap-0.5 text-text-secondary ml-1">
                               <Snowflake className="w-3 h-3" />
                               Frais
                             </span>
@@ -470,18 +502,22 @@ export default function V2PreparationDetailPage() {
                         <Check className="w-5 h-5" />
                       </span>
                     )}
-                    {!isWeightLine(l) && l.statut_preparation === "manquant" && (
-                      <span className="badge badge-danger text-[10px]">Manquant</span>
-                    )}
-                    {!isWeightLine(l) && l.statut_preparation === "en_attente" && (
-                      <button
-                        onClick={() => setMissingPhotoFor(l.id)}
-                        className="text-xs font-bold text-danger px-2 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
-                      >
-                        <PackageMinus className="w-3 h-3" />
-                        Manquant
-                      </button>
-                    )}
+                    {!isWeightLine(l) &&
+                      l.statut_preparation === "manquant" && (
+                        <span className="badge badge-danger text-[10px]">
+                          Manquant
+                        </span>
+                      )}
+                    {!isWeightLine(l) &&
+                      l.statut_preparation === "en_attente" && (
+                        <button
+                          onClick={() => setMissingPhotoFor(l.id)}
+                          className="text-xs font-bold text-danger px-2 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
+                        >
+                          <PackageMinus className="w-3 h-3" />
+                          Manquant
+                        </button>
+                      )}
                     {/* — Ligne WEIGHT/BRACKET : pesée Stripe — */}
                     {isWeightLine(l) && (
                       <WeightLineRow

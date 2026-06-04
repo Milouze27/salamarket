@@ -40,7 +40,7 @@ interface DlcAlert {
   produit_id: string;
   produit_nom: string;
   produit_categorie: string | null;
-  dlc: string;            // ISO date
+  dlc: string; // ISO date
   jours_restants: number;
   niveau_alerte: Niveau;
   remise_suggeree_pct: number;
@@ -164,13 +164,14 @@ export default function AlertesDlcPage() {
         groups[a.niveau_alerte as keyof typeof groups] += 1;
       }
       // Heuristique démarque potentielle = qté * remise%/100 * 8€/u moyen (mock).
-      valeurRemise += (a.quantite_recue ?? 0) * (a.remise_suggeree_pct / 100) * 8;
+      valeurRemise +=
+        (a.quantite_recue ?? 0) * (a.remise_suggeree_pct / 100) * 8;
     }
     return { ...groups, total: alerts.length, valeurRemise };
   }, [alerts]);
 
   async function applyRemise(a: DlcAlert) {
-    setActing(a.lot_id);
+    setActing(`apply:${a.lot_id}`);
     // Démo : pas de write vers Cashmag, juste un feedback.
     await new Promise((r) => setTimeout(r, 350));
     toast.success(
@@ -229,7 +230,9 @@ export default function AlertesDlcPage() {
       a2.download = `promo-dlc-${a.lot_id}.pdf`;
       a2.click();
       URL.revokeObjectURL(url);
-      toast.success(`Promo -${a.remise_suggeree_pct}% générée — ${a.produit_nom}`);
+      toast.success(
+        `Promo -${a.remise_suggeree_pct}% générée — ${a.produit_nom}`,
+      );
     } catch (e) {
       console.error(e);
       toast.error("Erreur génération promo");
@@ -246,9 +249,12 @@ export default function AlertesDlcPage() {
     }
     setActing("__bulk__");
     await new Promise((r) => setTimeout(r, 500));
-    toast.success(`${forces.length} lot${forces.length > 1 ? "s" : ""} marqué${forces.length > 1 ? "s" : ""} en démarque`, {
-      duration: 3000,
-    });
+    toast.success(
+      `${forces.length} lot${forces.length > 1 ? "s" : ""} marqué${forces.length > 1 ? "s" : ""} en démarque`,
+      {
+        duration: 3000,
+      },
+    );
     setActing(null);
   }
 
@@ -338,7 +344,8 @@ export default function AlertesDlcPage() {
           <ul className="space-y-2.5">
             {alerts.map((a) => {
               const style = NIVEAU_STYLE[a.niveau_alerte];
-              const isActing = acting === a.lot_id;
+              const isApplying = acting === `apply:${a.lot_id}`;
+              const isPrinting = acting === `promo:${a.lot_id}`;
               return (
                 <li
                   key={a.lot_id}
@@ -364,7 +371,9 @@ export default function AlertesDlcPage() {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-[16px] font-extrabold tabular ${style.text}`}>
+                      <p
+                        className={`text-[16px] font-extrabold tabular ${style.text}`}
+                      >
                         {joursLabel(a.jours_restants)}
                       </p>
                       <p className="text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary mt-0.5">
@@ -397,10 +406,10 @@ export default function AlertesDlcPage() {
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <button
                         onClick={() => void applyRemise(a)}
-                        disabled={isActing || acting === `promo:${a.lot_id}`}
+                        disabled={isApplying || isPrinting}
                         className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
                       >
-                        {isActing ? (
+                        {isApplying ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Tag className="w-4 h-4" />
@@ -409,10 +418,10 @@ export default function AlertesDlcPage() {
                       </button>
                       <button
                         onClick={() => void printPromo(a)}
-                        disabled={isActing || acting === `promo:${a.lot_id}`}
+                        disabled={isApplying || isPrinting}
                         className="min-h-[44px] bg-[#A8231A] text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
                       >
-                        {acting === `promo:${a.lot_id}` ? (
+                        {isPrinting ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Printer className="w-4 h-4" />
@@ -482,7 +491,9 @@ function Stat({
       </p>
       <p
         className={`text-[13px] tabular mt-0.5 ${
-          strong ? "font-extrabold text-[#A8231A]" : "font-bold text-text-primary"
+          strong
+            ? "font-extrabold text-[#A8231A]"
+            : "font-bold text-text-primary"
         }`}
       >
         {value}

@@ -1,15 +1,15 @@
 "use client";
 
-import { Moon, Sun, CircleDot } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "@/lib/hooks/useTheme";
 
 /**
  * ThemeToggle — bouton compact dans le header V2Shell.
  *
- * Tap court : flip jour↔nuit instantané.
- * Tap long (ou re-tap rapide) : ouvre un mini popover avec les 3 modes
- * (Auto, Jour, Nuit) pour donner le contrôle total à Otmane.
+ * Tap court : flip jour↔nuit instantané (dark = défaut Stock).
+ * Tap long (clic droit) : ouvre un mini popover avec les 2 modes
+ * (Nuit, Jour) pour donner le contrôle explicite à Otmane.
  */
 export function ThemeToggle() {
   const { pref, resolved, setPref, toggle } = useTheme();
@@ -34,13 +34,6 @@ export function ThemeToggle() {
         className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all relative"
       >
         <Icon className="w-4 h-4" strokeWidth={2.2} />
-        {pref === "auto" && (
-          <span
-            aria-hidden
-            className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#C9A227] border border-[#082A20]"
-            title="Mode auto"
-          />
-        )}
       </button>
 
       {popoverOpen && (
@@ -59,9 +52,8 @@ export function ThemeToggle() {
             </div>
             {(
               [
-                { key: "auto", label: "Auto (19h-7h)", icon: CircleDot },
-                { key: "jour", label: "Jour", icon: Sun },
                 { key: "nuit", label: "Nuit", icon: Moon },
+                { key: "jour", label: "Jour", icon: Sun },
               ] as const
             ).map(({ key, label, icon: ItemIcon }) => {
               const active = pref === key;

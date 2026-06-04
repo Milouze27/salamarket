@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 :root {
-  /* L'app est volontairement light-only par défaut (mode "atelier nuit"
-     est un opt-in via ThemeToggle, jamais déclenché par l'OS). Sans
-     ce hint, iOS/Android tinte les scrollbars + form controls + autofill
-     en sombre quand le user a prefers-color-scheme:dark sur son téléphone,
-     ce qui pète notre palette cream/sapin. */
-  color-scheme: light;
+  /* DARK = DÉFAUT (MYTHOS Wave 1). Le Stock est sombre par défaut ; le
+     mode jour cream reste un opt-in raffiné via [data-theme="jour"].
+     color-scheme:dark aligne scrollbars + form controls + autofill iOS/
+     Android sur le canvas abyssal. La grammaire jour vit en aval sous
+     [data-theme="jour"] (voir bloc dédié). */
+  color-scheme: dark;
   --bg-cream: #FAF7EE;
   --bg-card: #FFFFFF;
   --primary-green: #0E3B2E;
@@ -83,6 +83,35 @@
 
   /* Safe-area top (parity with Drive, LAY-06) */
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* ── Tokens partagés jour↔nuit (valeurs JOUR ici, surchargées en dark) ──
+     Déclarés au :root pour que le mode jour ait toujours une valeur définie
+     (jamais d'undefined). Les vagues suivantes consomment ces noms ; en jour
+     les surfaces dérivent du cream, en nuit de la palette abysse canonique. */
+  --bg-abyss: var(--bg-cream);
+  --bg-base: var(--bg-cream);
+  --bg-header: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%);
+  --surface-0: #FFFFFF;
+  --surface-1: var(--bg-card);
+  --surface-2: #FBF9F1;
+  --surface-3: #FFFFFF;
+  --primary-green-soft: rgba(14, 59, 46, 0.08);
+  --hero-gradient: linear-gradient(165deg, #0E3B2E, #082A20);
+  --accent-gold-dim: var(--or-text);
+  --accent-gold-glow: 0 0 0 transparent;
+  --accent-gold-hairline: rgba(201, 162, 39, 0.18);
+  --text-gold: var(--or-text);
+  --text-on-gold: var(--primary-green-dark);
+  --border-hairline: var(--border-light);
+  --border-card: var(--border-light);
+  --border-premium: rgba(201, 162, 39, 0.22);
+  --shadow-elevated: var(--shadow-card-lg);
+  --glow-cta: 0 8px 24px rgba(14, 59, 46, 0.18);
+  --bignum-glow: none;
+  --glass-overlay: rgba(255, 255, 255, 0.72);
+  --glass-overlay-blur: blur(16px);
+  --glass-nav: rgba(255, 255, 255, 0.86);
+  --glass-nav-blur: blur(20px);
 }
 
 * {
@@ -603,98 +632,255 @@ body {
   z-index: 50;
 }
 
-/* ──────────────────────────────────────────────────────────────────────
-   MOVE 2 — Mode atelier nuit
-   Active via body.theme-nuit (hook useTheme). Override des CSS variables
-   pour pousser l'app en sapin abyssal + or boosté. Contraste WCAG AA :
-   text-primary (#F4E9C4) sur bg #0A1F18 = 11.9:1, text-secondary
-   (#C9A227) sur bg #0A1F18 = 5.8:1. Transition douce 240ms.
-   ────────────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   DARK SYSTEM CANONIQUE — MYTHOS Wave 1 (Agent A DESIGN-CORE)
+   ──────────────────────────────────────────────────────────────────────
+   DOCTRINE : le DARK est le DÉFAUT du Stock. Le jour cream est un opt-in
+   raffiné via [data-theme="jour"]. Le dark est une grammaire propre, PAS
+   une inversion : SAPIN reste primary (#1B6A4A restauré), l'OR est un
+   accent (liseré + glow + chiffre), JAMAIS un fill de grande surface.
+
+   No-flash : les tokens dark s'appliquent dès le 1er paint via le sélecteur
+   :root:not([data-theme="jour"]) — donc en SSR (aucun attribut posé) ET en
+   data-theme="nuit", l'app est sombre. Seul [data-theme="jour"] explicite
+   bascule sur la palette cream du :root. Aucune dépendance JS pour le paint.
+
+   Alias acceptés (useTheme pose data-theme sur <html> + classe sur body) :
+     html[data-theme="nuit"], html:not([data-theme="jour"]),
+     body.theme-nuit  → tous mappés sur la même grammaire dark.
+   ══════════════════════════════════════════════════════════════════════ */
 html, body {
   transition: background-color 240ms var(--ease-out-quart),
               color 240ms var(--ease-out-quart);
 }
 
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
 body.theme-nuit {
-  --bg-cream: #0A1F18;
-  --bg-card: #0E2A20;
-  --primary-green: #DDB31C; /* en mode nuit l'or DEVIENT la primary */
-  --primary-green-hover: #E8C13A;
-  --primary-green-dark: #C9A227;
-  --accent-gold: #DDB31C;
-  --accent-gold-bright: #EFC840;
-  --accent-gold-soft: #2A2310;
-  --text-primary: #F4E9C4;
-  --text-secondary: #C9C2A8;
-  --text-tertiary: #8A8674;
-  --text-on-dark: #FFFFFF;
-  --text-on-dark-muted: #D7E0DA;
-  --border-light: #1A3A2E;
-  --border-medium: #2A4F40;
-  --danger: #FF6B5E;
-  --danger-soft: #2A1310;
-  --success: #5BCC8E;
-  --success-soft: #102A1B;
-  --warning: #F3A93C;
-  --warning-soft: #2A1F0E;
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
-  --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.45);
-  --shadow-card-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
-  --shadow-inset-soft: inset 0 0 0 1px rgba(221, 179, 28, 0.08);
+  color-scheme: dark;
+
+  /* ── Fonds ── canvas jamais #000, dégradés de profondeur sapin ── */
+  --bg-abyss: #08130F;
+  --bg-base: #0B1C16;
+  --bg-header: linear-gradient(180deg, #0E2A20, #08130F);
+  /* Remap des tokens legacy (Tailwind bg-cream / text-* y pointent) */
+  --bg-cream: #08130F;          /* = abyss : body & canvas en dark direct */
+  --bg-card: #13291F;           /* = surface-1 : remplace bg-white legacy */
+
+  /* ── Surfaces (+~6% luminosité par palier) ── */
+  --surface-0: #0E211A;
+  --surface-1: #13291F;         /* card standard */
+  --surface-2: #193327;         /* hover / sheet */
+  --surface-3: #1F3D2F;         /* popover / modal / palette */
+
+  /* ── Primary SAPIN restauré (l'or ne devient JAMAIS primary) ── */
+  --primary-green: #1B6A4A;
+  --primary-green-hover: #22855C;
+  --primary-green-dark: #134A36;
+  --primary-green-soft: rgba(27, 106, 74, 0.16);
+  --hero-gradient: linear-gradient(165deg, #134A36, #0A2419);
+
+  /* ── Or = ACCENT (remonté pour AA sur abysse) ── */
+  --accent-gold: #E8C24A;
+  --accent-gold-bright: #F2D469;   /* KPI / big numbers / bay labels */
+  --accent-gold-dim: #B89530;      /* eyebrows */
+  --accent-gold-soft: rgba(232, 194, 74, 0.12);
+  --accent-gold-glow: 0 0 24px rgba(232, 194, 74, 0.22);
+  --accent-gold-hairline: rgba(232, 194, 74, 0.12);
+  --or-text: #F2D469;              /* gold-on-dark text AA-safe (11.1:1) */
+
+  /* ── Texte cream désaturé (jamais blanc pur) ── */
+  --text-primary: #F3F0E6;         /* 14.8:1 AAA */
+  --text-secondary: #A8B4AC;       /* 8.2:1 */
+  --text-tertiary: #7C8A82;        /* 4.7:1 */
+  --text-gold: #F2D469;            /* 11.1:1 */
+  --text-on-gold: #0A1F18;
+  --text-on-dark: #F3F0E6;
+  --text-on-dark-muted: #A8B4AC;
+
+  /* ── Status lumineux + soft translucides ── */
+  --danger: #FF7062;
+  --danger-soft: rgba(255, 112, 98, 0.14);
+  --success: #4FD08A;
+  --success-soft: rgba(79, 208, 138, 0.14);
+  --warning: #F2B43C;
+  --warning-soft: rgba(242, 180, 60, 0.14);
+  --status-success: #4FD08A;
+  --status-success-bg: rgba(79, 208, 138, 0.14);
+  --status-success-text: #4FD08A;
+  --status-warning: #F2B43C;
+  --status-warning-bg: rgba(242, 180, 60, 0.14);
+  --status-warning-text: #F2B43C;
+  --status-danger: #FF7062;
+  --status-danger-bg: rgba(255, 112, 98, 0.14);
+  --status-danger-text: #FF7062;
+  --status-neutral-bg: rgba(255, 255, 255, 0.06);
+  --status-neutral-text: #A8B4AC;
+
+  /* ── Bordures hairline ── */
+  --border-hairline: rgba(255, 255, 255, 0.06);
+  --border-card: rgba(255, 255, 255, 0.09);
+  --border-premium: rgba(232, 194, 74, 0.14);
+  --border-light: rgba(255, 255, 255, 0.09);
+  --border-medium: rgba(255, 255, 255, 0.14);
+
+  /* ── Grammaire DEPTH (le secret : inset highlight top = depth Linear) ── */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card-lg: 0 12px 40px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-inset-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --glow-cta: 0 0 0 1px rgba(232, 194, 74, 0.20), 0 6px 24px rgba(232, 194, 74, 0.18);
+  --bignum-glow: 0 0 18px rgba(242, 212, 105, 0.25);
+
+  /* ── Glass ── */
+  --glass-overlay: rgba(11, 28, 22, 0.72);
+  --glass-overlay-blur: blur(16px);
+  --glass-nav: rgba(14, 33, 26, 0.86);
+  --glass-nav-blur: blur(20px);
 }
 
-/* Réajustements visuels spécifiques mode nuit */
+/* En dark, le canvas pose l'abysse direct (et non plus le cream Tailwind). */
+:root:not([data-theme="jour"]) body,
+[data-theme="nuit"] body,
+body.theme-nuit {
+  background: var(--bg-abyss);
+}
+
+/* ── DARK-04 — grammaire d'élévation : surfaces + inset highlight top ──
+   .card / .keypad-btn rendent déjà via les tokens (--bg-card, --shadow-card,
+   --border-light) qui sont remappés ci-dessus. On affine juste la surface
+   card sur la vraie surface-1 + bordure hairline premium. */
+:root:not([data-theme="jour"]) .card,
+[data-theme="nuit"] .card,
+body.theme-nuit .card {
+  background: var(--surface-1);
+  border-color: var(--border-card);
+}
+:root:not([data-theme="jour"]) .keypad-btn,
+[data-theme="nuit"] .keypad-btn,
+body.theme-nuit .keypad-btn {
+  background: var(--surface-1);
+  border-color: var(--border-hairline);
+}
+:root:not([data-theme="jour"]) .keypad-btn:active,
+[data-theme="nuit"] .keypad-btn:active,
+body.theme-nuit .keypad-btn:active {
+  background: var(--surface-2);
+}
+
+/* CTA primary sapin : liseré + glow or discret (l'or NE remplit pas). */
+:root:not([data-theme="jour"]) .btn-gold,
+[data-theme="nuit"] .btn-gold,
+body.theme-nuit .btn-gold {
+  color: var(--text-on-gold);
+}
+
+/* Skeleton dark : shimmer sur surfaces sombres, jamais clair. */
+:root:not([data-theme="jour"]) .skeleton,
+[data-theme="nuit"] .skeleton,
 body.theme-nuit .skeleton {
   background: linear-gradient(
     100deg,
-    #14302A 0%,
-    #1C3D34 50%,
-    #14302A 100%
+    var(--surface-0) 0%,
+    var(--surface-2) 50%,
+    var(--surface-0) 100%
   );
   background-size: 200% 100%;
 }
 
+/* Pills filtres : surface-1 par défaut, sapin plein actif (pas un bloc or). */
+:root:not([data-theme="jour"]) .pill-filter,
+[data-theme="nuit"] .pill-filter,
 body.theme-nuit .pill-filter {
-  background: #14302A;
-  border-color: #1A3A2E;
-  color: #F4E9C4;
+  background: var(--surface-1);
+  border-color: var(--border-hairline);
+  color: var(--text-primary);
 }
+:root:not([data-theme="jour"]) .pill-filter[data-active="true"],
+[data-theme="nuit"] .pill-filter[data-active="true"],
 body.theme-nuit .pill-filter[data-active="true"] {
-  background: #DDB31C;
-  color: #0A1F18;
-  border-color: #DDB31C;
+  background: var(--primary-green);
+  color: var(--text-primary);
+  border-color: var(--primary-green);
 }
 
+/* Inputs : surface-0 (un cran sous la card), liseré sapin au focus. */
+:root:not([data-theme="jour"]) .input-field,
+[data-theme="nuit"] .input-field,
 body.theme-nuit .input-field {
-  background: #0E2A20;
-  border-color: #1A3A2E;
-  color: #F4E9C4;
+  background: var(--surface-0);
+  border-color: var(--border-card);
+  color: var(--text-primary);
 }
-body.theme-nuit .input-field::placeholder { color: #6A6655; }
+:root:not([data-theme="jour"]) .input-field::placeholder,
+[data-theme="nuit"] .input-field::placeholder,
+body.theme-nuit .input-field::placeholder { color: var(--text-tertiary); }
+:root:not([data-theme="jour"]) .input-field:focus,
+[data-theme="nuit"] .input-field:focus,
+body.theme-nuit .input-field:focus {
+  border-color: var(--primary-green-hover);
+  box-shadow: 0 0 0 3px var(--primary-green-soft);
+}
+
+/* Big numbers / KPI hub : glow or doux (mot/chiffre, pas surface). */
+:root:not([data-theme="jour"]) .h1-display .gold,
+:root:not([data-theme="jour"]) .h1-display em,
+[data-theme="nuit"] .h1-display .gold,
+[data-theme="nuit"] .h1-display em,
+body.theme-nuit .h1-display .gold,
+body.theme-nuit .h1-display em {
+  color: var(--accent-gold-bright);
+  text-shadow: var(--bignum-glow);
+}
+
+/* Eyebrow numéroté en or-dim (DARK : graisse retenue, accent discret). */
+:root:not([data-theme="jour"]) .eyebrow,
+:root:not([data-theme="jour"]) .eyebrow .num,
+[data-theme="nuit"] .eyebrow,
+[data-theme="nuit"] .eyebrow .num,
+body.theme-nuit .eyebrow,
+body.theme-nuit .eyebrow .num { color: var(--accent-gold-dim); }
+
+/* TYPO dark : graisses -1 cran sur les gros titres (extrabold → bold) +
+   tabular-nums sur tous les chiffres financiers/quantités. */
+:root:not([data-theme="jour"]) .display,
+[data-theme="nuit"] .display,
+body.theme-nuit .display { font-weight: 700; }
+:root:not([data-theme="jour"]) .h1-display,
+[data-theme="nuit"] .h1-display,
+body.theme-nuit .h1-display { font-weight: 600; }
+:root:not([data-theme="jour"]) .tabular,
+[data-theme="nuit"] .tabular,
+body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
 
 /* ──────────────────────────────────────────────────────────────────────
-   Mode nuit — patch contraste cards/bottom-nav
-   Une grande partie des composants (cards cockpit, RamadanCard, AlertCard,
-   bottom nav pill, sheets, etc.) utilise Tailwind `bg-white` en dur (pas
-   var(--bg-card)), ce qui rend ces surfaces aveuglantes en mode nuit sur
-   le bg sapin abyssal. Override ciblé : on remappe `bg-white` vers
-   `--bg-card` (#0E2A20) en nuit, et on durcit le texte secondary pour
-   garder un contraste WCAG AA. Bordures rule passent en sapin lointain
-   pour ne pas se voir comme des silhouettes blanches.
-
-   Note : `!important` est nécessaire parce que Tailwind compile bg-white
-   en `background-color:#fff` à la fin du fichier généré. Le scope
-   `body.theme-nuit` reste suffisamment précis pour ne JAMAIS déclencher
-   en mode jour (qui reste le défaut absolu).
+   DARK — patch contraste legacy `bg-white` hardcodé
+   Beaucoup de composants V2 (cards cockpit, RamadanCard, AlertCard, bottom
+   nav pill, sheets) utilisent Tailwind `bg-white` en dur au lieu de
+   var(--bg-card). On les remappe sur la surface-1 dark + texte cream. Les
+   vagues suivantes migreront ces composants vers les tokens ; en attendant
+   ce filet de sécurité garde tout lisible. `!important` requis car Tailwind
+   compile bg-white en `#fff`. Scopé sur dark, jamais déclenché en jour.
    ────────────────────────────────────────────────────────────────────── */
+:root:not([data-theme="jour"]) .bg-white,
+:root:not([data-theme="jour"]) [class*="bg-white/"],
+[data-theme="nuit"] .bg-white,
+[data-theme="nuit"] [class*="bg-white/"],
 body.theme-nuit .bg-white,
 body.theme-nuit [class*="bg-white/"] {
-  background-color: var(--bg-card) !important;
+  background-color: var(--surface-1) !important;
   color: var(--text-primary);
 }
 
-/* Texte intérieur des cards : tout ce qui était hardcodé en text-primary
-   sapin (#0E3B2E, #0F1A14) devient cream pour rester lisible. */
+:root:not([data-theme="jour"]) .bg-white .text-text-primary,
+:root:not([data-theme="jour"]) .bg-white [class*="text-[#0E3B2E"],
+:root:not([data-theme="jour"]) .bg-white [class*="text-[#0F1A14"],
+:root:not([data-theme="jour"]) .bg-white [class*="text-primary-dark"],
+[data-theme="nuit"] .bg-white .text-text-primary,
+[data-theme="nuit"] .bg-white [class*="text-[#0E3B2E"],
+[data-theme="nuit"] .bg-white [class*="text-[#0F1A14"],
+[data-theme="nuit"] .bg-white [class*="text-primary-dark"],
 body.theme-nuit .bg-white .text-text-primary,
 body.theme-nuit .bg-white [class*="text-[#0E3B2E"],
 body.theme-nuit .bg-white [class*="text-[#0F1A14"],
@@ -702,20 +888,28 @@ body.theme-nuit .bg-white [class*="text-primary-dark"] {
   color: var(--text-primary) !important;
 }
 
-/* Borders des cards : passer en sapin foncé pour disparaitre dans le bg. */
+:root:not([data-theme="jour"]) [class*="border-rule"],
+:root:not([data-theme="jour"]) [class*="border-[#E8E4D8"],
+[data-theme="nuit"] [class*="border-rule"],
+[data-theme="nuit"] [class*="border-[#E8E4D8"],
 body.theme-nuit [class*="border-rule"],
 body.theme-nuit [class*="border-[#E8E4D8"] {
-  border-color: var(--border-light) !important;
+  border-color: var(--border-card) !important;
 }
 
-/* Bottom nav text : `text-text-secondary` devient cream-muddy sur la pill
-   dark (qui est maintenant bg-card). Force un cream lisible. */
+/* Bottom nav text lisible sur la surface dark de la pill. */
+:root:not([data-theme="jour"]) nav [class*="text-text-secondary"],
+:root:not([data-theme="jour"]) nav [class*="text-text-tertiary"],
+[data-theme="nuit"] nav [class*="text-text-secondary"],
+[data-theme="nuit"] nav [class*="text-text-tertiary"],
 body.theme-nuit nav [class*="text-text-secondary"],
 body.theme-nuit nav [class*="text-text-tertiary"] {
-  color: #B8C2A8 !important;
+  color: var(--text-secondary) !important;
 }
+:root:not([data-theme="jour"]) nav [class*="text-primary-dark"],
+[data-theme="nuit"] nav [class*="text-primary-dark"],
 body.theme-nuit nav [class*="text-primary-dark"] {
-  color: #F4E9C4 !important;
+  color: var(--text-primary) !important;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -794,14 +988,20 @@ body.density-compact .btn-ghost {
   background: var(--bg-cream);
 }
 
-/* Mode nuit : palette s'adapte au thème ambient */
+/* DARK — palette de commande sur surface-3 (popover/palette) */
+:root:not([data-theme="jour"]) .cmdk-root-wrap,
+[data-theme="nuit"] .cmdk-root-wrap,
 body.theme-nuit .cmdk-root-wrap {
-  background: #0E2A20;
-  border-color: #1A3A2E;
+  background: var(--surface-3);
+  border-color: var(--border-card);
 }
+:root:not([data-theme="jour"]) .cmdk-item[data-selected="true"],
+[data-theme="nuit"] .cmdk-item[data-selected="true"],
 body.theme-nuit .cmdk-item[data-selected="true"] {
-  background: rgba(221, 179, 28, 0.12);
+  background: var(--accent-gold-soft);
 }
+:root:not([data-theme="jour"]) .cmdk-item[data-selected="true"] .text-text-primary,
+[data-theme="nuit"] .cmdk-item[data-selected="true"] .text-text-primary,
 body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
-  color: #F4E9C4;
+  color: var(--text-primary);
 }

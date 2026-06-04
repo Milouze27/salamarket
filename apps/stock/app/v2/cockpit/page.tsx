@@ -329,9 +329,15 @@ export default function CockpitPage() {
 
         {/* Footer : warnings dev/admin */}
         {snap && snap.warnings.length > 0 && (
-          <div className="bg-[#FEF3E2] border border-[#D97706]/20 rounded-[16px] p-3 flex items-start gap-2.5">
+          <div
+            className="rounded-[16px] p-3 flex items-start gap-2.5 border"
+            style={{
+              background: "var(--warning-soft)",
+              borderColor: "color-mix(in srgb, var(--warning) 22%, transparent)",
+            }}
+          >
             <AlertTriangle
-              className="w-4 h-4 text-[#D97706] shrink-0 mt-0.5"
+              className="w-4 h-4 text-[var(--warning)] shrink-0 mt-0.5"
               strokeWidth={2.4}
             />
             <div className="flex-1 min-w-0">
@@ -348,7 +354,13 @@ export default function CockpitPage() {
         )}
 
         {error && (
-          <div className="bg-[#FEF2F1] border border-[#A8231A]/20 rounded-[16px] p-3 text-[13px] text-[#A8231A]">
+          <div
+            className="rounded-[16px] p-3 text-[13px] text-[var(--danger)] border"
+            style={{
+              background: "var(--danger-soft)",
+              borderColor: "color-mix(in srgb, var(--danger) 24%, transparent)",
+            }}
+          >
             <p className="font-bold mb-1">Snapshot indisponible</p>
             <p className="text-[12px]">{error}</p>
           </div>

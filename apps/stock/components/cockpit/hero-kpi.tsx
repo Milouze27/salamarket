@@ -113,14 +113,16 @@ export function HeroKpi({
             {salutation},
           </p>
           <h1
-            className="text-[32px] sm:text-[36px] font-extrabold leading-none tracking-tight text-white"
+            className="text-[32px] sm:text-[36px] font-bold leading-none tracking-tight text-white"
           >
             {prenom}
             <span className="text-[var(--accent-gold-bright)]">.</span>
           </h1>
         </div>
 
-        {/* Big number CA */}
+        {/* Big number CA — or-bright + bignum-glow : brille comme un cours
+            de bourse (DARK-05). Graisse -1 cran (extrabold→bold) car le gras
+            irradie en dark. */}
         <div className="flex flex-col gap-1">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">
             CA hier
@@ -128,12 +130,15 @@ export function HeroKpi({
           {loading ? (
             <div className="h-12 w-44 rounded-xl bg-white/10 animate-pulse" />
           ) : caHier === null ? (
-            <p className="text-[28px] font-extrabold text-white/55 tabular">
-              —
+            <p className="text-[24px] font-bold text-white/45 tabular leading-[1]">
+              En attente du Z
+              <span className="block text-[12px] font-semibold text-white/35 tracking-tight mt-1">
+                Premier ticket non clôturé
+              </span>
             </p>
           ) : (
             <p
-              className="text-[44px] sm:text-[52px] font-extrabold leading-[1] tracking-tight text-white tabular"
+              className="text-[44px] sm:text-[52px] font-bold leading-[1] tracking-tight text-[var(--accent-gold-bright)] tabular"
               style={{ textShadow: "var(--bignum-glow)" }}
               aria-label={`Chiffre d'affaires de la veille : ${formatEur(caHier)}`}
             >

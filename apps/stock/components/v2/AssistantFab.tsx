@@ -25,10 +25,26 @@ export function AssistantFab({ role, hideOnNoNav = false }: Props) {
     <Link
       href="/v2/admin/assistant-ia"
       aria-label="Ouvrir l'assistant IA"
-      className="fixed z-[55] bottom-[calc(var(--nav-height,64px)+var(--safe-bottom,0px)+36px)] right-4 w-14 h-14 rounded-full shadow-card-lg flex items-center justify-center bg-gradient-to-br from-[#0E3B2E] to-[#082A20] active:scale-95 transition-transform"
+      className="assistant-fab fixed z-[55] bottom-[calc(var(--nav-height,64px)+var(--safe-bottom,0px)+36px)] right-4 w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+      style={{
+        background: "var(--hero-gradient)",
+        border: "1px solid var(--border-premium)",
+        boxShadow: "var(--glow-cta)",
+      }}
     >
-      <span aria-hidden className="absolute -inset-1 rounded-full bg-gold-bright/30 motion-safe:animate-ping opacity-60" />
-      <Sparkles className="w-6 h-6 text-gold-bright relative" strokeWidth={2.4} />
+      {/* Halo or qui respire (pulse subtil, pas un ping agressif). */}
+      <span
+        aria-hidden
+        className="absolute -inset-1.5 rounded-full pointer-events-none motion-safe:animate-pulse"
+        style={{
+          background:
+            "radial-gradient(circle, var(--accent-gold-soft) 0%, transparent 70%)",
+        }}
+      />
+      <Sparkles
+        className="w-6 h-6 text-[var(--accent-gold-bright)] relative"
+        strokeWidth={2.4}
+      />
     </Link>
   );
 }

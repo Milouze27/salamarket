@@ -165,28 +165,55 @@ export default function CounterPage() {
     [rows],
   );
 
+  // Commande la plus ANCIENNE (la plus petite pret_at) — celle qui attend
+  // le plus longtemps. On lui pose un pulse glow or pour attirer l'œil du
+  // client. Indépendant de l'ordre d'affichage (qui est par bay).
+  const oldestId = useMemo(() => {
+    let best: CounterRow | null = null;
+    for (const r of rows) {
+      if (!r.pret_at) continue;
+      if (!best || r.pret_at < (best.pret_at ?? "")) best = r;
+    }
+    return best?.id ?? null;
+  }, [rows]);
+
   return (
     <main
-      className="fixed inset-0 overflow-hidden bg-gradient-to-br from-[#0E3B2E] to-[#082A20] text-white"
-      style={{ fontFamily: "var(--font-jakarta), system-ui, sans-serif" }}
+      data-theme="nuit"
+      className="fixed inset-0 overflow-hidden text-[var(--text-primary)]"
+      style={{
+        fontFamily: "var(--font-jakarta), system-ui, sans-serif",
+        background: "var(--bg-abyss)",
+      }}
     >
+      {/* Vignette radiale sapin — depth cinéma. Deux halos : un sapin
+          haut-gauche (chaleur), un assombrissement périphérique. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 18% 0%, rgba(27,106,74,0.30) 0%, transparent 55%), radial-gradient(140% 120% at 50% 50%, transparent 40%, rgba(4,12,9,0.55) 100%)",
+        }}
+      />
+
       {/* Header */}
-      <header className="px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
+      <header className="relative px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
         <div className="min-w-0">
           <p
-            className="font-bold tracking-[0.32em] uppercase text-[#C9A227]"
+            className="font-bold tracking-[0.32em] uppercase text-[var(--accent-gold-dim)]"
             style={{ fontSize: "clamp(11px, 1.1vw, 16px)" }}
           >
             Salam Market · Drive
           </p>
           <h1
-            className="font-extrabold tracking-tight leading-[0.95] mt-3"
+            className="font-bold tracking-tight leading-[0.95] mt-3 text-[var(--text-primary)]"
             style={{ fontSize: "clamp(40px, 5.6vw, 92px)" }}
           >
             Commandes prêtes
           </h1>
           <p
-            className="text-white/70 mt-3 max-w-[28ch]"
+            className="text-[var(--text-secondary)] mt-3 max-w-[28ch]"
             style={{ fontSize: "clamp(14px, 1.4vw, 22px)" }}
           >
             Présentez-vous à la borne indiquée à côté de votre numéro.
@@ -194,17 +221,21 @@ export default function CounterPage() {
         </div>
         <div className="text-right shrink-0">
           <div
-            className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-4 py-2 font-bold tabular"
-            style={{ fontSize: "clamp(14px, 1.3vw, 20px)" }}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 font-bold tabular text-[var(--text-primary)] border border-[var(--border-card)]"
+            style={{
+              fontSize: "clamp(14px, 1.3vw, 20px)",
+              background: "var(--glass-nav)",
+              backdropFilter: "var(--glass-nav-blur)",
+            }}
           >
-            <Clock3 className="w-4 h-4 opacity-80" />
+            <Clock3 className="w-4 h-4 text-[var(--accent-gold-bright)]" />
             {now.toLocaleTimeString("fr-FR", {
               hour: "2-digit",
               minute: "2-digit",
             })}
           </div>
           <p
-            className="text-white/50 mt-2 tracking-widest uppercase"
+            className="text-[var(--text-tertiary)] mt-2 tracking-widest uppercase"
             style={{ fontSize: "clamp(9px, 0.7vw, 12px)" }}
           >
             {sorted.length} en attente
@@ -218,10 +249,10 @@ export default function CounterPage() {
           un client en bay B5 ne voyait jamais son numéro affiché. Avec
           le scroll + un badge "+N en attente", on garantit que
           personne n'est invisible. */}
-      <CounterGrid sorted={sorted} loaded={loaded} />
+      <CounterGrid sorted={sorted} loaded={loaded} oldestId={oldestId} />
 
       {/* Footer hint */}
-      <footer className="absolute bottom-4 inset-x-0 text-center text-white/30 text-[11px] tracking-[0.18em] uppercase font-semibold pointer-events-none">
+      <footer className="absolute bottom-4 inset-x-0 text-center text-[var(--text-tertiary)] text-[11px] tracking-[0.18em] uppercase font-semibold pointer-events-none">
         Mise à jour automatique · Plein écran ⌃⌘F
       </footer>
     </main>
@@ -238,9 +269,11 @@ export default function CounterPage() {
 function CounterGrid({
   sorted,
   loaded,
+  oldestId,
 }: {
   sorted: CounterRow[];
   loaded: boolean;
+  oldestId: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [overflowCount, setOverflowCount] = useState(0);
@@ -296,7 +329,11 @@ function CounterGrid({
             >
               <AnimatePresence initial={false}>
                 {sorted.map((row) => (
-                  <BayCard key={row.id} row={row} />
+                  <BayCard
+                    key={row.id}
+                    row={row}
+                    isOldest={row.id === oldestId}
+                  />
                 ))}
               </AnimatePresence>
             </div>
@@ -312,8 +349,12 @@ function CounterGrid({
               className="absolute bottom-12 right-8 lg:right-14 z-10 pointer-events-none"
             >
               <div
-                className="inline-flex items-center gap-2 bg-[#C9A227] text-[#082A20] rounded-full px-4 py-2 font-extrabold shadow-lg shadow-[#C9A227]/40"
-                style={{ fontSize: "clamp(13px, 1.1vw, 18px)" }}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2 font-bold text-[var(--accent-gold-bright)] border border-[var(--border-premium)]"
+                style={{
+                  fontSize: "clamp(13px, 1.1vw, 18px)",
+                  background: "var(--surface-2)",
+                  boxShadow: "var(--accent-gold-glow)",
+                }}
               >
                 <ArrowDown className="w-4 h-4" aria-hidden />
                 +{overflowCount} en attente
@@ -326,7 +367,13 @@ function CounterGrid({
   );
 }
 
-function BayCard({ row }: { row: CounterRow }) {
+function BayCard({
+  row,
+  isOldest,
+}: {
+  row: CounterRow;
+  isOldest: boolean;
+}) {
   const isOverflow = row.bay_label === "OVERFLOW";
   return (
     <motion.div
@@ -336,21 +383,34 @@ function BayCard({ row }: { row: CounterRow }) {
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: -40, scale: 0.94 }}
       transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
-      className="relative bg-white/[0.06] border border-white/10 rounded-[28px] p-6 lg:p-8 flex flex-col gap-3 backdrop-blur-md shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]"
+      className={`relative rounded-[28px] p-6 lg:p-8 flex flex-col gap-3 ${
+        isOldest ? "counter-card-pulse" : ""
+      }`}
+      style={{
+        background: "var(--surface-1)",
+        border: isOldest
+          ? "1px solid var(--border-premium)"
+          : "1px solid var(--border-card)",
+        boxShadow: "var(--shadow-elevated)",
+      }}
     >
-      {/* Bay label — gigantesque, or */}
+      {/* Bay label — gigantesque, or-bright, rayonne comme un néon. */}
       <p
-        className={`font-extrabold tabular tracking-tighter leading-none ${
-          isOverflow ? "text-[#E48B70]" : "text-[#C9A227]"
-        }`}
-        style={{ fontSize: "clamp(64px, 8.4vw, 124px)" }}
+        className="font-bold tabular tracking-tighter leading-none"
+        style={{
+          fontSize: "clamp(64px, 8.4vw, 124px)",
+          color: isOverflow ? "var(--danger)" : "var(--accent-gold-bright)",
+          textShadow: isOverflow
+            ? "0 0 24px rgba(255,112,98,0.30)"
+            : "0 0 32px rgba(242,212,105,0.42), 0 0 64px rgba(242,212,105,0.18)",
+        }}
       >
         {row.bay_label ?? "—"}
       </p>
 
       {/* Numero commande */}
       <p
-        className="font-bold tracking-wide text-white tabular"
+        className="font-bold tracking-wide text-[var(--text-primary)] tabular"
         style={{ fontSize: "clamp(18px, 1.8vw, 28px)" }}
       >
         {row.numero_commande}
@@ -359,13 +419,13 @@ function BayCard({ row }: { row: CounterRow }) {
       {/* Client + heure */}
       <div className="flex items-baseline justify-between gap-3 mt-1">
         <p
-          className="text-white/75 truncate"
+          className="text-[var(--text-secondary)] truncate"
           style={{ fontSize: "clamp(14px, 1.2vw, 20px)" }}
         >
           {anonymize(row.client_nom)}
         </p>
         <p
-          className="text-white/45 tabular shrink-0"
+          className="text-[var(--text-tertiary)] tabular shrink-0"
           style={{ fontSize: "clamp(12px, 1vw, 18px)" }}
         >
           {formatHm(row.pret_at)}
@@ -378,15 +438,21 @@ function BayCard({ row }: { row: CounterRow }) {
 function EmptyState() {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-6">
-      <div className="w-3 h-3 rounded-full bg-[#C9A227] animate-pulse mb-6" />
+      <div
+        className="w-3 h-3 rounded-full animate-pulse mb-6"
+        style={{
+          background: "var(--accent-gold-bright)",
+          boxShadow: "var(--accent-gold-glow)",
+        }}
+      />
       <p
-        className="font-extrabold tracking-tight max-w-[24ch]"
+        className="font-bold tracking-tight max-w-[24ch] text-[var(--text-primary)]"
         style={{ fontSize: "clamp(28px, 3.6vw, 56px)" }}
       >
         Aucune commande prête actuellement
       </p>
       <p
-        className="text-white/55 mt-4 max-w-[36ch]"
+        className="text-[var(--text-secondary)] mt-4 max-w-[36ch]"
         style={{ fontSize: "clamp(14px, 1.3vw, 22px)" }}
       >
         Préparation en cours en arrière-boutique. Patientez quelques instants.

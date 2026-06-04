@@ -855,6 +855,79 @@ body.theme-nuit .h1-display { font-weight: 600; }
 body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
 
 /* ──────────────────────────────────────────────────────────────────────
+   DARK-06 — Counter TV : pulse glow or sur la commande la plus ANCIENNE.
+   Respiration lente (ne distrait pas, attire juste l'œil du client vers
+   celui qui attend depuis le plus longtemps). Halo or qui enfle/diminue +
+   liseré premium qui s'intensifie. motion-reduce désactive l'animation.
+   ────────────────────────────────────────────────────────────────────── */
+@keyframes counterCardPulse {
+  0%,
+  100% {
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.14),
+      0 0 28px rgba(242, 212, 105, 0.10);
+  }
+  50% {
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.34),
+      0 0 56px rgba(242, 212, 105, 0.26);
+  }
+}
+.counter-card-pulse {
+  animation: counterCardPulse 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .counter-card-pulse {
+    animation: none;
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.24),
+      0 0 36px rgba(242, 212, 105, 0.18);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   DARK-05 — HeroActionCard : CTA signature avec glow or au repos.
+   La card sapin (hero-action-card) garde le gradient sapin mais respire
+   un halo or discret (glow-cta) en permanence, intensifié au hover/active.
+   L'or NE remplit jamais — c'est un liseré + lueur. La light card (jour)
+   garde son ombre sapin neutre via le bloc @layer components plus haut.
+   ────────────────────────────────────────────────────────────────────── */
+@keyframes heroCtaBreathe {
+  0%,
+  100% {
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.14),
+      0 6px 22px rgba(232, 194, 74, 0.12);
+  }
+  50% {
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.22),
+      0 8px 28px rgba(232, 194, 74, 0.20);
+  }
+}
+:root:not([data-theme="jour"]) .hero-action-card,
+[data-theme="nuit"] .hero-action-card,
+body.theme-nuit .hero-action-card {
+  background: var(--hero-gradient);
+  border-color: var(--border-premium);
+  animation: heroCtaBreathe 4s ease-in-out infinite;
+  transition: box-shadow 0.22s ease, transform 0.12s ease;
+}
+:root:not([data-theme="jour"]) .hero-action-card:hover,
+:root:not([data-theme="jour"]) .hero-action-card:active,
+[data-theme="nuit"] .hero-action-card:hover,
+[data-theme="nuit"] .hero-action-card:active,
+body.theme-nuit .hero-action-card:hover,
+body.theme-nuit .hero-action-card:active {
+  animation: none;
+  box-shadow: var(--glow-cta), var(--shadow-elevated);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-theme="jour"]) .hero-action-card,
+  [data-theme="nuit"] .hero-action-card,
+  body.theme-nuit .hero-action-card {
+    animation: none;
+    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.18),
+      0 6px 22px rgba(232, 194, 74, 0.14);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
    DARK — patch contraste legacy `bg-white` hardcodé
    Beaucoup de composants V2 (cards cockpit, RamadanCard, AlertCard, bottom
    nav pill, sheets) utilisent Tailwind `bg-white` en dur au lieu de

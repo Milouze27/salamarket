@@ -7,9 +7,22 @@
  * Auth : Bearer ${CRON_SECRET} côté Vercel.
  */
 import { NextResponse } from "next/server";
+import { runDlcPushRules } from "@/lib/actions/push-rules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** Origin de l'app (pour rappeler /api/push/send en interne). */
+function resolveOrigin(req: Request): string {
+  const h = req.headers;
+  const host =
+    h.get("x-forwarded-host") ??
+    h.get("host") ??
+    (process.env.VERCEL_URL ? process.env.VERCEL_URL : "localhost:3000");
+  const proto =
+    h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 export async function GET(req: Request) {
   // SÉCURITÉ (durci HOTFIX vague 7) : refuse si CRON_SECRET non configuré.
@@ -49,6 +62,18 @@ export async function GET(req: Request) {
       },
     });
     const body = await resp.json().catch(() => ({}));
+
+    // ─── MYTH-08 — moteur de règles push (DLC forcé du jour) ─────────
+    // On évalue les règles APRÈS le scan edge (les vues sont à jour) et
+    // de façon best-effort : un échec ici ne doit pas faire passer le
+    // cron en rouge. Les quiet hours + dedup sont gérés dans le moteur.
+    let push_rules: unknown = null;
+    try {
+      push_rules = await runDlcPushRules(resolveOrigin(req));
+    } catch (e) {
+      push_rules = { error: e instanceof Error ? e.message : "push_rules failed" };
+    }
+
     return NextResponse.json(
       {
         ok: resp.ok,
@@ -56,6 +81,7 @@ export async function GET(req: Request) {
         duration_ms: Date.now() - t0,
         edge_status: resp.status,
         edge_body: body,
+        push_rules,
       },
       { status: resp.ok ? 200 : 502 },
     );

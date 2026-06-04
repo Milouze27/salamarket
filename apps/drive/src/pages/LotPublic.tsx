@@ -2,18 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   BadgeCheck,
-  CalendarDays,
   Factory,
   Loader2,
-  MapPin,
   PackageCheck,
   ShieldAlert,
   ShieldCheck,
   ShieldQuestion,
+  ShoppingBag,
   Sparkles,
+  Store,
+  Truck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/config/brand";
+import { qrSvg } from "@/lib/qr-svg";
 
 /**
  * Public, anonymous halal lot trace page.
@@ -196,6 +198,30 @@ const LotPublic = () => {
   }, [lot]);
   const certifExpired = certifState === "expire";
 
+  // ─── QR re-scannable (auto-encodé, zéro service externe) ─────────
+  // Le client peut re-montrer / re-scanner / partager cette preuve.
+  // On encode l'URL canonique du passeport côté navigateur — aucune
+  // image tierce sur une page de preuve halal.
+  const qrDataUrl = useMemo<string | null>(() => {
+    if (!lot?.id) return null;
+    try {
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "https://salamarket-drive.vercel.app";
+      const svg = qrSvg(`${origin}/lot/${lot.id}`, {
+        size: 220,
+        dark: BRAND.colors.primary,
+        light: "#FFFFFF",
+        margin: 3,
+      });
+      if (!svg) return null;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    } catch {
+      return null;
+    }
+  }, [lot?.id]);
+
   // ─── Loading ────────────────────────────────────────────────
   if (loading) {
     return (
@@ -317,13 +343,71 @@ const LotPublic = () => {
             {lot.id}
           </h1>
           {produit && (
-            <p className="text-base font-semibold opacity-95 leading-snug">
+            <p className="text-base font-semibold opacity-95 leading-snug mb-6">
               {produit.nom}
               {produit.marque && (
                 <span className="opacity-70 font-medium"> · {produit.marque}</span>
               )}
             </p>
           )}
+
+          {/* ─── Badge de confiance — le verdict, vu d'un coup d'œil ─────
+              Le client musulman doit savoir AVANT TOUT si la chaîne halal
+              est vérifiée. Vert = certifié & vérifié, rouge = expiré,
+              neutre = validité non renseignée (jamais un faux vert). */}
+          <div
+            className="inline-flex items-center gap-2.5 rounded-full pl-2.5 pr-4 py-2"
+            style={{
+              background: certifExpired
+                ? "rgba(229,72,61,0.18)"
+                : certifState === "inconnu"
+                  ? "rgba(255,255,255,0.12)"
+                  : "rgba(255,255,255,0.14)",
+              border: `1.5px solid ${
+                certifExpired
+                  ? BRAND.colors.destructive
+                  : certifState === "inconnu"
+                    ? "rgba(255,255,255,0.25)"
+                    : BRAND.colors.accent
+              }`,
+            }}
+          >
+            <span
+              className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                background: certifExpired
+                  ? BRAND.colors.destructive
+                  : certifState === "inconnu"
+                    ? "rgba(255,255,255,0.2)"
+                    : BRAND.colors.accent,
+                color: certifExpired ? "#FFFFFF" : BRAND.colors.primary,
+              }}
+            >
+              {certifExpired ? (
+                <ShieldAlert className="w-4 h-4" />
+              ) : certifState === "inconnu" ? (
+                <ShieldQuestion className="w-4 h-4" />
+              ) : (
+                <ShieldCheck className="w-4 h-4" />
+              )}
+            </span>
+            <span
+              className="text-[13px] font-extrabold tracking-tight"
+              style={{
+                color: certifExpired
+                  ? "#FFE7E4"
+                  : certifState === "inconnu"
+                    ? "rgba(255,255,255,0.9)"
+                    : BRAND.colors.accent,
+              }}
+            >
+              {certifExpired
+                ? "Certificat expiré"
+                : certifState === "inconnu"
+                  ? "Validité non renseignée"
+                  : "Certifié & vérifié"}
+            </span>
+          </div>
         </div>
       </header>
 
@@ -453,58 +537,90 @@ const LotPublic = () => {
           </div>
         </Section>
 
-        {/* ─── 2. Origine ─────────────────────────────────── */}
-        <Section
-          eyebrow="02 — Origine"
-          title="Abattoir & date d'abattage"
-          icon={<Factory className="w-5 h-5" />}
+        {/* ─── 2. Le parcours — timeline halal visuelle ──────────────
+            Le cœur du passeport : la viande remonte sa chaîne sous les
+            yeux du client. Abattoir → Fournisseur → Magasin → Vous.
+            Chaque étape est un nœud relié par une ligne verticale ;
+            on lit le voyage d'un seul coup d'œil. */}
+        <section
+          className="p-5 rounded-2xl border"
+          style={{
+            borderColor: BRAND.colors.border,
+            background: BRAND.colors.surface,
+            boxShadow: "0 1px 2px rgba(14,59,46,0.04)",
+          }}
         >
-          <DataRow label="Abattoir" value={lot.abattoir_nom} />
-          <DataRow
-            label="Pays"
-            value={lot.abattoir_pays ? flagFor(lot.abattoir_pays) : null}
-          />
-          <DataRow label="Date d'abattage" value={formatDate(lot.date_abattage)} />
-        </Section>
+          <div className="mb-5">
+            <p
+              className="text-[10.5px] font-bold tracking-[0.18em] uppercase"
+              style={{ color: BRAND.colors.accentText }}
+            >
+              02 — Le parcours
+            </p>
+            <h2
+              className="text-[16px] font-extrabold tracking-tight"
+              style={{ color: BRAND.colors.text }}
+            >
+              De l&apos;abattoir jusqu&apos;à vous
+            </h2>
+          </div>
 
-        {/* ─── 3. Fournisseur ─────────────────────────────── */}
-        <Section
-          eyebrow="03 — Fournisseur"
-          title="Chaîne d'approvisionnement"
-          icon={<MapPin className="w-5 h-5" />}
-        >
-          <DataRow label="Fournisseur" value={fournisseur?.nom ?? "Non renseigné"} />
-          {fournisseur?.siret && (
-            <DataRow label="SIRET" value={fournisseur.siret} mono />
-          )}
-          <DataRow
-            label="Lot fournisseur"
-            value={lot.supplier_lot}
-            mono
+          <Timeline
+            steps={[
+              {
+                icon: <Factory className="w-4 h-4" />,
+                label: "Abattoir",
+                title: lot.abattoir_nom ?? "Abattoir non renseigné",
+                rows: [
+                  {
+                    k: "Pays",
+                    v: lot.abattoir_pays ? flagFor(lot.abattoir_pays) : null,
+                  },
+                  { k: "Abattage", v: formatDate(lot.date_abattage) },
+                ],
+              },
+              {
+                icon: <Truck className="w-4 h-4" />,
+                label: "Fournisseur",
+                title: fournisseur?.nom ?? "Fournisseur non renseigné",
+                rows: [
+                  { k: "SIRET", v: fournisseur?.siret ?? null, mono: true },
+                  { k: "Lot fournisseur", v: lot.supplier_lot, mono: true },
+                  {
+                    k: "Quantité",
+                    v:
+                      lot.quantite_recue != null
+                        ? `${lot.quantite_recue} ${lot.unite ?? ""}`.trim()
+                        : null,
+                  },
+                ],
+              },
+              {
+                icon: <Store className="w-4 h-4" />,
+                label: "Magasin",
+                title: BRAND.store.name,
+                rows: [
+                  { k: "Réception", v: formatDate(lot.date_reception) },
+                  { k: "DLC", v: lot.dlc ? formatDate(lot.dlc) : null, accent: true },
+                  { k: "DDM", v: lot.ddm ? formatDate(lot.ddm) : null },
+                ],
+              },
+              {
+                icon: <ShoppingBag className="w-4 h-4" />,
+                label: "Vous",
+                title: "Entre vos mains",
+                rows: [
+                  {
+                    k: "Vérifié le",
+                    v: formatDate(new Date().toISOString()),
+                  },
+                ],
+                last: true,
+                highlight: !certifExpired,
+              },
+            ]}
           />
-          {lot.quantite_recue != null && (
-            <DataRow
-              label="Quantité reçue"
-              value={`${lot.quantite_recue} ${lot.unite ?? ""}`.trim()}
-            />
-          )}
-        </Section>
-
-        {/* ─── 4. Réception magasin ──────────────────────── */}
-        <Section
-          eyebrow="04 — Magasin"
-          title="Réception & conservation"
-          icon={<CalendarDays className="w-5 h-5" />}
-        >
-          <DataRow
-            label="Date de réception"
-            value={formatDate(lot.date_reception)}
-          />
-          {lot.dlc && (
-            <DataRow label="DLC" value={formatDate(lot.dlc)} accent />
-          )}
-          {lot.ddm && <DataRow label="DDM" value={formatDate(lot.ddm)} />}
-        </Section>
+        </section>
 
         {lot.notes && (
           <div
@@ -554,7 +670,7 @@ const LotPublic = () => {
           </section>
         ) : (
           <section
-            className="p-5 rounded-2xl text-center"
+            className="p-6 rounded-2xl text-center"
             style={{
               background: BRAND.colors.accentSoft,
               border: `1px solid ${BRAND.colors.borderMedium}`,
@@ -562,21 +678,50 @@ const LotPublic = () => {
           >
             <ShieldCheck
               className="w-6 h-6 mx-auto mb-2"
-              style={{ color: "#8B6F0E" }}
+              style={{ color: BRAND.colors.accentText }}
             />
             <p
               className="text-[11px] font-bold tracking-[0.18em] uppercase mb-2"
-              style={{ color: "#8B6F0E" }}
+              style={{ color: BRAND.colors.accentText }}
             >
               Preuve auto-vérifiable
             </p>
             <p
-              className="text-[13px] leading-relaxed"
+              className="text-[13px] leading-relaxed mb-5"
               style={{ color: BRAND.colors.text }}
             >
-              Cette page est publique et auto-vérifiable. Le QR est imprimé sur
-              votre ticket. Conservez-le pour preuve halal.
+              Cette page est publique et auto-vérifiable. Scannez ce code à tout
+              moment pour la retrouver, ou montrez-le à un proche.
             </p>
+
+            {/* ─── QR re-scannable, encodé localement ───────────────── */}
+            {qrDataUrl && (
+              <div className="flex flex-col items-center">
+                <div
+                  className="rounded-2xl p-3"
+                  style={{
+                    background: "#FFFFFF",
+                    border: `1px solid ${BRAND.colors.borderMedium}`,
+                    boxShadow: "0 4px 16px rgba(14,59,46,0.10)",
+                  }}
+                >
+                  <img
+                    src={qrDataUrl}
+                    alt={`QR du lot ${lot.id}`}
+                    width={168}
+                    height={168}
+                    className="block"
+                    style={{ width: 168, height: 168 }}
+                  />
+                </div>
+                <p
+                  className="mt-3 text-[11px] font-bold tracking-[0.08em] tabular-nums"
+                  style={{ color: BRAND.colors.accentText }}
+                >
+                  LOT {lot.id}
+                </p>
+              </div>
+            )}
           </section>
         )}
 
@@ -648,37 +793,100 @@ function Section({
   );
 }
 
-function DataRow({
-  label,
-  value,
-  mono = false,
-  accent = false,
-}: {
-  label: string;
-  value: string | null;
+// ─── Timeline halal : abattoir → fournisseur → magasin → vous ───────
+interface TimelineRow {
+  k: string;
+  v: string | null;
   mono?: boolean;
   accent?: boolean;
-}) {
-  if (!value) return null;
+}
+interface TimelineStep {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  rows: TimelineRow[];
+  last?: boolean;
+  highlight?: boolean;
+}
+
+function Timeline({ steps }: { steps: TimelineStep[] }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 border-b last:border-b-0"
-      style={{ borderColor: BRAND.colors.border }}
-    >
-      <span
-        className="text-[12px] font-semibold shrink-0"
-        style={{ color: BRAND.colors.muted }}
-      >
-        {label}
-      </span>
-      <span
-        className={`text-[14px] font-bold text-right truncate ${mono ? "tabular-nums" : ""}`}
-        style={{
-          color: accent ? BRAND.colors.primary : BRAND.colors.text,
-        }}
-      >
-        {value}
-      </span>
-    </div>
+    <ol className="relative">
+      {steps.map((step, i) => {
+        const visibleRows = step.rows.filter((r) => r.v);
+        return (
+          <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
+            {/* Ligne verticale reliant les nœuds */}
+            {!step.last && (
+              <span
+                aria-hidden
+                className="absolute left-[19px] top-10 bottom-0 w-[2px]"
+                style={{ background: BRAND.colors.border }}
+              />
+            )}
+            {/* Nœud */}
+            <span
+              className="relative z-10 shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: step.highlight
+                  ? BRAND.colors.accent
+                  : BRAND.colors.primary,
+                color: step.highlight ? BRAND.colors.primary : "#FFFFFF",
+                boxShadow: step.highlight
+                  ? `0 0 0 4px ${BRAND.colors.accentSoft}`
+                  : "none",
+              }}
+            >
+              {step.icon}
+            </span>
+            {/* Contenu de l'étape */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <p
+                className="text-[10px] font-bold tracking-[0.16em] uppercase mb-0.5"
+                style={{ color: BRAND.colors.accentText }}
+              >
+                {step.label}
+              </p>
+              <p
+                className="text-[15px] font-extrabold leading-snug mb-1.5"
+                style={{ color: BRAND.colors.text }}
+              >
+                {step.title}
+              </p>
+              {visibleRows.length > 0 && (
+                <div className="space-y-1">
+                  {visibleRows.map((r, j) => (
+                    <div
+                      key={j}
+                      className="flex items-baseline justify-between gap-3"
+                    >
+                      <span
+                        className="text-[12px] font-semibold shrink-0"
+                        style={{ color: BRAND.colors.muted }}
+                      >
+                        {r.k}
+                      </span>
+                      <span
+                        className={`text-[13px] font-bold text-right truncate ${
+                          r.mono ? "tabular-nums" : ""
+                        }`}
+                        style={{
+                          color: r.accent
+                            ? BRAND.colors.primary
+                            : BRAND.colors.text,
+                        }}
+                      >
+                        {r.v}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

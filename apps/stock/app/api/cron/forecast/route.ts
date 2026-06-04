@@ -11,9 +11,22 @@
  * Auth : Bearer ${CRON_SECRET} côté Vercel + côté edge fn (transparent).
  */
 import { NextResponse } from "next/server";
+import { runForecastPushRules } from "@/lib/actions/push-rules";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+/** Origin de l'app (pour rappeler /api/push/send en interne). */
+function resolveOrigin(req: Request): string {
+  const h = req.headers;
+  const host =
+    h.get("x-forwarded-host") ??
+    h.get("host") ??
+    (process.env.VERCEL_URL ? process.env.VERCEL_URL : "localhost:3000");
+  const proto =
+    h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 export async function GET(req: Request) {
   // SÉCURITÉ (durci HOTFIX vague 7) : refuse si CRON_SECRET non configuré.
@@ -54,6 +67,17 @@ export async function GET(req: Request) {
       },
     });
     const body = await resp.json().catch(() => ({}));
+
+    // ─── MYTH-08 — moteur de règles push (rupture blocker + casse) ───
+    // Évalué APRÈS le recalcul forecast (les vues v_stockout_critiques
+    // sont à jour). Best-effort : un échec ici ne fait pas rougir le cron.
+    let push_rules: unknown = null;
+    try {
+      push_rules = await runForecastPushRules(resolveOrigin(req));
+    } catch (e) {
+      push_rules = { error: e instanceof Error ? e.message : "push_rules failed" };
+    }
+
     return NextResponse.json(
       {
         ok: resp.ok,
@@ -61,6 +85,7 @@ export async function GET(req: Request) {
         duration_ms: Date.now() - t0,
         edge_status: resp.status,
         edge_body: body,
+        push_rules,
       },
       { status: resp.ok ? 200 : 502 },
     );

@@ -14,18 +14,21 @@ import {
   ArrowUpRight,
   ClipboardList,
   Clock,
+  Compass,
+  Gauge,
   Home,
   LayoutDashboard,
+  LineChart,
+  MonitorPlay,
   PackageSearch,
   Repeat2,
   Search,
   ShoppingBag,
   Store,
-  Sparkles,
   Tag,
+  Truck,
   Warehouse,
   Building2,
-  Bell,
   Boxes,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
@@ -53,51 +56,45 @@ interface RecentAction {
   type: "nav" | "depot" | "action";
 }
 
-const NAV_ITEMS = [
-  { id: "nav-home", label: "Accueil", href: "/v2", icon: Home, hint: "Vue d'ensemble" },
-  { id: "nav-reception", label: "Réception", href: "/v2/reception", icon: ArrowDownToLine, hint: "Scan + photo + valid BDL" },
+/**
+ * ARCH-02 — 3 plans mentaux. La palette ⌘K (comme le Plus-sheet) range
+ * toutes les destinations sous : OPÉRER (gestes terrain) / PILOTER (décider,
+ * surveiller) / ADMINISTRER (back-office, fiscal, IA). Un seul modèle mental,
+ * réutilisé partout, pour que l'utilisateur sache toujours où chercher.
+ */
+type PaletteItem = {
+  id: string;
+  label: string;
+  href: string;
+  icon: typeof Home;
+  hint: string;
+};
+
+const OPERER: PaletteItem[] = [
   { id: "nav-sortie", label: "Sortie de stock", href: "/v2/sortie", icon: ArrowUpRight, hint: "Casse, périmé, défaut" },
+  { id: "nav-reception", label: "Réception", href: "/v2/reception", icon: ArrowDownToLine, hint: "Scan + photo + valid BDL" },
   { id: "nav-transfert", label: "Transfert inter-dépôt", href: "/v2/transfert", icon: Repeat2, hint: "Bouger du stock" },
+  { id: "nav-etiquettes", label: "Étiquettes EAN-13", href: "/v2/etiquettes", icon: Tag, hint: "Imprimer codes-barres" },
   { id: "nav-stock", label: "Stock du dépôt", href: "/v2/stock", icon: PackageSearch, hint: "Catalogue produits" },
   { id: "nav-preparation", label: "Préparation drive", href: "/v2/preparation", icon: ShoppingBag, hint: "Commandes à préparer" },
-  { id: "nav-inventaire", label: "Inventaire tournant", href: "/v2/inventaire", icon: ClipboardList, hint: "5–10 produits/jour" },
-  { id: "nav-etiquettes", label: "Étiquettes EAN-13", href: "/v2/etiquettes", icon: Tag, hint: "Imprimer codes-barres" },
-  { id: "nav-lots", label: "Lots & DLC", href: "/v2/lots", icon: Boxes, hint: "Suivi lots / péremption" },
-  { id: "nav-admin", label: "Dashboard admin", href: "/v2/admin", icon: LayoutDashboard, hint: "Vue 3 dépôts + alertes IA" },
-  { id: "nav-cockpit", label: "Cockpit", href: "/v2/cockpit", icon: Sparkles, hint: "KPI live" },
-  { id: "nav-forecast", label: "Forecast", href: "/v2/forecast", icon: Clock, hint: "Prévision demande" },
-] as const;
+];
 
-const QUICK_ACTIONS = [
-  {
-    id: "act-reception",
-    label: "Nouvelle réception",
-    href: "/v2/reception",
-    icon: ArrowDownToLine,
-    hint: "Démarrer un scan carton",
-  },
-  {
-    id: "act-sortie",
-    label: "Déclarer une sortie",
-    href: "/v2/sortie",
-    icon: ArrowUpRight,
-    hint: "Casse / périmé / défaut",
-  },
-  {
-    id: "act-dlc",
-    label: "Voir les alertes DLC",
-    href: "/v2/lots",
-    icon: Bell,
-    hint: "Lots qui périment bientôt",
-  },
-  {
-    id: "act-transfert",
-    label: "Nouveau transfert",
-    href: "/v2/transfert",
-    icon: Repeat2,
-    hint: "Entre dépôts",
-  },
-] as const;
+const PILOTER: PaletteItem[] = [
+  { id: "nav-accueil", label: "Accueil", href: "/v2", icon: Home, hint: "Vue d'ensemble" },
+  { id: "nav-cockpit", label: "Cockpit", href: "/v2/cockpit", icon: Gauge, hint: "Vue 30 sec : ventes, alertes, staff" },
+  { id: "nav-forecast", label: "Prévisions ruptures", href: "/v2/forecast", icon: LineChart, hint: "Stockouts prévus (hijri-aware)" },
+  { id: "nav-dlc", label: "Alertes DLC", href: "/v2/admin/alertes-dlc", icon: Compass, hint: "Lots courte date + remises auto" },
+  { id: "nav-counter", label: "Écran comptoir", href: "/v2/counter", icon: MonitorPlay, hint: "TV/iPad — commandes prêtes" },
+];
+
+const ADMINISTRER: PaletteItem[] = [
+  { id: "nav-admin", label: "Dashboard admin", href: "/v2/admin", icon: LayoutDashboard, hint: "Vue 3 dépôts + alertes IA" },
+  { id: "nav-fournisseurs", label: "Fournisseurs", href: "/v2/fournisseurs", icon: Truck, hint: "Fiches + certif halal" },
+  { id: "nav-po", label: "Commandes fournisseurs", href: "/v2/po", icon: ClipboardList, hint: "PO auto-générés + suivi" },
+  { id: "nav-lots", label: "Lots & DLC", href: "/v2/lots", icon: Boxes, hint: "Traçabilité lots halal" },
+  { id: "nav-inventaire", label: "Inventaire tournant", href: "/v2/inventaire", icon: ClipboardList, hint: "5–10 produits/jour" },
+  { id: "nav-recap", label: "Récap fiscal du jour", href: "/v2/admin/recap-fiscal", icon: Compass, hint: "TVA, ventes, ticket Z" },
+];
 
 function depotIcon(d: Depot) {
   if (d.type === "entrepot") return Warehouse;
@@ -237,16 +234,24 @@ export function CommandPalette() {
       aria-modal="true"
       aria-label="Palette de commandes"
     >
-      {/* Backdrop sapin */}
+      {/* DARK-08 — backdrop verre teinté sapin (glass-overlay) */}
       <button
         type="button"
         aria-label="Fermer la palette"
         onClick={() => setOpen(false)}
-        className="absolute inset-0 bg-[#082A20]/72 backdrop-blur-[6px]"
+        className="absolute inset-0"
+        style={{
+          background: "var(--glass-overlay)",
+          backdropFilter: "var(--glass-overlay-blur)",
+          WebkitBackdropFilter: "var(--glass-overlay-blur)",
+        }}
       />
 
-      {/* Modale */}
-      <div className="relative w-full max-w-[640px] bg-white rounded-[20px] shadow-card-lg border border-rule overflow-hidden cmdk-root-wrap">
+      {/* Modale — surface-3 (popover/palette) via .cmdk-root-wrap en dark */}
+      <div
+        className="relative w-full max-w-[640px] bg-white rounded-[20px] border border-rule overflow-hidden cmdk-root-wrap"
+        style={{ boxShadow: "var(--shadow-elevated)" }}
+      >
         <Command label="Recherche globale" className="cmdk-root" loop shouldFilter>
           <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-rule">
             <Search className="w-4 h-4 text-text-tertiary shrink-0" strokeWidth={2.2} />
@@ -291,11 +296,26 @@ export function CommandPalette() {
               </Command.Group>
             )}
 
-            <Command.Group heading="Navigation" className="cmdk-group">
-              {NAV_ITEMS.map(({ id, label, href, icon: Icon, hint }) => (
+            <Command.Group heading="Opérer" className="cmdk-group">
+              {OPERER.map(({ id, label, href, icon: Icon, hint }) => (
                 <Command.Item
                   key={id}
-                  value={`nav ${label} ${hint}`}
+                  value={`operer ${label} ${hint}`}
+                  onSelect={() => handleSelect({ id, label, href, type: "nav" })}
+                  className="cmdk-item"
+                >
+                  <Icon className="w-4 h-4 text-primary shrink-0" strokeWidth={2.2} />
+                  <span className="flex-1 truncate font-semibold text-text-primary">{label}</span>
+                  <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{hint}</span>
+                </Command.Item>
+              ))}
+            </Command.Group>
+
+            <Command.Group heading="Piloter" className="cmdk-group">
+              {PILOTER.map(({ id, label, href, icon: Icon, hint }) => (
+                <Command.Item
+                  key={id}
+                  value={`piloter ${label} ${hint}`}
                   onSelect={() => handleSelect({ id, label, href, type: "nav" })}
                   className="cmdk-item"
                 >
@@ -333,15 +353,15 @@ export function CommandPalette() {
               </Command.Group>
             )}
 
-            <Command.Group heading="Actions rapides" className="cmdk-group">
-              {QUICK_ACTIONS.map(({ id, label, href, icon: Icon, hint }) => (
+            <Command.Group heading="Administrer" className="cmdk-group">
+              {ADMINISTRER.map(({ id, label, href, icon: Icon, hint }) => (
                 <Command.Item
                   key={id}
-                  value={`action ${label} ${hint}`}
+                  value={`administrer ${label} ${hint}`}
                   onSelect={() => handleSelect({ id, label, href, type: "action" })}
                   className="cmdk-item"
                 >
-                  <Icon className="w-4 h-4 text-danger shrink-0" strokeWidth={2.2} />
+                  <Icon className="w-4 h-4 text-text-secondary shrink-0" strokeWidth={2.2} />
                   <span className="flex-1 truncate font-semibold text-text-primary">{label}</span>
                   <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{hint}</span>
                 </Command.Item>

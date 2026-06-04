@@ -14,12 +14,12 @@ import {
   Home,
   LayoutDashboard,
   LineChart,
-  LogOut,
   MonitorPlay,
   MoreHorizontal,
   PackageSearch,
   QrCode,
   Repeat2,
+  Search,
   ShoppingBag,
   Tag,
   Truck,
@@ -32,8 +32,6 @@ import { V2Logo } from "./V2Logo";
 import { AdminMenu } from "./AdminMenu";
 import { AssistantFab } from "./AssistantFab";
 import { CommandPalette } from "./CommandPalette";
-import { ThemeToggle } from "./ThemeToggle";
-import { DensityToggle } from "./DensityToggle";
 
 interface NavItem {
   label: string;
@@ -73,49 +71,57 @@ function primaryFor(role: string): NavItem[] {
   return [ITEMS.accueil, ITEMS.reception, ITEMS.sortie, ITEMS.stock];
 }
 
-/** All other items go in the "Plus" sheet. Order matters here. */
-function secondaryFor(role: string): NavItem[] {
-  if (role === "admin") {
-    return [
-      ITEMS.cockpit,
-      ITEMS.forecast,
-      ITEMS.alertesDlc,
-      ITEMS.po,
-      ITEMS.fournisseurs,
-      ITEMS.lots,
-      ITEMS.counter,
-      ITEMS.reception,
-      ITEMS.sortie,
-      ITEMS.transfert,
-      ITEMS.preparation,
-      ITEMS.etiquettes,
-    ];
-  }
-  if (role === "manager") {
-    return [
-      ITEMS.cockpit,
-      ITEMS.forecast,
-      ITEMS.alertesDlc,
-      ITEMS.po,
-      ITEMS.fournisseurs,
-      ITEMS.lots,
-      ITEMS.counter,
-      ITEMS.transfert,
-      ITEMS.preparation,
-      ITEMS.inventaire,
-      ITEMS.etiquettes,
-      ITEMS.admin,
-    ];
-  }
-  // reception / preparation
-  return [
-    ITEMS.lots,
-    ITEMS.counter,
+/** ARCH-02 — un groupe de plan mental dans le Plus-sheet. */
+interface SheetGroup {
+  /** Heading affiché en eyebrow or-dim. */
+  heading: string;
+  items: NavItem[];
+}
+
+/**
+ * Le Plus-sheet range tout sous 3 plans mentaux (même modèle que ⌘K) :
+ *   OPÉRER     — les gestes terrain (sortie, réception, transfert, étiq, stock, prépa)
+ *   PILOTER    — décider / surveiller (cockpit, forecast, alertes DLC, comptoir)
+ *   ADMINISTRER— back-office (admin hub, fournisseurs, PO, lots, inventaire)
+ *
+ * On filtre, par groupe, les entrées déjà épinglées sur la bottom-bar (primary)
+ * pour éviter les doublons, et on retire les groupes vides.
+ */
+function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
+  const operer = [
+    ITEMS.sortie,
+    ITEMS.reception,
     ITEMS.transfert,
-    ITEMS.preparation,
-    ITEMS.inventaire,
     ITEMS.etiquettes,
+    ITEMS.stock,
+    ITEMS.preparation,
   ];
+  const piloter = [
+    ITEMS.accueil,
+    ITEMS.cockpit,
+    ITEMS.forecast,
+    ITEMS.alertesDlc,
+    ITEMS.counter,
+  ];
+  const administrer =
+    role === "reception" || role === "preparation"
+      ? [ITEMS.lots, ITEMS.inventaire]
+      : [
+          ITEMS.admin,
+          ITEMS.fournisseurs,
+          ITEMS.po,
+          ITEMS.lots,
+          ITEMS.inventaire,
+        ];
+
+  const dedup = (items: NavItem[]) =>
+    items.filter((it) => !primaryHrefs.has(it.href));
+
+  return [
+    { heading: "Opérer", items: dedup(operer) },
+    { heading: "Piloter", items: dedup(piloter) },
+    { heading: "Administrer", items: dedup(administrer) },
+  ].filter((g) => g.items.length > 0);
 }
 
 export function V2Shell({
@@ -198,7 +204,8 @@ export function V2Shell({
   if (!employe) return null;
 
   const primary = primaryFor(employe.role);
-  const secondary = secondaryFor(employe.role);
+  const primaryHrefs = new Set(primary.map((it) => it.href));
+  const sheetGroups = sheetGroupsFor(employe.role, primaryHrefs);
 
   // BUG-006 : cockpit/admin doivent pouvoir respirer sur desktop/iPad.
   // En mode wide, on étend le container à max-w-7xl ≥md tout en gardant
@@ -246,31 +253,38 @@ export function V2Shell({
               </div>
             </Link>
 
-            {/* Discreet ⌘K hint — desktop uniquement, mobile a le long-press logo */}
+            {/* ARCH-11 — header épuré, 4 éléments max :
+                identité (logo+profil) · recherche ⌘K · DepotSwitcher · menu(Plus).
+                Les toggles thème/densité et le logout ont migré dans le drawer
+                AdminMenu (répertoire unique « Compte & réglages »). */}
+
+            {/* Recherche ⌘K — desktop affiche le hint, mobile une icône loupe.
+                Le long-press logo reste le fallback tactile. */}
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("salam-stock-cmdk:open"))}
-              aria-label="Ouvrir la palette de commandes (Cmd+K)"
+              aria-label="Rechercher — palette de commandes (Cmd+K)"
               className="hidden sm:inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
             >
+              <Search className="w-3.5 h-3.5 opacity-80" strokeWidth={2.2} />
               <span className="opacity-80">Rechercher</span>
               <kbd className="font-bold bg-white/20 rounded px-1 py-px tracking-wider">⌘K</kbd>
             </button>
-
-            {/* Toggles atelier nuit + densité */}
-            <ThemeToggle />
-            <DensityToggle />
-
-            {/* Actions à droite — DepotSwitcher en discret, hamburger admin proéminent, logout neutre */}
-            <DepotSwitcher />
-            <AdminMenu role={employe.role} />
             <button
-              onClick={logout}
-              className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white active:scale-95 transition-all"
-              aria-label="Déconnexion"
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("salam-stock-cmdk:open"))}
+              aria-label="Rechercher (Cmd+K)"
+              className="sm:hidden w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
             >
-              <LogOut className="w-4 h-4" />
+              <Search className="w-4 h-4" strokeWidth={2.2} />
             </button>
+
+            {/* DepotSwitcher discret */}
+            <DepotSwitcher />
+
+            {/* Menu / répertoire unique — toutes les pages groupées + compte&réglages.
+                Disponible pour tous les rôles (logout vit dedans). */}
+            <AdminMenu role={employe.role} onLogout={logout} />
           </div>
           {mode === "local" && process.env.NODE_ENV === "development" && (
             <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">
@@ -300,11 +314,10 @@ export function V2Shell({
           {depot && children}
         </motion.main>
 
-        {/* BOTTOM NAV — 4 primary + "Plus"
-            Pill 100% opaque pour rester lisible sur n'importe quel
-            background de page. WCAG AA : labels en text-secondary
-            (#6B7280) → 4.74:1 sur blanc. Shadow tight (8px blur), pas
-            le -lg qui crée une lueur halo sapin trop grasse sur cream. */}
+        {/* BOTTOM NAV — DARK-08 glassmorphism : 4 primary + "Plus".
+            Verre teinté sapin (--glass-nav, blur 20px) + border-top hairline.
+            L'item actif est souligné d'un trait OR qui glow (accent, jamais
+            un fill de surface). Lisible sur n'importe quel fond de page. */}
         {!hideNav && (
           <nav
             className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none md:hidden"
@@ -312,10 +325,14 @@ export function V2Shell({
           >
             <div className="mx-auto max-w-[460px] px-3 pb-2 pt-2 pointer-events-auto">
               <div
-                className="bg-white/95 backdrop-blur-md rounded-[24px] border border-rule px-2 py-2 flex items-center gap-1"
+                className="rounded-[24px] px-2 py-2 flex items-center gap-1"
                 style={{
-                  boxShadow:
-                    "0 1px 2px rgba(14,59,46,0.08), 0 6px 16px rgba(14,59,46,0.08)",
+                  background: "var(--glass-nav)",
+                  backdropFilter: "var(--glass-nav-blur)",
+                  WebkitBackdropFilter: "var(--glass-nav-blur)",
+                  borderTop: "1px solid var(--border-hairline)",
+                  border: "1px solid var(--border-card)",
+                  boxShadow: "var(--shadow-elevated)",
                 }}
               >
                   {primary.map((it) => {
@@ -332,7 +349,13 @@ export function V2Shell({
                         className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                       >
                         {active && (
-                          <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full bg-gold" />
+                          <span
+                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full"
+                            style={{
+                              background: "var(--accent-gold-bright)",
+                              boxShadow: "var(--accent-gold-glow)",
+                            }}
+                          />
                         )}
                         <span
                           className={`inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
@@ -340,18 +363,23 @@ export function V2Shell({
                           }`}
                         >
                           <Icon
-                            className={`w-[22px] h-[22px] transition-colors ${
-                              active ? "text-primary-dark" : "text-text-secondary"
-                            }`}
+                            className="w-[22px] h-[22px] transition-colors"
+                            style={{
+                              color: active
+                                ? "var(--accent-gold-bright)"
+                                : "var(--text-secondary)",
+                            }}
                             strokeWidth={active ? 2.4 : 2}
                           />
                         </span>
                         <span
-                          className={`text-[10.5px] leading-tight mt-0.5 transition-colors whitespace-nowrap ${
-                            active
-                              ? "text-primary-dark font-bold"
-                              : "text-text-secondary font-semibold"
-                          }`}
+                          className="text-[10.5px] leading-tight mt-0.5 transition-colors whitespace-nowrap"
+                          style={{
+                            color: active
+                              ? "var(--text-primary)"
+                              : "var(--text-secondary)",
+                            fontWeight: active ? 700 : 600,
+                          }}
                         >
                           {it.label}
                         </span>
@@ -366,13 +394,35 @@ export function V2Shell({
                     aria-expanded={sheetOpen}
                     className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                   >
+                    {sheetOpen && (
+                      <span
+                        className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full"
+                        style={{
+                          background: "var(--accent-gold-bright)",
+                          boxShadow: "var(--accent-gold-glow)",
+                        }}
+                      />
+                    )}
                     <span className="inline-flex items-center justify-center w-9 h-9 rounded-full">
                       <MoreHorizontal
-                        className="w-[22px] h-[22px] text-text-secondary"
+                        className="w-[22px] h-[22px]"
+                        style={{
+                          color: sheetOpen
+                            ? "var(--accent-gold-bright)"
+                            : "var(--text-secondary)",
+                        }}
                         strokeWidth={2}
                       />
                     </span>
-                    <span className="text-[10.5px] font-semibold leading-tight mt-0.5 text-text-secondary whitespace-nowrap">
+                    <span
+                      className="text-[10.5px] leading-tight mt-0.5 whitespace-nowrap"
+                      style={{
+                        color: sheetOpen
+                          ? "var(--text-primary)"
+                          : "var(--text-secondary)",
+                        fontWeight: sheetOpen ? 700 : 600,
+                      }}
+                    >
                       Plus
                     </span>
                   </button>
@@ -398,7 +448,12 @@ export function V2Shell({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.16 }}
                 onClick={() => setSheetOpen(false)}
-                className="fixed inset-0 z-[60] bg-primary-dark/55 backdrop-blur-[6px]"
+                className="fixed inset-0 z-[60]"
+                style={{
+                  background: "var(--glass-overlay)",
+                  backdropFilter: "var(--glass-overlay-blur)",
+                  WebkitBackdropFilter: "var(--glass-overlay-blur)",
+                }}
               />
               <motion.div
                 key="sheet-body"
@@ -417,57 +472,87 @@ export function V2Shell({
                 role="dialog"
                 aria-modal="true"
                 aria-label="Menu secondaire"
-                className="fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] bg-white rounded-t-[28px] shadow-card-lg max-h-[70vh] flex flex-col"
+                className="fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] rounded-t-[28px] max-h-[78vh] flex flex-col"
+                style={{
+                  background: "var(--surface-3)",
+                  borderTop: "1px solid var(--border-card)",
+                  boxShadow: "var(--shadow-elevated)",
+                }}
               >
                 <div className="pt-2 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
                   <span className="w-10 h-1 rounded-full bg-line-medium" />
                 </div>
                 <div className="px-5 pb-3 flex items-center justify-between">
-                  <p className="text-base font-bold text-text-primary">Plus d&apos;actions</p>
+                  <p className="text-base font-bold text-text-primary">Toutes les actions</p>
                   <button
                     onClick={() => setSheetOpen(false)}
                     aria-label="Fermer le menu"
-                    className="w-9 h-9 rounded-full bg-cream flex items-center justify-center text-text-secondary"
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary"
+                    style={{ background: "var(--surface-1)" }}
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+                {/* ARCH-02 — 3 plans mentaux, headings en eyebrow or-dim. */}
                 <div className="overflow-y-auto px-3 pb-[calc(var(--safe-bottom)+16px)]">
-                  {secondary.map((it) => {
-                    const Icon = it.icon;
-                    const active = pathname.startsWith(it.href);
-                    return (
-                      <Link
-                        key={it.href}
-                        href={it.href}
-                        onClick={() => setSheetOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${
-                          active ? "bg-cream" : "active:bg-cream"
-                        }`}
+                  {sheetGroups.map((group) => (
+                    <div key={group.heading} className="mb-1.5 last:mb-0">
+                      <p
+                        className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                        style={{ color: "var(--accent-gold-dim)" }}
                       >
-                        <span
-                          className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                            active
-                              ? "bg-primary text-white"
-                              : "bg-cream text-primary"
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" strokeWidth={2.1} />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-text-primary truncate">
-                            {it.fullLabel ?? it.label}
-                          </p>
-                          {it.desc && (
-                            <p className="text-[11px] text-text-tertiary truncate">
-                              {it.desc}
-                            </p>
-                          )}
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-text-tertiary shrink-0" />
-                      </Link>
-                    );
-                  })}
+                        {group.heading}
+                      </p>
+                      {group.items.map((it) => {
+                        const Icon = it.icon;
+                        const active = it.exact
+                          ? pathname === it.href
+                          : pathname.startsWith(it.href);
+                        return (
+                          <Link
+                            key={it.href}
+                            href={it.href}
+                            onClick={() => setSheetOpen(false)}
+                            aria-current={active ? "page" : undefined}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors"
+                            style={
+                              active
+                                ? { background: "var(--surface-2)" }
+                                : undefined
+                            }
+                          >
+                            <span
+                              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                              style={
+                                active
+                                  ? {
+                                      background: "var(--primary-green)",
+                                      color: "var(--text-primary)",
+                                    }
+                                  : {
+                                      background: "var(--surface-1)",
+                                      color: "var(--primary-green)",
+                                    }
+                              }
+                            >
+                              <Icon className="w-5 h-5" strokeWidth={2.1} />
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-text-primary truncate">
+                                {it.fullLabel ?? it.label}
+                              </p>
+                              {it.desc && (
+                                <p className="text-[11px] text-text-tertiary truncate">
+                                  {it.desc}
+                                </p>
+                              )}
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-text-tertiary shrink-0" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             </>

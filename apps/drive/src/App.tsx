@@ -322,9 +322,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
-            <StickyCartCTA />
-            <BottomNav />
-            <CookieBanner />
+            <RouteChrome />
           </AuthProvider>
         </BrowserRouter>
       </RoutedErrorBoundary>

@@ -147,10 +147,10 @@ export default function CockpitPage() {
 
       <div className="px-4 sm:px-5 md:px-8 pt-3 pb-2 flex items-center justify-between gap-3 max-w-7xl mx-auto w-full">
         <div className="flex flex-col">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#5A6470]">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--accent-gold-dim)]">
             Cockpit matin
           </p>
-          <p className="text-[12.5px] text-[#7B8693] tabular">
+          <p className="text-[12.5px] text-[var(--text-secondary)] tabular">
             {snap ? `Mis à jour ${timeAgo(snap.generated_at)}` : "Chargement…"}
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function CockpitPage() {
           type="button"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-white border border-[#E8E4D8] text-[13px] md:text-[12px] font-bold text-[#0E3B2E] active:scale-[0.97] transition disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[13px] md:text-[12px] font-bold text-[var(--text-primary)] active:scale-[0.97] transition disabled:opacity-50"
           aria-label="Actualiser le cockpit"
         >
           <RefreshCw
@@ -335,10 +335,10 @@ export default function CockpitPage() {
               strokeWidth={2.4}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#D97706]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">
                 Warnings cockpit
               </p>
-              <ul className="text-[12px] text-[#5A6470] mt-1 list-disc list-inside space-y-0.5">
+              <ul className="text-[12px] text-[var(--text-secondary)] mt-1 list-disc list-inside space-y-0.5">
                 {snap.warnings.map((w, i) => (
                   <li key={i}>{w}</li>
                 ))}

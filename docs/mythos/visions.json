@@ -1,0 +1,882 @@
+[
+  {
+    "domain": "Design Dark — Atelier Nuit premium \"Command Center\" pour l'app Stock",
+    "current_assessment": "Le mode nuit actuel (`body.theme-nuit` dans globals.css L606-807) est cassé pour une raison structurelle précise, vérifiée live sur salam-stock.vercel.app : il REMAPPE `--primary-green` vers l'or `#DDB31C` (L621). Résultat constaté en screenshot : la HeroActionCard \"Nouvelle réception\" devient un bloc JAUNE FLUO aveuglant, icône or-sur-or invisible, gradient/halo détruits. C'est l'anti-pattern fondamental : l'or, qui doit rester un ACCENT, devient le fill primaire de toute l'app (pills toggle, DepotSwitcher, AdminMenu, FAB → tous des boutons or qui ressemblent à des alarmes).\n\nDeuxième problème : ~40 composants utilisent `bg-white` en dur (cards cockpit, RamadanCard, AlertCard). Le patch L690 les remappe vers `--bg-card #0E2A20` avec `!important`, mais (a) c'est un sparadrap fragile, (b) des surfaces internes cream `#FAF7EE` survivent → en cockpit night, la card \"J-22 Achoura 1448\" reste CRÈME aveuglante flottant sur l'abysse. Inconsistance totale : la HeroKpi (gradient sapin HARDCODÉ #0E3B2E→#082A20, jamais tokenisé) est la SEULE card correcte en dark — elle prouve la grammaire juste pendant que tout le reste est cassé.\n\nTroisième : `--shadow-card` en dark passe à `rgba(0,0,0,0.35)` (L640) — des ombres noires sur fond noir = invisibles, donc ZÉRO élévation perçue. Pas de glow, pas de depth, pas de hiérarchie. Le système useTheme (auto/jour/nuit) a même désactivé l'auto-nuit \"car illisible\". C'est un dark naïf par inversion de tokens, pas un dark conçu. Le toggle ThemeToggle (long-press popover) est aussi un pattern bancal et peu découvrable.\n\nCE QUI EXISTE DÉJÀ DE BON (à systématiser) : la HeroKpi (hero-kpi.tsx) et l'écran counter TV (counter/page.tsx, gradient `#0E3B2E→#082A20` + glassmorphism `bg-white/[0.06]` + glow or) sont DÉJÀ du dark premium parfait. La cible n'est pas d'inventer — c'est d'extraire cette grammaire vers des tokens et de l'appliquer partout.",
+    "vision": "L'atelier nuit Salam Stock devient un \"command center\" niveau Linear/Vercel/terminal trading, et il devient le DÉFAUT. Le Stock est un back-office d'atelier/magasin halal, manipulé à 6h (cockpit avant ouverture, réserve mal éclairée) et le soir (préparation drive, daily-Z, comptoir) — sur ces contextes un dark premium est plus reposant pour les yeux, plus pro, et fait briller les KPI lumineux comme des néons de cockpit. La grammaire : background abyssal sapin (jamais noir pur — un noir-sapin teinté #08130F à #0B1C16), surfaces qui s'élèvent par LUMINOSITÉ croissante, un seul accent or qui glow doucement sur les CTA et chiffres-clés, glassmorphism léger sur les overlays, bordures hairline rgba(or,0.10) qui dessinent les cards sans les hurler. L'or ne remplit JAMAIS une grande surface — il liseré, il glow, il accentue un chiffre. Le sapin reste l'âme de la marque, réinterprété en profondeur nocturne. Résultat : un outil qui donne envie de l'ouvrir, où le CA de la veille brille comme un cours de bourse, où le QR halal et les bay labels du counter rayonnent.",
+    "dark_palette": {
+      "doctrine": "Dark = grammaire propre, PAS une inversion. L'or reste ACCENT (jamais primary fill). Elevation par luminosite croissante. Glow or subtil sur CTA + KPI. Bordures hairline or 8-12%. Tous WCAG AA verifies sur le bg le plus sombre.",
+      "--bg-abyss": "#08130F (canvas racine, sapin quasi-noir, jamais #000 pur)",
+      "--bg-base": "#0B1C16 (background body / scroll area)",
+      "--bg-header": "linear-gradient(180deg,#0E2A20 0%,#08130F 100%)",
+      "--surface-0": "#0E211A (surface posee, listes plates)",
+      "--surface-1": "#13291F (card standard AlertCard/RamadanCard, remplace #0E2A20)",
+      "--surface-2": "#193327 (card surelevee / hover / sheet)",
+      "--surface-3": "#1F3D2F (popover, command palette, modal)",
+      "elevation_regle": "chaque palier +~6% luminosite = depth percu sans ombre noire invisible",
+      "--primary-green": "#1B6A4A (sapin RESTE primary, vert vif lisible, RESTAURE vs remap-or casse)",
+      "--primary-green-hover": "#22855C",
+      "--primary-green-soft": "rgba(27,106,74,0.16)",
+      "--hero-gradient": "linear-gradient(165deg,#134A36 0%,#0A2419 100%)",
+      "--accent-gold": "#E8C24A (or remonte en luminosite pour briller sur dark)",
+      "--accent-gold-bright": "#F2D469 (KPI hero, big numbers, bay labels TV)",
+      "--accent-gold-dim": "#B89530 (texte secondaire or, eyebrows)",
+      "--accent-gold-glow": "0 0 24px rgba(232,194,74,0.22)",
+      "--accent-gold-hairline": "rgba(232,194,74,0.12)",
+      "--accent-gold-soft": "rgba(232,194,74,0.10)",
+      "or_regle": "or = lisere + glow + chiffre. JAMAIS un fill de grande surface.",
+      "--text-primary": "#F3F0E6 (cream desature, 14.8:1 sur #0B1C16, AAA)",
+      "--text-secondary": "#A8B4AC (8.2:1, AA)",
+      "--text-tertiary": "#7C8A82 (4.7:1, AA)",
+      "--text-on-gold": "#0A1F18 (texte sur pill/btn or)",
+      "--text-gold": "#F2D469 (chiffres-cles, eyebrows, 11.1:1)",
+      "--success": "#4FD08A (9.1:1)",
+      "--success-soft": "rgba(79,208,138,0.14)",
+      "--warning": "#F2B43C (9.8:1)",
+      "--warning-soft": "rgba(242,180,60,0.14)",
+      "--danger": "#FF7062 (corail clair, 6.4:1 AA vs rouge sombre jour illisible)",
+      "--danger-soft": "rgba(255,112,98,0.14)",
+      "status_regle": "status soft = teinte translucide sur la surface, laisse transparaitre l'elevation",
+      "--border-hairline": "rgba(255,255,255,0.06)",
+      "--border-card": "rgba(255,255,255,0.09)",
+      "--border-premium": "rgba(232,194,74,0.14)",
+      "--shadow-card": "0 2px 8px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "--shadow-elevated": "0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+      "--glow-cta": "0 0 0 1px rgba(232,194,74,0.20), 0 6px 24px rgba(232,194,74,0.18)",
+      "depth_regle": "en dark l'elevation se lit via highlight interne top (inset white 4-5%) + ombre noire. L'inset est le secret qui manque actuellement.",
+      "--glass-overlay": "rgba(11,28,22,0.72) + backdrop-blur(16px)",
+      "--glass-nav": "rgba(14,33,26,0.86) + backdrop-blur(20px) + border-top hairline"
+    },
+    "recommendations": [
+      {
+        "id": "DARK-01",
+        "title": "Tokeniser un vrai dark theme et tuer le remap or vers primary",
+        "rationale": "Cause racine du 'merdique' : globals.css L621 fait `--primary-green: #DDB31C` donc la HeroActionCard devient un bloc jaune fluo (verifie screenshot /tmp/stock-home-night.png). FIX : creer un bloc `[data-theme='nuit']` (ou body.theme-nuit) qui (a) RESTAURE le sapin comme primary #1B6A4A, (b) introduit les 4 paliers de surface (--surface-0..3 #0E211A->#1F3D2F), (c) remonte l'or a #E8C24A/#F2D469 (l'or jour #C9A227 est trop sombre sur abysse), (d) remplace les ombres noires par `0 2px 8px rgba(0,0,0,.4) + inset 0 1px 0 rgba(255,255,255,.04)` pour une elevation reellement percue. Tous les HEX sont dans dark_palette, prets a coller. Socle dont dependent toutes les autres recos.",
+        "effort_hours": 5,
+        "impact": "mythos",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/globals.css:606-807"
+        ]
+      },
+      {
+        "id": "DARK-02",
+        "title": "Eradiquer les bg-white/cream hardcodes vers tokens de surface partout",
+        "rationale": "Le patch `body.theme-nuit .bg-white { ... !important }` (L690) est un sparadrap : il rattrape les bg-white mais PAS les surfaces cream internes #FAF7EE ni les bg-[#FFF] inline. Resultat : en cockpit night la card 'J-22 Achoura 1448' reste CREME aveuglante (screenshot /tmp/stock-cockpit-night.png). FIX systemique : remplacer dans les composants cockpit/v2 les bg-white et bg-[#FAF7EE] par bg-[var(--surface-1)], et les text-[#0F1A14]/#0E3B2E hardcodes par var(--text-primary). Cibles prioritaires : AlertCard (TONE_STYLES iconBg en hex), RamadanCard, CompetitorCard, alert-card.tsx L99/L109/L149. Supprimer les !important de patch une fois fait.",
+        "effort_hours": 6,
+        "impact": "mythos",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/cockpit/alert-card.tsx:39-77",
+          "apps/stock/components/cockpit/ramadan-card.tsx",
+          "apps/stock/app/globals.css:690-719"
+        ]
+      },
+      {
+        "id": "DARK-03",
+        "title": "Dark = DEFAUT du Stock (jour reste opt-in raffine)",
+        "rationale": "Trancher : OUI dark par defaut. Le Stock est un back-office atelier/reserve manipule tot (cockpit 6h, lumieres partielles) et tard (prepa, daily-Z, comptoir soir) : contexte ideal pour un command-center dark (ref Linear/Vercel/Stripe dashboards dark par defaut). Le jour cream reste dispo pour l'iPad comptoir en plein soleil. Implementation : useTheme.ts par defaut 'nuit' au lieu de 'auto->jour' (L37-43), color-scheme: dark dans :root, garder le toggle pour basculer en jour. Bonus : resout le bug iOS color-scheme (L6) car l'app EST dark. NB : valider avec le user car parti-pris fort, mais c'est LE move qui fait passer l'app de 'POS generique' a 'outil pro MYTHOS'.",
+        "effort_hours": 2,
+        "impact": "mythos",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/lib/hooks/useTheme.ts:37-43",
+          "apps/stock/app/globals.css:5-11"
+        ]
+      },
+      {
+        "id": "DARK-04",
+        "title": "Systeme d'elevation par luminosite + highlight interne (la grammaire qui manque)",
+        "rationale": "Le dark actuel n'a AUCUNE hierarchie de profondeur : tout sur le meme plan, ombres noires invisibles. FIX = grammaire a 3 regles, deja chiffree dans dark_palette : (1) chaque card monte d'un palier de surface selon son role (liste=surface-0, card=surface-1, hover/sheet=surface-2, modal=surface-3) ; (2) ombre = rgba(0,0,0,.4) + INSET highlight inset 0 1px 0 rgba(255,255,255,.04) en haut (le secret du depth dark facon Linear) ; (3) bordures hairline rgba(255,255,255,.09). Appliquer sur .card, .keypad-btn, AlertCard, les sheets V2Shell. Transforme un aplat sombre triste en surfaces qui semblent flotter.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/globals.css:194-225",
+          "apps/stock/components/v2/V2Shell.tsx:313-320"
+        ]
+      },
+      {
+        "id": "DARK-05",
+        "title": "Glow or signature sur CTA + accent lumineux sur les KPI",
+        "rationale": "Le detail MYTHOS qui fait wow. (1) CTA primaires (.btn-gold, HeroActionCard, FAB Assistant) recoivent --glow-cta (0 0 0 1px rgba(232,194,74,.20), 0 6px 24px rgba(232,194,74,.18)) : le bouton respire une lueur or chaude. (2) Les big numbers (HeroKpi CA hier, AlertCard metric, counter bay labels) passent en --accent-gold-bright #F2D469 avec text-shadow: 0 0 18px rgba(242,212,105,.25) : le CA de la veille brille comme un cours de bourse. (3) Hairline or --border-premium sur la HeroKpi (elle a deja inset 0 0 0 1px rgba(201,162,39,.12) a L69, juste remonter l'intensite en dark). L'oeil va droit aux chiffres qui comptent.",
+        "effort_hours": 3,
+        "impact": "mythos",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/cockpit/hero-kpi.tsx:62-71",
+          "apps/stock/app/globals.css:247-287",
+          "apps/stock/components/v2/AssistantFab.tsx"
+        ]
+      },
+      {
+        "id": "DARK-06",
+        "title": "Counter TV + Cockpit : pousser les ecrans qui gagnent le plus en dark",
+        "rationale": "Le counter (counter/page.tsx) est DEJA dark parfait (gradient sapin + glass bg-white/[0.06] + bay labels or geants + glow). Sert de reference et de preuve. A enrichir facon departures board aeroport : vignette radial au centre, et faire pulser doucement le glow or sur la card la plus ancienne (client qui attend le plus). Le COCKPIT data-dense est le 2e gros gagnant : sur fond abysse, les KPI or + tone-colors status (corail danger, ambre warn, vert succes) ressortent comme un dashboard de trading. Daily-Z / recap-fiscal aussi : chiffres financiers tabular sur dark = serieux comptable premium. Prioriser le polish dark sur ces 3 ecrans (cockpit, counter, daily-Z) car ce sont les moments demo.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/v2/counter/page.tsx:168-227",
+          "apps/stock/app/v2/cockpit/page.tsx",
+          "apps/stock/lib/cashbox/monthly-report.ts"
+        ]
+      },
+      {
+        "id": "DARK-07",
+        "title": "Refaire le ThemeToggle : switch jour/nuit premium et decouvrable",
+        "rationale": "Le toggle actuel (ThemeToggle.tsx) repose sur long-press/contextMenu pour ouvrir le popover 3-modes : pas decouvrable, et le mode auto est mort (useTheme L37 force jour). Avec dark-par-defaut, simplifier : un switch sun/moon anime dans le header (track sapin, thumb or qui glisse avec glow), tap = bascule directe jour<->nuit, persistance localStorage. Retirer le mode auto (inutile) et le popover. Animer la transition de theme (les transition: background-color 240ms existent deja L613). Micro-detail : sur le switch, une petite lune or #F2D469 avec halo quand dark actif. C'est l'objet que le user touche en premier, il doit etre satisfaisant.",
+        "effort_hours": 3,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/v2/ThemeToggle.tsx:14-97",
+          "apps/stock/lib/hooks/useTheme.ts"
+        ]
+      },
+      {
+        "id": "DARK-08",
+        "title": "Glassmorphism leger sur bottom-nav, sheets et command palette",
+        "rationale": "En dark le glass donne la sensation premium flottant (ref Arc/Vercel). (1) La bottom-nav pill (V2Shell L315 bg-white/95) devient bg-[rgba(14,33,26,.86)] backdrop-blur-20 border-top hairline avec l'item actif souligne par un trait or qui glow (le bg-gold L335 existe deja). (2) Les sheets/modals (.fixed-overlay L598, le Plus-sheet L420) : overlay rgba(8,19,15,.72) blur-16, corps en surface-3 avec hairline top. (3) La command palette CmdK passe en surface-3 + hairline or, item selectionne rgba(232,194,74,.12) (le scope body.theme-nuit .cmdk existe deja L798, juste reaccorder les HEX). Glass = jamais lourd, blur leger, opacite haute pour rester lisible sur ecran reserve.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/v2/V2Shell.tsx:308-475",
+          "apps/stock/app/globals.css:597-604",
+          "apps/stock/app/globals.css:762-807"
+        ]
+      },
+      {
+        "id": "DARK-09",
+        "title": "Typographie en dark : alleger les graisses, durcir le tabular, gerer le halation",
+        "rationale": "Sur dark, le texte blanc epais bave (halation/irradiation optique). Regles : (1) le body cream #F3F0E6 est DESATURE (pas blanc pur) pour reduire le glare, deja dans la palette. (2) Baisser d'un cran les font-weight extrabold->bold sur les gros titres dark (HeroKpi h1 800->700) car le gras irradie plus sur fond sombre. (3) -webkit-font-smoothing: antialiased deja la (L96), parfait pour dark. (4) Forcer font-variant-numeric: tabular-nums sur TOUS les chiffres financiers (.tabular existe L102, l'appliquer sur daily-Z/recap/cockpit). (5) Eyebrows label-caps en or-dim #B89530 pour pas voler l'attention aux KPI. La difference entre dark amateur qui pique et dark Linear reposant.",
+        "effort_hours": 2,
+        "impact": "medium",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/globals.css:88-188",
+          "apps/stock/components/cockpit/hero-kpi.tsx:116-141"
+        ]
+      },
+      {
+        "id": "DARK-10",
+        "title": "Login PIN : abysse premium avec keypad glass + glow halo or",
+        "rationale": "Le login (login/page.tsx) est DEJA sapin #082A20, bon depart. En dark MYTHOS : (1) background --bg-abyss #08130F avec le halo or radial existant (L102) intensifie. (2) Le keypad : les .keypad-btn sont en bg-card blanc, en dark passer en surface glass rgba(255,255,255,.06) + hairline, tap -> glow or doux. (3) Les 4 dots PIN : bg-gold quand remplis avec --accent-gold-glow (lueur quand le chiffre rentre = feedback satisfaisant). (4) Le logo V2Logo variant=dark avec halo or subtil. C'est le premier ecran que voit Otmane chaque matin, il doit poser le ton cockpit premium immediatement.",
+        "effort_hours": 3,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/v2/login/page.tsx:96-241",
+          "apps/stock/app/globals.css:345-370"
+        ]
+      },
+      {
+        "id": "DARK-11",
+        "title": "Status colors dark : remonter danger/success/warning en versions lumineuses + soft translucides",
+        "rationale": "Le rouge jour #E5483D/#A8231A (AlertCard danger) est ILLISIBLE sur abysse. Le dark exige des status remontes en luminosite : danger=corail #FF7062, success=#4FD08A, warning=#F2B43C (tous AA verifies, dans la palette). Regle cle : les fonds soft deviennent TRANSLUCIDES rgba(couleur,.14) au lieu de couleurs pleines, pour laisser transparaitre l'elevation de surface dessous. Impacte AlertCard TONE_STYLES (alert-card.tsx L39-77, tout en hex pleins), les badges .badge-* (globals L339), DlcBanner, les demarques DLC par paliers (ATTENTION/CRITIQUE/FORCE). Sans ca, les alertes DLC (coeur metier) sont invisibles ou criardes en dark.",
+        "effort_hours": 3,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/cockpit/alert-card.tsx:39-77",
+          "apps/stock/app/globals.css:64-75",
+          "apps/stock/components/v2/DlcBanner.tsx"
+        ]
+      },
+      {
+        "id": "DARK-12",
+        "title": "PDF & etiquettes dark-aware : header sombre, impression econome, branding ajoute",
+        "rationale": "Detail MYTHOS souvent oublie : les PDF generes (daily-Z, rapport mensuel, bon-reception) et les etiquettes EAN-13 sont actuellement noir-sur-blanc plat. labels/generate-pdf.ts = juste texte + barcode, AUCUN branding (pas de logo, pas de sceau halal AVS, pas de prix, pas de lot/DLC, pas de QR). Pour coherence premium sans gaspiller l'encre : (1) PDF daily-Z/recap -> bandeau d'en-tete sapin #0E3B2E plein avec logo Salam or + titre cream (corps reste blanc pour impression). Document qui RESSEMBLE a l'app. (2) Etiquettes : ajouter logo Salam mini + lisere sapin + selon contexte sceau halal AVS, prix, lot/DLC. NB : ne PAS imprimer de fond sombre plein (cout encre), juste les bandeaux/accents.",
+        "effort_hours": 5,
+        "impact": "medium",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/labels/generate-pdf.ts:20-83",
+          "apps/stock/lib/cashbox/monthly-report.ts"
+        ]
+      }
+    ]
+  },
+  {
+    "domain": "Architecture & Simplification — Information Architecture, navigation, rangement du code",
+    "current_assessment": "L'app a une fondation forte (32 routes v2 cohérentes sur le store `useV2`, design tokens aboutis, CommandPalette ⌘K déjà présente, bottom-nav 4+Plus role-aware). MAIS deux problèmes structurels la rendent moins \"rangée\" qu'elle ne paraît :\n\n1) UN APP-FANTÔME LEGACY V1 COHABITE ET EST LIVE. 18 fichiers sur l'ancien store `@/lib/store` forment une app V1 parallèle complète (`app/dashboard`, `app/catalogue/*`, `app/reception/*`, `app/inventaire/*`, `app/alertes`, `app/assistant`, `app/compte`, `app/login`, `app/staff/preparation/*`). Vérifié : ZÉRO fichier v2 n'importe ce store et ZÉRO lien v2 ne pointe vers ces routes (l'île est 100% isolée). Pourtant `curl https://salam-stock.vercel.app/dashboard` → HTTP 200, `/catalogue` → 200 : un client qui tape l'URL atterrit dans une V1 morte aux données différentes (rôles `directeur/employe` au lieu de `admin/manager`, mock data). C'est le plus gros frein au \"bien rangé\" : ~18 fichiers + composants `components/layout/*`, `components/dashboard/*` à supprimer. `app/v2/preparation` duplique `app/staff/preparation` ; `app/v2/login` (PIN) duplique `app/login` (sélection de profil).\n\n2) LA SURFACE ADMIN EST EXPOSÉE 4 FOIS. Les mêmes destinations admin apparaissent dans : (a) le hub home section 03 \"Espace manager\" (4 cards), (b) le drawer hamburger AdminMenu (11 entrées), (c) le Plus-sheet bottom-nav (jusqu'à 12 entrées secondaires), (d) le header du dashboard `/v2/admin` lui-même (8 chips pills + 2 HeroActionCards identiques pour l'assistant IA + toggle Stock/Drive). Le manager voit la même chose répétée partout — c'est de la redondance, pas de la redondance utile.\n\nCôté patterns : BackButton (26 pages) et EditorialEyebrow (13 pages) montrent une bonne discipline mais pas universelle. CommandPalette existe mais son catalogue NAV_ITEMS est figé (manque PO, fournisseurs, counter, étiquettes, transfert, toutes les pages admin) → pas encore \"LE\" moyen central de navigation. Aucun onboarding premier-run pour un caissier.",
+    "vision": "Salam Stock doit avoir UNE seule app, UN seul store, et UNE hiérarchie mentale en 3 plans que tout le staff partage : OPÉRER (les 5 gestes du terrain — réception, sortie, transfert, stock, étiquettes), PILOTER (le cerveau d'Otmane — cockpit, forecast, PO, alertes DLC), ADMINISTRER (le bureau d'Ahmed — dashboard, fiscal, rapports, assistant IA). Chaque destination vit dans UN seul plan et n'est exposée qu'à UN seul endroit canonique. Le ⌘K (long-press logo sur mobile) devient l'autoroute universelle : un power-user comme Otmane atteint n'importe quelle page en 2 frappes sans jamais ouvrir un menu. La bottom-nav reste 4 gestes + Plus, mais le Plus devient un vrai \"tableau de bord des plans\" groupé (Opérer / Piloter), pas une liste à plat. On supprime tout le legacy V1 pour qu'il n'existe plus aucune porte dérobée. Résultat : un nouveau caissier comprend l'app en 2 minutes via un onboarding de 3 cartes, et un visiteur de démo ne peut jamais tomber sur un écran mort.",
+    "recommendations": [
+      {
+        "id": "ARCH-01",
+        "title": "Supprimer l'app-fantôme V1 legacy (18 fichiers + composants morts) et 404/redirect les routes",
+        "rationale": "Vérifié read-only : l'île legacy est 100% isolée (aucun import v2 vers `@/lib/store` dans `app/v2`+`components/v2`, aucun lien v2 vers ces routes) MAIS LIVE — `curl /dashboard`→200, `/catalogue`→200, `/staff/preparation`→308. À SUPPRIMER : `app/dashboard/`, `app/catalogue/` (page+[id]+nouveau), `app/reception/` (page+[id]+historique — remplacé par `app/v2/reception/*`), `app/inventaire/` (page+historique — remplacé par `app/v2/inventaire/*`), `app/alertes/`, `app/assistant/`, `app/compte/`, `app/login/` (remplacé par `app/v2/login`), `app/staff/` (layout+preparation/page+[id]+components — remplacé par `app/v2/preparation/*`). Plus les composants qui n'en dépendent QUE : `components/layout/PageWrapper.tsx`, `components/layout/PageHeader.tsx`, `components/dashboard/*` (AlertCard, ActivityList), et le store `lib/store.ts` une fois orphelin (grep confirme : 18 fichiers sur l'ancien store, 25 sur v2). Garde-fou : avant suppression, `grep -rn 'from \"@/lib/store\"' app/v2 components/v2` doit rester vide (déjà le cas). Ajouter dans `next.config` ou un `middleware.ts` une redirection 308 de `/dashboard|/catalogue|/reception|/inventaire|/alertes|/assistant|/login|/staff/*` → `/v2` pour tuer les portes dérobées en prod sans casser les vieux bookmarks. Effet : -2000+ lignes mortes, plus aucun écran-zombie en démo.",
+        "effort_hours": 3,
+        "impact": "mythos",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/app/dashboard/page.tsx",
+          "apps/stock/app/catalogue/page.tsx",
+          "apps/stock/app/reception/page.tsx",
+          "apps/stock/app/inventaire/page.tsx",
+          "apps/stock/app/alertes/page.tsx",
+          "apps/stock/app/assistant/page.tsx",
+          "apps/stock/app/compte/page.tsx",
+          "apps/stock/app/login/page.tsx",
+          "apps/stock/app/staff/preparation/page.tsx",
+          "apps/stock/components/layout/PageWrapper.tsx",
+          "apps/stock/components/dashboard/AlertCard.tsx",
+          "apps/stock/lib/store.ts"
+        ]
+      },
+      {
+        "id": "ARCH-02",
+        "title": "Adopter la hiérarchie en 3 plans (Opérer / Piloter / Administrer) comme colonne vertébrale de toute la nav",
+        "rationale": "Aujourd'hui les destinations sont rangées par rôle (`primaryFor`/`secondaryFor` dans V2Shell.tsx) sans regroupement sémantique : le Plus-sheet est une liste à plat de 12 items mélangeant cockpit, forecast, transfert, étiquettes. Définir 3 groupes canoniques et les appliquer PARTOUT (Plus-sheet, ⌘K, hub) : OPÉRER = {reception, sortie, transfert, stock, etiquettes, inventaire} (le terrain, gestes du staff) ; PILOTER = {cockpit, forecast, po, fournisseurs, alertes-dlc, lots} (le pilotage Otmane) ; ADMINISTRER = {admin dashboard, recap-fiscal, rapport-mensuel, import-cashmag, bons-reception, alertes IA, alertes-surplus, assistant-ia, activite} (le bureau Ahmed). Dans le Plus-sheet de V2Shell.tsx (lignes 435-471), ajouter des `Command.Group`-style headings 'Opérer'/'Piloter' au lieu du `.map` à plat. Bénéfice : la même grammaire mentale dans les 3 surfaces → charge cognitive divisée, le staff sait toujours 'dans quel monde' il est.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/components/v2/V2Shell.tsx",
+          "apps/stock/components/v2/CommandPalette.tsx",
+          "apps/stock/app/v2/page.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-03",
+        "title": "Dé-dupliquer la surface admin : UN seul point d'entrée canonique (le drawer), retirer les redondances",
+        "rationale": "La surface admin est exposée 4× : hub home section 03 (4 cards), AdminMenu drawer (11 entrées, AdminMenu.tsx l.38-103), Plus-sheet (12 items), ET le header de `/v2/admin/page.tsx` qui empile 8 chips pills (l.206-265) + 2 HeroActionCards 'Assistant IA' (l.184-193 ET chip l.258-264, DOUBLON exact) + toggle Stock/Drive. Décision : le DRAWER AdminMenu devient l'unique répertoire admin exhaustif (rôle admin only). Sur `/v2/admin/page.tsx` : supprimer les 8 chips header (redondants avec le drawer), garder UN seul Hero (l'assistant IA), garder le toggle Stock/Drive et les bandeaux DLC/Counter qui sont du contenu, pas de la nav. Sur le hub home, garder les 4 cards 'Espace manager' (raccourcis quotidiens) mais les libeller comme tels, pas comme 'l'admin complet'. Résultat : header admin allégé d'~80 lignes, plus de doublon Assistant IA, le manager arrête de voir 4 listes parallèles.",
+        "effort_hours": 3,
+        "impact": "high",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/app/v2/admin/page.tsx",
+          "apps/stock/components/v2/AdminMenu.tsx",
+          "apps/stock/app/v2/page.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-04",
+        "title": "Faire du ⌘K l'autoroute centrale : compléter le catalogue + ouvrir la palette à TOUTES les pages",
+        "rationale": "CommandPalette.tsx est techniquement excellent (cmdk, recent localStorage, live search produits, switch dépôt, long-press logo mobile) MAIS son `NAV_ITEMS` (l.56-69) est incomplet : manque PO (`/v2/po`), Fournisseurs (`/v2/fournisseurs`), Counter (`/v2/counter`), Étiquettes EAN (présent), Transfert (présent), et AUCUNE page admin (recap-fiscal, rapport-mensuel, import-cashmag, alertes, alertes-dlc, alertes-surplus, activite, assistant-ia). Pour qu'Otmane navigue sans jamais ouvrir un menu, le ⌘K doit indexer les 32 routes, groupées par les 3 plans de ARCH-02. Ajouter aussi des 'commandes' (pas que des pages) : 'Imprimer étiquette pour…', 'Déclarer casse', 'Lancer forecast'. Et afficher le hint ⌘K plus visiblement sur mobile (actuellement caché derrière un long-press logo non-découvrable — ajouter un bouton loupe discret dans le header mobile). Cible : 100% des destinations atteignables en ≤2 frappes.",
+        "effort_hours": 4,
+        "impact": "mythos",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/components/v2/CommandPalette.tsx",
+          "apps/stock/components/v2/V2Shell.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-05",
+        "title": "Onboarding caissier 2 minutes : 3 cartes coachmark au premier login (post-PIN)",
+        "rationale": "Aucun onboarding n'existe (les matches grep 'Bienvenue/première' sont du copy, pas un flow). Un nouveau caissier qui se connecte au PIN tombe direct sur le hub sans contexte. Ajouter un overlay 3-étapes one-shot (flag `localStorage 'salam-onboarded-{employeId}'`), déclenché après `loginByPin` : (1) 'Ton terrain' → pointe la bottom-nav Réception/Sortie/Stock, (2) 'Tout chercher' → montre le ⌘K / long-press logo, (3) 'Ton dépôt' → montre le DepotSwitcher en haut à droite. Réutiliser le pattern motion/AnimatePresence déjà partout. 3 écrans skippables, jamais re-montrés. C'est le delta entre 'app de pro' et 'app qu'on doit expliquer à la main' — directement la demande 'rends-la facile'.",
+        "effort_hours": 5,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/app/v2/login/page.tsx",
+          "apps/stock/app/v2/page.tsx",
+          "apps/stock/components/v2/V2Shell.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-06",
+        "title": "Découper la page Réception (1044 lignes) en sous-composants — la plus dense de l'app",
+        "rationale": "`app/v2/reception/page.tsx` fait 1044 lignes (vs 362 cockpit, 400 stock, 450 po) — c'est de loin la page la plus lourde, monolithique, dure à maintenir et à charger mentalement. Extraire en composants nommés dans `components/v2/reception/` : `ReceptionScanZone`, `ReceptionLotForm` (lots/DLC/températures), `ReceptionEcartTable`, `ReceptionValidationFooter`. Pas de changement fonctionnel — pure simplification de la charge cognitive du code ET du rendu (chunks plus petits). Idem dans une moindre mesure pour `forecast` (611 l) et `sortie` (500 l). Bénéfice : maintenabilité, et un dev (ou agent) qui ouvre Réception comprend la structure en 30s.",
+        "effort_hours": 6,
+        "impact": "medium",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/app/v2/reception/page.tsx",
+          "apps/stock/app/v2/forecast/page.tsx",
+          "apps/stock/app/v2/sortie/page.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-07",
+        "title": "Uniformiser les patterns d'en-tête : BackButton + EditorialEyebrow numéroté + empty-state sur TOUTES les pages",
+        "rationale": "Discipline partielle : BackButton sur 26 pages, EditorialEyebrow sur 13. Donc ~6-19 pages divergent. Définir UN PageHeader v2 canonique (eyebrow numéroté '01 …' + h1 'mot {gold}.' + sous-titre + BackButton si profondeur>1) et l'appliquer partout pour que chaque écran ait la même 'signature'. Idem empty-states : le dashboard a un bel empty-state (Sparkles + titre + sous-titre, admin/page.tsx l.582-592) mais ce n'est pas systématique — chaque liste (stock, lots, po, fournisseurs, préparation) doit avoir le même composant `EmptyState` réutilisable plutôt que des variantes ad-hoc. Cohérence = sensation de qualité 'une seule main'.",
+        "effort_hours": 4,
+        "impact": "medium",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/components/v2/EditorialEyebrow.tsx",
+          "apps/stock/components/v2/BackButton.tsx",
+          "apps/stock/app/v2/admin/page.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-08",
+        "title": "Réduire la charge cognitive du dashboard admin : passer de scroll-fleuve à sections repliables",
+        "rationale": "`/v2/admin/page.tsx` (862 lignes) empile en un seul scroll : Hero assistant + DlcBanner + CounterPreview + 8 chips + toggle + RevenueChart + cards dépôts + réceptions vides + flags IA + activité 24h + inventaires + 3 cards communication (Push/Email/StockEditWindow) + WhatsAppRecap. C'est 12+ blocs verticaux = surcharge. Regrouper en 3 sections avec ancres/tabs internes alignées sur les 3 plans : 'Vue d'ensemble' (KPI+dépôts), 'Surveillance' (DLC+flags IA+réceptions vides), 'Comms & paramètres' (push/email/fenêtre édition/whatsapp). Soit via le toggle Stock/Drive déjà présent étendu en 3-4 onglets, soit via des `<details>` repliables. Le manager voit l'essentiel d'abord, déplie le reste à la demande — au lieu d'un mur.",
+        "effort_hours": 5,
+        "impact": "high",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/app/v2/admin/page.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-09",
+        "title": "Fusionner Lots et Alertes-DLC — un seul univers 'Traçabilité & DLC'",
+        "rationale": "`/v2/lots` (traçabilité halal, QR public, certif AVS) et `/v2/admin/alertes-dlc` (lots courte date + démarque auto par paliers) parlent du MÊME objet métier (le lot) sous deux angles. Le ⌘K les présente d'ailleurs ensemble ('Lots & DLC', CommandPalette l.65). Les fusionner en une seule destination `/v2/lots` à deux onglets ('Tous les lots' / 'Courte date & démarques') élimine une route, une entrée de menu, et la confusion 'où je regarde les lots qui périment ?'. La page lots devient le hub unique du cycle de vie d'un lot : réception → traçabilité QR → alerte DLC → démarque → sortie périmé. Cohérent avec le moat halal.",
+        "effort_hours": 4,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/app/v2/lots/page.tsx",
+          "apps/stock/app/v2/admin/alertes-dlc/page.tsx",
+          "apps/stock/components/v2/CommandPalette.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-10",
+        "title": "Consolider les 3 dashboards d'alertes en un centre d'alertes unifié",
+        "rationale": "Trois pages d'alertes coexistent : `/v2/admin/alertes` (sorties IA suspectes), `/v2/admin/alertes-dlc` (DLC/démarques), `/v2/admin/alertes-surplus` (surplus fournisseurs). Trois entrées dans AdminMenu + chips header. Pour le manager c'est 'où sont mes alertes ?' réparti en 3 endroits. Créer `/v2/admin/alertes` comme centre unique à onglets ou sections (IA-sorties / DLC / Surplus) avec un badge compteur agrégé visible dès le hub ('7 alertes à traiter'). Réduit 3 routes → 1, et donne au manager UN endroit où purger sa to-do du jour. (Si ARCH-09 absorbe le volet DLC dans Lots, ce centre garde IA-sorties + surplus.) Aligne avec 'bien rangé'.",
+        "effort_hours": 5,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/app/v2/admin/alertes/page.tsx",
+          "apps/stock/app/v2/admin/alertes-surplus/page.tsx",
+          "apps/stock/app/v2/admin/alertes-dlc/page.tsx",
+          "apps/stock/components/v2/AdminMenu.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-11",
+        "title": "Nettoyer les toggles header orphelins (ThemeToggle 'merdique', DensityToggle) et alléger le header V2Shell",
+        "rationale": "Le header V2Shell.tsx empile 7 contrôles sur une ligne : identité, hint ⌘K, ThemeToggle, DensityToggle, DepotSwitcher, AdminMenu, Logout. Le user a explicitement jugé le ThemeToggle (mode atelier nuit) 'merdique' (cf. brief) — soit on le retire du header jusqu'à la refonte dark premium (chantier de l'agent dark), soit on le déplace dans un menu compte. DensityToggle est un réglage avancé qui n'a rien à faire en permanence dans le chrome principal → le déplacer aussi. Objectif : header à 4 éléments max (identité / ⌘K / dépôt+admin / logout) pour respirer. Crée aussi un mini-menu 'Compte & réglages' (theme, densité, déconnexion, version) en remplacement de `app/compte` legacy supprimé.",
+        "effort_hours": 3,
+        "impact": "medium",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/components/v2/V2Shell.tsx",
+          "apps/stock/components/v2/ThemeToggle.tsx",
+          "apps/stock/components/v2/DensityToggle.tsx"
+        ]
+      },
+      {
+        "id": "ARCH-12",
+        "title": "Bottom-nav role-aware affinée + label cohérent 'Plus' → 'Menu', et garantir zéro overlap contenu/CTA",
+        "rationale": "La bottom-nav (V2Shell.tsx l.308-382) est bien faite (4+Plus, pill opaque, role-aware) mais : (1) le 5e item 'Plus' devrait s'appeler 'Menu' ou 'Tout' et afficher un badge si des alertes attendent dans Piloter/Administrer — sinon l'utilisateur ne sait pas qu'il y a de la valeur derrière. (2) Vérifier le `pb-nav-stack` (l.291) sur toutes les pages à CTA bas (préparation, sortie, réception ont des footers de validation) — la mémoire user dit 'la nav bottom ne doit JAMAIS cacher du contenu utile (CTA inclus)'. Auditer chaque page à bouton fixe bas pour confirmer que le scroll-to-bottom révèle bien le CTA au-dessus de la pill. (3) Pour le rôle admin, la primary inclut 'Inventaire' (rare) plutôt que 'Cockpit' (quotidien) — revoir `primaryFor('admin')` pour mettre les vrais gestes quotidiens en accès direct.",
+        "effort_hours": 3,
+        "impact": "medium",
+        "category": "simplification",
+        "file_refs": [
+          "apps/stock/components/v2/V2Shell.tsx"
+        ]
+      }
+    ]
+  },
+  {
+    "domain": "Logique métier — robustesse, exactitude, automatisations magasin",
+    "current_assessment": "L'app a une fondation métier impressionnante pour une PWA de magasin halal : moteur DLC à paliers, forecast Holt + courbe hijri, réception scan-first avec écart valorisé + push, traçabilité lot → QR public, cashbox TVA multi-taux. Beaucoup de code est défensif et bien commenté. MAIS la justesse des calculs et la robustesse des flux ne sont pas encore au niveau \"on livre dans une semaine\" : (1) le barème de démarque DLC SQL ne correspond PAS au mapping métier attendu (forcé -50 / critique -40 / attention -20) — il est rattrapé in extremis par un plancher TS, mais les règles SQL sont incomplètes (Épicerie, F&L, Surgelés sans démarque profonde) et la logique de sélection du palier est fausse pour les lots périmés ; (2) le stock est décrémenté en read-then-write non atomique, sans ledger stock_movements, et les side-effects de transfert sont explicitement non bloquants → dérive de stock garantie en concurrence ; (3) les lots ne sont JAMAIS consommés (pas de FIFO) — quantite_recue reste figée, donc la valeur de casse/DLC suppose le lot entier toujours en rayon ; (4) la valorisation de casse utilise prix_drive_cents qui est NULL pour tout produit non publié sur le Drive → la casse € est massivement sous-comptée ; (5) le forecast attribue 100% des ventes au dépôt Particulier et tourne sur une vélocité pseudo-aléatoire de démo, et ignore le lead time fournisseur dans days_cover ; (6) le certificat halal a une date de validité chargée mais jamais affichée/contrôlée sur la page QR publique — le maillon \"certif expiré\" est manquant. Beaucoup de ces points sont des choix \"T+10 honnêtes\" assumés dans les commentaires, mais ils doivent être durcis avant prod réelle.",
+    "vision": "Otmane ouvre son cockpit le matin et fait CONFIANCE aux chiffres : la casse en euros est exacte (vrai prix de vente), la démarque DLC proposée est la bonne au centime (forcé = -50% garanti, calculé une seule fois côté SQL, pas rattrapé en TS), et le stock affiché est le stock réel parce que chaque mouvement passe par un ledger immuable stock_movements (jamais un read-then-write). La traçabilité halal devient inviolable : un lot dont le certificat AVS a expiré s'affiche en ROUGE sur le QR public et bloque la génération de PO ; chaque vente Drive consomme le plus vieux lot (FIFO) donc la DLC qu'on voit en rayon est la vraie. Le réassort devient PROACTIF : le forecast (lead time inclus) génère les PO avant la rupture, pas après, et regroupe intelligemment par fournisseur sous le minimum de commande. La machine fait gagner 1h/jour à Otmane : démarques auto-suggérées scannables, détection de pic de casse anormal (>2σ) poussée sur l'iPhone, et un seul chiffre de CA consolidé Drive+Magasin fiable pour le comptable.",
+    "recommendations": [
+      {
+        "id": "ML-1",
+        "title": "Corriger le barème de démarque DLC à la source (SQL) — supprimer le rattrapage TS fragile",
+        "rationale": "BUG DE JUSTESSE confirmé. La vue v_dlc_alerts (20260530000001_dlc_engine.sql L71-82) sélectionne remise_pct via `where r.jours_avant_dlc >= (l.dlc - current_date) order by r.jours_avant_dlc asc limit 1`. Pour un lot FORCÉ (dlc <= today → jours_restants <= 0), la plus petite règle `jours_avant_dlc >= 0` pour Boucherie est la règle J-1 = 15% (pas 50%). Le mapping métier attendu (CONTEXT : forcé -50 / critique -40 / attention -20) n'est donc JAMAIS produit par le SQL ; il est seulement sauvé par le plancher TS de lib/dlc.ts (normalizeRemiseDlc). Pire : les règles seedées s'arrêtent à -50% (J-1) et ne couvrent ni le palier critique -40% ni attention -20% (Boucherie J-3 = 15%, pas 20%). Et les catégories Épicerie, Fruits & Légumes, Maghreb, Bazar n'ont AUCUNE règle → remise 0% sur tout sauf si le produit est Boucherie/Charcuterie/Frais/Traiteur/Surgelés. FIX : réécrire les paliers SQL pour qu'ils matchent exactement le mapping niveau→remise (forcé 50, critique 40, attention 20, surveillance 0), basés sur niveau_alerte et non sur un order-by ambigu (`case niveau_alerte when 'forcé' then 50 when 'critique' then 40 when 'attention' then 20 else 0 end`), avec override par dlc_pricing_rules.categorie si présent et plus agressif. Garder normalizeRemiseDlc comme garde-fou mais il ne doit plus être le seul producteur de la vérité. Seeder les règles pour TOUTES les catégories du catalogue.",
+        "effort_hours": 4,
+        "impact": "mythos",
+        "category": "business-logic",
+        "file_refs": [
+          "supabase/migrations/20260530000001_dlc_engine.sql",
+          "apps/stock/lib/dlc.ts",
+          "apps/stock/app/api/cockpit/snapshot/route.ts",
+          "apps/stock/app/v2/admin/alertes-dlc/page.tsx"
+        ]
+      },
+      {
+        "id": "ML-2",
+        "title": "Valorisation casse fausse : prix_drive_cents NULL → casse € sous-comptée",
+        "rationale": "BUG DE JUSTESSE confirmé. v_casse_baseline_28j, v_casse_pic_horaire et v_casse_digest_semaine (20260530000008_casse_baseline.sql L26, L62, L105) valorisent la casse via `s.quantite * coalesce(p.prix_drive_cents / 100.0, 0)`. Or prix_drive_cents (ajouté en 0022, integer cents) n'est renseigné QUE pour les produits visibles sur le Drive (visible_drive=true). Tout produit vendu uniquement en magasin physique a prix_drive_cents = NULL → valorisé à 0€. Résultat : le digest hebdo casse d'Otmane ('ton dépôt a cassé pour 412€, +2.1σ') sous-estime massivement la perte, parfois de 80%, car la viande fraîche au comptoir n'est souvent pas sur le Drive. FIX : COALESCE en cascade vers un prix de vente magasin réel : `coalesce(p.prix_drive_cents/100.0, p.prix_vente, 0)` (prix_vente numeric existe depuis 0001). Idéalement ajouter une colonne prix_vente_magasin_ttc dédiée et l'utiliser en priorité. Recalculer ensuite les MV. Sans ça, l'écart-sigma de détection d'anomalie (ML-7) est lui aussi faux.",
+        "effort_hours": 3,
+        "impact": "high",
+        "category": "business-logic",
+        "file_refs": [
+          "supabase/migrations/20260530000008_casse_baseline.sql",
+          "SCHEMA.md"
+        ]
+      },
+      {
+        "id": "ML-3",
+        "title": "Stock décrémenté en read-then-write non atomique + side-effects non bloquants → dérive garantie",
+        "rationale": "ROBUSTESSE. createSortie (lib/db/index.ts L501-519) fait un SELECT quantite puis UPDATE quantite = max(0, q - input) : deux sorties simultanées sur le même produit/dépôt lisent la même valeur et la dernière écrase la première (lost update). Le commentaire l'admet ('RPC would be safer'). createTransfert (L603-619) va plus loin : les adjustStock source/destination sont dans un try/catch explicitement NON BLOQUANT — si l'ajustement plante, le transfert est enregistré mais le stock n'a pas bougé → incohérence permanente. finalize/route.ts (L135-158) a le même pattern read-then-write à la réception. Il n'existe AUCUN ledger stock_movements : impossible de reconstruire le stock ou d'auditer. FIX (1 semaine) : créer une RPC SQL `adjust_stock(produit_id, depot_id, delta)` atomique (`update ... set quantite = quantite + delta returning`, ou insert ledger + trigger) qui empêche le négatif au niveau base, et une table stock_movements (type, produit, dépôt, delta, source_id, employe, ts) alimentée par sortie/transfert/réception/vente. Le stock_par_depot devient une projection. C'est le socle de confiance de toute l'app.",
+        "effort_hours": 12,
+        "impact": "mythos",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/db/index.ts",
+          "apps/stock/app/api/bdl/finalize/route.ts"
+        ]
+      },
+      {
+        "id": "ML-4",
+        "title": "Lots jamais consommés : pas de FIFO → DLC affichée fausse + traçabilité vente incomplète",
+        "rationale": "TRAÇABILITÉ + JUSTESSE. produits_lots.quantite_recue (migration 0030) est figé à la réception et n'est JAMAIS décrémenté : aucune vente, sortie ou transfert ne touche le lot. Conséquences : (a) la valeur de remise DLC du cockpit/alertes-dlc multiplie remise × quantite_recue × 8 (snapshot route L337) en supposant que TOUT le lot est encore en rayon, ce qui surévalue le manque à gagner ; (b) la chaîne lot → vente → QR est cassée : le QR public /lot/:id prouve l'origine mais on ne peut pas dire QUELLE vente a consommé QUEL lot ; (c) pas de FIFO : rien ne garantit qu'on vend le plus vieux lot d'abord, donc la DLC qu'un client scanne peut ne pas correspondre au lot réellement en main. FIX : ajouter produits_lots.quantite_restante (init = quantite_recue), et au moment d'une sortie/vente d'un produit qui a des lots actifs, décrémenter le lot le plus proche de la DLC (FIFO/FEFO). Lier sorties_stock.lot_id et commandes_drive_lignes.lot_id. Marquer le lot 'épuisé' quand restante <= 0 pour le sortir des alertes DLC. C'est ce qui rend le moat halal réellement inviolable.",
+        "effort_hours": 10,
+        "impact": "mythos",
+        "category": "business-logic",
+        "file_refs": [
+          "supabase/migrations/20260530000000_lots_traceability.sql",
+          "apps/stock/app/api/cockpit/snapshot/route.ts",
+          "apps/stock/lib/db/index.ts"
+        ]
+      },
+      {
+        "id": "ML-5",
+        "title": "Bloquer la génération de PO sur certificat halal expiré + l'afficher en rouge sur le QR public",
+        "rationale": "TRAÇABILITÉ — maillon manquant confirmé. produits_lots.certifier_valid_until existe et est chargé sur la page publique LotPublic.tsx (L49) MAIS n'est jamais comparé à today : un lot dont le certif AVS a expiré s'affiche comme parfaitement valide au client qui scanne. Côté PO, po/auto-generate (L110-132) vérifie bien certif_expire_le du FOURNISSEUR via certifAlerte, mais pas du LOT. Aucun garde-fou n'empêche de réceptionner ou vendre un lot dont le certificat de la BÊTE est périmé. FIX : (1) sur LotPublic, calculer `expired = certifier_valid_until < today` et afficher un bandeau rouge 'Certificat à revérifier' + griser le badge halal (honnêteté = confiance) ; (2) à la réception scan-carton, si le lot scanné a un certif expiré, répondre kind:'warn' + push admin ; (3) exclure du calcul de PARSE 'halal vérifié' tout lot expiré. Petit effort, impact réputationnel énorme sur le seul vrai moat de l'app.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/drive/src/pages/LotPublic.tsx",
+          "apps/stock/app/api/bdl/scan-carton/route.ts",
+          "apps/stock/app/api/po/auto-generate/route.ts"
+        ]
+      },
+      {
+        "id": "ML-6",
+        "title": "Réassort PROACTIF depuis le forecast (lead time inclus) au lieu de réactif à stock ≤ 0",
+        "rationale": "AUTOMATISATION. po/auto-generate (L57-66) ne déclenche un PO QUE quand stock_par_depot.quantite <= 0 — c'est-à-dire APRÈS la rupture, et avec une quantité fixe arbitraire DEFAULT_REASSORT_QTY=12 (commentaire 'T+10 honnête'). Or l'app a déjà un moteur de forecast (stockout_forecast avec tier blocker/crit/warn et days_cover) ET un lead_time_jours par fournisseur. Le réassort devrait se brancher sur le forecast : commander quand days_cover < lead_time + marge de sécurité (sinon on rompt pendant le délai de livraison), et calculer la quantité = vélocité_adj × (lead_time + couverture cible) − stock, arrondie au conditionnement. FIX : remplacer le filtre `quantite <= 0` par une jointure sur stockout_forecast where tier in ('blocker','crit') OR days_cover < lead_time*1.5, et dimensionner qty sur velocity_adj. Bonus : pendant Ramadan/Aïd (phase hijri ≠ normal), gonfler la couverture cible. C'est LE gain de temps quotidien qui impressionne Otmane.",
+        "effort_hours": 8,
+        "impact": "mythos",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/app/api/po/auto-generate/route.ts",
+          "apps/stock/lib/forecast/recompute.ts"
+        ]
+      },
+      {
+        "id": "ML-7",
+        "title": "Détection d'anomalie de casse (pic > 2σ) poussée en temps réel + dépôt réel par caisse",
+        "rationale": "AUTOMATISATION + JUSTESSE. La baseline 28j (mu/sigma/p95 par produit×dépôt) et l'écart-sigma existent déjà (v_casse_digest_semaine.ecart_sigma) mais ne servent QUE le digest hebdo du lundi. Un pic de casse anormal le mardi n'est détecté que 6 jours plus tard. FIX : à chaque createSortie de type casse_*, comparer la casse cumulée du jour pour ce produit×dépôt à mu + 2σ de la baseline 28j ; si dépassement, push iPhone Otmane immédiat ('Pic casse viande fraîche : 47€ aujourd'hui vs 18€ habituel, +2.4σ'). Le code de push admin existe déjà (pushAdminsServer dans scan-carton). Sous-jacent à corriger : recompute.ts (L9-12) attribue 100% des ventes au dépôt Particulier faute de depot_id dans ventes_cashmag_import → la baseline casse par dépôt est exacte (sorties_stock A un depot_id) mais le forecast vélocité par dépôt est faux. Brancher un mapping caisse→dépôt même minimal (table 1 ligne) fiabilise les deux.",
+        "effort_hours": 6,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/lib/db/index.ts",
+          "apps/stock/lib/forecast/recompute.ts",
+          "supabase/migrations/20260530000008_casse_baseline.sql"
+        ]
+      },
+      {
+        "id": "ML-8",
+        "title": "Daily-Z : timezone +02:00 codée en dur (casse en hiver/DST) + idempotence CashMag fragile",
+        "rationale": "JUSTESSE confirmée. (a) computeDailyZ (cashbox/daily-z.ts L65-66) construit les bornes du jour avec `${dateIso}T00:00:00+02:00` et `+02:00` en dur : en heure d'hiver (UTC+1) ces bornes sont décalées d'1h → des commandes passées entre 23h et minuit sont attribuées au mauvais jour fiscal. yesterdayIsoParis/todayIsoParis (L238-253) ont aussi un bug subtil : `new Date(now.toLocaleString('en-US',{timeZone:'Europe/Paris'}))` re-parse une string locale comme si elle était dans la TZ du serveur → drift selon l'host. FIX : utiliser un offset Paris calculé dynamiquement (ou Intl avec formatToParts comme dans lib/forecast/hijri.ts qui le fait bien). (b) import-cashmag (route L42-45) déduplique sur `numero_ticket,code_barre,designation,quantite` : deux lignes légitimes identiques sur le même ticket (ex client achète 2× le même article scanné en 2 passages distincts du même montant) sont écrasées en une seule → CA sous-compté. Ajouter un numéro de ligne ou un hash de ligne brute (raw_line) à la clé de conflit.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/cashbox/daily-z.ts",
+          "apps/stock/app/api/cashbox/import-cashmag/route.ts"
+        ]
+      },
+      {
+        "id": "ML-9",
+        "title": "TVA Drive : taux figé par catégorie produit, jamais par mode de consommation (traiteur sur place vs emporté)",
+        "rationale": "JUSTESSE fiscale. tvaRateForCategory (cashbox/tva.ts) mappe Traiteur→10% et Boissons→10% en dur. Or pour un magasin/traiteur halal le taux dépend du mode de consommation, pas que de la catégorie : un plat traiteur VENDU À EMPORTER non immédiatement consommable est à 5.5%, sur place / à consommer immédiatement à 10%. De même les boissons : eau/lait/jus en bouteille fermée à emporter = 5.5%, boisson à consommer sur place = 10%, sodas = parfois 5.5% selon conditionnement. Le Drive étant 100% emporté/retrait, beaucoup de ces lignes devraient être à 5.5%, pas 10% → la TVA collectée est surévaluée et le HT sous-évalué dans daily-Z et le rapport mensuel. FIX : pour le canal Drive (retrait), forcer 5.5% sur l'alimentaire emporté et ne réserver 10% qu'aux lignes explicitement 'consommation sur place'. Documenter le choix avec l'expert-comptable (livrable à enjeu — cadrer avant). Faible effort code, fort enjeu de conformité.",
+        "effort_hours": 3,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/cashbox/tva.ts",
+          "apps/stock/lib/cashbox/daily-z.ts",
+          "apps/stock/lib/cashbox/monthly-report.ts"
+        ]
+      },
+      {
+        "id": "ML-10",
+        "title": "Écart de réception : push uniquement sur surplus, jamais sur manquant — et réception > commande non plafonnée",
+        "rationale": "ROBUSTESSE + JUSTESSE. scan-carton (route L237-239) ne déclenche le push admin que si `ratio > 2% ET surplusLine` (surplus positif). Un MANQUANT important (carton non livré, ratio -30%) ne pousse RIEN au scan — il n'est vu qu'à la finalize, et seulement si l'écart valeur global dépasse 2%. Otmane devrait être alerté immédiatement d'un sous-livré tout autant que d'un sur-livré (c'est même plus grave commercialement). De plus rien ne PLAFONNE quantite_recue : on peut scanner 50 cartons sur une ligne attendue à 10 sans aucune limite ni confirmation, et finalize incrémentera le stock de tout (L143-158) — une erreur de scan répété gonfle le stock silencieusement. FIX : (1) pousser aussi sur écart négatif > seuil au scan ; (2) au-delà de ~150% de l'attendu, exiger une confirmation explicite (kind:'warn' bloquant) avant d'incrémenter ; (3) à finalize, journaliser l'écart par ligne dans stock_movements (cf ML-3) pour audit comptable.",
+        "effort_hours": 5,
+        "impact": "high",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/app/api/bdl/scan-carton/route.ts",
+          "apps/stock/app/api/bdl/finalize/route.ts"
+        ]
+      },
+      {
+        "id": "ML-11",
+        "title": "Étiquettes : ni prix, ni DLC, ni remise — l'étiquette générée n'est pas exploitable en rayon",
+        "rationale": "PDF/ÉTIQUETTES — manque fonctionnel. buildLabelsPdf (lib/labels/generate-pdf.ts) imprime UNIQUEMENT nom + marque + code-barres EAN-13. Une étiquette de rayon halal a besoin du PRIX (TTC, et prix au kg pour le frais), idéalement la DLC du lot, et — décisif pour l'anti-gaspi — le PRIX REMISÉ quand le lot est en démarque DLC (prix barré + nouveau prix + bandeau '-50% DLC courte'). Aujourd'hui le staff doit étiqueter le prix à la main par-dessus, et la démarque DLC calculée par le moteur n'arrive jamais physiquement sur le produit → le client ne voit pas la remise → l'anti-gaspi ne se concrétise pas en caisse. FIX : ajouter au LabelInput prix_ttc, prix_kg optionnel, dlc optionnel, remise_pct optionnel ; rendre un layout 'étiquette démarque' distinct (prix barré + prix soldé + raison). Brancher le bouton 'Imprimer étiquette démarque' depuis /v2/admin/alertes-dlc pour que la suggestion du moteur devienne une étiquette en 1 clic. C'est le chaînon qui transforme le calcul DLC en chiffre d'affaires sauvé.",
+        "effort_hours": 6,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/labels/generate-pdf.ts",
+          "apps/stock/app/v2/etiquettes",
+          "apps/stock/app/v2/admin/alertes-dlc/page.tsx"
+        ]
+      },
+      {
+        "id": "ML-12",
+        "title": "Forecast : retirer la vélocité pseudo-aléatoire de démo et fiabiliser days_cover (lead time + sécurité)",
+        "rationale": "JUSTESSE. recompute.ts (L120-130, L281-298) génère une vélocité pseudo-aléatoire stable (pseudoVelocity) quand ventes_cashmag_import est vide, 'à retirer une fois import-cashmag rempli'. En prod réelle ce fallback produit des tiers (blocker/crit) FANTÔMES sur des produits qui ne se vendent pas, polluant à la fois les alertes ET le réassort auto (ML-6). days_cover = stock / velocity_adj (L312) ne compare PAS au lead time du fournisseur : un produit avec 4 jours de couverture est 'warn' (ok-ish) alors que si son fournisseur met 5 jours à livrer, il sera EN RUPTURE avant l'arrivée — le seuil blocker à 1.5j est universel et ignore le délai d'appro. FIX : (1) gate useDemoFallback sur un flag d'environnement DEMO_MODE, off en prod ; (2) intégrer lead_time_jours dans tierFromCover (blocker si days_cover < lead_time, crit si < lead_time*1.5) pour que l'alerte tombe AVANT la rupture, pas pendant. Aligne le forecast avec la réalité d'appro et débloque un réassort proactif crédible.",
+        "effort_hours": 5,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/forecast/recompute.ts",
+          "apps/stock/lib/forecast/holt.ts"
+        ]
+      }
+    ]
+  },
+  {
+    "domain": "PDF / Étiquettes / Print — documents niveau pro, brand, conformes",
+    "current_assessment": "Le socle PDF est SÉRIEUX mais inégal et techniquement fragile sur les bases.\n\nPOINTS FORTS réels :\n- bon-reception-pdf-v2 (apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts) est le meilleur doc : bandeau \"ÉCART VALORISÉ\" coloré (ambre >2%), température chaîne du froid, QR lots traçabilité en annexe, double signature réceptionneur+comptable, fallback QR propre. C'est déjà presque MYTHOS.\n- po/send (route.ts) : header sapin + liseré or #C9A227, bloc certif halal snapshot, email HTML brand soigné (gradient sapin, CTA pill, Plus Jakarta Sans). Bon niveau.\n- Pagination gérée (addPage à y>250/265/270), colonnes right-aligned calées sur pageW-margin, splitTextToSize, écarts colorés.\n\nFAILLES TECHNIQUES CRITIQUES (toutes les routes) :\n1. ZÉRO police embarquée. Tous les PDF utilisent helvetica/courier built-in jsPDF (encodage WinAnsi/StandardEncoding). Risque réel sur accents FR (é è à ç œ) et surtout le « € » qui n'est PAS dans le StandardEncoding de base — selon la version jsPDF, \"€\" peut sortir vide ou en \"?\". formatEurFr() injecte \"€\" partout (daily-z, monthly, po). C'est un bug d'apparence latent sur des docs envoyés au comptable et aux fournisseurs.\n2. AUCUN logo réel. Le \"logo\" est juste du texte \"SALAM MARKET\" en helvetica bold. Un PNG existe pourtant (apps/drive/public/brand/logo-horizontal-transparent.png) — jamais embarqué dans les PDF.\n3. Étiquette Brother (lib/labels/generate-pdf.ts) très pauvre : nom + marque + EAN-13, c'est tout. PAS de prix, PAS de DLC, PAS de logo halal, PAS de lot, PAS de QR. bwip-js scale:2 height:12 → densité ok mais barcode placé à 38mm de large sur 62mm, marges quiet-zone non garanties. document.createElement(\"canvas\") = client-only, OK mais pas de fallback robuste sur gros volume (100+ pages, chaque page recrée un canvas → lent et memory-heavy).\n\nINCOHÉRENCES BRAND inter-documents :\n- 3 headers différents : monthly/po = bande sapin pleine largeur ; bon-reception = texte noir 2 colonnes sans bande ; daily-z = centré monospace. Aucune charte unifiée.\n- daily-z en Courier (effet ticket) mais c'est un doc transmis au comptable → amateur.\n- Footers tous différents, mentions légales minimales (SIRET + adresse, mais PAS de TVA intracom, PAS de RCS, PAS de capital, PAS d'APE).\n\nCONFORMITÉ :\n- Daily-Z et monthly s'auto-déclarent honnêtement \"non fiscal au sens NF525\" (correct, Drive = 100% Stripe online, hors champ caisse). OK juridiquement.\n- AUCUNE vraie facture B2B Pro n'existe (grep facture → seulement bons de réception). Pour les clients Pro c'est un trou : pas de doc avec n° séquentiel, TVA intracom, mentions légales art. L441-9.\n\nDOCUMENTS MANQUANTS : certificat de traçabilité halal imprimable (LE moat, données déjà en base : abattoir/pays/date_abattage/certificateur/AVS/DLC), facture B2B Pro, bon de transfert inter-dépôt PDF, inventaire PDF signable, étiquette gondole/rayon prix+QR, fiche produit.",
+    "vision": "Salam Market doit imprimer des documents qui ressemblent à ceux d'une PME alimentaire structurée, pas d'un MVP. Un design system PDF unique (un seul module brand : logo PNG embarqué, bande sapin #0E3B2E + liseré or #C9A227, police Plus Jakarta Sans embarquée pour des accents et « € » impeccables, footer légal complet K&A FOOD) que TOUS les générateurs consomment — header, footer, palette, helpers €/date partagés. Au-dessus de ce socle, deux documents deviennent des armes commerciales : (1) le CERTIFICAT DE TRAÇABILITÉ HALAL imprimable A4, brandé, avec QR public, sceau AVS, chaîne abattoir→fournisseur→DLC — un document que ni Intermarché ni les épiceries de quartier ne savent produire, à afficher en rayon et à donner aux clients Pro (restaurants, traiteurs) ; (2) l'ÉTIQUETTE GONDOLE prix+QR qui transforme chaque rayon en preuve de transparence scannable. L'étiquette produit Brother devient une vraie étiquette de gondole : prix TTC géant, prix au kilo, DLC, picto halal, lot, mini-QR. Tout doit être robuste à 200 étiquettes, à un barcode qui échoue, à un accent, sans jamais casser le PDF.",
+    "recommendations": [
+      {
+        "id": "PDF-01",
+        "title": "Module brand PDF unifié : police Plus Jakarta Sans embarquée + logo PNG + helpers € sûrs",
+        "rationale": "Racine de tout. Créer apps/stock/lib/pdf/brand.ts exporté par TOUS les générateurs. Embarquer Plus Jakarta Sans via doc.addFileToVFS()+doc.addFont() (base64 du .ttf, comme jsPDF custom fonts) en Regular + Bold → accents FR (é è à ç œ ï) ET « € » rendus correctement quel que soit le client/version. AUJOURD'HUI tout est en helvetica/courier StandardEncoding où le « € » n'est pas garanti — formatEurFr() injecte « € » dans daily-z, monthly, po/send : bug latent sur docs comptable/fournisseur. Embarquer le vrai logo : apps/drive/public/brand/logo-horizontal-transparent.png (le copier dans apps/stock/public/brand/, le charger en base64, doc.addImage en haut de bande sapin à la place du texte 'SALAM MARKET'). Exposer helpers partagés : drawHeader(doc,{title,numero,date}), drawFooter(doc) avec mentions légales COMPLÈTES (K&A FOOD SAS · SIRET 802 773 812 · RCS Toulouse · TVA intracom FR + clé · APE/NAF · 8 av. Larrieu-Thibaud 31100 Toulouse), eur(n), dateFr(iso), palette {sapin:[14,59,46], or:[201,162,39], orText:[139,111,14], cream:[250,247,238]}. Tous les fichiers route dupliquent aujourd'hui fmtDateFr/eur/line/header → factoriser. C'est ~3h qui débloquent et fiabilisent les 6 autres docs.",
+        "effort_hours": 4,
+        "impact": "mythos",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/app/api/cashbox/monthly-report-pdf/route.ts",
+          "apps/stock/app/api/cashbox/daily-z-pdf/route.ts",
+          "apps/stock/app/api/cashbox/bon-reception-pdf/route.ts",
+          "apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts",
+          "apps/stock/app/api/po/send/route.ts",
+          "apps/stock/lib/cashbox/tva.ts",
+          "apps/drive/public/brand/logo-horizontal-transparent.png"
+        ]
+      },
+      {
+        "id": "PDF-02",
+        "title": "CERTIFICAT DE TRAÇABILITÉ HALAL imprimable A4 (le moat) — nouvelle route /api/lots/[id]/certificat-pdf",
+        "rationale": "LA feature signature. Toutes les données existent déjà en base et sont lues par apps/stock/app/v2/lots/[id]/page.tsx : abattoir_nom, abattoir_pays, date_abattage, certifier_name, certifier_valid_until (AVS), supplier_lot, dlc, ddm, fournisseurs.nom+siret, produits.nom+marque. Aujourd'hui il n'y a QU'UN bouton Printer écran + la page publique QR — AUCUN PDF. Créer un A4 brandé : bande sapin + logo + titre 'CERTIFICAT DE TRAÇABILITÉ HALAL', grand QR public (generateLotQrUrl → /lot/:id) en haut à droite, timeline verticale Abattoir (nom+pays+date_abattage) → Certificateur AVS (n° + validité, badge or si valide) → Fournisseur (nom+SIRET) → Réception → DLC/DDM, sceau circulaire or 'HALAL CERTIFIÉ' (réutiliser le motif de apps/drive/src/components/HalalSeal.tsx), mention 'Document généré le X, vérifiable en scannant le QR'. Imprimable et affichable en rayon boucherie, donné aux clients Pro (restaurants/traiteurs qui DOIVENT prouver l'origine halal à leur propre clientèle). Aucun concurrent local ne sait produire ça. Lien depuis lots/[id] (le Printer existant) + bouton sur la fiche produit Drive Pro.",
+        "effort_hours": 6,
+        "impact": "mythos",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/app/v2/lots/[id]/page.tsx",
+          "apps/stock/lib/qr-lot.ts",
+          "apps/drive/src/components/HalalSeal.tsx",
+          "apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts"
+        ]
+      },
+      {
+        "id": "PDF-03",
+        "title": "Étiquette GONDOLE/RAYON prix+QR (nouveau format) + refonte étiquette Brother produit",
+        "rationale": "lib/labels/generate-pdf.ts ne produit aujourd'hui que nom+marque+EAN-13 — pauvre pour du rayon. Deux livrables : (A) ÉTIQUETTE GONDOLE (format ~100×70mm ou A6, posée sur réglette) : prix TTC GÉANT (police 28-36pt), prix au kilo/litre en sous-titre (obligation Code conso art. R412-1 pour préemballés), nom produit, picto halal + lot, mini-QR vers /lot/:id pour la transparence scannable client. Transforme chaque rayon en preuve. (B) Refonte étiquette Brother 62×29mm produit : ajouter prix TTC à droite (gras), DLC si DLC courte, petit picto halal, lot en micro-texte sous le barcode. Garder EAN-13 mais réduire à bcW=34 pour garantir la quiet-zone (zone silencieuse 2.97mm mini de chaque côté, aujourd'hui 38mm sur 62 = marges trop justes → risque de non-scan sur douchette stricte). Ajouter un sélecteur de format dans apps/stock/app/v2/etiquettes/page.tsx (produit / gondole).",
+        "effort_hours": 7,
+        "impact": "mythos",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/labels/generate-pdf.ts",
+          "apps/stock/app/v2/etiquettes/page.tsx",
+          "apps/stock/lib/qr-lot.ts"
+        ]
+      },
+      {
+        "id": "PDF-04",
+        "title": "Robustesse étiquettes : barcode pré-rendu batch + fallback + quiet-zone + 200 copies sans freeze",
+        "rationale": "lib/labels/generate-pdf.ts crée un nouveau canvas par étiquette dans la double boucle (items × copies). Pour 200 étiquettes = 200 appels bwip-js + 200 toDataURL → lent et lourd en mémoire sur iPad/Brother. Fix : déduper — encoder chaque EAN UNE fois (Map<ean, dataUrl>) puis réutiliser l'image pour toutes les copies. Le fallback actuel (catch → texte 'EAN: x') est bien mais l'erreur n'est pas remontée à l'UI : si un EAN est invalide (ex: 290xxxx non-13-chiffres, checksum faux), l'étiquette sort sans code et l'utilisateur ne le sait pas. Ajouter : validation EAN-13 (longueur + check-digit) AVANT génération, toast listant les produits sans code valide, et un mode 'EAN manquant → générer un Code128 du SKU interne' plutôt que rien. Garantir quiet-zone (cf PDF-03). Ajouter compteur de progression au-delà de 50 étiquettes.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/labels/generate-pdf.ts",
+          "apps/stock/app/v2/etiquettes/page.tsx"
+        ]
+      },
+      {
+        "id": "PDF-05",
+        "title": "FACTURE B2B Pro conforme (mentions obligatoires FR) — document manquant pour le canal Pro",
+        "rationale": "Aucune facture n'existe (grep facture → seulement bons de réception). Le canal B2B Pro (restaurants/traiteurs via Drive Pro) a besoin d'une vraie facture légale, sinon le client Pro ne peut pas comptabiliser ses achats. Créer /api/facture/[commande_id]/pdf avec TOUTES les mentions obligatoires (art. 242 nonies A CGI / L441-9 C.com) : n° de facture séquentiel et continu (créer une séquence Supabase facture_seq, jamais de trou), date d'émission + date de vente, identité vendeur K&A FOOD complète (SIRET, TVA intracom, RCS, capital), identité + SIRET acheteur, désignation/qté/PU HT par ligne, TVA ventilée par taux (5,5 / 10 / 20 — la lib lib/cashbox/tva.ts a déjà tvaRateForCategory + decomposeTTC), total HT/TVA/TTC, conditions et date de règlement, taux pénalités de retard + indemnité forfaitaire 40 € recouvrement (mention obligatoire B2B), escompte. Réutiliser le module brand PDF-01. C'est le doc qui rend le canal Pro vendable.",
+        "effort_hours": 7,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/cashbox/tva.ts",
+          "apps/stock/app/api/po/send/route.ts"
+        ]
+      },
+      {
+        "id": "PDF-06",
+        "title": "Unifier la charte des 3 PDF existants + daily-z hors monospace",
+        "rationale": "Incohérence brand visible : monthly + po/send ont la belle bande sapin pleine largeur ; bon-reception (v1+v2) ont un header texte noir 2 colonnes sans bande ; daily-z est centré en Courier 'effet ticket'. Une fois PDF-01 livré, refondre les 5 routes pour appeler drawHeader/drawFooter communs. Spécifiquement : sortir daily-z-pdf du Courier monospace (c'est un doc transmis au comptable, pas un ticket client → le monospace fait amateur) et lui donner le même header sapin + tableau propre que monthly. Harmoniser les footers (tous portent aujourd'hui des mentions différentes et incomplètes). Aligner tous les rouges/ambres/verts sur les tokens canoniques de globals.css (danger #E5483D, warning #D97706, success #2D7A4F) qui sont déjà utilisés mais en RGB en dur répétés partout.",
+        "effort_hours": 4,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/app/api/cashbox/daily-z-pdf/route.ts",
+          "apps/stock/app/api/cashbox/monthly-report-pdf/route.ts",
+          "apps/stock/app/api/cashbox/bon-reception-pdf/route.ts",
+          "apps/stock/app/globals.css"
+        ]
+      },
+      {
+        "id": "PDF-07",
+        "title": "BON DE TRANSFERT inter-dépôt PDF + INVENTAIRE PDF signable",
+        "rationale": "Deux documents métier manquants pour clore la boucle stock. (A) Bon de transfert Particulier↔Professionnel : la route /v2/transfert existe mais aucun PDF — créer /api/transfert/[id]/pdf (dépôt source, dépôt destination, lignes produit+qté+lot, double signature expéditeur/réceptionneur, horodatage) pour que chaque mouvement inter-dépôt laisse une trace papier archivable. (B) Inventaire PDF signable depuis /v2/inventaire : feuille de comptage (produit, stock théorique, stock compté, écart coloré, valorisation €) + ligne de signature, à conserver pour l'expert-comptable comme justificatif de l'inventaire annuel obligatoire. Les deux réutilisent le module brand PDF-01 et le pattern tableau de bon-reception-pdf-v2.",
+        "effort_hours": 6,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts",
+          "apps/stock/app/v2/inventaire/page.tsx",
+          "apps/stock/app/v2/transfert/page.tsx"
+        ]
+      },
+      {
+        "id": "PDF-08",
+        "title": "QR lots : passer eclevel M → Q et corriger l'EAN factice du bon-reception v1",
+        "rationale": "Deux durcissements ciblés. (A) Les QR de traçabilité (qr-lot.ts toSVG et bon-reception-pdf-v2 qrPngDataUrl) sont en eclevel:'M' (15% correction d'erreur). Sur étiquette imprimée/plastifiée/manipulée en rayon humide (boucherie), passer en eclevel:'Q' (25%) pour rester scannable même sali/froissé — coût quasi nul, fiabilité ++. (B) bon-reception-pdf v1 (route.ts ensureEanFormat) FABRIQUE un faux EAN-13 préfixe '3' par hash quand le vrai code manque, et l'affiche comme s'il était réel dans la colonne EAN du document comptable. C'est trompeur sur un doc archivé avec la facture fournisseur. Le remplacer par '—' explicite ou par le SKU interne préfixé '[interne]', jamais un pseudo-EAN crédible. La v2 fait déjà mieux (slice 13 du vrai code, '—' sinon) — aligner v1 sur v2 ou déprécier v1.",
+        "effort_hours": 2,
+        "impact": "medium",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/qr-lot.ts",
+          "apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts",
+          "apps/stock/app/api/cashbox/bon-reception-pdf/route.ts"
+        ]
+      },
+      {
+        "id": "PDF-09",
+        "title": "FICHE PRODUIT A4 (one-pager) pour le canal Pro et le référencement",
+        "rationale": "Document léger à fort effet commercial : une fiche A4 par produit (photo, nom+marque, EAN, catégorie, prix HT/TTC Pro, conditionnement/colisage, origine, picto halal + lien certif lot via QR, allergènes si saisis). Sert au commercial Pro qui démarche restaurants/traiteurs, et de fiche de référencement pour une centrale. Réutilise ProductThumbnail/données produit déjà en base et le module brand PDF-01. Faible coût, haute valeur perçue côté B2B.",
+        "effort_hours": 4,
+        "impact": "medium",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/components/v2/ProductThumbnail.tsx",
+          "apps/stock/app/v2/stock/page.tsx"
+        ]
+      },
+      {
+        "id": "PDF-10",
+        "title": "Mention NF525 et n° de séquence sur les Z + numérotation continue anti-trou",
+        "rationale": "daily-z et monthly se déclarent honnêtement 'non fiscal NF525' (correct : Drive 100% Stripe). Mais pour solidifier le dossier comptable : ajouter aux Z journaliers un numéro de séquence continu (Z n°YYYY-NNNN) et un cumul perpétuel du CA (Grand Total) — c'est ce qu'un comptable attend d'un journal de caisse, même non certifié, et ça prépare un éventuel passage NF525 si un point de vente physique encaisse un jour du cash. Stocker la séquence en base (jamais de trou, jamais de réémission silencieuse avec un nouveau numéro). Idem facture (PDF-05). Petit effort, gros gain de crédibilité auprès de l'expert-comptable et en cas de contrôle.",
+        "effort_hours": 3,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/cashbox/daily-z.ts",
+          "apps/stock/app/api/cashbox/daily-z-pdf/route.ts",
+          "apps/stock/lib/cashbox/monthly-report.ts"
+        ]
+      }
+    ]
+  },
+  {
+    "domain": "Stock app — nouvelles features MYTHOS + vision dark premium + roadmap livraison 1 semaine",
+    "current_assessment": "L'app Stock est déjà très aboutie : 32 routes v2, cockpit matin temps réel (snapshot 6 zones + realtime Supabase sur sorties/competitor), forecast Holt + courbe hijri (lib/hijri.ts couvre 2026-2030 avec deltas J-X), moteur DLC à paliers (lib/dlc.ts -20/-40/-50%), traçabilité halal lots→QR public Drive /lot/:id, vision Claude (cohérence sortie + reconnaissance produit), assistant IA agentic à 6 tools Supabase (app/api/assistant/route.ts), PO auto-generate, cashbox (CashMag, daily-Z, rapport mensuel, P&L PDF), préparation drive→counter, push web (lib/actions/push-send.ts), pointage staff + score IA employé. Les tokens design (globals.css 807 lignes) sont premium en LIGHT. POINTS FAIBLES vs mission MYTHOS : (1) le mode sombre existant body.theme-nuit est un opt-in fragile — il remappe .bg-white au !important (hack fragile), inverse l'or en primary (perd l'identité sapin), fond #0A1F18 abyssal qui lit boueux ; le user l'a jugé merdique → à refaire en dark-FIRST premium, pas un toggle. (2) L'assistant IA est REACTIF (attend les questions) — aucun copilote proactif qui ALERTE. (3) Aucune intelligence transversale agrégée qui dit quoi faire maintenant. (4) Les étiquettes PDF (lib/labels/generate-pdf.ts) sont minimalistes : helvetica, pas de prix/promo/DLC/logo, pas de format rayon. (5) Pas de mode présentation/démo, pas de scan-to-action global. (6) Pas de classement préparateurs visible, gamification staff sous-exploitée. (7) Le hijri est affiché mais pas transformé en plan d'action (checklist Ramadan/Aïd).",
+    "vision": "Salam Stock devient le premier ERP halal copilote : une app sombre, dense et calme — sapin abyssal + or chaud — qui ne se contente pas d'afficher des données, elle DIT à Otmane quoi faire, dans l'ordre, avant qu'il ne demande. Le cockpit matin devient un fil d'actions priorisées (3 choses avant 10h), l'assistant IA devient proactif (il pousse des alertes au lieu d'attendre), et la traçabilité halal devient un argument commercial scannable (certificat AVS public, niveau de confiance client). Pour le SaaS multi-magasins, le moat est triple : copilote proactif + traçabilité halal vérifiable + intelligence saisonnière hijri (aucun concurrent généraliste ne sait que Ramadan double les ventes de dattes 28 jours à l'avance). Niveau MYTHOS = quand Otmane ouvre l'app à 8h05 et qu'elle a déjà tout préparé : les PO à valider, les démarques à appliquer, les ruptures Aïd à anticiper. L'app travaille pour lui pendant qu'il dort.",
+    "dark_palette": {
+      "--bg-base": "#0B1F18",
+      "--bg-elevated": "#102A21",
+      "--bg-card-solid": "#143329",
+      "--bg-card-hover": "#18402F",
+      "--surface-sunken": "#081A14",
+      "--primary-green": "#1E5A45",
+      "--primary-green-hover": "#236B52",
+      "--accent-gold": "#E0B83A",
+      "--accent-gold-bright": "#F0CB55",
+      "--accent-gold-soft": "#2A2310",
+      "--text-primary": "#F2EEDF",
+      "--text-secondary": "#B9C2B6",
+      "--text-tertiary": "#7E8C82",
+      "--text-on-gold": "#0B1F18",
+      "--border-hairline": "#1E3A2E",
+      "--border-medium": "#2A4F3E",
+      "--border-glow-gold": "rgba(224,184,58,0.22)",
+      "--danger": "#FF6B5E",
+      "--danger-soft": "#2A1310",
+      "--danger-text": "#FFB4AC",
+      "--success": "#4FCB8A",
+      "--success-soft": "#0F2A1C",
+      "--success-text": "#9AE3BE",
+      "--warning": "#F3A93C",
+      "--warning-soft": "#2A1F0E",
+      "--warning-text": "#F8CE8C",
+      "--shadow-card": "0 1px 2px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.32)",
+      "--shadow-card-lg": "0 16px 48px rgba(0,0,0,0.5)",
+      "--glow-gold": "0 0 0 1px rgba(224,184,58,0.18), 0 4px 24px rgba(224,184,58,0.10)",
+      "--hero-gradient": "radial-gradient(120% 120% at 0% 0%, #16382B 0%, #0B1F18 55%)",
+      "--gold-gradient": "linear-gradient(135deg, #E0B83A 0%, #C9A227 100%)",
+      "notes": "Dark-FIRST premium. Le sapin RESTE la primary (pas l'inversion or-as-primary du mode nuit actuel qui tue l'identite). bg-base #0B1F18 (sapin profond, pas le #0A1F18 boueux). Or #E0B83A volontairement plus clair que le #C9A227 light pour passer AA sur dark (contraste 8.9:1 sur #0B1F18). Cards = surface elevee #143329 avec hairline #1E3A2E, JAMAIS bg-white remappe au !important. Texte cream #F2EEDF = 13.8:1 sur base. Glow or reserve aux CTA/hero pour l'effet bijou."
+    },
+    "recommendations": [
+      {
+        "id": "MYTH-01",
+        "title": "Dark-FIRST premium : refonte du mode sombre comme direction par defaut (pas un toggle)",
+        "rationale": "Le mode nuit actuel (body.theme-nuit, globals.css L618-719) est juge merdique car : (1) il remappe .bg-white {background-color:var(--bg-card)!important} hack fragile qui casse au moindre composant, (2) il inverse l'or en primary (--primary-green:#DDB31C) ce qui detruit l'identite sapin, (3) fond #0A1F18 boueux. SOLUTION MYTHOS : faire du DARK la direction par defaut de l'app staff (atelier/reserve = environnement sombre, ecrans la nuit). Garder le sapin comme primary, l'or comme accent bijou. Remplacer le bloc theme-nuit par un set de tokens dark propres (voir dark_palette) appliques sur :root, et migrer les composants qui hardcodent bg-white/text-[#0E3B2E] vers les tokens --bg-card-solid/--text-primary. Effet WOW immediat en demo : ouvrir l'app, fond sapin abyssal + cards qui flottent + or qui brille sur les CTA. C'est LA premiere impression du user.",
+        "effort_hours": 14,
+        "impact": "mythos",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/globals.css",
+          "apps/stock/components/v2/ThemeToggle.tsx",
+          "apps/stock/lib/hooks/useTheme.ts",
+          "apps/stock/app/v2/page.tsx",
+          "apps/stock/components/cockpit/hero-kpi.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-02",
+        "title": "Copilote proactif Otmane : le brief 3 choses avant 10h en tete de cockpit",
+        "rationale": "L'assistant IA actuel (app/api/assistant/route.ts) est 100% reactif : il attend une question. Le cockpit (app/v2/cockpit/page.tsx) affiche 6 cards de donnees brutes mais ne PRIORISE pas. MYTHOS = un bandeau hero qui agrege snapshot + forecast + DLC + hijri en une phrase d'action ordonnee : Otmane, ce matin : 1) valide le PO Bigard (rupture merguez J-2), 2) demarque 4 lots forces (47e a sauver), 3) commande +40% dattes (Ramadan J-28). Reutilise les donnees deja dans CockpitSnapshot, il suffit d'ajouter un scoreur de priorite (DLC force > rupture blocker > opportunite saisonniere) et un appel Claude court qui transforme le snapshot en 3 bullets actionnables avec deep-links. C'est le moment qui fait dire WOW : l'app a fait le travail de reflexion avant lui.",
+        "effort_hours": 10,
+        "impact": "mythos",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/app/v2/cockpit/page.tsx",
+          "apps/stock/app/api/cockpit/snapshot/route.ts",
+          "apps/stock/lib/actions/cockpit.ts",
+          "apps/stock/app/api/assistant/route.ts",
+          "apps/stock/components/cockpit/hero-kpi.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-03",
+        "title": "Etiquettes MYTHOS : etiquette rayon avec prix, promo DLC, origine halal et logo",
+        "rationale": "buildLabelsPdf (lib/labels/generate-pdf.ts) est minimaliste : helvetica bold + EAN, rien d'autre. Pour MYTHOS il faut 3 templates jsPDF distincts dans le meme generateur : (A) etiquette gondole 62x29mm = nom + marque + PRIX e/kg en gros (tabular) + EAN ; (B) etiquette PROMO DLC = bandeau rouge -40% + ancien prix barre + nouveau prix + date limite, declenchee depuis /v2/admin/alertes-dlc en un tap (la demarque devient imprimable) ; (C) etiquette tracabilite = nom + QR lot (deja via lib/qr-lot.ts) + Abattoir X / Certifie AVS + logo Salam. Ajouter le logo Salam (PNG dans /public) et une police premium (embed Plus Jakarta via jsPDF addFont, coherent avec la memoire user un seul typeface). Le PDF etiquette est un livrable physique vu par les CLIENTS, impact business direct.",
+        "effort_hours": 9,
+        "impact": "high",
+        "category": "pdf-labels",
+        "file_refs": [
+          "apps/stock/lib/labels/generate-pdf.ts",
+          "apps/stock/app/v2/etiquettes/page.tsx",
+          "apps/stock/app/v2/admin/alertes-dlc/page.tsx",
+          "apps/stock/lib/qr-lot.ts"
+        ]
+      },
+      {
+        "id": "MYTH-04",
+        "title": "Certificat halal scannable premium : page /lot/:id niveau passeport produit",
+        "rationale": "La tracabilite lot->QR existe (lib/qr-lot.ts pointe vers Drive /lot/:id, les champs abattoir/certifier_name/certifier_valid_until/date_abattage sont en base, vus dans app/v2/lots/[id]/page.tsx). Le MOAT SaaS = transformer cette page publique en passeport halal verifiable : timeline visuelle (abattage -> reception -> mise en rayon, avec dates), badge certif AVS avec date de validite (vert si valide / ambre si <30j), nom abattoir + pays + drapeau, photo du certificat, et un niveau de confiance calcule (certif valide + chaine complete = 100%). Aucun concurrent generaliste (Hiboutik, Tactill) n'a ca. C'est l'argument qui vend le SaaS a toute boucherie halal de France : scannez, prouvez a vos clients. Le QR est deja sur le ticket ET sur le PDF reception (bon-reception-pdf-v2).",
+        "effort_hours": 12,
+        "impact": "mythos",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/app/v2/lots/[id]/page.tsx",
+          "apps/stock/lib/qr-lot.ts",
+          "apps/stock/app/api/bdl/bon-reception-pdf-v2/route.ts",
+          "apps/drive/src/components/HalalSeal.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-05",
+        "title": "Mode Ramadan/Aid : checklist saisonniere + plan de reassort auto",
+        "rationale": "lib/hijri.ts calcule deja Ramadan dans 28j avec impact_ca par event, et le forecast applique une courbe hijri. Mais ca reste de l'AFFICHAGE. MYTHOS = transformer l'event en PLAN : a J-30 d'un event critique, le cockpit declenche un Mode Ramadan = (1) checklist saisonniere (dattes x3, semoule x2, viande x2.5, lait, briouates, multiplicateurs par categorie connus du metier halal), (2) generation d'un PO previsionnel special event pre-rempli (reutilise po/auto-generate avec les multiplicateurs hijri), (3) un compte a rebours hero anime. Le user a explicitement demande l'angle Ramadan/Aid MYTHOS. C'est la feature qui prouve que l'app COMPREND le metier halal, un POS generique ne sait pas que l'Aid al-Adha c'est le sacrifice du mouton. Tache #21 deja en pending dans le tracker.",
+        "effort_hours": 11,
+        "impact": "mythos",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/hijri.ts",
+          "apps/stock/lib/forecast/hijri.ts",
+          "apps/stock/app/v2/forecast/page.tsx",
+          "apps/stock/app/api/po/auto-generate/route.ts",
+          "apps/stock/components/cockpit/ramadan-card.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-06",
+        "title": "Scan-to-action universel + Command Palette : un seul scan, l'app devine l'intention",
+        "rationale": "Le scanner existe par flow (reception, etiquettes) et un CommandPalette.tsx est present mais sous-exploite. MYTHOS quick-win = un bouton scan flottant global qui, selon le code scanne, propose l'action contextuelle : EAN produit -> Voir stock / Declarer sortie / Imprimer etiquette ; QR lot -> fiche tracabilite ; QR retrait -> preparation. Couple a un Command Palette (CmdK / bouton) qui permet a Otmane de taper merguez et d'atteindre n'importe quel produit/action en 2 taps. Gain de temps quotidien enorme pour le staff (moins de navigation), effet pro en demo. Le composant CommandPalette.tsx est deja la a cabler.",
+        "effort_hours": 7,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/components/v2/CommandPalette.tsx",
+          "apps/stock/components/v2/AssistantFab.tsx",
+          "apps/stock/app/v2/reception/[id]/scan-first/page.tsx",
+          "apps/stock/app/v2/page.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-07",
+        "title": "Classement preparateurs + objectifs : gamification staff visible",
+        "rationale": "Le score IA employe existe (sorties_stock.ia_coherence_score, query_employes_perf dans l'assistant) et le pointage staff aussi (lib/staff/pointage-data.ts), mais il n'y a pas d'ecran d'engagement. MYTHOS = un mini-leaderboard preparateurs : commandes drive preparees aujourd'hui, temps moyen de prepa, taux d'ecart inventaire, score fiabilite. Objectif du jour (15 commandes avant 12h), badges (zero-ecart 7j, preparateur du mois). Affiche sur l'ecran counter (TV bornes retrait) ou un /v2/staff/classement. Motivation staff = moins de casse, prepa plus rapide -> ROI reel pour Otmane. Pour le SaaS c'est un argument RH. Donnees deja calculables depuis preparation + sorties_stock.",
+        "effort_hours": 8,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/lib/staff/pointage-data.ts",
+          "apps/stock/lib/staff/preparation-actions.ts",
+          "apps/stock/app/v2/counter/page.tsx",
+          "apps/stock/app/api/assistant/route.ts"
+        ]
+      },
+      {
+        "id": "MYTH-08",
+        "title": "Alertes push intelligentes : l'app pousse les vraies urgences, pas du bruit",
+        "rationale": "L'infra push existe (lib/actions/push-send.ts, /api/push/send) mais semble surtout testee manuellement (PushNotifCard dans admin). MYTHOS = un moteur de regles qui transforme les evenements metier en push cibles et utiles : Lot merguez FORCE - demarque -50% maintenant (au manager), Rupture imminente dattes - PO a valider (J-2), Casse +30% vs moyenne ce soir (alerte anomalie), Temperature palette hors seuil a la reception (qualite). Brancher ces declencheurs sur les crons existants (dlc-scan, forecast, refresh-cockpit) + les inserts realtime. Anti-bruit : dedup par tag, seuils, fenetre horaire (pas de push a 23h). C'est ce qui rend le copilote VIVANT entre deux ouvertures d'app.",
+        "effort_hours": 9,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/lib/actions/push-send.ts",
+          "apps/stock/app/api/push/send/route.ts",
+          "apps/stock/app/api/cron/dlc-scan/route.ts",
+          "apps/stock/app/api/cron/refresh-cockpit/route.ts",
+          "apps/stock/lib/notifications.ts"
+        ]
+      },
+      {
+        "id": "MYTH-09",
+        "title": "Roles fins + multi-magasins : la fondation SaaS (manager/owner/caissier/preparateur)",
+        "rationale": "Le store ne porte qu'un currentEmploye avec role manager/admin (lib/v2-store.ts, garde isManager sur la home). Pour vendre en SaaS multi-magasins il faut : (1) roles fins (owner voit P&L, manager voit ops, caissier voit sortie/reception, preparateur voit prepa seulement) avec masquage des routes sensibles ; (2) un selecteur de magasin (DepotSwitcher existe pour depots, a etendre en magasin) ; (3) un dashboard owner P&L consolide (cashbox a deja daily-Z/monthly/P&L PDF). C'est moins WOW demo mais c'est LE prerequis pour que l'app devienne un produit vendable et pas une instance unique. A cadrer en RBAC propre maintenant pour eviter une dette plus tard.",
+        "effort_hours": 12,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/v2-store.ts",
+          "apps/stock/components/v2/DepotSwitcher.tsx",
+          "apps/stock/middleware.ts",
+          "apps/stock/app/v2/admin/page.tsx",
+          "apps/stock/app/v2/page.tsx"
+        ]
+      },
+      {
+        "id": "MYTH-10",
+        "title": "Exports comptables programmes + integration compta (FEC/Sage/EBP)",
+        "rationale": "Cashbox genere deja daily-Z, rapport mensuel, recap fiscal, P&L en PDF/CSV (lib/cashbox/*, api/cashbox/*) et des crons existent (cron/monthly-report, cron/daily-z). MYTHOS pour un POS complet = (1) export FEC (Fichier des Ecritures Comptables, format legal francais obligatoire) que le comptable d'Ahmed peut importer dans Sage/EBP/Pennylane ; (2) envoi automatique programme du rapport mensuel au comptable par email (lib/actions/email-send.ts existe) le 1er du mois ; (3) un recap fiscal TVA par taux (lib/cashbox/tva.ts est la). Ca transforme l'app d'outil ops en outil de gestion que le gerant Ahmed ADORE. Argument SaaS fort : votre compta sort toute seule.",
+        "effort_hours": 10,
+        "impact": "medium",
+        "category": "business-logic",
+        "file_refs": [
+          "apps/stock/lib/cashbox/monthly-report.ts",
+          "apps/stock/lib/cashbox/tva.ts",
+          "apps/stock/app/api/cashbox/monthly-report-pdf/route.ts",
+          "apps/stock/lib/actions/email-send.ts",
+          "apps/stock/app/api/cron/monthly-report/route.ts"
+        ]
+      },
+      {
+        "id": "MYTH-11",
+        "title": "Mode presentation / demo : un parcours guide qui se vend tout seul",
+        "rationale": "Aucun mode presentation n'existe. Pour la demo du 10 juin ET pour le pitch SaaS, MYTHOS = un mode demo activable qui : (1) charge un jeu de donnees ideal recale sur aujourd'hui (scripts/seed-demo.mjs existe deja et est idempotent, memoire user), (2) declenche une visite guidee des 5 ecrans phares (cockpit -> forecast Ramadan -> tracabilite scan -> DLC demarque -> assistant IA) avec des tooltips, (3) un bouton rejouer qui re-anime les chiffres. Quick-win pur effet : transforme une demo stressante en parcours fluide qui impressionne a coup sur. Faible risque technique, gros impact commercial.",
+        "effort_hours": 6,
+        "impact": "high",
+        "category": "feature",
+        "file_refs": [
+          "apps/stock/app/v2/page.tsx",
+          "apps/stock/app/v2/cockpit/page.tsx",
+          "apps/stock/components/v2/SplashScreen.tsx",
+          "apps/stock/scripts"
+        ]
+      },
+      {
+        "id": "MYTH-12",
+        "title": "Polish micro-interactions dark : glow or sur CTA, haptique, transitions de page",
+        "rationale": "Les tokens motion existent (--ease-out-expo, --dur-page) et framer-motion est partout, mais en dark il faut des touches bijou pour atteindre le niveau MYTHOS : (1) glow dore subtil au survol/tap des CTA hero (box-shadow --glow-gold du dark_palette), (2) haptique legere (navigator.vibrate) sur les actions critiques (validation BDL, demarque, scan reussi), (3) animation de comptage sur les KPI (CA hier qui s'incremente), (4) transition de page sapin->sapin sans flash blanc (le flash blanc tue l'immersion dark). Ce sont des details qui, cumules, font passer de propre a premium absolu. Doit etre fait APRES MYTH-01 (la base dark) pour coherence.",
+        "effort_hours": 7,
+        "impact": "high",
+        "category": "design-dark",
+        "file_refs": [
+          "apps/stock/app/globals.css",
+          "apps/stock/components/cockpit/hero-kpi.tsx",
+          "apps/stock/components/v2/HeroActionCard.tsx",
+          "apps/stock/app/loading.tsx",
+          "apps/stock/components/v2/V2Shell.tsx"
+        ]
+      }
+    ]
+  }
+]

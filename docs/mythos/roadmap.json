@@ -1,0 +1,270 @@
+{
+  "executive_summary": "Salam Stock cesse d'etre un \"POS halal generique avec un mode nuit casse\" pour devenir le premier ERP halal copilote, dark-FIRST et MYTHOS. La verite confirmee live : le mode nuit actuel remappe `--primary-green` vers l'or fluo (globals.css L621), seme du `bg-white !important` (sparadrap fragile), et laisse des cards cream aveuglantes flotter sur l'abysse — pendant que la HeroKpi et l'ecran Counter prouvent DEJA la grammaire dark parfaite (gradient sapin #0E3B2E→#082A20 + glassmorphism + glow or). La mission n'est pas d'inventer mais d'extraire cette grammaire vers des tokens propres et de l'imposer partout, par defaut. En parallele on RANGE : une app-fantome V1 (18 fichiers, store legacy) est encore live et accessible par URL — on la supprime pour qu'aucun ecran-zombie ne pollue la demo. On unifie la nav en 3 plans mentaux partages (OPERER / PILOTER / ADMINISTRER), on fait du ⌘K l'autoroute universelle. Cote metier on durcit la confiance : bareme DLC corrige a la source SQL (forced=-50 garanti, plus de rattrapage TS fragile), valorisation casse au vrai prix de vente, certificat halal expire qui s'affiche en ROUGE et bloque les PO. On batit un module PDF brand unique (police Plus Jakarta embarquee pour des accents et « € » impeccables, logo PNG, footer legal complet) qui debloque le certificat de tracabilite halal imprimable A4 (le moat que ni Intermarche ni les epiceries ne savent produire) et des etiquettes de gondole prix+DLC+QR exploitables en rayon. Enfin l'app devient PROACTIVE : le cockpit dit a Otmane \"3 choses avant 10h\", l'assistant pousse les vraies urgences, le mode Ramadan transforme le calendrier hijri en plan de reassort. Resultat : a 8h05 l'app a deja fait le travail de reflexion pendant qu'Otmane dormait. Livrable credible en une semaine via 6 vagues parallelisables a scopes disjoints.",
+  "dark_design_direction": "TRANCHE : le DARK devient le DEFAUT de l'app Stock (jour cream reste opt-in raffine pour l'iPad comptoir en plein soleil). Justification : le Stock est un back-office d'atelier/reserve manipule a 6h (cockpit avant ouverture, lumiere partielle) et le soir (prepa drive, daily-Z, comptoir), contexte ideal pour un command-center facon Linear/Vercel/Stripe-dashboard. Doctrine non-negociable : DARK = grammaire propre, PAS une inversion de tokens. L'OR reste ACCENT (lisere + glow + chiffre-cle) et ne remplit JAMAIS une grande surface. Le SAPIN reste la primary (on RESTAURE #1B6A4A, on TUE le remap or-as-primary #DDB31C de L621 qui detruisait l'identite). L'elevation se lit par LUMINOSITE croissante des surfaces + highlight interne top (le secret qui manque), pas par des ombres noires invisibles sur fond noir.\n\nPALETTE CANONIQUE CONSOLIDEE (fusion des 2 visions design, HEX prets a coller dans un bloc `[data-theme='nuit']` qui devient le default) :\n• Fonds/abysse : --bg-abyss #08130F (canvas racine, sapin quasi-noir jamais #000) · --bg-base #0B1C16 (scroll body) · --bg-header linear-gradient(180deg,#0E2A20,#08130F).\n• Surfaces par elevation (+~6% luminosite/palier) : --surface-0 #0E211A (listes plates) · --surface-1 #13291F (card standard — remplace l'ancien #0E2A20 et TOUS les bg-white hardcodes) · --surface-2 #193327 (hover/sheet) · --surface-3 #1F3D2F (popover, command palette, modal).\n• Primary sapin RESTAURE : --primary-green #1B6A4A · --primary-green-hover #22855C · --primary-green-soft rgba(27,106,74,0.16) · --hero-gradient linear-gradient(165deg,#134A36,#0A2419).\n• Or accent (remonte en luminosite pour passer AA sur abysse, l'or jour #C9A227 est trop sombre) : --accent-gold #E8C24A · --accent-gold-bright #F2D469 (KPI hero, big numbers, bay labels TV) · --accent-gold-dim #B89530 (eyebrows, texte secondaire or) · --accent-gold-glow 0 0 24px rgba(232,194,74,0.22) · --accent-gold-hairline rgba(232,194,74,0.12).\n• Texte (cream DESATURE pour tuer le halation/glare, jamais blanc pur) : --text-primary #F3F0E6 (14.8:1 AAA) · --text-secondary #A8B4AC (8.2:1 AA) · --text-tertiary #7C8A82 (4.7:1 AA) · --text-gold #F2D469 (chiffres-cles 11.1:1) · --text-on-gold #0A1F18.\n• Status remontes lumineux + soft TRANSLUCIDES (laissent transparaitre l'elevation) : --danger #FF7062 (corail, 6.4:1) / --danger-soft rgba(255,112,98,0.14) · --success #4FD08A (9.1:1) / rgba(79,208,138,0.14) · --warning #F2B43C (9.8:1) / rgba(242,180,60,0.14).\n• Bordures hairline : --border-hairline rgba(255,255,255,0.06) · --border-card rgba(255,255,255,0.09) · --border-premium rgba(232,194,74,0.14).\n• GRAMMAIRE DEPTH (la regle qui manque) : --shadow-card 0 2px 8px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.04) — l'INSET highlight top est le secret du depth dark facon Linear · --shadow-elevated 0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05) · --glow-cta 0 0 0 1px rgba(232,194,74,0.20), 0 6px 24px rgba(232,194,74,0.18) (CTA primaires respirent une lueur or) · text-shadow 0 0 18px rgba(242,212,105,0.25) sur les big numbers (le CA d'hier brille comme un cours de bourse).\n• Glass overlays (premium flottant, blur leger / opacite haute pour rester lisible en reserve) : --glass-overlay rgba(11,28,22,0.72)+blur(16px) (sheets/modals) · --glass-nav rgba(14,33,26,0.86)+blur(20px)+border-top hairline (bottom-nav, item actif souligne d'un trait or qui glow).\n• TYPO dark : baisser les graisses d'un cran (extrabold→bold sur gros titres car le gras irradie), forcer font-variant-numeric:tabular-nums sur TOUS les chiffres financiers (daily-Z, recap, cockpit), eyebrows en or-dim #B89530 pour ne pas voler l'attention aux KPI. Toggle jour/nuit refait : switch sun/moon anime decouvrable dans le header (track sapin, thumb or qui glisse avec glow), tap = bascule directe, suppression du mode auto mort et du long-press popover non-decouvrable. PDF dark-aware (bandeau d'en-tete sapin #0E3B2E plein + logo or, corps blanc pour ne pas gaspiller l'encre).",
+  "execution_waves": [
+    {
+      "wave": 1,
+      "theme": "FONDATION — Dark design system tokenise + grand nettoyage legacy (socle dont tout depend)",
+      "items": [
+        "DARK-01 : creer le bloc [data-theme='nuit'] propre (restaurer sapin #1B6A4A primary, TUER le remap or L621, 4 paliers de surface, or #E8C24A/#F2D469, ombres+inset highlight) — globals.css L606-807",
+        "DARK-04 : grammaire d'elevation par luminosite + inset highlight top + bordures hairline sur .card/.keypad-btn/sheets — globals.css L194-225",
+        "DARK-03 : dark = DEFAUT (useTheme.ts default 'nuit', color-scheme dark dans :root, garder toggle pour basculer jour)",
+        "ARCH-01 : supprimer l'app-fantome V1 (18 fichiers + store legacy + composants morts) et ajouter middleware.ts redirect 308 des routes mortes vers /v2",
+        "ARCH-06 : decouper reception/page.tsx (1044 l) en sous-composants ReceptionScanZone/LotForm/EcartTable/ValidationFooter (pure refacto, fichiers neufs)"
+      ],
+      "parallel_scopes": [
+        "Agent A (DESIGN-CORE) : globals.css uniquement (DARK-01 + DARK-04) + useTheme.ts/:root (DARK-03). Tokens = contrat livre aux autres vagues.",
+        "Agent B (LEGACY-PURGE) : suppression dossiers app/dashboard,catalogue,reception(v1),inventaire(v1),alertes,assistant,compte,login,staff + lib/store.ts + components/layout,dashboard + creation middleware.ts. ZERO chevauchement avec app/v2.",
+        "Agent C (RECEPTION-SPLIT) : app/v2/reception/page.tsx + nouveaux fichiers components/v2/reception/*. Isole."
+      ],
+      "effort_hours": 14
+    },
+    {
+      "wave": 2,
+      "theme": "SURFACES — Migrer composants vers tokens dark + ranger la navigation en 3 plans",
+      "items": [
+        "DARK-02 : eradiquer bg-white/bg-[#FAF7EE]/text-hardcodes vers var(--surface-1)/var(--text-primary) dans AlertCard, RamadanCard, CompetitorCard, cockpit cards ; supprimer les !important de patch",
+        "DARK-11 : status colors dark (AlertCard TONE_STYLES, badges, DlcBanner, paliers demarque ATTENTION/CRITIQUE/FORCE) en versions lumineuses + soft translucides",
+        "DARK-08 : glassmorphism bottom-nav + sheets + command palette (V2Shell L308-475, --glass-nav, item actif trait or)",
+        "ARCH-02 : hierarchie 3 plans (OPERER/PILOTER/ADMINISTRER) appliquee au Plus-sheet (Command.Group headings au lieu du .map a plat) + ⌘K + hub",
+        "ARCH-03 : de-dupliquer la surface admin (drawer = unique repertoire, retirer 8 chips header + doublon Assistant IA dans admin/page.tsx)",
+        "ARCH-11 : nettoyer header V2Shell (retirer ThemeToggle merdique + DensityToggle vers menu Compte&reglages), header a 4 elements max",
+        "ARCH-07 : PageHeader v2 canonique (eyebrow numerote + h1 mot{gold} + BackButton) + EmptyState reutilisable partout"
+      ],
+      "parallel_scopes": [
+        "Agent A (COCKPIT-CARDS) : components/cockpit/* (alert-card, ramadan-card, competitor-card) — DARK-02 + DARK-11. Consomme les tokens de Wave 1.",
+        "Agent B (SHELL-NAV) : components/v2/V2Shell.tsx + CommandPalette.tsx + AdminMenu.tsx — DARK-08 + ARCH-02 + ARCH-11. Le chrome.",
+        "Agent C (ADMIN-PAGE) : app/v2/admin/page.tsx uniquement — ARCH-03 (alleger header). Isole du shell.",
+        "Agent D (PATTERNS) : components/v2/EditorialEyebrow, BackButton, nouveau EmptyState + DlcBanner — ARCH-07 + DARK-11 volet DlcBanner."
+      ],
+      "effort_hours": 22
+    },
+    {
+      "wave": 3,
+      "theme": "ECRANS PHARES dark + login + ThemeToggle premium (les moments demo)",
+      "items": [
+        "DARK-10 : login PIN abysse premium (keypad glass + halo or + dots PIN glow) — app/v2/login/page.tsx",
+        "DARK-07 : refaire ThemeToggle en switch sun/moon anime decouvrable dans header, retirer mode auto + popover long-press",
+        "DARK-06 : pousser Counter TV (vignette radial + pulse glow sur card la plus ancienne) + Cockpit data-dense + daily-Z (chiffres tabular dark)",
+        "DARK-05 : glow or signature sur CTA (.btn-gold, HeroActionCard, AssistantFab) + big numbers en --accent-gold-bright avec text-shadow",
+        "DARK-09 : typo dark (graisses allegees, tabular-nums force partout, eyebrows or-dim)",
+        "ARCH-12 : bottom-nav role-aware affinee (Plus→Menu + badge alertes, primaryFor('admin') = gestes quotidiens, audit pb-nav-stack zero overlap CTA)",
+        "ARCH-04 : ⌘K autoroute (indexer les 32 routes groupees par 3 plans + commandes 'Imprimer etiquette/Declarer casse/Lancer forecast' + bouton loupe mobile decouvrable)"
+      ],
+      "parallel_scopes": [
+        "Agent A (LOGIN+TOGGLE) : app/v2/login/page.tsx + components/v2/ThemeToggle.tsx — DARK-10 + DARK-07. Premier ecran du matin.",
+        "Agent B (HERO-ECRANS) : counter/page.tsx + cockpit/page.tsx + hero-kpi.tsx + HeroActionCard + AssistantFab — DARK-05 + DARK-06 + DARK-09. Les ecrans-wow.",
+        "Agent C (NAV-PALETTE) : V2Shell bottom-nav + CommandPalette.tsx — ARCH-12 + ARCH-04. (Coordonner avec Wave 2 Agent B sur V2Shell : sequencer, pas paralleliser le meme fichier.)"
+      ],
+      "effort_hours": 18
+    },
+    {
+      "wave": 4,
+      "theme": "VERITE METIER — Confiance des chiffres + traceabilite halal inviolable (SQL + logique)",
+      "items": [
+        "ML-1 : corriger le bareme DLC a la source SQL (case niveau_alerte→remise forced/50 critique/40 attention/20, seeder TOUTES les categories) — migration dlc_engine",
+        "ML-2 : valorisation casse au vrai prix (coalesce prix_drive_cents → prix_vente magasin) dans les 3 MV casse",
+        "ML-3 : RPC adjust_stock atomique + table ledger stock_movements (anti read-then-write, transfert bloquant) — lib/db + finalize",
+        "ML-4 : FIFO/FEFO lots (quantite_restante, decrement du lot le plus proche DLC, lien sorties.lot_id, marquer epuise)",
+        "ML-5 : certif halal expire → bandeau ROUGE sur QR public + bloque PO + warn a la reception",
+        "ML-8 : daily-Z timezone Paris dynamique (fin du +02:00 en dur) + idempotence CashMag avec raw_line hash",
+        "ML-10 : push aussi sur ecart NEGATIF reception + plafond 150% attendu avec confirmation bloquante"
+      ],
+      "parallel_scopes": [
+        "Agent A (SQL-DLC-CASSE) : supabase/migrations dlc_engine + casse_baseline (ML-1 + ML-2). Migrations SQL isolees.",
+        "Agent B (STOCK-LEDGER) : lib/db/index.ts + api/bdl/finalize + nouvelle migration stock_movements + RPC (ML-3 + ML-4 FIFO). Le socle de confiance — gros morceau.",
+        "Agent C (HALAL-TRACE) : apps/drive LotPublic.tsx + api/bdl/scan-carton + api/po/auto-generate (ML-5). Le moat.",
+        "Agent D (CASHBOX-RECEPT) : lib/cashbox/daily-z + import-cashmag + api/bdl/scan-carton volet ecart (ML-8 + ML-10)."
+      ],
+      "effort_hours": 38
+    },
+    {
+      "wave": 5,
+      "theme": "PDF/ETIQUETTES brand + COPILOTE proactif + intelligence saisonniere (les features signature)",
+      "items": [
+        "PDF-01 : module brand PDF unifie (lib/pdf/brand.ts : Plus Jakarta embarquee pour accents+€, logo PNG, drawHeader/drawFooter, footer legal complet, palette+helpers €/date partages)",
+        "PDF-02 : CERTIFICAT DE TRACABILITE HALAL imprimable A4 (nouvelle route /api/lots/[id]/certificat-pdf : QR public, timeline abattoir→fournisseur→DLC, sceau AVS)",
+        "PDF-03+ML-11 : etiquette GONDOLE prix TTC geant + prix/kg + DLC + picto halal + mini-QR ; refonte etiquette Brother (prix+DLC+lot) ; layout PROMO DLC (prix barre + soldé) imprimable depuis alertes-dlc en 1 tap",
+        "PDF-04 : robustesse etiquettes (dedup barcode Map<ean,dataUrl>, validation EAN-13 check-digit + toast, fallback Code128 SKU, quiet-zone, progression 200 copies)",
+        "MYTH-02 : copilote proactif cockpit '3 choses avant 10h' (scoreur priorite DLC-force>rupture-blocker>saisonnier + Claude court → 3 bullets deep-linkees)",
+        "MYTH-05 : mode Ramadan/Aid (checklist saisonniere multiplicateurs metier + PO previsionnel pre-rempli + compte a rebours hero)",
+        "ML-6 : reassort PROACTIF depuis forecast (days_cover < lead_time*1.5, qty dimensionnee sur velocity_adj, gonfler couverture pendant hijri)",
+        "MYTH-08+MYTH-04 : moteur push regles (DLC force / rupture / pic casse, dedup+fenetre horaire) + page /lot/:id passeport halal (timeline + niveau confiance)"
+      ],
+      "parallel_scopes": [
+        "Agent A (PDF-BRAND) : lib/pdf/brand.ts + refonte des routes PDF existantes (daily-z, monthly, bon-reception, po/send) — PDF-01 puis PDF-06. Contrat pour B.",
+        "Agent B (PDF-DOCS) : nouvelles routes certificat-pdf + facture B2B + lib/labels/generate-pdf.ts refonte — PDF-02 + PDF-03 + PDF-04 + ML-11. Consomme brand.ts.",
+        "Agent C (COPILOTE) : app/v2/cockpit + api/cockpit/snapshot + api/assistant + lib/actions/cockpit — MYTH-02. Le cerveau.",
+        "Agent D (SAISONNIER+REASSORT) : lib/hijri + lib/forecast + api/po/auto-generate + ramadan-card — MYTH-05 + ML-6. Le moat hijri.",
+        "Agent E (PUSH+PASSEPORT) : lib/actions/push-send + crons + apps/drive LotPublic/passeport — MYTH-08 + MYTH-04. (Sequencer avec Wave 4 Agent C sur LotPublic.)"
+      ],
+      "effort_hours": 44
+    },
+    {
+      "wave": 6,
+      "theme": "POLISH MYTHOS + onboarding + mode demo + verification finale",
+      "items": [
+        "MYTH-12 : micro-interactions dark (glow or tap CTA, haptique navigator.vibrate sur validation/scan, count-up KPI, transition page sapin→sapin sans flash blanc)",
+        "ARCH-05 : onboarding caissier 3 cartes coachmark post-PIN (one-shot localStorage : terrain / ⌘K / depot)",
+        "MYTH-11 : mode presentation/demo (seed-demo recale + visite guidee 5 ecrans phares + bouton rejouer)",
+        "MYTH-06 : scan-to-action universel (EAN→stock/sortie/etiquette, QR lot→tracabilite, QR retrait→prepa)",
+        "MYTH-07 : leaderboard preparateurs sur counter/page ou /v2/staff/classement (objectif jour + badges)",
+        "VERIFY : audit AA dark sur les 32 routes, zero bg-white/cream survivant, zero ecran-zombie (curl routes mortes→308), build+lint, parcours demo complet"
+      ],
+      "parallel_scopes": [
+        "Agent A (POLISH-MOTION) : globals.css motion + hero-kpi + HeroActionCard + loading.tsx + V2Shell transitions — MYTH-12. Apres Wave 1-3 dark stable.",
+        "Agent B (ONBOARDING+DEMO) : nouveau composant onboarding + login + SplashScreen + scripts/seed-demo — ARCH-05 + MYTH-11.",
+        "Agent C (SCAN+STAFF) : CommandPalette/AssistantFab scan global + counter leaderboard + lib/staff — MYTH-06 + MYTH-07.",
+        "Agent D (VERIFY-GATE) : audit transversal read-only + build + curl smoke-test, ouvre des correctifs cibles. Passe en DERNIER."
+      ],
+      "effort_hours": 28
+    }
+  ],
+  "features_to_build": [
+    {
+      "id": "DARK-SYSTEM",
+      "title": "Dark design system tokenise dark-FIRST (palette consolidee, elevation par luminosite + inset, glow or, glass) appliquee partout",
+      "why_mythos": "Premiere impression absolue. On extrait la grammaire DEJA parfaite de HeroKpi/Counter (gradient sapin + glass + glow or, verifies live) vers des tokens propres, on TUE le remap or-as-primary L621 qui rendait le mode merdique, et le dark devient le defaut command-center. L'app passe de 'POS generique' a 'outil pro Linear-grade'.",
+      "effort_hours": 36,
+      "priority": "must"
+    },
+    {
+      "id": "DLC-TRUTH",
+      "title": "Bareme demarque DLC corrige a la source SQL (forced=-50 garanti) + valorisation casse au vrai prix de vente",
+      "why_mythos": "Confiance des chiffres. Aujourd'hui le SQL ne produit JAMAIS le mapping metier (rattrape par un plancher TS fragile) et la casse € est sous-comptee de ~80% car prix_drive_cents est NULL pour le non-Drive. Otmane doit faire confiance au centime a la demarque proposee et a la perte affichee.",
+      "effort_hours": 7,
+      "priority": "must"
+    },
+    {
+      "id": "STOCK-LEDGER",
+      "title": "RPC adjust_stock atomique + ledger stock_movements + FIFO/FEFO lots",
+      "why_mythos": "Socle de confiance de toute l'app. Le read-then-write non atomique + transfert non-bloquant garantit une derive de stock en concurrence ; les lots ne sont jamais consommes donc la DLC affichee est fausse. Le ledger rend le stock auditable et reconstructible, le FIFO rend le moat halal reellement inviolable (le lot scanne = le vrai lot en main).",
+      "effort_hours": 22,
+      "priority": "must"
+    },
+    {
+      "id": "HALAL-CERT-GUARD",
+      "title": "Certificat halal expire : bandeau rouge sur QR public + blocage PO + warn reception, et page /lot passeport premium",
+      "why_mythos": "Le seul vrai moat de l'app. Un certif AVS expire s'affiche aujourd'hui comme valide au client qui scanne — honnetete = confiance. La page devient un passeport halal verifiable (timeline, badge validite, niveau de confiance) qu'aucun concurrent generaliste ne sait produire.",
+      "effort_hours": 14,
+      "priority": "must"
+    },
+    {
+      "id": "PDF-BRAND-MODULE",
+      "title": "Module brand PDF unifie (Plus Jakarta embarquee pour € et accents, logo PNG, header sapin/or, footer legal complet)",
+      "why_mythos": "Racine de tous les documents. Bug latent confirme : helvetica/courier StandardEncoding ne garantit pas le « € » sur les docs comptable/fournisseur. Un seul module brand fiabilise et unifie les 6 documents — les PDF ressemblent enfin a ceux d'une PME structuree, pas d'un MVP.",
+      "effort_hours": 8,
+      "priority": "must"
+    },
+    {
+      "id": "CERT-HALAL-PDF",
+      "title": "Certificat de tracabilite halal imprimable A4 (QR public, timeline abattoir→fournisseur→DLC, sceau AVS)",
+      "why_mythos": "LA feature signature commerciale. Toutes les donnees sont deja en base. Document a afficher en rayon boucherie et a donner aux clients Pro (restaurants/traiteurs qui doivent prouver l'origine) — ni Intermarche ni les epiceries de quartier ne savent le produire. Argument qui vend le SaaS a toute boucherie halal de France.",
+      "effort_hours": 6,
+      "priority": "must"
+    },
+    {
+      "id": "LABELS-MYTHOS",
+      "title": "Etiquettes gondole/rayon (prix TTC geant + prix/kg + DLC + picto halal + mini-QR) + promo DLC imprimable en 1 tap + refonte Brother + robustesse 200 copies",
+      "why_mythos": "Chainon qui transforme le calcul DLC en CA sauve : la demarque du moteur arrive enfin physiquement sur le produit, le client voit la remise, l'anti-gaspi se concretise en caisse. Livrable physique vu par les CLIENTS, impact business direct. Robustesse (dedup barcode, validation check-digit, quiet-zone) pour ne jamais casser en rayon.",
+      "effort_hours": 17,
+      "priority": "must"
+    },
+    {
+      "id": "COPILOTE-PROACTIF",
+      "title": "Copilote proactif : cockpit '3 choses avant 10h' + moteur de push regles (DLC force / rupture / pic casse anormal >2σ)",
+      "why_mythos": "Le moment WOW : a 8h05 l'app a deja fait le travail de reflexion. L'assistant passe de reactif a proactif, agrege snapshot+forecast+DLC+hijri en actions ordonnees deep-linkees, et pousse les vraies urgences sur l'iPhone entre deux ouvertures. C'est ce qui rend le copilote VIVANT.",
+      "effort_hours": 16,
+      "priority": "must"
+    },
+    {
+      "id": "NAV-3-PLANS",
+      "title": "Navigation rangee en 3 plans (Operer/Piloter/Administrer) + ⌘K autoroute 32 routes + admin de-duplique",
+      "why_mythos": "Reponse directe a 'simplifie, range, organise'. Une seule grammaire mentale partagee par tout le staff, chaque destination dans UN seul endroit canonique, ⌘K atteint n'importe quelle page en ≤2 frappes. La surface admin exposee 4× est ramenee a UN repertoire.",
+      "effort_hours": 14,
+      "priority": "high"
+    },
+    {
+      "id": "MODE-RAMADAN",
+      "title": "Mode Ramadan/Aid : checklist saisonniere + PO previsionnel pre-rempli + compte a rebours, branche sur la courbe hijri",
+      "why_mythos": "Prouve que l'app COMPREND le metier halal. Le calendrier hijri (deja calcule 2026-2030) devient un PLAN d'action : un POS generique ne sait pas que l'Aid al-Adha c'est le sacrifice du mouton ni que Ramadan triple les dattes 28 jours a l'avance. Intelligence saisonniere = moat SaaS inimitable.",
+      "effort_hours": 11,
+      "priority": "high"
+    },
+    {
+      "id": "REASSORT-PROACTIF",
+      "title": "Reassort proactif depuis le forecast (lead time inclus) au lieu de reactif a stock≤0",
+      "why_mythos": "Le PO part AVANT la rupture (days_cover < lead_time*1.5), pas apres, avec une quantite dimensionnee sur la velocite reelle. Gain de temps quotidien qui impressionne Otmane : la machine commande pour lui. Retirer la velocite pseudo-aleatoire de demo (gate DEMO_MODE) pour ne plus polluer alertes et reassort en prod.",
+      "effort_hours": 13,
+      "priority": "high"
+    },
+    {
+      "id": "PDF-DOCS-PRO",
+      "title": "Facture B2B Pro conforme + bon de transfert PDF + inventaire PDF signable + unification charte des 3 PDF existants (daily-Z hors monospace)",
+      "why_mythos": "Rend le canal Pro vendable (facture legale avec n° sequentiel continu, TVA ventilee, mentions L441-9) et clot la boucle stock (chaque mouvement laisse une trace archivable pour l'expert-comptable). Sort daily-Z du Courier amateur. Crebibilite PME structuree.",
+      "effort_hours": 17,
+      "priority": "high"
+    },
+    {
+      "id": "RECEPTION-ROBUST",
+      "title": "Reception : push sur ecart negatif (sous-livre) + plafond 150% avec confirmation + daily-Z timezone Paris dynamique + idempotence CashMag",
+      "why_mythos": "Robustesse des flux critiques. Un sous-livre (carton manquant) est plus grave commercialement qu'un surplus et n'alertait personne ; un scan repete gonflait le stock silencieusement ; le +02:00 en dur cassait le jour fiscal en heure d'hiver. Confiance comptable.",
+      "effort_hours": 9,
+      "priority": "high"
+    },
+    {
+      "id": "RECEPTION-SPLIT",
+      "title": "Decoupage de reception/page.tsx (1044 l, la plus dense) en sous-composants nommes",
+      "why_mythos": "Maintenabilite et 'bien range' cote code : un dev ou agent comprend la structure en 30s, chunks plus petits. Pure simplification de la charge cognitive sans changement fonctionnel.",
+      "effort_hours": 6,
+      "priority": "high"
+    },
+    {
+      "id": "POLISH-MOTION",
+      "title": "Polish micro-interactions dark (glow or tap CTA, haptique, count-up KPI, transition page sans flash blanc) + login PIN abysse + ThemeToggle switch premium",
+      "why_mythos": "Le delta entre propre et premium absolu. Touches bijou cumulees : le CTA respire une lueur or, le scan vibre, le CA d'hier s'incremente, jamais de flash blanc qui tue l'immersion dark. Login et toggle = premiers objets touches chaque matin.",
+      "effort_hours": 13,
+      "priority": "high"
+    },
+    {
+      "id": "ONBOARDING-DEMO",
+      "title": "Onboarding caissier 3 cartes coachmark + mode presentation/demo guide (seed recale + visite 5 ecrans)",
+      "why_mythos": "Reponse a 'rends-la facile' (un nouveau caissier comprend l'app en 2 min) et arme pour la demo client (transforme un pitch stressant en parcours fluide qui impressionne a coup sur). Faible risque, gros impact.",
+      "effort_hours": 11,
+      "priority": "high"
+    },
+    {
+      "id": "SCAN-LEADERBOARD",
+      "title": "Scan-to-action universel (l'app devine l'intention) + leaderboard preparateurs gamifie",
+      "why_mythos": "Gain de temps terrain quotidien (un scan → action contextuelle, moins de navigation) et engagement staff (objectifs, badges zero-ecart) qui reduit casse et accelere la prepa = ROI reel + argument RH SaaS.",
+      "effort_hours": 15,
+      "priority": "nice"
+    },
+    {
+      "id": "TVA-NF525-FEC",
+      "title": "TVA Drive par mode de consommation (emporte 5.5%) + n° sequence continu Z/facture + export FEC compta",
+      "why_mythos": "Conformite fiscale (Drive 100% emporte devrait etre a 5.5% sur l'alimentaire, pas 10%) et credibilite expert-comptable (journal sans trou, compta qui sort toute seule en FEC/Sage). A CADRER avec l'expert-comptable avant de produire (livrable a enjeu). Moins WOW mais solidifie le dossier.",
+      "effort_hours": 16,
+      "priority": "nice"
+    }
+  ],
+  "legacy_to_remove": [
+    "apps/stock/app/dashboard/ (page.tsx — dashboard V1 sur store legacy, live en 200, ecran-zombie en demo)",
+    "apps/stock/app/catalogue/ (page.tsx + [id]/ + nouveau/ — remplace par /v2/stock, live en 200)",
+    "apps/stock/app/reception/ (page.tsx + [id]/ + historique/ — remplace par /v2/reception/*)",
+    "apps/stock/app/inventaire/ (page.tsx + historique/ — remplace par /v2/inventaire/*)",
+    "apps/stock/app/alertes/ (page.tsx — remplace par /v2/admin/alertes*)",
+    "apps/stock/app/assistant/ (page.tsx — remplace par AssistantFab/v2 assistant)",
+    "apps/stock/app/compte/ (page.tsx — a remplacer par un mini-menu Compte&reglages dans le shell v2)",
+    "apps/stock/app/login/ (page.tsx — selection de profil V1, remplace par /v2/login PIN)",
+    "apps/stock/app/staff/ (layout.tsx + preparation/page.tsx + [id]/ + components — remplace par /v2/preparation/*)",
+    "apps/stock/lib/store.ts (ancien store Zustand V1 roles directeur/employe + mock data, orphelin une fois les pages supprimees — grep confirme 18 fichiers dessus, 0 import depuis app/v2)",
+    "apps/stock/components/layout/PageWrapper.tsx + PageHeader.tsx (ne servent QUE la V1 legacy)",
+    "apps/stock/components/dashboard/* (AlertCard, ActivityList V1 — dependent du store legacy uniquement)",
+    "Bloc body.theme-nuit casse de globals.css L606-807 (le remap --primary-green:#DDB31C L621 + les patchs bg-white !important — remplace par le bloc [data-theme='nuit'] propre de DARK-01)",
+    "Mode 'auto' de useTheme.ts (mort : resolve() force 'jour', non-decouvrable) — remplace par switch jour/nuit direct, dark par defaut",
+    "Doublon HeroActionCard Assistant IA dans app/v2/admin/page.tsx (L184-193 ET chip L258-264) + les 8 chips header redondants avec le drawer AdminMenu",
+    "GARDE-FOU avant suppression : confirmer que `grep -rn 'from \"@/lib/store\"' apps/stock/app/v2 apps/stock/components/v2` reste vide (deja le cas), et ajouter middleware.ts redirect 308 des routes mortes vers /v2 pour tuer les portes derobees en prod sans casser les vieux bookmarks"
+  ],
+  "total_effort_hours": 164
+}

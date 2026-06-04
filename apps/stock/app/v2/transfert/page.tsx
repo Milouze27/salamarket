@@ -309,7 +309,7 @@ export default function V2TransfertPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Nom, marque, code…"
-                      className="input-field !pl-10"
+                      className="input-field !pl-10 !text-base"
                       autoFocus
                     />
                   </div>
@@ -469,7 +469,7 @@ function DepotPick({
           const d = depots.find((x) => x.id === e.target.value);
           if (d) onChange(d);
         }}
-        className="w-full bg-white border border-rule rounded-2xl px-3 py-3 text-sm font-bold text-text-primary appearance-none text-center"
+        className="w-full bg-white border border-rule rounded-2xl px-3 py-3 text-base font-bold text-text-primary appearance-none text-center"
       >
         <option value="">— choisir —</option>
         {depots.map((d) => (

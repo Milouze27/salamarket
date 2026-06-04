@@ -159,13 +159,26 @@ const ITEMS: Record<string, NavItem> = {
   },
 };
 
-/** Choose primary nav items shown directly on the bar (max 4) per role. */
+/**
+ * Choose primary nav items shown directly on the bar (max 4) per role.
+ * Role-aware : le suivi drive (préparation) doit être accessible en 1 tap
+ * pour qui en a besoin ; chaque rôle voit d'abord ses gestes du quotidien.
+ */
 function primaryFor(role: string): NavItem[] {
-  if (role === "admin") {
-    return [ITEMS.accueil, ITEMS.stock, ITEMS.inventaire, ITEMS.admin];
+  switch (role) {
+    case "preparation":
+      return [ITEMS.accueil, ITEMS.preparation, ITEMS.sortie, ITEMS.stock];
+    case "caisse":
+      // La caisse gère le retrait au comptoir ; pas de réception/sortie.
+      return [ITEMS.accueil, ITEMS.stock, ITEMS.preparation, ITEMS.counter];
+    case "manager":
+    case "admin":
+      // Préparation épinglée = suivi drive en 1 tap, même pour l'admin.
+      return [ITEMS.accueil, ITEMS.preparation, ITEMS.stock, ITEMS.admin];
+    case "reception":
+    default:
+      return [ITEMS.accueil, ITEMS.reception, ITEMS.sortie, ITEMS.stock];
   }
-  // manager / reception / preparation / caisse
-  return [ITEMS.accueil, ITEMS.reception, ITEMS.sortie, ITEMS.stock];
 }
 
 /** ARCH-02 — un groupe de plan mental dans le Plus-sheet. */
@@ -214,10 +227,17 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   const dedup = (items: NavItem[]) =>
     items.filter((it) => !primaryHrefs.has(it.href));
 
+  // Sémantique terrain : pour les rôles opérationnels, "Administrer" devient
+  // "Autres tâches" (ils ne pilotent pas le back-office, ils dépannent).
+  const lastHeading =
+    role === "reception" || role === "preparation"
+      ? "Autres tâches"
+      : "Administrer";
+
   return [
     { heading: "Opérer", items: dedup(operer) },
     { heading: "Piloter", items: dedup(piloter) },
-    { heading: "Administrer", items: dedup(administrer) },
+    { heading: lastHeading, items: dedup(administrer) },
   ].filter((g) => g.items.length > 0);
 }
 
@@ -241,9 +261,9 @@ export function V2Shell({
   const logout = useV2((s) => s.logoutEmploye);
   const [mode, setMode] = useState<"supabase" | "local">("local");
   const [sheetOpen, setSheetOpen] = useState(false);
-  // ARCH-12 — badge alertes DLC sur le bouton "Menu" (admin/manager only :
-  // les rôles terrain n'agissent pas sur la démarque). Résilient : 0 en
-  // démo locale ou si la vue est indisponible.
+  // ARCH-12 — badge alertes DLC sur le bouton "Menu" (admin/manager +
+  // préparation : eux agissent sur la démarque ou pickent les lots courts).
+  // Résilient : 0 en démo locale ou si la vue est indisponible.
   const [dlcCount, setDlcCount] = useState(0);
   const [dlcLoading, setDlcLoading] = useState(false);
 
@@ -253,7 +273,10 @@ export function V2Shell({
 
   const role = employe?.role;
   useEffect(() => {
-    if (role !== "admin" && role !== "manager") {
+    // ARCH-12 — badge DLC pour qui agit sur la démarque : admin/manager
+    // (décision) + préparation (un préparateur doit voir les DLC courtes
+    // avant de picker). Les autres rôles terrain restent au calme.
+    if (role !== "admin" && role !== "manager" && role !== "preparation") {
       setDlcCount(0);
       return;
     }
@@ -325,7 +348,7 @@ export function V2Shell({
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-cream flex items-center justify-center">
         <div className="w-7 h-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
       </div>
     );
@@ -337,18 +360,19 @@ export function V2Shell({
   const primaryHrefs = new Set(primary.map((it) => it.href));
   const sheetGroups = sheetGroupsFor(employe.role, primaryHrefs);
 
-  // BUG-006 : cockpit/admin doivent pouvoir respirer sur desktop/iPad.
-  // En mode wide, on étend le container à max-w-7xl ≥md tout en gardant
-  // la pill-nav mobile centrée à 460px côté CSS.
+  // BUG-006 : cockpit/admin doivent respirer sur desktop/iPad. En mode wide,
+  // on étend à une largeur tablette confortable (820px) ≥md, harmonisée avec
+  // la bottom-nav et le Plus-sheet pour rester cohérent et centré.
+  // min-h-[100dvh] : évite le saut de hauteur dû à la barre d'adresse iOS.
   const containerClass = wide
-    ? "mx-auto w-full max-w-[460px] md:max-w-7xl min-h-screen relative bg-cream"
-    : "mx-auto w-full max-w-[460px] min-h-screen relative bg-cream";
+    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] min-h-[100dvh] relative bg-cream"
+    : "mx-auto w-full max-w-[460px] min-h-[100dvh] relative bg-cream";
 
   return (
     // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms
     // (translate/scale/x) sous reduce-motion OS, en gardant les fades d'opacité.
     <MotionConfig reducedMotion="user">
-      <div className="min-h-screen bg-cream">
+      <div className="min-h-[100dvh] bg-cream">
         <div className={containerClass}>
           {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
@@ -459,7 +483,7 @@ export function V2Shell({
               className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none md:hidden"
               aria-label="Navigation principale"
             >
-              <div className="mx-auto max-w-[460px] px-3 pb-2 pt-2 pointer-events-auto">
+              <div className="mx-auto max-w-[460px] md:max-w-[820px] px-3 pb-2 pt-2 pointer-events-auto">
                 <div
                   className="rounded-[24px] px-2 py-2 flex items-center gap-1"
                   style={{
@@ -638,7 +662,7 @@ export function V2Shell({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Menu secondaire"
-                  className="fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] rounded-t-[28px] max-h-[78vh] flex flex-col"
+                  className="fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] md:max-w-[820px] rounded-t-[28px] max-h-[78vh] flex flex-col"
                   style={{
                     background: "var(--surface-3)",
                     borderTop: "1px solid var(--border-card)",

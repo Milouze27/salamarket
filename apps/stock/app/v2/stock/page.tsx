@@ -2,7 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, Layers, Lock, Package, Pencil, Search, Store, Unlock } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Layers,
+  Lock,
+  Package,
+  Pencil,
+  Search,
+  Store,
+  Unlock,
+} from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
@@ -27,7 +37,7 @@ export default function V2StockPage() {
   const [items, setItems] = useState<ProduitInDepot[]>([]);
   const [allDepots, setAllDepots] = useState<Depot[]>([]);
   const [allStocks, setAllStocks] = useState<Map<string, ProduitInDepot[]>>(
-    new Map()
+    new Map(),
   );
   const [view, setView] = useState<"depot" | "regroupe">("depot");
   const [query, setQuery] = useState("");
@@ -87,7 +97,11 @@ export default function V2StockPage() {
     ean: string | null;
     image_url: string | null;
     total: number;
-    breakdown: Array<{ depot: Depot; quantite: number; prix_vente: number | null }>;
+    breakdown: Array<{
+      depot: Depot;
+      quantite: number;
+      prix_vente: number | null;
+    }>;
   };
   const aggregated: Aggregated[] = useMemo(() => {
     if (view !== "regroupe" || allStocks.size === 0) return [];
@@ -134,7 +148,7 @@ export default function V2StockPage() {
         (p) =>
           p.nom.toLowerCase().includes(q) ||
           (p.marque?.toLowerCase().includes(q) ?? false) ||
-          (p.ean?.includes(q) ?? false)
+          (p.ean?.includes(q) ?? false),
       );
     }
     return l;
@@ -149,7 +163,7 @@ export default function V2StockPage() {
         (p) =>
           p.nom.toLowerCase().includes(q) ||
           (p.marque?.toLowerCase().includes(q) ?? false) ||
-          (p.ean?.includes(q) ?? false)
+          (p.ean?.includes(q) ?? false),
       );
     }
     return l;
@@ -210,7 +224,9 @@ export default function V2StockPage() {
             aria-selected={view === "regroupe"}
             onClick={() => setView("regroupe")}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
-              view === "regroupe" ? "bg-primary text-white" : "text-text-secondary"
+              view === "regroupe"
+                ? "bg-primary text-white"
+                : "text-text-secondary"
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
@@ -250,7 +266,7 @@ export default function V2StockPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher un produit, une marque, un EAN…"
-            className="input-field !pl-10 !rounded-full"
+            className="input-field !pl-10 !rounded-full !text-base"
           />
         </div>
       </section>

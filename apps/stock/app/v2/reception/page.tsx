@@ -624,7 +624,7 @@ export default function V2ReceptionPage() {
               value={fournisseur}
               onChange={(e) => setFournisseur(e.target.value)}
               placeholder="Maamora, Doux Halal…"
-              className="input-field"
+              className="input-field !text-base"
             />
           </Field>
           <Field label="Numéro de bon de livraison (optionnel)">
@@ -632,7 +632,7 @@ export default function V2ReceptionPage() {
               value={numeroBl}
               onChange={(e) => setNumeroBl(e.target.value)}
               placeholder="BL-2026-…"
-              className="input-field"
+              className="input-field !text-base"
             />
           </Field>
 
@@ -958,7 +958,7 @@ export default function V2ReceptionPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nom, marque, code…"
-                    className="input-field !pl-10"
+                    className="input-field !pl-10 !text-base"
                     autoFocus
                   />
                 </div>

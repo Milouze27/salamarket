@@ -548,7 +548,10 @@ export default function V2PreparationDetailPage() {
             className="w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
           >
             <div className="text-left">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gold">
+              <p
+                className="text-[10px] font-bold uppercase tracking-[0.14em]"
+                style={{ color: "var(--accent-gold-bright)" }}
+              >
                 {isStripeFlow ? "Finaliser & capturer" : "Marquer prêt"}
               </p>
               <p className="text-[15px] font-extrabold mt-0.5">
@@ -633,7 +636,7 @@ function WeightLineRow({
             placeholder="kg"
             value={ligne.weighedKg ?? ""}
             onChange={(e) => onChange({ weighedKg: e.target.value })}
-            className="w-20 px-2 py-1 rounded-lg border border-rule text-[13px] text-right tabular bg-cream focus:outline-none focus:border-primary"
+            className="w-20 px-2 py-1 rounded-lg border border-rule text-base text-right tabular bg-cream focus:outline-none focus:border-primary"
             aria-label={`Poids pesé ${ligne.produit?.nom ?? ""}`}
           />
           <span className="text-[10px] text-text-tertiary">kg</span>

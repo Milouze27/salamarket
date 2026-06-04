@@ -9,27 +9,27 @@
      Android sur le canvas abyssal. La grammaire jour vit en aval sous
      [data-theme="jour"] (voir bloc dédié). */
   color-scheme: dark;
-  --bg-cream: #FAF7EE;
-  --bg-card: #FFFFFF;
-  --primary-green: #0E3B2E;
-  --primary-green-hover: #14523F;
-  --primary-green-dark: #082A20;
-  --accent-gold: #C9A227;
-  --accent-gold-bright: #DDB31C;
-  --accent-gold-soft: #F4E9C4;
-  --text-primary: #0F1A14;
-  --text-secondary: #5A6470;     /* durci de #6B7280 → contrast 7.3:1 sur cream */
-  --text-tertiary: #7B8693;      /* durci de #9CA3AF → contrast 4.6:1 sur cream (WCAG AA) */
-  --text-on-dark: #FFFFFF;
-  --text-on-dark-muted: #D7E0DA; /* durci de #B8C8C0 → contrast 8.1:1 sur sapin */
-  --danger: #E5483D;
-  --danger-soft: #FEF2F1;
-  --success: #2D7A4F;
-  --success-soft: #E8F5EE;
-  --warning: #D97706;
-  --warning-soft: #FEF3E2;
-  --border-light: #E8E4D8;
-  --border-medium: #D1CCB8;
+  --bg-cream: #faf7ee;
+  --bg-card: #ffffff;
+  --primary-green: #0e3b2e;
+  --primary-green-hover: #14523f;
+  --primary-green-dark: #082a20;
+  --accent-gold: #c9a227;
+  --accent-gold-bright: #ddb31c;
+  --accent-gold-soft: #f4e9c4;
+  --text-primary: #0f1a14;
+  --text-secondary: #5a6470; /* durci de #6B7280 → contrast 7.3:1 sur cream */
+  --text-tertiary: #7b8693; /* durci de #9CA3AF → contrast 4.6:1 sur cream (WCAG AA) */
+  --text-on-dark: #ffffff;
+  --text-on-dark-muted: #d7e0da; /* durci de #B8C8C0 → contrast 8.1:1 sur sapin */
+  --danger: #e5483d;
+  --danger-soft: #fef2f1;
+  --success: #2d7a4f;
+  --success-soft: #e8f5ee;
+  --warning: #d97706;
+  --warning-soft: #fef3e2;
+  --border-light: #e8e4d8;
+  --border-medium: #d1ccb8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Nav bottom flottant : pill effective ~86px (icon 36 + label 14 +
      paddings 16 + py-2 outer + halo top). Audit 2026-05-30 : pill
@@ -46,7 +46,7 @@
   --header-height: 56px;
   /* Elevation */
   --shadow-card: 0 2px 12px rgba(14, 59, 46, 0.06);
-  --shadow-card-hover: 0 4px 20px rgba(14, 59, 46, 0.10);
+  --shadow-card-hover: 0 4px 20px rgba(14, 59, 46, 0.1);
   --shadow-card-lg: 0 8px 32px rgba(14, 59, 46, 0.12);
   --shadow-inset-soft: inset 0 0 0 1px rgba(14, 59, 46, 0.04);
   /* Motion */
@@ -59,20 +59,20 @@
 
   /* AA-safe gold for TEXT on cream/white (DSN-07) — #C9A227 fails WCAG
      on light, so labels/eyebrows on cream use this darker gold. */
-  --or-text: #8B6F0E;
+  --or-text: #8b6f0e;
 
   /* Canonical status aliases — shared names + hues with Drive (DSN-02) */
-  --status-success: #2D7A4F;
-  --status-success-bg: #E8F5EE;
-  --status-success-text: #1C5536;
-  --status-warning: #D97706;
-  --status-warning-bg: #FEF3E2;
-  --status-warning-text: #92570A;
-  --status-danger: #E5483D;
-  --status-danger-bg: #FEF2F1;
-  --status-danger-text: #A4271F;
-  --status-neutral-bg: #F1ECDD;
-  --status-neutral-text: #5A6470;
+  --status-success: #2d7a4f;
+  --status-success-bg: #e8f5ee;
+  --status-success-text: #1c5536;
+  --status-warning: #d97706;
+  --status-warning-bg: #fef3e2;
+  --status-warning-text: #92570a;
+  --status-danger: #e5483d;
+  --status-danger-bg: #fef2f1;
+  --status-danger-text: #a4271f;
+  --status-neutral-bg: #f1ecdd;
+  --status-neutral-text: #5a6470;
 
   /* Radius scale — canonical, identical to Drive (DSN-08) */
   --radius-sm: 10px;
@@ -90,13 +90,13 @@
      les surfaces dérivent du cream, en nuit de la palette abysse canonique. */
   --bg-abyss: var(--bg-cream);
   --bg-base: var(--bg-cream);
-  --bg-header: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%);
-  --surface-0: #FFFFFF;
+  --bg-header: linear-gradient(180deg, #0e3b2e 0%, #082a20 100%);
+  --surface-0: #ffffff;
   --surface-1: var(--bg-card);
-  --surface-2: #FBF9F1;
-  --surface-3: #FFFFFF;
+  --surface-2: #fbf9f1;
+  --surface-3: #ffffff;
   --primary-green-soft: rgba(14, 59, 46, 0.08);
-  --hero-gradient: linear-gradient(165deg, #0E3B2E, #082A20);
+  --hero-gradient: linear-gradient(165deg, #0e3b2e, #082a20);
   --accent-gold-dim: var(--or-text);
   --accent-gold-glow: 0 0 0 transparent;
   --accent-gold-hairline: rgba(201, 162, 39, 0.18);
@@ -118,17 +118,24 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+html,
+body {
   background: var(--bg-cream);
   color: var(--text-primary);
-  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-jakarta),
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 /* Tabular numbers everywhere a quantity sits next to text. Stops "16"
    from being narrower than "30" — critical for stock-count alignment. */
-.tabular { font-variant-numeric: tabular-nums; }
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
 .mono {
   font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   letter-spacing: -0.01em;
@@ -141,7 +148,9 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -151,6 +160,56 @@ html, body {
 body {
   min-height: 100vh;
   min-height: 100dvh;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   PWA iPad/iOS hardening — correctifs PWA standalone (iPad paysage/portrait)
+   ──────────────────────────────────────────────────────────────────────
+   Bugs classiques couverts ici :
+   • Zoom auto au focus d'un input iOS si police < 16px → garanti ≥16px
+     UNIQUEMENT sur écrans tactiles (pointer: coarse), jamais sur desktop.
+   • Rubber-band / overscroll vertical qui révèle le fond → bloqué.
+   • Highlight gris au tap iOS → déjà neutralisé globalement (sélecteur *
+     plus haut) ; rappelé sur body comme filet.
+   • Délai 300ms / double-tap-zoom sur les boutons → touch-action manipulation.
+   • 100vh iOS qui inclut la barre d'URL → util .min-h-dvh (voir @layer
+     utilities, fallback 100vh AVANT 100dvh).
+
+   ─── Référence z-index (DOCUMENTAIRE — ne pas modifier ici) ───────────
+     nav            40
+     FAB            50
+     download-bar   52
+     modal-backdrop 60
+     action-sheet   61 / 70
+     dialog         80
+     command-palette 100
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Anti-zoom-au-focus iOS : police ≥16px sur les contrôles de saisie, mais
+   SEULEMENT sur écrans tactiles. Préserve l'échelle typo desktop/souris. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+/* Overscroll / rubber-band : pas de rebond vertical qui dévoile le fond. */
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
+/* Filet anti-highlight tap iOS (en plus du sélecteur * global plus haut). */
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Pas de délai tactile / double-tap-zoom sur les éléments d'action. */
+button,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 @layer components {
@@ -175,7 +234,9 @@ body {
     letter-spacing: -0.01em;
   }
   @media (min-width: 640px) {
-    .h1 { font-size: 32px; }
+    .h1 {
+      font-size: 32px;
+    }
   }
   .h2 {
     font-size: 22px;
@@ -184,7 +245,9 @@ body {
     letter-spacing: -0.01em;
   }
   @media (min-width: 640px) {
-    .h2 { font-size: 24px; }
+    .h2 {
+      font-size: 24px;
+    }
   }
   .h3 {
     font-size: 18px;
@@ -199,7 +262,9 @@ body {
     letter-spacing: -0.02em;
   }
   @media (min-width: 640px) {
-    .display { font-size: 40px; }
+    .display {
+      font-size: 40px;
+    }
   }
   .body-md {
     font-size: 15px;
@@ -217,7 +282,7 @@ body {
   }
 
   .gradient-header {
-    background: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%);
+    background: linear-gradient(180deg, #0e3b2e 0%, #082a20 100%);
   }
 
   .card {
@@ -228,8 +293,9 @@ body {
     padding: 20px;
   }
   .card-tappable {
-    transition: transform var(--dur-fast) var(--ease-out-quart),
-                box-shadow var(--dur-base) var(--ease-out-quart);
+    transition:
+      transform var(--dur-fast) var(--ease-out-quart),
+      box-shadow var(--dur-base) var(--ease-out-quart);
   }
   .card-tappable:active {
     transform: scale(0.985);
@@ -241,7 +307,7 @@ body {
     background: linear-gradient(
       100deg,
       var(--border-light) 0%,
-      #F1ECDD 50%,
+      #f1ecdd 50%,
       var(--border-light) 100%
     );
     background-size: 200% 100%;
@@ -249,8 +315,12 @@ body {
     border-radius: 8px;
   }
   @keyframes skeletonShimmer {
-    from { background-position: 200% 0; }
-    to   { background-position: -200% 0; }
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
   }
 
   .btn-primary {
@@ -269,9 +339,17 @@ body {
       background var(--dur-base) var(--ease-out-quart),
       transform var(--dur-fast) var(--ease-out-quart);
   }
-  .btn-primary:hover { background: var(--primary-green-hover); }
-  .btn-primary:active { transform: scale(0.97); }
-  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .btn-primary:hover {
+    background: var(--primary-green-hover);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+  }
 
   .btn-gold {
     display: inline-flex;
@@ -286,7 +364,9 @@ body {
     font-size: 15px;
     transition: filter 160ms ease;
   }
-  .btn-gold:hover { filter: brightness(1.05); }
+  .btn-gold:hover {
+    filter: brightness(1.05);
+  }
 
   .btn-ghost {
     display: inline-flex;
@@ -301,7 +381,9 @@ body {
     font-weight: 600;
     font-size: 14px;
   }
-  .btn-ghost:hover { background: var(--bg-cream); }
+  .btn-ghost:hover {
+    background: var(--bg-cream);
+  }
 
   .btn-fab {
     width: 56px;
@@ -348,12 +430,16 @@ body {
       box-shadow var(--dur-base) var(--ease-out-quart);
     min-height: 48px;
   }
-  .input-field::placeholder { color: var(--text-tertiary); }
+  .input-field::placeholder {
+    color: var(--text-tertiary);
+  }
   .input-field:focus {
     border-color: var(--primary-green);
-    box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.10);
+    box-shadow: 0 0 0 3px rgba(14, 59, 46, 0.1);
   }
-  .input-field:focus-visible { outline: none; }
+  .input-field:focus-visible {
+    outline: none;
+  }
 
   .badge {
     display: inline-flex;
@@ -365,11 +451,26 @@ body {
     font-weight: 600;
     letter-spacing: 0.02em;
   }
-  .badge-success { background: var(--success-soft); color: var(--success); }
-  .badge-warning { background: var(--warning-soft); color: var(--warning); }
-  .badge-danger { background: var(--danger-soft); color: var(--danger); }
-  .badge-gold { background: var(--accent-gold-soft); color: #8B6F0E; }
-  .badge-neutral { background: var(--bg-cream); color: var(--text-secondary); }
+  .badge-success {
+    background: var(--success-soft);
+    color: var(--success);
+  }
+  .badge-warning {
+    background: var(--warning-soft);
+    color: var(--warning);
+  }
+  .badge-danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .badge-gold {
+    background: var(--accent-gold-soft);
+    color: #8b6f0e;
+  }
+  .badge-neutral {
+    background: var(--bg-cream);
+    color: var(--text-secondary);
+  }
 
   /* Keypad button (login PIN). 28pt font, large square card, satisfying tap. */
   .keypad-btn {
@@ -486,24 +587,51 @@ body {
 }
 
 @layer utilities {
-  .text-balance { text-wrap: balance; }
-  .scrollbar-none { scrollbar-width: none; }
-  .scrollbar-none::-webkit-scrollbar { display: none; }
-  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
-  .safe-top { padding-top: max(env(safe-area-inset-top), 16px); }
+  /* iOS 100vh fix : 100dvh suit la zone visible réelle (barre d'URL
+     dynamique). Fallback 100vh AVANT pour les navigateurs sans dvh. */
+  .min-h-dvh {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  }
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 16px);
+  }
   /* Hero/onboarding gradient headers: safe-area + breathing room so the
      iPhone Dynamic Island (~59pt) never touches a heading. */
-  .safe-top-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 56px); }
-  .safe-top-md   { padding-top: calc(env(safe-area-inset-top, 0px) + 24px); }
+  .safe-top-hero {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 56px);
+  }
+  .safe-top-md {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 24px);
+  }
   /* Bottom-padding helpers tied to nav-height + cta-height variables. */
   .pb-cta-stack {
-    padding-bottom: calc(var(--nav-height) + var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--nav-height) + var(--cta-height) + var(--safe-bottom) +
+        var(--nav-breathing)
+    );
   }
   .pb-cta-only {
-    padding-bottom: calc(var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--cta-height) + var(--safe-bottom) + var(--nav-breathing)
+    );
   }
   .pb-nav-stack {
-    padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--nav-height) + var(--safe-bottom) + var(--nav-breathing)
+    );
   }
   /* Float a CTA strip above the bottom nav (or above safe-area when no nav). */
   .cta-above-nav {
@@ -514,23 +642,47 @@ body {
   }
   /* Sticky sub-header offset under the app header (parity with Drive, LAY-06) */
   .top-header {
-    top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + var(--header-height));
+    top: calc(
+      var(--safe-top, env(safe-area-inset-top, 0px)) + var(--header-height)
+    );
   }
 
   /* Shared elevation / radius / text utilities — same names as Drive
      (DSN-02/08/09) so both apps speak one token language. */
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-card-hover { box-shadow: var(--shadow-card-hover); }
-  .shadow-card-lg { box-shadow: var(--shadow-card-lg); }
-  .rounded-token-sm { border-radius: var(--radius-sm); }
-  .rounded-token-md { border-radius: var(--radius-md); }
-  .rounded-token-lg { border-radius: var(--radius-lg); }
-  .rounded-token-xl { border-radius: var(--radius-xl); }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .shadow-card-lg {
+    box-shadow: var(--shadow-card-lg);
+  }
+  .rounded-token-sm {
+    border-radius: var(--radius-sm);
+  }
+  .rounded-token-md {
+    border-radius: var(--radius-md);
+  }
+  .rounded-token-lg {
+    border-radius: var(--radius-lg);
+  }
+  .rounded-token-xl {
+    border-radius: var(--radius-xl);
+  }
   /* AA-safe gold text + semantic text helpers (replace stray text-slate-*) */
-  .text-gold-ink { color: var(--or-text); }
-  .text-ink { color: var(--text-primary); }
-  .text-ink-2 { color: var(--text-secondary); }
-  .text-ink-3 { color: var(--text-tertiary); }
+  .text-gold-ink {
+    color: var(--or-text);
+  }
+  .text-ink {
+    color: var(--text-primary);
+  }
+  .text-ink-2 {
+    color: var(--text-secondary);
+  }
+  .text-ink-3 {
+    color: var(--text-tertiary);
+  }
 
   /* ─── P0-5 — Scroll-x filter pills with gradient fade ─────
      Container scrollable horizontalement avec fade or-cream à
@@ -546,11 +698,7 @@ body {
     top: 0;
     bottom: 0;
     width: 36px;
-    background: linear-gradient(
-      to right,
-      transparent 0%,
-      var(--bg-cream) 100%
-    );
+    background: linear-gradient(to right, transparent 0%, var(--bg-cream) 100%);
     pointer-events: none;
     z-index: 2;
   }
@@ -561,11 +709,7 @@ body {
     top: 0;
     bottom: 0;
     width: 20px;
-    background: linear-gradient(
-      to left,
-      transparent 0%,
-      var(--bg-cream) 100%
-    );
+    background: linear-gradient(to left, transparent 0%, var(--bg-cream) 100%);
     pointer-events: none;
     z-index: 2;
   }
@@ -585,22 +729,33 @@ body {
      Tous partagent le même easing que le reste de l'app et respectent
      prefers-reduced-motion (override global plus bas neutralise le scale). */
   .press-card {
-    transition: transform var(--dur-fast) var(--ease-out-quart),
-                box-shadow var(--dur-base) var(--ease-out-quart);
+    transition:
+      transform var(--dur-fast) var(--ease-out-quart),
+      box-shadow var(--dur-base) var(--ease-out-quart);
   }
-  .press-card:active { transform: scale(0.985); }
+  .press-card:active {
+    transform: scale(0.985);
+  }
   .press-btn {
-    transition: transform var(--dur-fast) var(--ease-out-quart),
-                background var(--dur-base) var(--ease-out-quart),
-                filter var(--dur-base) var(--ease-out-quart);
+    transition:
+      transform var(--dur-fast) var(--ease-out-quart),
+      background var(--dur-base) var(--ease-out-quart),
+      filter var(--dur-base) var(--ease-out-quart);
   }
-  .press-btn:active { transform: scale(0.97); }
-  .press-btn:disabled { transform: none; }
+  .press-btn:active {
+    transform: scale(0.97);
+  }
+  .press-btn:disabled {
+    transform: none;
+  }
   .press-icon {
-    transition: transform var(--dur-fast) var(--ease-out-quart),
-                background var(--dur-base) var(--ease-out-quart);
+    transition:
+      transform var(--dur-fast) var(--ease-out-quart),
+      background var(--dur-base) var(--ease-out-quart);
   }
-  .press-icon:active { transform: scale(0.92); }
+  .press-icon:active {
+    transform: scale(0.92);
+  }
 
   /* ─── LAY-08 — Barre d'action collée alignée sur le conteneur ──────────
      Largeur max identique au contenu V2Shell (460px mobile), padding
@@ -620,7 +775,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .press-card:active,
   .press-btn:active,
-  .press-icon:active { transform: none; }
+  .press-icon:active {
+    transform: none;
+  }
 }
 
 /* shadcn dialog overlay tweak */
@@ -649,9 +806,11 @@ body {
      html[data-theme="nuit"], html:not([data-theme="jour"]),
      body.theme-nuit  → tous mappés sur la même grammaire dark.
    ══════════════════════════════════════════════════════════════════════ */
-html, body {
-  transition: background-color 240ms var(--ease-out-quart),
-              color 240ms var(--ease-out-quart);
+html,
+body {
+  transition:
+    background-color 240ms var(--ease-out-quart),
+    color 240ms var(--ease-out-quart);
 }
 
 :root:not([data-theme="jour"]),
@@ -660,62 +819,62 @@ body.theme-nuit {
   color-scheme: dark;
 
   /* ── Fonds ── canvas jamais #000, dégradés de profondeur sapin ── */
-  --bg-abyss: #08130F;
-  --bg-base: #0B1C16;
-  --bg-header: linear-gradient(180deg, #0E2A20, #08130F);
+  --bg-abyss: #08130f;
+  --bg-base: #0b1c16;
+  --bg-header: linear-gradient(180deg, #0e2a20, #08130f);
   /* Remap des tokens legacy (Tailwind bg-cream / text-* y pointent) */
-  --bg-cream: #08130F;          /* = abyss : body & canvas en dark direct */
-  --bg-card: #13291F;           /* = surface-1 : remplace bg-white legacy */
+  --bg-cream: #08130f; /* = abyss : body & canvas en dark direct */
+  --bg-card: #13291f; /* = surface-1 : remplace bg-white legacy */
 
   /* ── Surfaces (+~6% luminosité par palier) ── */
-  --surface-0: #0E211A;
-  --surface-1: #13291F;         /* card standard */
-  --surface-2: #193327;         /* hover / sheet */
-  --surface-3: #1F3D2F;         /* popover / modal / palette */
+  --surface-0: #0e211a;
+  --surface-1: #13291f; /* card standard */
+  --surface-2: #193327; /* hover / sheet */
+  --surface-3: #1f3d2f; /* popover / modal / palette */
 
   /* ── Primary SAPIN restauré (l'or ne devient JAMAIS primary) ── */
-  --primary-green: #1B6A4A;
-  --primary-green-hover: #22855C;
-  --primary-green-dark: #134A36;
+  --primary-green: #1b6a4a;
+  --primary-green-hover: #22855c;
+  --primary-green-dark: #134a36;
   --primary-green-soft: rgba(27, 106, 74, 0.16);
-  --hero-gradient: linear-gradient(165deg, #134A36, #0A2419);
+  --hero-gradient: linear-gradient(165deg, #134a36, #0a2419);
 
   /* ── Or = ACCENT (remonté pour AA sur abysse) ── */
-  --accent-gold: #E8C24A;
-  --accent-gold-bright: #F2D469;   /* KPI / big numbers / bay labels */
-  --accent-gold-dim: #B89530;      /* eyebrows */
+  --accent-gold: #e8c24a;
+  --accent-gold-bright: #f2d469; /* KPI / big numbers / bay labels */
+  --accent-gold-dim: #b89530; /* eyebrows */
   --accent-gold-soft: rgba(232, 194, 74, 0.12);
   --accent-gold-glow: 0 0 24px rgba(232, 194, 74, 0.22);
   --accent-gold-hairline: rgba(232, 194, 74, 0.12);
-  --or-text: #F2D469;              /* gold-on-dark text AA-safe (11.1:1) */
+  --or-text: #f2d469; /* gold-on-dark text AA-safe (11.1:1) */
 
   /* ── Texte cream désaturé (jamais blanc pur) ── */
-  --text-primary: #F3F0E6;         /* 14.8:1 AAA */
-  --text-secondary: #A8B4AC;       /* 8.2:1 */
-  --text-tertiary: #7C8A82;        /* 4.7:1 */
-  --text-gold: #F2D469;            /* 11.1:1 */
-  --text-on-gold: #0A1F18;
-  --text-on-dark: #F3F0E6;
-  --text-on-dark-muted: #A8B4AC;
+  --text-primary: #f3f0e6; /* 14.8:1 AAA */
+  --text-secondary: #a8b4ac; /* 8.2:1 */
+  --text-tertiary: #7c8a82; /* 4.7:1 */
+  --text-gold: #f2d469; /* 11.1:1 */
+  --text-on-gold: #0a1f18;
+  --text-on-dark: #f3f0e6;
+  --text-on-dark-muted: #a8b4ac;
 
   /* ── Status lumineux + soft translucides ── */
-  --danger: #FF7062;
+  --danger: #ff7062;
   --danger-soft: rgba(255, 112, 98, 0.14);
-  --success: #4FD08A;
+  --success: #4fd08a;
   --success-soft: rgba(79, 208, 138, 0.14);
-  --warning: #F2B43C;
+  --warning: #f2b43c;
   --warning-soft: rgba(242, 180, 60, 0.14);
-  --status-success: #4FD08A;
+  --status-success: #4fd08a;
   --status-success-bg: rgba(79, 208, 138, 0.14);
-  --status-success-text: #4FD08A;
-  --status-warning: #F2B43C;
+  --status-success-text: #4fd08a;
+  --status-warning: #f2b43c;
   --status-warning-bg: rgba(242, 180, 60, 0.14);
-  --status-warning-text: #F2B43C;
-  --status-danger: #FF7062;
+  --status-warning-text: #f2b43c;
+  --status-danger: #ff7062;
   --status-danger-bg: rgba(255, 112, 98, 0.14);
-  --status-danger-text: #FF7062;
+  --status-danger-text: #ff7062;
   --status-neutral-bg: rgba(255, 255, 255, 0.06);
-  --status-neutral-text: #A8B4AC;
+  --status-neutral-text: #a8b4ac;
 
   /* ── Bordures hairline ── */
   --border-hairline: rgba(255, 255, 255, 0.06);
@@ -725,12 +884,17 @@ body.theme-nuit {
   --border-medium: rgba(255, 255, 255, 0.14);
 
   /* ── Grammaire DEPTH (le secret : inset highlight top = depth Linear) ── */
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.50), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-card-lg: 0 12px 40px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card:
+    0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card-hover:
+    0 6px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-card-lg:
+    0 12px 40px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-elevated:
+    0 8px 28px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   --shadow-inset-soft: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --glow-cta: 0 0 0 1px rgba(232, 194, 74, 0.20), 0 6px 24px rgba(232, 194, 74, 0.18);
+  --glow-cta:
+    0 0 0 1px rgba(232, 194, 74, 0.2), 0 6px 24px rgba(232, 194, 74, 0.18);
   --bignum-glow: 0 0 18px rgba(242, 212, 105, 0.25);
 
   /* ── Glass ── */
@@ -815,7 +979,9 @@ body.theme-nuit .input-field {
 }
 :root:not([data-theme="jour"]) .input-field::placeholder,
 [data-theme="nuit"] .input-field::placeholder,
-body.theme-nuit .input-field::placeholder { color: var(--text-tertiary); }
+body.theme-nuit .input-field::placeholder {
+  color: var(--text-tertiary);
+}
 :root:not([data-theme="jour"]) .input-field:focus,
 [data-theme="nuit"] .input-field:focus,
 body.theme-nuit .input-field:focus {
@@ -840,19 +1006,27 @@ body.theme-nuit .h1-display em {
 [data-theme="nuit"] .eyebrow,
 [data-theme="nuit"] .eyebrow .num,
 body.theme-nuit .eyebrow,
-body.theme-nuit .eyebrow .num { color: var(--accent-gold-dim); }
+body.theme-nuit .eyebrow .num {
+  color: var(--accent-gold-dim);
+}
 
 /* TYPO dark : graisses -1 cran sur les gros titres (extrabold → bold) +
    tabular-nums sur tous les chiffres financiers/quantités. */
 :root:not([data-theme="jour"]) .display,
 [data-theme="nuit"] .display,
-body.theme-nuit .display { font-weight: 700; }
+body.theme-nuit .display {
+  font-weight: 700;
+}
 :root:not([data-theme="jour"]) .h1-display,
 [data-theme="nuit"] .h1-display,
-body.theme-nuit .h1-display { font-weight: 600; }
+body.theme-nuit .h1-display {
+  font-weight: 600;
+}
 :root:not([data-theme="jour"]) .tabular,
 [data-theme="nuit"] .tabular,
-body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
+body.theme-nuit .tabular {
+  font-variant-numeric: tabular-nums;
+}
 
 /* ──────────────────────────────────────────────────────────────────────
    DARK-06 — Counter TV : pulse glow or sur la commande la plus ANCIENNE.
@@ -863,11 +1037,15 @@ body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
 @keyframes counterCardPulse {
   0%,
   100% {
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.14),
-      0 0 28px rgba(242, 212, 105, 0.10);
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(242, 212, 105, 0.14),
+      0 0 28px rgba(242, 212, 105, 0.1);
   }
   50% {
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.34),
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(242, 212, 105, 0.34),
       0 0 56px rgba(242, 212, 105, 0.26);
   }
 }
@@ -877,7 +1055,9 @@ body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   .counter-card-pulse {
     animation: none;
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(242, 212, 105, 0.24),
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(242, 212, 105, 0.24),
       0 0 36px rgba(242, 212, 105, 0.18);
   }
 }
@@ -892,12 +1072,16 @@ body.theme-nuit .tabular { font-variant-numeric: tabular-nums; }
 @keyframes heroCtaBreathe {
   0%,
   100% {
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.14),
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(232, 194, 74, 0.14),
       0 6px 22px rgba(232, 194, 74, 0.12);
   }
   50% {
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.22),
-      0 8px 28px rgba(232, 194, 74, 0.20);
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(232, 194, 74, 0.22),
+      0 8px 28px rgba(232, 194, 74, 0.2);
   }
 }
 :root:not([data-theme="jour"]) .hero-action-card,
@@ -906,7 +1090,9 @@ body.theme-nuit .hero-action-card {
   background: var(--hero-gradient);
   border-color: var(--border-premium);
   animation: heroCtaBreathe 4s ease-in-out infinite;
-  transition: box-shadow 0.22s ease, transform 0.12s ease;
+  transition:
+    box-shadow 0.22s ease,
+    transform 0.12s ease;
 }
 :root:not([data-theme="jour"]) .hero-action-card:hover,
 :root:not([data-theme="jour"]) .hero-action-card:active,
@@ -922,7 +1108,9 @@ body.theme-nuit .hero-action-card:active {
   [data-theme="nuit"] .hero-action-card,
   body.theme-nuit .hero-action-card {
     animation: none;
-    box-shadow: var(--shadow-elevated), 0 0 0 1px rgba(232, 194, 74, 0.18),
+    box-shadow:
+      var(--shadow-elevated),
+      0 0 0 1px rgba(232, 194, 74, 0.18),
       0 6px 22px rgba(232, 194, 74, 0.14);
   }
 }
@@ -1007,9 +1195,15 @@ body.density-compact .body-md {
   line-height: 1.45;
 }
 
-body.density-compact .h1 { font-size: 24px; }
-body.density-compact .h2 { font-size: 19px; }
-body.density-compact .h3 { font-size: 16px; }
+body.density-compact .h1 {
+  font-size: 24px;
+}
+body.density-compact .h2 {
+  font-size: 19px;
+}
+body.density-compact .h3 {
+  font-size: 16px;
+}
 
 body.density-compact .pill-filter {
   padding: 6px 12px;
@@ -1026,7 +1220,10 @@ body.density-compact .btn-ghost {
    Styles cmdk minimaux. Linear-grade : item haut 40px, focus or doux,
    group heading label-caps or, séparateur subtle.
    ────────────────────────────────────────────────────────────────────── */
-.cmdk-root { display: flex; flex-direction: column; }
+.cmdk-root {
+  display: flex;
+  flex-direction: column;
+}
 
 .cmdk-group {
   padding: 6px 6px 8px;
@@ -1073,7 +1270,9 @@ body.theme-nuit .cmdk-root-wrap {
 body.theme-nuit .cmdk-item[data-selected="true"] {
   background: var(--accent-gold-soft);
 }
-:root:not([data-theme="jour"]) .cmdk-item[data-selected="true"] .text-text-primary,
+:root:not([data-theme="jour"])
+  .cmdk-item[data-selected="true"]
+  .text-text-primary,
 [data-theme="nuit"] .cmdk-item[data-selected="true"] .text-text-primary,
 body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
   color: var(--text-primary);

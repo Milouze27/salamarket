@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,6 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Layers,
+  ListChecks,
   Lock,
   PackageCheck,
   PlayCircle,
@@ -42,6 +45,35 @@ interface CommandeWithLignes extends CommandeDrive {
 
 type KanbanStatut = "a_preparer" | "en_preparation" | "pret" | "retire";
 type ViewMode = "kanban" | "batch";
+
+// Filtres suivi-drive : segment client + fenêtre d'urgence.
+type SegmentFilter = "tous" | ClientType;
+type UrgenceFilter = "tous" | "urgent" | "normal" | "late";
+
+const SEGMENT_FILTERS: Array<{ key: SegmentFilter; label: string }> = [
+  { key: "tous", label: "Tous" },
+  { key: "particulier", label: "Particulier" },
+  { key: "pro", label: "Pro" },
+  { key: "traiteur", label: "Traiteur" },
+];
+
+const URGENCE_FILTERS: Array<{ key: UrgenceFilter; label: string }> = [
+  { key: "tous", label: "Tous" },
+  { key: "urgent", label: "<30min" },
+  { key: "normal", label: "30min-2h" },
+  { key: "late", label: ">2h" },
+];
+
+// Segment client d'une commande, déduit des zones de préparation de ses
+// lignes. Une commande est rattachée à un segment si au moins une ligne
+// appartient à ce segment (cas mixte rare → match permissif).
+function commandeMatchesSegment(
+  cmd: CommandeWithLignes,
+  seg: SegmentFilter,
+): boolean {
+  if (seg === "tous") return true;
+  return cmd.lignes.some((l) => clientTypeFromZone(l.zone_preparation) === seg);
+}
 
 /* ── Batch Pick helpers ─────────────────────────────────────────────── */
 
@@ -257,6 +289,8 @@ export default function V2PreparationKanbanPage() {
   const [updating, setUpdating] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
+  const [segmentFilter, setSegmentFilter] = useState<SegmentFilter>("tous");
+  const [urgenceFilter, setUrgenceFilter] = useState<UrgenceFilter>("tous");
   const [pickedProducts, setPickedProducts] = useState<Set<string>>(
     () => new Set(),
   );
@@ -336,16 +370,34 @@ export default function V2PreparationKanbanPage() {
     };
   }, []);
 
+  // Commandes filtrées par segment client. Le filtre urgence ne s'applique
+  // qu'aux commandes "à préparer" (seul statut où le tier a du sens), il est
+  // donc appliqué plus bas, colonne par colonne, pour ne pas vider les autres.
+  const filteredCommandes = useMemo(
+    () => commandes.filter((c) => commandeMatchesSegment(c, segmentFilter)),
+    [commandes, segmentFilter],
+  );
+
+  const filtersActive = segmentFilter !== "tous" || urgenceFilter !== "tous";
+
   const byColumn = useMemo(() => {
     const map = new Map<KanbanStatut, CommandeWithLignes[]>();
     for (const col of COLUMNS) map.set(col.key, []);
-    for (const c of commandes) {
+    for (const c of filteredCommandes) {
       if (
         c.statut === "a_preparer" ||
         c.statut === "en_preparation" ||
         c.statut === "pret" ||
         c.statut === "retire"
       ) {
+        // Filtre urgence : actif uniquement sur la colonne "à préparer".
+        if (
+          c.statut === "a_preparer" &&
+          urgenceFilter !== "tous" &&
+          getUrgencyTier(c.creneau_retrait) !== urgenceFilter
+        ) {
+          continue;
+        }
         map.get(c.statut)!.push(c);
       }
     }
@@ -370,11 +422,25 @@ export default function V2PreparationKanbanPage() {
       }
     }
     return map;
-  }, [commandes]);
+  }, [filteredCommandes, urgenceFilter]);
+
+  // Batch pick : segment toujours appliqué ; urgence appliquée aussi car le
+  // batch ne pioche que dans les commandes "à préparer" (tier pertinent).
+  const batchSourceCommandes = useMemo(
+    () =>
+      urgenceFilter === "tous"
+        ? filteredCommandes
+        : filteredCommandes.filter(
+            (c) =>
+              c.statut !== "a_preparer" ||
+              getUrgencyTier(c.creneau_retrait) === urgenceFilter,
+          ),
+    [filteredCommandes, urgenceFilter],
+  );
 
   const batchCategories = useMemo(
-    () => buildBatchCategories(commandes),
-    [commandes],
+    () => buildBatchCategories(batchSourceCommandes),
+    [batchSourceCommandes],
   );
 
   const totalBatchProducts = useMemo(
@@ -487,29 +553,115 @@ export default function V2PreparationKanbanPage() {
         </div>
 
         {/* View mode toggle */}
-        <div className="mt-4 inline-flex rounded-full p-0.5 bg-[#FAF7EE] border border-[#E8E4D8]">
+        <div
+          className="mt-4 inline-flex rounded-full p-1 gap-1 border"
+          style={{
+            background: "var(--surface-1)",
+            borderColor: "var(--border-light)",
+          }}
+        >
           <button
             onClick={() => setViewMode("kanban")}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
+            aria-pressed={viewMode === "kanban"}
+            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full text-[13px] font-bold transition-colors ${
               viewMode === "kanban"
-                ? "bg-[#0E3B2E] text-white"
-                : "bg-white text-[#0E3B2E] border border-[#E8E4D8]"
+                ? "bg-primary text-white"
+                : "text-text-primary"
             }`}
           >
+            <Layers className="w-4 h-4" aria-hidden />
             Kanban
           </button>
           <button
             onClick={() => setViewMode("batch")}
-            className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
+            aria-pressed={viewMode === "batch"}
+            className={`inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full text-[13px] font-bold transition-colors ${
               viewMode === "batch"
-                ? "bg-[#0E3B2E] text-white"
-                : "bg-white text-[#0E3B2E] border border-[#E8E4D8]"
+                ? "bg-primary text-white"
+                : "text-text-primary"
             }`}
           >
-            Batch Pick
+            <ListChecks className="w-4 h-4" aria-hidden />
+            Batch
           </button>
         </div>
+        {/* Micro-légende des deux modes (affichée une seule fois) */}
+        <p className="mt-2 text-[11px] leading-snug text-text-tertiary">
+          Kanban : une commande à la fois · Batch : pick par catégorie
+        </p>
       </header>
+
+      {/* Filtres suivi-drive : sticky sous le header, communs aux 2 vues */}
+      {!loading && (
+        <div
+          className="sticky top-0 z-50 px-5 py-3 mt-4 space-y-2 border-b backdrop-blur-sm"
+          style={{
+            background: "var(--surface-1)",
+            borderColor: "var(--border-light)",
+          }}
+        >
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-text-tertiary shrink-0 pr-0.5">
+              Client
+            </span>
+            {SEGMENT_FILTERS.map((f) => {
+              const active = segmentFilter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setSegmentFilter(f.key)}
+                  aria-pressed={active}
+                  className={`shrink-0 min-h-[44px] px-3.5 rounded-full text-[12.5px] font-bold border transition-colors ${
+                    active
+                      ? "bg-primary text-white border-transparent"
+                      : "text-text-primary"
+                  }`}
+                  style={
+                    active
+                      ? undefined
+                      : {
+                          background: "var(--surface-2)",
+                          borderColor: "var(--border-light)",
+                        }
+                  }
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-text-tertiary shrink-0 pr-0.5">
+              Urgence
+            </span>
+            {URGENCE_FILTERS.map((f) => {
+              const active = urgenceFilter === f.key;
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setUrgenceFilter(f.key)}
+                  aria-pressed={active}
+                  className={`shrink-0 min-h-[44px] px-3.5 rounded-full text-[12.5px] font-bold border transition-colors ${
+                    active
+                      ? "bg-primary text-white border-transparent"
+                      : "text-text-primary"
+                  }`}
+                  style={
+                    active
+                      ? undefined
+                      : {
+                          background: "var(--surface-2)",
+                          borderColor: "var(--border-light)",
+                        }
+                  }
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="px-5 py-10 text-center text-text-secondary">
@@ -517,178 +669,233 @@ export default function V2PreparationKanbanPage() {
         </p>
       ) : viewMode === "kanban" ? (
         /* ────────────────── KANBAN VIEW ────────────────── */
-        <div className="px-5 mt-5 space-y-6 pb-12">
-          {COLUMNS.map((col) => {
-            const items = byColumn.get(col.key) ?? [];
-            return (
-              <section key={col.key}>
-                <div className="flex items-baseline justify-between mb-2 px-1">
-                  <p className={`label-caps ${col.textAccent}`}>{col.label}</p>
-                  <span className="text-[12px] font-extrabold tabular text-text-primary">
-                    {items.length}
-                  </span>
+        <div className="px-5 mt-5 space-y-6 pb-nav-stack">
+          {(() => {
+            // Quand un filtre est actif, on masque les colonnes vides pour
+            // garder l'écran lisible. Sans filtre, on garde toutes les
+            // colonnes (état vide explicite informatif).
+            const visibleColumns = filtersActive
+              ? COLUMNS.filter(
+                  (col) => (byColumn.get(col.key) ?? []).length > 0,
+                )
+              : COLUMNS;
+            if (filtersActive && visibleColumns.length === 0) {
+              return (
+                <div
+                  className="border rounded-2xl p-6 text-center text-[13px] text-text-tertiary"
+                  style={{
+                    background: "var(--surface-2)",
+                    borderColor: "var(--border-light)",
+                  }}
+                >
+                  Aucune commande ne correspond aux filtres.
                 </div>
-                {items.length === 0 ? (
-                  <div
-                    className={`border rounded-2xl p-4 text-center text-[12px] text-text-tertiary ${col.accent}`}
-                  >
-                    Aucune commande dans cette colonne.
+              );
+            }
+            return visibleColumns.map((col) => {
+              const items = byColumn.get(col.key) ?? [];
+              return (
+                <section key={col.key}>
+                  <div className="flex items-baseline justify-between mb-2 px-1">
+                    <p className={`label-caps ${col.textAccent}`}>
+                      {col.label}
+                    </p>
+                    <span className="text-[12px] font-extrabold tabular text-text-primary">
+                      {items.length}
+                    </span>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {items.map((cmd) => {
-                      const totalLignes = cmd.lignes.length;
-                      const prepares = cmd.lignes.filter(
-                        (l) => l.statut_preparation === "prepare",
-                      ).length;
-                      const types = Array.from(
-                        new Set(
-                          cmd.lignes.map((l) =>
-                            clientTypeFromZone(l.zone_preparation),
+                  {items.length === 0 ? (
+                    <div
+                      className={`border rounded-2xl p-4 text-center text-[12px] text-text-tertiary ${col.accent}`}
+                    >
+                      Aucune commande dans cette colonne.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {items.map((cmd) => {
+                        const totalLignes = cmd.lignes.length;
+                        const prepares = cmd.lignes.filter(
+                          (l) => l.statut_preparation === "prepare",
+                        ).length;
+                        const types = Array.from(
+                          new Set(
+                            cmd.lignes.map((l) =>
+                              clientTypeFromZone(l.zone_preparation),
+                            ),
                           ),
-                        ),
-                      );
-                      const isFinal = col.key === "retire";
-                      // Drive au poids — badges Stripe + nb à peser
-                      const nbAPeser = cmd.lignes.filter(
-                        (l) =>
-                          l.produit_unit_type === "weight" ||
-                          l.produit_unit_type === "weight_bracket",
-                      ).length;
-                      const isPreAutorise = cmd.statut_paiement === "autorise";
-                      const isCapture = cmd.statut_paiement === "capture";
+                        );
+                        const isFinal = col.key === "retire";
+                        // Drive au poids — badges Stripe + nb à peser
+                        const nbAPeser = cmd.lignes.filter(
+                          (l) =>
+                            l.produit_unit_type === "weight" ||
+                            l.produit_unit_type === "weight_bracket",
+                        ).length;
+                        const isPreAutorise =
+                          cmd.statut_paiement === "autorise";
+                        const isCapture = cmd.statut_paiement === "capture";
 
-                      // Urgency tier appliqué uniquement sur la colonne
-                      // À préparer — sur les autres colonnes (en cours,
-                      // prête, retirée) la priorité visuelle n'a plus de
-                      // sens, on garde le style de colonne d'origine.
-                      const tier =
-                        col.key === "a_preparer"
-                          ? getUrgencyTier(cmd.creneau_retrait)
-                          : null;
-                      const cardClass =
-                        tier === "urgent"
-                          ? "border-[#C9A227] ring-1 ring-[#C9A227]/40 shadow-[0_0_0_3px_rgba(201,162,39,0.08)]"
-                          : tier === "late"
-                            ? "border-[#E8E4D8] opacity-75"
+                        // Urgency tier appliqué uniquement sur la colonne
+                        // À préparer — sur les autres colonnes (en cours,
+                        // prête, retirée) la priorité visuelle n'a plus de
+                        // sens, on garde le style de colonne d'origine.
+                        const tier =
+                          col.key === "a_preparer"
+                            ? getUrgencyTier(cmd.creneau_retrait)
+                            : null;
+                        // Urgent : liseré or (token). Late : dé-emphasé via
+                        // surface-2 + bordure carte SANS opacity (qui cassait
+                        // le contraste en dark mode), texte tertiaire.
+                        const isUrgent = tier === "urgent";
+                        const isLate = tier === "late";
+                        const cardClass = isUrgent
+                          ? "ring-1"
+                          : isLate
+                            ? ""
                             : col.accent.split(" ")[1];
-                      const chipClass =
-                        tier === "urgent"
-                          ? "bg-[#C9A227] text-[#082A20]"
-                          : tier === "late"
-                            ? "bg-[#E8E4D8] text-text-tertiary"
+                        const cardStyle: CSSProperties = isUrgent
+                          ? {
+                              borderColor: "var(--accent-gold)",
+                              // ring via box-shadow tokenisé
+                              boxShadow:
+                                "0 0 0 1px var(--accent-gold-hairline), 0 0 0 3px var(--accent-gold-soft)",
+                            }
+                          : isLate
+                            ? {
+                                background: "var(--surface-2)",
+                                borderColor: "var(--border-card)",
+                              }
+                            : {};
+                        const chipClass = isUrgent
+                          ? "text-primary-dark"
+                          : isLate
+                            ? "text-text-tertiary"
                             : "bg-cream text-text-primary";
-                      return (
-                        <motion.div
-                          key={cmd.id}
-                          layout
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className={`bg-white border rounded-2xl p-3.5 shadow-card ${cardClass}`}
-                        >
-                          {tier === "urgent" && (
-                            <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-[0.18em] text-[#C9A227] mb-2">
-                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C9A227] animate-pulse" />
-                              Urgent
-                            </span>
-                          )}
-                          {tier === "late" && (
-                            <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.18em] text-text-tertiary mb-2">
-                              Plus tard
-                            </span>
-                          )}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-[14px] font-extrabold text-text-primary">
-                                {cmd.numero_commande}
-                              </p>
-                              <p className="text-[11.5px] text-text-secondary truncate">
-                                {cmd.client_nom}
-                              </p>
-                            </div>
-                            <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${chipClass}`}
-                              title={`Créneau : ${formatHeure(cmd.creneau_retrait)}`}
-                            >
-                              <Clock className="w-3 h-3" />
-                              {tier
-                                ? formatRelativeToCreneau(cmd.creneau_retrait)
-                                : formatHeure(cmd.creneau_retrait)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-                            <ClientTypeBadgeGroup size="sm" types={types} />
-                            {nbAPeser > 0 && (
+                        const chipStyle: CSSProperties = isUrgent
+                          ? { background: "var(--accent-gold)" }
+                          : isLate
+                            ? { background: "var(--border-light)" }
+                            : {};
+                        return (
+                          <motion.div
+                            key={cmd.id}
+                            layout
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className={`bg-white border rounded-2xl p-3.5 shadow-card ${cardClass}`}
+                            style={cardStyle}
+                          >
+                            {isUrgent && (
                               <span
-                                title="Lignes au poids à peser"
-                                className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide bg-gold-soft text-primary-dark px-2 py-0.5 rounded-full"
+                                className="inline-flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-[0.18em] mb-2"
+                                style={{ color: "var(--accent-gold-dim)" }}
                               >
-                                <Scale className="w-3 h-3" aria-hidden />
-                                {nbAPeser} à peser
+                                <span
+                                  className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+                                  style={{ background: "var(--accent-gold)" }}
+                                />
+                                Urgent
                               </span>
                             )}
-                            <span className="text-[11px] text-text-secondary inline-flex items-center gap-1 ml-auto">
-                              {prepares}/{totalLignes} préparés
-                              {isPreAutorise ? (
-                                <span
-                                  title="Stripe pré-autorisé, capture après pesée"
-                                  className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-cream text-primary px-2 py-0.5 rounded-full"
-                                >
-                                  <Lock className="w-3 h-3" aria-hidden />
-                                  Pré-aut.{" "}
-                                  {(
-                                    cmd.montant_autorise_ttc ?? cmd.total_ttc
-                                  ).toFixed(0)}{" "}
-                                  €
-                                </span>
-                              ) : isCapture ? (
-                                <span
-                                  title="Capture Stripe effectuée"
-                                  className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-success-soft text-success px-2 py-0.5 rounded-full"
-                                >
-                                  <Check className="w-3 h-3" aria-hidden />
-                                  Capt.{" "}
-                                  {(
-                                    cmd.montant_capture_ttc ?? cmd.total_ttc
-                                  ).toFixed(0)}{" "}
-                                  €
-                                </span>
-                              ) : (
-                                <PriceTag
-                                  amount={cmd.total_ttc}
-                                  decimals={0}
-                                  className="ml-1"
-                                />
-                              )}
-                            </span>
-                          </div>
-                          <div className="mt-3 flex gap-2">
-                            <Link
-                              href={`/v2/preparation/${cmd.id}`}
-                              className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-primary bg-cream rounded-full py-2 active:scale-[0.98] transition-transform"
-                            >
-                              Détail
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </Link>
-                            {!isFinal && (
-                              <button
-                                onClick={() => setActionFor(cmd)}
-                                className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform"
-                              >
-                                Avancer
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
+                            {isLate && (
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold uppercase tracking-[0.18em] text-text-tertiary mb-2">
+                                Plus tard
+                              </span>
                             )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            );
-          })}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-[14px] font-extrabold text-text-primary">
+                                  {cmd.numero_commande}
+                                </p>
+                                <p className="text-[11.5px] text-text-secondary truncate">
+                                  {cmd.client_nom}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${chipClass}`}
+                                style={chipStyle}
+                                title={`Créneau : ${formatHeure(cmd.creneau_retrait)}`}
+                              >
+                                <Clock className="w-3 h-3" />
+                                {tier
+                                  ? formatRelativeToCreneau(cmd.creneau_retrait)
+                                  : formatHeure(cmd.creneau_retrait)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                              <ClientTypeBadgeGroup size="sm" types={types} />
+                              {nbAPeser > 0 && (
+                                <span
+                                  title="Lignes au poids à peser"
+                                  className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide bg-gold-soft text-primary-dark px-2 py-0.5 rounded-full"
+                                >
+                                  <Scale className="w-3 h-3" aria-hidden />
+                                  {nbAPeser} à peser
+                                </span>
+                              )}
+                              <span className="text-[11px] text-text-secondary inline-flex items-center gap-1 ml-auto">
+                                {prepares}/{totalLignes} préparés
+                                {isPreAutorise ? (
+                                  <span
+                                    title="Stripe pré-autorisé, capture après pesée"
+                                    className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-cream text-primary px-2 py-0.5 rounded-full"
+                                  >
+                                    <Lock className="w-3 h-3" aria-hidden />
+                                    Pré-aut.{" "}
+                                    {(
+                                      cmd.montant_autorise_ttc ?? cmd.total_ttc
+                                    ).toFixed(0)}{" "}
+                                    €
+                                  </span>
+                                ) : isCapture ? (
+                                  <span
+                                    title="Capture Stripe effectuée"
+                                    className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-success-soft text-success px-2 py-0.5 rounded-full"
+                                  >
+                                    <Check className="w-3 h-3" aria-hidden />
+                                    Capt.{" "}
+                                    {(
+                                      cmd.montant_capture_ttc ?? cmd.total_ttc
+                                    ).toFixed(0)}{" "}
+                                    €
+                                  </span>
+                                ) : (
+                                  <PriceTag
+                                    amount={cmd.total_ttc}
+                                    decimals={0}
+                                    className="ml-1"
+                                  />
+                                )}
+                              </span>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <Link
+                                href={`/v2/preparation/${cmd.id}`}
+                                className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-primary bg-cream rounded-full py-2 active:scale-[0.98] transition-transform"
+                              >
+                                Détail
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </Link>
+                              {!isFinal && (
+                                <button
+                                  onClick={() => setActionFor(cmd)}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform"
+                                >
+                                  Avancer
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            });
+          })()}
         </div>
       ) : (
         /* ────────────────── BATCH PICK VIEW ──────────────────
@@ -698,19 +905,23 @@ export default function V2PreparationKanbanPage() {
           {/* Progress bar */}
           <div className="mb-5">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[13px] font-bold text-[#0F1A14]">
+              <p className="text-[13px] font-bold text-text-primary">
                 {pickedCount}/{totalBatchProducts} produits{" "}
                 {totalBatchProducts > 0 ? "récupérés" : ""}
               </p>
-              <p className="text-[11px] font-bold text-[#6B7280]">
+              <p className="text-[11px] font-bold text-text-secondary">
                 {totalBatchProducts > 0
                   ? `${Math.round((pickedCount / totalBatchProducts) * 100)}%`
                   : "0%"}
               </p>
             </div>
-            <div className="h-2.5 rounded-full bg-[#E8E4D8] overflow-hidden">
+            <div
+              className="h-2.5 rounded-full overflow-hidden"
+              style={{ background: "var(--border-light)" }}
+            >
               <motion.div
-                className="h-full rounded-full bg-[#C9A227]"
+                className="h-full rounded-full"
+                style={{ background: "var(--accent-gold)" }}
                 initial={{ width: 0 }}
                 animate={{
                   width:
@@ -724,8 +935,16 @@ export default function V2PreparationKanbanPage() {
           </div>
 
           {batchCategories.length === 0 ? (
-            <div className="border border-[#E8E4D8] rounded-2xl p-6 text-center text-[13px] text-[#6B7280] bg-[#FAF7EE]">
-              Aucune commande en attente de préparation.
+            <div
+              className="border rounded-2xl p-6 text-center text-[13px] text-text-secondary"
+              style={{
+                background: "var(--surface-2)",
+                borderColor: "var(--border-light)",
+              }}
+            >
+              {filtersActive
+                ? "Aucune commande ne correspond aux filtres."
+                : "Aucune commande en attente de préparation."}
             </div>
           ) : (
             <div className="space-y-4">
@@ -736,16 +955,17 @@ export default function V2PreparationKanbanPage() {
                     {/* Category header */}
                     <button
                       onClick={() => toggleCategory(cat.categorie)}
-                      className="w-full flex items-center justify-between bg-[#FAF7EE] rounded-lg px-3.5 py-2.5 mb-2"
+                      className="w-full flex items-center justify-between rounded-lg px-3.5 min-h-[44px] mb-2"
+                      style={{ background: "var(--surface-2)" }}
                     >
-                      <span className="text-[13px] font-bold text-[#0F1A14]">
+                      <span className="text-[13px] font-bold text-text-primary text-left">
                         {cat.emoji} {cat.categorie} ({cat.products.length}{" "}
                         produit{cat.products.length > 1 ? "s" : ""},{" "}
                         {cat.orderCount} commande
                         {cat.orderCount > 1 ? "s" : ""})
                       </span>
                       <ChevronDown
-                        className={`w-4 h-4 text-[#6B7280] transition-transform ${
+                        className={`w-4 h-4 text-text-tertiary transition-transform ${
                           isCollapsed ? "-rotate-90" : ""
                         }`}
                       />
@@ -772,9 +992,10 @@ export default function V2PreparationKanbanPage() {
                               return (
                                 <div
                                   key={product.produit_id}
-                                  className={`bg-white rounded-lg border border-[#E8E4D8] transition-opacity ${
-                                    isPicked ? "opacity-50" : ""
+                                  className={`bg-white rounded-lg border transition-opacity ${
+                                    isPicked ? "opacity-60" : ""
                                   }`}
+                                  style={{ borderColor: "var(--border-light)" }}
                                 >
                                   <div className="flex items-center gap-3 p-3">
                                     {/* Checkbox */}
@@ -782,15 +1003,24 @@ export default function V2PreparationKanbanPage() {
                                       onClick={() =>
                                         togglePicked(product.produit_id)
                                       }
-                                      className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
-                                        isPicked
-                                          ? "bg-[#0E3B2E] border-[#0E3B2E]"
-                                          : "border-[#E8E4D8] bg-white"
-                                      }`}
+                                      aria-pressed={isPicked}
+                                      className="flex-shrink-0 w-11 h-11 -m-2.5 mr-0 flex items-center justify-center"
                                     >
-                                      {isPicked && (
-                                        <Check className="w-3.5 h-3.5 text-white" />
-                                      )}
+                                      <span
+                                        className="w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors"
+                                        style={{
+                                          background: isPicked
+                                            ? "var(--primary-green)"
+                                            : "var(--bg-card)",
+                                          borderColor: isPicked
+                                            ? "var(--primary-green)"
+                                            : "var(--border-light)",
+                                        }}
+                                      >
+                                        {isPicked && (
+                                          <Check className="w-3.5 h-3.5 text-white" />
+                                        )}
+                                      </span>
                                     </button>
 
                                     {/* Product info — tap to expand */}
@@ -798,10 +1028,10 @@ export default function V2PreparationKanbanPage() {
                                       onClick={() =>
                                         toggleExpanded(product.produit_id)
                                       }
-                                      className="flex-1 min-w-0 text-left"
+                                      className="flex-1 min-w-0 text-left min-h-[44px] flex items-center"
                                     >
                                       <p
-                                        className={`text-[13px] font-bold text-[#0F1A14] ${
+                                        className={`text-[13px] font-bold text-text-primary ${
                                           isPicked ? "line-through" : ""
                                         }`}
                                       >
@@ -812,7 +1042,7 @@ export default function V2PreparationKanbanPage() {
                                     {/* Quantity + orders badge */}
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                       <span
-                                        className={`text-[13px] font-bold tabular-nums text-[#0F1A14] ${
+                                        className={`text-[13px] font-bold tabular-nums text-text-primary ${
                                           isPicked ? "line-through" : ""
                                         }`}
                                       >
@@ -824,12 +1054,17 @@ export default function V2PreparationKanbanPage() {
                                             )} kg`
                                           : `${product.totalQty}`}
                                       </span>
-                                      <span className="text-[10.5px] font-bold text-[#6B7280] bg-[#FAF7EE] px-2 py-0.5 rounded-full">
+                                      <span
+                                        className="text-[10.5px] font-bold text-text-secondary px-2 py-0.5 rounded-full"
+                                        style={{
+                                          background: "var(--surface-2)",
+                                        }}
+                                      >
                                         {product.orderCount} cmd
                                         {product.orderCount > 1 ? "s" : ""}
                                       </span>
                                       <ChevronDown
-                                        className={`w-3.5 h-3.5 text-[#6B7280] transition-transform ${
+                                        className={`w-3.5 h-3.5 text-text-tertiary transition-transform ${
                                           isExpanded ? "" : "-rotate-90"
                                         }`}
                                       />
@@ -852,12 +1087,17 @@ export default function V2PreparationKanbanPage() {
                                         transition={{ duration: 0.15 }}
                                         className="overflow-hidden"
                                       >
-                                        <div className="px-3 pb-3 pt-0 border-t border-[#E8E4D8]">
+                                        <div
+                                          className="px-3 pb-3 pt-0 border-t"
+                                          style={{
+                                            borderColor: "var(--border-light)",
+                                          }}
+                                        >
                                           <div className="pt-2 space-y-1">
                                             {product.orders.map((o, i) => (
                                               <div
                                                 key={i}
-                                                className="flex items-center justify-between text-[12px] text-[#6B7280]"
+                                                className="flex items-center justify-between text-[12px] text-text-secondary"
                                               >
                                                 <span className="font-medium">
                                                   {o.numero_commande}
@@ -893,10 +1133,16 @@ export default function V2PreparationKanbanPage() {
 
           {/* Bottom CTA */}
           {totalBatchProducts > 0 && (
-            <div className="fixed cta-above-nav left-0 right-0 z-[60] bg-white border-t border-[#E8E4D8] px-5 py-4">
+            <div
+              className="fixed cta-above-nav left-0 right-0 z-[60] border-t px-5 py-4"
+              style={{
+                background: "var(--surface-1)",
+                borderColor: "var(--border-light)",
+              }}
+            >
               <button
                 onClick={() => setViewMode("kanban")}
-                className="w-full bg-[#0E3B2E] text-white rounded-full py-3.5 px-5 flex items-center justify-center gap-2 text-[14px] font-bold active:scale-[0.99] transition-transform"
+                className="w-full bg-primary text-white rounded-full py-3.5 px-5 flex items-center justify-center gap-2 text-[14px] font-bold active:scale-[0.99] transition-transform"
               >
                 Dispatcher par commande
                 <ArrowRight className="w-4 h-4" />

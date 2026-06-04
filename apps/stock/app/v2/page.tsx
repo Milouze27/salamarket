@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   ArrowRight,
   ClipboardList,
+  Gauge,
   PackageSearch,
   Repeat2,
   ShoppingBag,
@@ -53,18 +54,19 @@ const ACTIONS = [
   },
 ] as const;
 
-const ADMIN_ACTIONS = [
-  {
-    href: "/v2/admin",
-    title: "Dashboard global",
-    desc: "Vue 3 dépôts, alertes IA",
-    icon: Sparkles,
-  },
+/** Tuiles communes manager + admin : le quotidien de pilotage rapproché. */
+const MANAGER_ACTIONS = [
   {
     href: "/v2/preparation",
     title: "Préparation drive",
     desc: "Commandes à préparer",
     icon: ShoppingBag,
+  },
+  {
+    href: "/v2/stock",
+    title: "Stock du dépôt",
+    desc: "Catalogue produits",
+    icon: PackageSearch,
   },
   {
     href: "/v2/inventaire",
@@ -77,6 +79,22 @@ const ADMIN_ACTIONS = [
     title: "Imprimer étiquettes",
     desc: "EAN-13 Brother QL-820",
     icon: Tag,
+  },
+] as const;
+
+/** Tuiles réservées admin : la vue 3 dépôts + le cockpit temps réel. */
+const ADMIN_ONLY_ACTIONS = [
+  {
+    href: "/v2/admin",
+    title: "Dashboard global",
+    desc: "Vue 3 dépôts, alertes IA",
+    icon: Sparkles,
+  },
+  {
+    href: "/v2/cockpit",
+    title: "Cockpit",
+    desc: "Ventes, alertes, staff en 30 s",
+    icon: Gauge,
   },
 ] as const;
 
@@ -98,13 +116,33 @@ function greeting() {
   return "Bonsoir";
 }
 
+/** Sous-titre orienté tâche, propre au rôle (onboarding + cap clair). */
+function introForRole(role: string | undefined): string {
+  switch (role) {
+    case "reception":
+      return "Scanne les cartons fournisseur pour démarrer la réception.";
+    case "preparation":
+      return "Voici les commandes drive à préparer aujourd'hui.";
+    case "caisse":
+      return "Consulte le stock ou gère le retrait au comptoir.";
+    case "manager":
+    case "admin":
+      return "Pilote tes 3 dépôts et le drive d'un coup d'œil.";
+    default:
+      return "Choisis une action pour démarrer.";
+  }
+}
+
 export default function V2HomePage() {
   const employe = useV2((s) => s.currentEmploye);
   const depot = useV2((s) => s.currentDepot);
-  const isManager = employe?.role === "manager" || employe?.role === "admin";
+  const role = employe?.role;
+  const isManager = role === "manager" || role === "admin";
+  const isAdmin = role === "admin";
 
   const greet = greeting();
   const firstName = employe?.prenom ?? employe?.nom ?? "";
+  const intro = introForRole(role);
 
   return (
     <V2Shell>
@@ -116,9 +154,7 @@ export default function V2HomePage() {
         <h1 className="h1-display mt-3">
           {greet} <span className="gold">{firstName}</span>.
         </h1>
-        <p className="body-md text-text-secondary mt-3 max-w-[36ch]">
-          Choisis une action pour démarrer.
-        </p>
+        <p className="body-md text-text-secondary mt-3 max-w-[36ch]">{intro}</p>
       </header>
 
       {/* HERO ACTION — sapin plein, promotion de l'action principale */}
@@ -181,11 +217,22 @@ export default function V2HomePage() {
 
       {isManager && (
         <section className="px-5 mt-9">
-          <EditorialEyebrow num="03" label="Espace manager" className="mb-3" />
+          <EditorialEyebrow
+            num="03"
+            label={isAdmin ? "Espace admin" : "Espace manager"}
+            className="mb-3"
+          />
           <div className="grid grid-cols-2 gap-3">
-            {ADMIN_ACTIONS.map((a, i) => {
+            {/* Admin : tuiles globales (dashboard, cockpit) en tête, puis le
+                quotidien manager. Manager : uniquement le quotidien. */}
+            {(isAdmin
+              ? [...ADMIN_ONLY_ACTIONS, ...MANAGER_ACTIONS]
+              : MANAGER_ACTIONS
+            ).map((a, i) => {
               const Icon = a.icon;
-              const isAdmin = a.href === "/v2/admin";
+              // Les tuiles admin-only se distinguent par un fond dégradé sapin→or.
+              const isGlobal =
+                a.href === "/v2/admin" || a.href === "/v2/cockpit";
               const isEtiquettes = a.href === "/v2/etiquettes";
               const isPrep = a.href === "/v2/preparation";
               const isInventaire = a.href === "/v2/inventaire";
@@ -203,12 +250,12 @@ export default function V2HomePage() {
                   <Link
                     href={a.href}
                     className={`relative rounded-[20px] shadow-card border p-4 card-tappable focus-visible:outline-2 focus-visible:outline-primary block h-full ${
-                      isAdmin
+                      isGlobal
                         ? "border-transparent text-white"
                         : "bg-white border-rule"
                     }`}
                     style={
-                      isAdmin
+                      isGlobal
                         ? {
                             background:
                               "linear-gradient(135deg, #0E3B2E 0%, #14523F 55%, #C9A227 130%)",
@@ -218,7 +265,7 @@ export default function V2HomePage() {
                   >
                     <span
                       className={`inline-flex w-10 h-10 rounded-xl items-center justify-center mb-3 ${
-                        isAdmin
+                        isGlobal
                           ? "bg-white/15 text-white backdrop-blur-sm"
                           : isEtiquettes
                             ? "bg-[#E0B83A] text-[#0E3B2E]"
@@ -233,14 +280,14 @@ export default function V2HomePage() {
                     </span>
                     <p
                       className={`text-[14px] font-bold leading-tight ${
-                        isAdmin ? "text-white" : "text-text-primary"
+                        isGlobal ? "text-white" : "text-text-primary"
                       }`}
                     >
                       {a.title}
                     </p>
                     <p
                       className={`text-[11.5px] mt-1 leading-snug ${
-                        isAdmin ? "text-white/85" : "text-text-tertiary"
+                        isGlobal ? "text-white/85" : "text-text-tertiary"
                       }`}
                     >
                       {a.desc}

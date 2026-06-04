@@ -490,33 +490,42 @@ export async function createSortie(input: {
     created_at: new Date().toISOString(),
   };
   if (sb) {
-    const { id: _localId, ...payload } = row;
+    // FEFO : décrémente d'abord le lot le plus proche de la DLC et
+    // récupère son id pour tracer la sortie. Non bloquant : un produit
+    // sans lots suivis renvoie simplement null (sortie quand même valide).
+    let lotId: string | null = null;
+    try {
+      const { data: lot } = await sb.rpc("consume_lot_fefo", {
+        p_produit_id: input.produit_id,
+        p_quantite: input.quantite,
+        p_depot_id: input.depot_id,
+      });
+      lotId = typeof lot === "string" ? lot : null;
+    } catch (lotErr) {
+      console.warn("[createSortie] consume_lot_fefo non-fatal:", lotErr);
+    }
+
+    const { id: _localId, ...rest } = row;
     void _localId;
+    const payload = { ...rest, lot_id: lotId };
     const { data, error } = await sb
       .from("sorties_stock")
       .insert(payload)
       .select()
       .single();
     if (error) throw new Error(error.message);
-    // Decrement stock atomically — RPC would be safer; for the demo we read+update.
-    const { data: stock } = await sb
-      .from("stock_par_depot")
-      .select("id, quantite")
-      .eq("produit_id", input.produit_id)
-      .eq("depot_id", input.depot_id)
-      .maybeSingle();
-    if (stock) {
-      await sb
-        .from("stock_par_depot")
-        .update({
-          quantite: Math.max(
-            0,
-            (stock as { quantite: number }).quantite - input.quantite
-          ),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", (stock as { id: string }).id);
-    }
+    // Décrément stock ATOMIQUE via RPC (verrou ligne + ledger). Plus de
+    // read-then-write : deux sorties concurrentes ne s'écrasent plus.
+    const sortieId = (data as SortieStock).id;
+    const isCasse =
+      input.type !== "demarque_inconnue" && input.type !== "autre";
+    await adjustStock(
+      input.produit_id,
+      input.depot_id,
+      -input.quantite,
+      isCasse ? "casse" : "sortie",
+      { lotId, referenceId: sortieId, actorId: input.employe_id }
+    );
     return data as SortieStock;
   }
   localSorties.push(row);
@@ -578,44 +587,43 @@ export async function createTransfert(input: {
     created_at: new Date().toISOString(),
   };
   if (sb) {
-    // On omet `id` + `created_at` (générés DB). Mauvaise pratique de
-    // passer un id "trf-…" string non-UUID à une colonne uuid → Supabase
-    // 22P02 invalid input syntax for type uuid. Idem created_at géré
-    // par default now() côté DB.
+    // Wave 4 (ML-3) : le mouvement de stock est désormais BLOQUANT et
+    // ATOMIQUE. On appelle `transfer_stock` AVANT d'enregistrer le
+    // transfert : si le stock source est insuffisant, la RPC lève une
+    // exception (check_violation) et RIEN n'est écrit — plus de
+    // quantité négative silencieuse ni de transfert fantôme.
+    const { error: rpcErr } = await sb.rpc("transfer_stock", {
+      p_produit_id: input.produit_id,
+      p_depot_source: input.depot_source_id,
+      p_depot_dest: input.depot_destination_id,
+      p_quantite: input.quantite,
+      p_reference_id: row.id,
+      p_actor_id: input.employe_id,
+    });
+    if (rpcErr) {
+      console.error("[createTransfert] transfer_stock refusé:", rpcErr);
+      const msg = /insuffisant/i.test(rpcErr.message)
+        ? "Stock source insuffisant pour ce transfert."
+        : `Transfert refusé : ${rpcErr.message}`;
+      throw new Error(msg);
+    }
+
+    // Le stock est déjà déplacé de façon transactionnelle. On enregistre
+    // la trace métier (la photo, l'auteur). Si cet INSERT échoue, le
+    // mouvement reste tracé dans stock_movements (ledger = source d'audit).
     const { id: _localId, created_at: _createdAt, ...payload } = row;
     void _localId;
     void _createdAt;
-    console.log("[createTransfert] INSERT payload:", payload);
     const { data, error } = await sb
       .from("transferts_inter_depots")
       .insert(payload)
       .select()
       .single();
     if (error) {
-      console.error("[createTransfert] INSERT error:", error);
+      console.error("[createTransfert] INSERT trace error:", error);
       throw new Error(
-        `Transfert refusé par la base : ${error.message}${
-          error.details ? ` (${error.details})` : ""
-        }`
+        `Stock transféré mais trace non enregistrée : ${error.message}`
       );
-    }
-    console.log("[createTransfert] INSERT OK:", data);
-    // Side-effects stock : NON BLOQUANTS. Si l'ajustement plante, le
-    // transfert est déjà enregistré côté DB — l'utilisateur ne perd pas
-    // sa saisie. On loggue pour audit + cron qui recalculera le stock.
-    try {
-      await adjustStock(
-        input.produit_id,
-        input.depot_source_id,
-        -input.quantite
-      );
-      await adjustStock(
-        input.produit_id,
-        input.depot_destination_id,
-        input.quantite
-      );
-    } catch (sideErr) {
-      console.error("[createTransfert] adjustStock failed:", sideErr);
     }
     return data as TransfertInterDepot;
   }
@@ -645,34 +653,43 @@ export async function createTransfert(input: {
   return row;
 }
 
-async function adjustStock(produitId: string, depotId: string, delta: number) {
+/**
+ * Ajuste le stock d'un produit dans un dépôt de façon ATOMIQUE.
+ *
+ * Wave 4 (ML-3) : appelle la RPC SQL `adjust_stock` (verrou ligne +
+ * ledger immuable stock_movements dans une seule transaction). Plus de
+ * read-then-write : deux sorties/transferts/casses concurrents ne
+ * s'écrasent plus. C'est le socle de confiance des chiffres.
+ *
+ * @param type  catégorie du mouvement pour le ledger (audit).
+ * @returns la quantité APRÈS mouvement, ou null en mode démo.
+ */
+async function adjustStock(
+  produitId: string,
+  depotId: string,
+  delta: number,
+  type:
+    | "reception"
+    | "sortie"
+    | "transfert"
+    | "casse"
+    | "inventaire"
+    | "correction" = "correction",
+  opts?: { lotId?: string | null; referenceId?: string | null; actorId?: string | null }
+): Promise<number | null> {
   const sb = supabase();
-  if (!sb) return;
-  const { data: stock } = await sb
-    .from("stock_par_depot")
-    .select("id, quantite")
-    .eq("produit_id", produitId)
-    .eq("depot_id", depotId)
-    .maybeSingle();
-  if (stock) {
-    await sb
-      .from("stock_par_depot")
-      .update({
-        quantite: Math.max(
-          0,
-          (stock as { quantite: number }).quantite + delta
-        ),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", (stock as { id: string }).id);
-  } else if (delta > 0) {
-    await sb.from("stock_par_depot").insert({
-      produit_id: produitId,
-      depot_id: depotId,
-      quantite: delta,
-      is_visible: true,
-    });
-  }
+  if (!sb) return null; // mode démo : le caller met à jour SEED_STOCK lui-même
+  const { data, error } = await sb.rpc("adjust_stock", {
+    p_produit_id: produitId,
+    p_depot_id: depotId,
+    p_delta: delta,
+    p_type: type,
+    p_lot_id: opts?.lotId ?? null,
+    p_reference_id: opts?.referenceId ?? null,
+    p_actor_id: opts?.actorId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return typeof data === "number" ? data : Number(data ?? 0);
 }
 
 export async function listTransferts(opts?: {

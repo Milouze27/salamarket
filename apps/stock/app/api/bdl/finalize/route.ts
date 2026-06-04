@@ -121,9 +121,10 @@ export async function POST(req: Request) {
   }
 
   // ─── 5. Pour chaque ligne reçue, incrémente stock_par_depot ──────
-  // On reste sur 2 requêtes par ligne (select-existing + insert/update)
-  // pour rester compatible avec le legacy `finalize()` côté client et
-  // éviter de surcharger ce route handler avec un trigger SQL ad-hoc.
+  // Wave 4 (ML-3) : on passe par la RPC atomique `adjust_stock`
+  // (verrou ligne + ledger stock_movements). Une réception concurrente
+  // sur le même produit/dépôt ne peut plus écraser le compteur, et
+  // chaque entrée est tracée dans le ledger pour audit.
   let lignesRecues = 0;
   let lignesEcart = 0;
   for (const l of bdl.bons_de_livraison_lignes) {
@@ -132,29 +133,21 @@ export async function POST(req: Request) {
     if (recu <= 0 || !l.produit_id || !bdl.depot_destination_id) continue;
     if (l.statut !== "recu" && l.statut !== "surplus") continue;
 
-    const { data: existingRaw } = await sb
-      .from("stock_par_depot")
-      .select("id, quantite")
-      .eq("produit_id", l.produit_id)
-      .eq("depot_id", bdl.depot_destination_id)
-      .maybeSingle();
-    const existing = existingRaw as { id: string; quantite: number } | null;
-
-    if (existing) {
-      await sb
-        .from("stock_par_depot")
-        .update({
-          quantite: existing.quantite + recu,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
-    } else {
-      await sb.from("stock_par_depot").insert({
-        produit_id: l.produit_id,
-        depot_id: bdl.depot_destination_id,
-        quantite: recu,
-        is_visible: true,
-      });
+    const { error: adjErr } = await sb.rpc("adjust_stock", {
+      p_produit_id: l.produit_id,
+      p_depot_id: bdl.depot_destination_id,
+      p_delta: recu,
+      p_type: "reception",
+      p_lot_id: null,
+      p_reference_id: bdl.id,
+      p_actor_id: body.employe_id ?? null,
+    });
+    if (adjErr) {
+      console.error("[finalize] adjust_stock RPC error:", adjErr);
+      return NextResponse.json(
+        { error: "stock_update_failed", detail: adjErr.message },
+        { status: 500 }
+      );
     }
     lignesRecues++;
   }

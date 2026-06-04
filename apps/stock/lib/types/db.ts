@@ -147,6 +147,8 @@ export interface SortieStock {
   photo_url: string;
   ia_coherence_score: number | null;
   ia_coherence_notes: string | null;
+  /** Lot consommé (FEFO) lié à cette sortie. Null si produit sans lots suivis. */
+  lot_id?: string | null;
   created_at: string;
 }
 

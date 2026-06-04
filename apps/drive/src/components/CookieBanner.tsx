@@ -6,6 +6,17 @@ import { emitConsentChange } from "@/lib/cookie-consent";
 
 const STORAGE_KEY = "cookieConsent";
 
+// Événement de réouverture du bandeau. Permet à n'importe quelle page (ex :
+// Politique de confidentialité) de laisser l'utilisateur revenir sur son choix
+// — exigence CNIL : le retrait du consentement doit être aussi simple que son
+// recueil. `reopenCookieBanner()` est l'API publique appelée par ces pages.
+const REOPEN_EVENT = "sala:reopen-cookie-banner";
+
+export function reopenCookieBanner(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(REOPEN_EVENT));
+}
+
 type Consent = {
   necessary: true; // toujours true (cookies techniques)
   analytics: boolean;
@@ -68,13 +79,30 @@ export const CookieBanner = () => {
 
   useEffect(() => {
     const existing = readConsent();
+    let t: number | undefined;
     if (!existing) {
       // Léger délai pour ne pas concurrencer le 1st paint + l'install
       // prompt. UX : l'utilisateur voit d'abord la page, puis le banner
       // apparaît une fois la navigation principale visible.
-      const t = window.setTimeout(() => setVisible(true), 600);
-      return () => window.clearTimeout(t);
+      t = window.setTimeout(() => setVisible(true), 600);
     }
+
+    // Réouverture à la demande (depuis la page Confidentialité). On pré-remplit
+    // les toggles avec le choix déjà enregistré pour que l'utilisateur parte de
+    // son état courant, pas de zéro.
+    const onReopen = () => {
+      const prev = readConsent();
+      setAnalytics(Boolean(prev?.analytics));
+      setMarketing(Boolean(prev?.marketing));
+      setShowPrefs(true);
+      setVisible(true);
+    };
+    window.addEventListener(REOPEN_EVENT, onReopen);
+
+    return () => {
+      if (t) window.clearTimeout(t);
+      window.removeEventListener(REOPEN_EVENT, onReopen);
+    };
   }, []);
 
   const acceptAll = () => {
@@ -111,7 +139,7 @@ export const CookieBanner = () => {
         className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 md:px-6 md:pb-6 pointer-events-none"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
       >
-        <div className="pointer-events-auto mx-auto max-w-3xl rounded-2xl bg-[#082A20] text-[#FAF7EE] shadow-2xl ring-1 ring-[#C9A227]/30">
+        <div className="pointer-events-auto mx-auto max-w-3xl rounded-2xl bg-sapin-deep text-[#FAF7EE] shadow-2xl ring-1 ring-[#C9A227]/30">
           {/* ─── MOBILE COMPACT (≤25% viewport) ───────────────────────
               Layout 1 ligne : icône + texte court + 2 boutons inline.
               Padding p-3 pour minimiser la hauteur. Le bouton
@@ -145,7 +173,7 @@ export const CookieBanner = () => {
                 <button
                   type="button"
                   onClick={acceptAll}
-                  className="h-9 px-3 rounded-lg text-[12px] font-bold bg-[#C9A227] text-[#082A20] hover:bg-[#DDB31C] active:scale-[0.96] transition"
+                  className="h-9 px-3 rounded-lg text-[12px] font-bold bg-[#C9A227] text-sapin-deep hover:bg-[#DDB31C] active:scale-[0.96] transition"
                 >
                   Accepter
                 </button>
@@ -197,7 +225,7 @@ export const CookieBanner = () => {
               <button
                 type="button"
                 onClick={acceptAll}
-                className="min-h-[44px] px-4 rounded-xl text-[14px] font-bold bg-[#C9A227] text-[#082A20] hover:bg-[#DDB31C] active:scale-[0.98] transition"
+                className="min-h-[44px] px-4 rounded-xl text-[14px] font-bold bg-[#C9A227] text-sapin-deep hover:bg-[#DDB31C] active:scale-[0.98] transition"
               >
                 J'accepte tout
               </button>
@@ -302,7 +330,7 @@ export const CookieBanner = () => {
               <button
                 type="button"
                 onClick={savePrefs}
-                className="min-h-[44px] px-4 rounded-xl text-[14px] font-bold bg-[#0E3B2E] text-[#FAF7EE] hover:bg-[#082A20] active:scale-[0.98] transition"
+                className="min-h-[44px] px-4 rounded-xl text-[14px] font-bold bg-[#0E3B2E] text-[#FAF7EE] hover:bg-sapin-deep active:scale-[0.98] transition"
               >
                 Enregistrer mes choix
               </button>

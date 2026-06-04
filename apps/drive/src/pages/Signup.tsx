@@ -2,8 +2,33 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { translateAuthError } from "@/lib/authErrors";
 import { getRedirectFromSearch } from "@/lib/redirect";
+
+/**
+ * RGPD art. 7.1 — preuve du recueil du consentement. On journalise, au moment
+ * de l'inscription, l'acceptation des CGV + politique de confidentialité (case
+ * bloquante) et l'opt-in marketing (facultatif). La table consent_log autorise
+ * l'INSERT anon (cf. migration 20260601000010) : pas besoin d'attendre une
+ * session. Best-effort strict : un échec de journalisation ne doit JAMAIS
+ * empêcher la création du compte (on log en console et on continue).
+ */
+async function logSignupConsent(email: string, marketing: boolean): Promise<void> {
+  try {
+    await supabase.from("consent_log").insert({
+      email,
+      consent_cgv: true,
+      consent_privacy: true,
+      consent_marketing: marketing,
+      user_agent:
+        typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[consent_log] enregistrement du consentement échoué:", err);
+  }
+}
 
 // BUG-013 — Accepter les numéros internationaux (E.164 relax) en plus du
 // format français historique. Règle :
@@ -29,6 +54,7 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptMarketing, setAcceptMarketing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -57,12 +83,15 @@ export default function Signup() {
     setServerError(null);
     setLoading(true);
     try {
+      const cleanedEmail = email.trim();
       await signUp({
-        email: email.trim(),
+        email: cleanedEmail,
         password,
         full_name: fullName.trim(),
         phone: phone.replace(/[\s.-]/g, ""),
       });
+      // Preuve RGPD art. 7 — best-effort, ne bloque jamais l'inscription.
+      await logSignupConsent(cleanedEmail, acceptMarketing);
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setServerError(translateAuthError(err));
@@ -86,7 +115,7 @@ export default function Signup() {
   return (
     // BUG-017 — alignement Signup/Login : bg sapin pleine page, card
     // blanche pour le formulaire. Cohérence avec /v2/login Stock.
-    <div className="min-h-dvh bg-[#0E3B2E] flex flex-col">
+    <div className="min-h-dvh bg-sapin flex flex-col">
       <AppHeader showBack title="Créer un compte" />
       <main className="max-w-md mx-auto px-4 py-6 w-full flex-1">
         <form
@@ -196,15 +225,15 @@ export default function Signup() {
               type="checkbox"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-[#0E3B2E]/40 accent-[#0E3B2E] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#0E3B2E]/30"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-sapin/40 accent-sapin cursor-pointer focus:outline-none focus:ring-2 focus:ring-sapin/30"
             />
-            <span className="leading-snug text-[13px] text-[#0F1A14]/75">
+            <span className="leading-snug text-[13px] text-ink/75">
               J'accepte les{" "}
               <Link
                 to="/cgv"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-2 text-[#0E3B2E] font-medium hover:text-[#082A20]"
+                className="underline underline-offset-2 text-sapin font-medium hover:text-sapin-deep"
               >
                 Conditions générales de vente
               </Link>
@@ -213,7 +242,7 @@ export default function Signup() {
                 to="/confidentialite"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-2 text-[#0E3B2E] font-medium hover:text-[#082A20]"
+                className="underline underline-offset-2 text-sapin font-medium hover:text-sapin-deep"
               >
                 Politique de confidentialité
               </Link>
@@ -221,10 +250,30 @@ export default function Signup() {
             </span>
           </label>
 
+          {/* Opt-in marketing — facultatif, NON coché par défaut (RGPD :
+              consentement libre et spécifique, distinct de l'acceptation des
+              CGV). Journalisé séparément dans consent_log.consent_marketing. */}
+          <label
+            htmlFor="acceptMarketing"
+            className="flex items-start gap-3 text-sm text-text cursor-pointer select-none"
+          >
+            <input
+              id="acceptMarketing"
+              type="checkbox"
+              checked={acceptMarketing}
+              onChange={(e) => setAcceptMarketing(e.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-sapin/40 accent-sapin cursor-pointer focus:outline-none focus:ring-2 focus:ring-sapin/30"
+            />
+            <span className="leading-snug text-[13px] text-ink/75">
+              J'accepte de recevoir les offres et nouveautés Salamarket par email
+              (facultatif, résiliable à tout moment).
+            </span>
+          </label>
+
           <button
             type="submit"
             disabled={loading || !valid}
-            className="min-h-[44px] h-12 rounded-xl bg-[#0E3B2E] hover:bg-[#082A20] text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
+            className="min-h-[44px] h-12 rounded-xl bg-sapin hover:bg-sapin-deep text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
           >
             {loading ? "Création…" : "Créer mon compte"}
           </button>

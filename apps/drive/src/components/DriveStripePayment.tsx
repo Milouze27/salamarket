@@ -9,6 +9,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Loader2, Lock, Scale } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { getConsent } from "@/lib/cookie-consent";
 import { stripeErrorObjectToFr } from "@/lib/stripe-errors-fr";
 
 // ────────────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ export const DriveStripePayment = ({
 
   if (loadingIntent) {
     return (
-      <div className="flex items-center justify-center py-10 gap-2 text-[#0E3B2E]">
+      <div className="flex items-center justify-center py-10 gap-2 text-sapin">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
         <span className="text-sm font-medium">
           Préparation du paiement sécurisé…
@@ -236,6 +237,11 @@ function logBreadcrumb(event: string, data: Record<string, unknown>): void {
   // eslint-disable-next-line no-console
   console.info(`[stripe-event] ${event}`, data);
   if (typeof window === "undefined") return;
+  // RGPD — gating réel du tracking tiers : on n'envoie RIEN à Sentry tant que
+  // l'utilisateur n'a pas consenti à la mesure d'audience. Refus = pas de
+  // remontée (le console.info ci-dessus reste pour le debug local, ce n'est pas
+  // un traceur tiers). Le consentement est celui choisi via le CookieBanner.
+  if (!getConsent().analytics) return;
   const sentry = (window as unknown as { Sentry?: SentryGlobal }).Sentry;
   if (!sentry) return;
   try {
@@ -317,10 +323,10 @@ const PaymentForm = ({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {/* Bloc explicatif Drive au poids */}
-      <div className="flex items-start gap-3 rounded-2xl bg-[#FBF6E2] border border-[#C9A227]/40 p-4 text-[13px] text-[#3E2E0A] leading-relaxed">
+      <div className="flex items-start gap-3 rounded-2xl bg-[#FBF6E2] border border-gold/40 p-4 text-[13px] text-[#3E2E0A] leading-relaxed">
         <Scale
           size={16}
-          className="shrink-0 mt-0.5 text-[#C9A227]"
+          className="shrink-0 mt-0.5 text-gold"
           aria-hidden
         />
         <div>
@@ -348,7 +354,7 @@ const PaymentForm = ({
         type="submit"
         disabled={!stripe || !elements || submitting}
         size="lg"
-        className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#0E3B2E] to-[#082A20] text-white font-bold text-base shadow-lg shadow-[#0E3B2E]/30 hover:shadow-xl active:scale-[0.99] transition-all"
+        className="w-full h-14 rounded-2xl bg-gradient-to-r from-sapin to-sapin-deep text-white font-bold text-base shadow-lg shadow-sapin/30 hover:shadow-xl active:scale-[0.99] transition-all"
       >
         {submitting ? (
           <>
@@ -363,7 +369,7 @@ const PaymentForm = ({
         )}
       </Button>
 
-      <p className="text-[11px] text-center text-[#0F1A14]/55">
+      <p className="text-[11px] text-center text-ink/55">
         Paiement sécurisé par Stripe — vos données bancaires ne transitent pas
         par nos serveurs.
       </p>

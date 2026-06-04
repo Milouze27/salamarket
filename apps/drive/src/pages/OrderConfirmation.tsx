@@ -121,6 +121,11 @@ const OrderConfirmation = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
+  // FUNC-01 — après un retour de paiement (notamment 3DS), le webhook Stripe
+  // bascule payment_status côté serveur de façon asynchrone. Tant qu'il reste
+  // "unpaid" pour un paiement en ligne, on poll confirm-order (idempotent) au
+  // lieu de laisser l'utilisateur sur un état figé. `polling` pilote l'UI.
+  const [polling, setPolling] = useState(false);
 
   // Appelle confirm-order au mount (idempotent côté serveur).
   // Garde via useRef contre le double-call de React StrictMode.
@@ -227,6 +232,75 @@ const OrderConfirmation = () => {
     };
   }, [orderId, searchParams, clearCart, clearSlot]);
 
+  // FUNC-01 — polling du statut de paiement.
+  // Déclenché uniquement quand : commande chargée, paiement EN LIGNE, et statut
+  // encore "unpaid" (le webhook Stripe n'a pas encore confirmé). On ré-invoque
+  // confirm-order (idempotent) toutes les 3 s, max ~40 s, et on s'arrête dès
+  // qu'on atteint un état terminal (paid / authorized) ou au timeout.
+  //
+  // Les deps sont PRIMITIVES (orderId + method + status), pas l'objet `order` :
+  // ainsi la boucle interne peut appeler setOrder() sans relancer l'effet tant
+  // que le statut reste "unpaid" (sinon le compteur d'essais se réinitialiserait
+  // à chaque tick → polling infini). Quand le statut bascule, la dep status
+  // change, l'effet est rejoué, et le early-return l'arrête proprement.
+  const paymentMethod = order?.payment_method;
+  const paymentStatus = order?.payment_status;
+  useEffect(() => {
+    if (!orderId) return;
+    if (paymentMethod !== "online" || paymentStatus !== "unpaid") {
+      setPolling(false);
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+    const MAX_ATTEMPTS = 13; // ~40 s à 3 s d'intervalle
+    const INTERVAL_MS = 3000;
+    setPolling(true);
+
+    const tick = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const { data } = await supabase.functions.invoke("confirm-order", {
+          body: { order_id: orderId },
+        });
+        if (cancelled) return;
+        const refreshed = data?.order as Order | undefined;
+        if (refreshed && refreshed.payment_status !== "unpaid") {
+          // État terminal atteint : maj de l'order (la dep status change → cet
+          // effet sera rejoué et s'arrêtera via l'early-return), vidage du
+          // panier/créneau si payé/pré-autorisé.
+          if (
+            refreshed.payment_status === "paid" ||
+            refreshed.payment_status === "authorized"
+          ) {
+            clearCart();
+            clearSlot();
+          }
+          setOrder(refreshed);
+          return;
+        }
+      } catch {
+        // Erreur réseau ponctuelle : on retentera au prochain tick.
+      }
+      if (attempts >= MAX_ATTEMPTS) {
+        setPolling(false);
+        return;
+      }
+      if (!cancelled) {
+        timer = window.setTimeout(tick, INTERVAL_MS);
+      }
+    };
+
+    timer = window.setTimeout(tick, INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [orderId, paymentMethod, paymentStatus, clearCart, clearSlot]);
+
   if (loading) {
     return (
       <div
@@ -270,7 +344,7 @@ const OrderConfirmation = () => {
 
   return (
     <div
-      className="min-h-dvh bg-[#FAF7EE]"
+      className="min-h-dvh bg-cream"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="max-w-xl mx-auto px-5 md:px-8 space-y-7">
@@ -445,18 +519,30 @@ const OrderConfirmation = () => {
 
           {order.payment_method === "online" &&
             order.payment_status === "unpaid" && (
-              <div className="flex items-start gap-3">
-                <Clock
-                  className="text-[#6B7280] shrink-0 mt-0.5"
-                  size={18}
-                  aria-hidden
-                />
+              <div className="flex items-start gap-3" aria-live="polite">
+                {polling ? (
+                  <Loader2
+                    className="text-[#C9A227] shrink-0 mt-0.5 animate-spin"
+                    size={18}
+                    aria-hidden
+                  />
+                ) : (
+                  <Clock
+                    className="text-[#6B7280] shrink-0 mt-0.5"
+                    size={18}
+                    aria-hidden
+                  />
+                )}
                 <div className="flex-1">
                   <p className="text-[13px] font-semibold text-[#0E3B2E]">
-                    Paiement en cours de validation
+                    {polling
+                      ? "Confirmation du paiement en cours…"
+                      : "Paiement en cours de validation"}
                   </p>
                   <p className="text-[13px] text-[#0F1A14]/70 mt-0.5">
-                    Vous recevrez un email de confirmation sous peu.
+                    {polling
+                      ? "Merci de patienter quelques instants, nous confirmons votre paiement."
+                      : "Votre paiement a bien été reçu. La confirmation peut prendre un instant — vous recevrez un email dès qu'elle est validée."}
                   </p>
                 </div>
               </div>
@@ -502,7 +588,7 @@ const OrderConfirmation = () => {
         <div className="pt-4 pb-10 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-1000 [animation-fill-mode:backwards]">
           <button
             type="button"
-            className="w-full h-12 rounded-full bg-[#0E3B2E] text-white text-[15px] font-semibold shadow-md shadow-[#0E3B2E]/20 hover:bg-[#082A20] hover:shadow-lg active:scale-[0.98] transition-all"
+            className="w-full h-12 rounded-full bg-sapin text-white text-[15px] font-semibold shadow-md shadow-sapin/20 hover:bg-sapin-deep hover:shadow-lg active:scale-[0.98] transition-all"
             onClick={() => {
               clearCart();
               clearSlot();
@@ -513,7 +599,7 @@ const OrderConfirmation = () => {
           </button>
           <button
             type="button"
-            className="w-full h-11 text-[14px] font-semibold text-[#0E3B2E] underline underline-offset-[6px] decoration-[#C9A227]/60 decoration-[1.5px] hover:decoration-[#C9A227] transition-colors"
+            className="w-full h-11 text-[14px] font-semibold text-sapin underline underline-offset-[6px] decoration-gold/60 decoration-[1.5px] hover:decoration-gold transition-colors"
             onClick={() => {
               clearCart();
               clearSlot();

@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { Cookie } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { reopenCookieBanner } from "@/components/CookieBanner";
 
 /**
  * Politique de confidentialité — RGPD (UE 2016/679) + Loi Informatique
@@ -12,13 +14,13 @@ export default function Confidentialite() {
     <div className="min-h-dvh bg-bg">
       <AppHeader showBack title="Confidentialité" />
       <main className="max-w-3xl mx-auto px-6 md:px-8 py-10 md:py-14">
-        <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-[#C9A227] mb-3">
+        <p className="text-[10px] uppercase tracking-[0.32em] font-bold text-gold mb-3">
           Données personnelles
         </p>
-        <h1 className="text-[30px] md:text-[44px] leading-[1.05] tracking-[-0.03em] font-extrabold text-[#0E3B2E]">
+        <h1 className="text-[30px] md:text-[44px] leading-[1.05] tracking-[-0.03em] font-extrabold text-sapin">
           Politique de confidentialité
         </h1>
-        <p className="mt-4 text-[14px] text-[#0F1A14]/55">
+        <p className="mt-4 text-[14px] text-ink/55">
           Conforme au Règlement Général sur la Protection des Données (UE 2016/679, RGPD) et
           à la loi française n° 78-17 du 6 janvier 1978 modifiée.
         </p>
@@ -33,7 +35,7 @@ export default function Confidentialite() {
             Contact :{" "}
             <a
               href="mailto:contact@salamarket.fr"
-              className="underline underline-offset-2 text-[#0E3B2E] hover:text-[#082A20]"
+              className="underline underline-offset-2 text-sapin hover:text-sapin-deep"
             >
               contact@salamarket.fr
             </a>
@@ -123,7 +125,7 @@ export default function Confidentialite() {
             Pour exercer ces droits, écrivez à{" "}
             <a
               href="mailto:contact@salamarket.fr"
-              className="underline underline-offset-2 text-[#0E3B2E] hover:text-[#082A20]"
+              className="underline underline-offset-2 text-sapin hover:text-sapin-deep"
             >
               contact@salamarket.fr
             </a>
@@ -140,7 +142,7 @@ export default function Confidentialite() {
               href="https://www.cnil.fr/fr/plaintes"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline underline-offset-2 text-[#0E3B2E] hover:text-[#082A20]"
+              className="underline underline-offset-2 text-sapin hover:text-sapin-deep"
             >
               Commission Nationale de l'Informatique et des Libertés (CNIL)
             </a>
@@ -168,17 +170,24 @@ export default function Confidentialite() {
             </li>
           </ul>
           <p>
-            Vous pouvez à tout moment modifier vos préférences via le bandeau de gestion des
-            cookies en bas de page. Pour plus de détails sur le cadre contractuel, consultez
-            nos{" "}
+            Vous pouvez à tout moment modifier ou retirer votre consentement. Pour plus de
+            détails sur le cadre contractuel, consultez nos{" "}
             <Link
               to="/cgv"
-              className="underline underline-offset-2 text-[#0E3B2E] hover:text-[#082A20] font-medium"
+              className="underline underline-offset-2 text-sapin hover:text-sapin-deep font-medium"
             >
               CGV
             </Link>
             .
           </p>
+          <button
+            type="button"
+            onClick={reopenCookieBanner}
+            className="mt-1 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl bg-sapin/5 text-sapin font-semibold text-[14px] hover:bg-sapin/10 active:scale-[0.98] transition-all"
+          >
+            <Cookie size={16} aria-hidden />
+            Gérer mes préférences cookies
+          </button>
         </Section>
 
         <Section title="9. Sécurité">
@@ -199,10 +208,10 @@ export default function Confidentialite() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-10">
-      <h2 className="text-[18px] md:text-[20px] font-bold text-[#0E3B2E] tracking-[-0.01em] mb-3">
+      <h2 className="text-[18px] md:text-[20px] font-bold text-sapin tracking-[-0.01em] mb-3">
         {title}
       </h2>
-      <div className="space-y-3 text-[15px] leading-[1.65] text-[#0F1A14]/80">
+      <div className="space-y-3 text-[15px] leading-[1.65] text-ink/80">
         {children}
       </div>
     </section>

@@ -116,25 +116,25 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
 
   return (
     <div
-      className="bg-white border border-[#E8E4D8] rounded-[22px] p-4 sm:p-5"
-      style={{ boxShadow: "0 2px 12px rgba(14, 59, 46, 0.06)" }}
+      className="bg-[var(--surface-1)] border border-[var(--border-card)] rounded-[22px] p-4 sm:p-5"
+      style={{ boxShadow: "var(--shadow-card)" }}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
           <span
             aria-hidden
-            className="inline-flex w-11 h-11 rounded-xl items-center justify-center shrink-0 bg-[#FAF7EE] text-[#0E3B2E] border border-[#E8E4D8]"
+            className="inline-flex w-11 h-11 rounded-xl items-center justify-center shrink-0 bg-[var(--surface-2)] text-[var(--accent-gold-bright)] border border-[var(--border-card)]"
           >
             <Eye className="w-5 h-5" strokeWidth={2.2} />
           </span>
           <div className="min-w-0">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#5A6470]">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[var(--accent-gold-dim)]">
               {titleData.eyebrow}
             </p>
-            <p className="text-[16px] font-bold text-[#0F1A14] leading-tight mt-0.5">
+            <p className="text-[16px] font-bold text-[var(--text-primary)] leading-tight mt-0.5">
               {titleData.title}
             </p>
-            <p className="text-[11.5px] text-[#7B8693] mt-0.5">
+            <p className="text-[11.5px] text-[var(--text-tertiary)] mt-0.5">
               {titleData.sub}
             </p>
           </div>
@@ -143,7 +143,7 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
           <button
             type="button"
             onClick={onAddRelevé}
-            className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[#0E3B2E] text-white text-[13px] md:text-[12px] font-bold active:scale-[0.97] transition-transform shrink-0"
+            className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[var(--primary-green)] text-[var(--text-primary)] text-[13px] md:text-[12px] font-bold active:scale-[0.97] transition-transform shrink-0"
             aria-label="Ajouter un relevé"
           >
             <Camera className="w-3.5 h-3.5" strokeWidth={2.4} />
@@ -153,11 +153,11 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
       </div>
 
       {empty && (
-        <div className="rounded-[16px] border border-dashed border-[#E8E4D8] py-6 text-center">
-          <p className="text-[13px] font-semibold text-[#5A6470]">
+        <div className="rounded-[16px] border border-dashed border-[var(--border-card)] py-6 text-center">
+          <p className="text-[13px] font-semibold text-[var(--text-secondary)]">
             Aucun prix Aya Market relevé cette semaine.
           </p>
-          <p className="text-[11.5px] text-[#7B8693] mt-1">
+          <p className="text-[11.5px] text-[var(--text-tertiary)] mt-1">
             Tape « Relevé » pour photographier agneau, poulet, merguez.
           </p>
         </div>
@@ -168,11 +168,11 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
           {rows.map((r) => (
             <article
               key={r.id}
-              className="snap-start shrink-0 w-[150px] bg-[#FAF7EE] border border-[#E8E4D8] rounded-[14px] overflow-hidden"
+              className="snap-start shrink-0 w-[150px] bg-[var(--surface-0)] border border-[var(--border-card)] rounded-[14px] overflow-hidden"
             >
               {/* Photo */}
               <div
-                className="w-full aspect-square bg-[#E8E4D8] flex items-center justify-center"
+                className="w-full aspect-square bg-[var(--surface-2)] flex items-center justify-center"
                 style={{
                   backgroundImage: r.photo_url ? `url(${r.photo_url})` : "none",
                   backgroundSize: "cover",
@@ -181,7 +181,7 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
               >
                 {!r.photo_url && (
                   <Camera
-                    className="w-6 h-6 text-[#B3AC95]"
+                    className="w-6 h-6 text-[var(--text-tertiary)]"
                     strokeWidth={1.8}
                     aria-hidden
                   />
@@ -190,22 +190,22 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
               {/* Info */}
               <div className="px-2.5 py-2 flex flex-col gap-0.5">
                 <p
-                  className="text-[12px] font-bold text-[#0F1A14] truncate leading-tight"
+                  className="text-[12px] font-bold text-[var(--text-primary)] truncate leading-tight"
                   title={r.libelle_releve}
                 >
                   {r.libelle_releve}
                 </p>
                 <div className="flex items-baseline justify-between gap-1">
-                  <p className="text-[15px] font-extrabold text-[#0E3B2E] tabular">
+                  <p className="text-[15px] font-extrabold text-[var(--accent-gold-bright)] tabular">
                     {formatEur(r.prix_releve_eur)}
                   </p>
                   {r.unite && (
-                    <p className="text-[10.5px] font-semibold text-[#7B8693]">
+                    <p className="text-[10.5px] font-semibold text-[var(--text-tertiary)]">
                       /{r.unite}
                     </p>
                   )}
                 </div>
-                <p className="text-[10px] text-[#7B8693] mt-0.5">
+                <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
                   {formatRelativeDate(r.releve_le)}
                 </p>
               </div>

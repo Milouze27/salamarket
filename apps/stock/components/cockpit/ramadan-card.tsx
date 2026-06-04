@@ -15,8 +15,10 @@
  *   - Pill impact (critique / fort / moyen)
  *   - Mini-fenêtre 3 prochains événements (timeline horizontale)
  *
- * Visuel : fond cream + filet or vertical à gauche (rappel sapin/or).
+ * Visuel : surface-1 + filet or vertical à gauche (rappel sapin/or).
+ * L'or reste accent (filet/glow/chiffre), jamais fill grande surface.
  */
+import type { CSSProperties } from "react";
 import { Moon } from "lucide-react";
 
 interface RamadanCardProps {
@@ -42,12 +44,28 @@ function formatDateFr(iso: string): string {
 
 const IMPACT_STYLES: Record<
   "faible" | "moyen" | "fort" | "critique",
-  { bg: string; text: string; label: string }
+  { style: CSSProperties; label: string }
 > = {
-  faible:   { bg: "bg-[#F4E9C4]/55", text: "text-[#8B6F0E]", label: "Impact faible" },
-  moyen:    { bg: "bg-[#F4E9C4]",    text: "text-[#8B6F0E]", label: "Impact moyen" },
-  fort:     { bg: "bg-[#DDB31C]/85", text: "text-[#082A20]", label: "Impact fort" },
-  critique: { bg: "bg-[#A8231A]",    text: "text-white",     label: "Impact critique" },
+  faible: {
+    style: { background: "var(--accent-gold-soft)", color: "var(--accent-gold-dim)" },
+    label: "Impact faible",
+  },
+  moyen: {
+    style: { background: "var(--accent-gold-soft)", color: "var(--accent-gold-bright)" },
+    label: "Impact moyen",
+  },
+  fort: {
+    style: {
+      background: "var(--warning-soft)",
+      color: "var(--warning)",
+      border: "1px solid var(--border-premium)",
+    },
+    label: "Impact fort",
+  },
+  critique: {
+    style: { background: "var(--danger-soft)", color: "var(--danger)" },
+    label: "Impact critique",
+  },
 };
 
 export function RamadanCard({
@@ -63,28 +81,36 @@ export function RamadanCard({
 
   return (
     <div
-      className="relative bg-[#FAF7EE] border border-[#E8E4D8] rounded-[22px] p-5 sm:p-6 overflow-hidden"
-      style={{ boxShadow: "0 2px 12px rgba(14, 59, 46, 0.06)" }}
+      className="relative bg-[var(--surface-1)] border border-[var(--border-card)] rounded-[22px] p-5 sm:p-6 overflow-hidden"
+      style={{ boxShadow: "var(--shadow-card)" }}
     >
-      {/* Filet or vertical gauche */}
+      {/* Filet or vertical gauche — accent or (liseré), jamais fill */}
       <span
         aria-hidden
         className="absolute left-0 top-6 bottom-6 w-[3px] rounded-full"
-        style={{ background: "linear-gradient(180deg, #DDB31C 0%, #C9A227 100%)" }}
+        style={{
+          background:
+            "linear-gradient(180deg, var(--accent-gold-bright) 0%, var(--accent-gold) 100%)",
+          boxShadow: "var(--accent-gold-glow)",
+        }}
       />
 
       <div className="flex flex-col gap-4 pl-2">
         {/* Eyebrow + impact */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Moon className="w-4 h-4 text-[#C9A227]" strokeWidth={2.4} />
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#8B6F0E]">
+            <Moon
+              className="w-4 h-4 text-[var(--accent-gold-bright)]"
+              strokeWidth={2.4}
+            />
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--accent-gold-dim)]">
               Calendrier hijri
             </p>
           </div>
           {impact && (
             <span
-              className={`text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full ${impact.bg} ${impact.text}`}
+              className="text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
+              style={impact.style}
             >
               {impact.label}
             </span>
@@ -94,21 +120,27 @@ export function RamadanCard({
         {/* Big countdown */}
         <div className="flex items-end gap-3 flex-wrap">
           {joursJusqua !== null && !enCours && (
-            <p className="text-[56px] sm:text-[64px] font-extrabold leading-none tracking-tight text-[#0E3B2E] tabular">
+            <p
+              className="text-[56px] sm:text-[64px] font-extrabold leading-none tracking-tight text-[var(--accent-gold-bright)] tabular"
+              style={{ textShadow: "var(--bignum-glow)" }}
+            >
               {joursJusqua === 0 ? "J" : `J-${joursJusqua}`}
             </p>
           )}
           {enCours && (
-            <p className="text-[36px] sm:text-[40px] font-extrabold leading-none tracking-tight text-[#0E3B2E]">
+            <p
+              className="text-[36px] sm:text-[40px] font-extrabold leading-none tracking-tight text-[var(--accent-gold-bright)]"
+              style={{ textShadow: "var(--bignum-glow)" }}
+            >
               En cours
             </p>
           )}
           <div className="flex flex-col gap-0.5 pb-1.5 min-w-0">
-            <p className="text-[16px] font-bold text-[#0F1A14] leading-tight">
+            <p className="text-[16px] font-bold text-[var(--text-primary)] leading-tight">
               {libelle ?? message}
             </p>
             {dateDebutIso && (
-              <p className="text-[12.5px] text-[#5A6470] capitalize">
+              <p className="text-[12.5px] text-[var(--text-secondary)] capitalize">
                 {formatDateFr(dateDebutIso)}
               </p>
             )}
@@ -117,8 +149,8 @@ export function RamadanCard({
 
         {/* Mini timeline événements suivants */}
         {fenetre.length > 0 && (
-          <div className="flex flex-col gap-1.5 pt-2 border-t border-[#E8E4D8]">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#5A6470] mb-1">
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--border-hairline)]">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] mb-1">
               90 prochains jours
             </p>
             {fenetre.slice(0, 3).map((f, i) => (
@@ -126,10 +158,10 @@ export function RamadanCard({
                 key={i}
                 className="flex items-center justify-between gap-3 py-1"
               >
-                <p className="text-[13px] font-semibold text-[#0F1A14] truncate">
+                <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
                   {f.libelle}
                 </p>
-                <span className="text-[12px] font-bold text-[#5A6470] tabular shrink-0">
+                <span className="text-[12px] font-bold text-[var(--text-secondary)] tabular shrink-0">
                   J-{f.jours}
                 </span>
               </div>

@@ -47,32 +47,32 @@ const TONE_STYLES: Record<
   }
 > = {
   danger: {
-    iconBg: "bg-[#FEF2F1]",
-    iconColor: "text-[#A8231A]",
-    metricColor: "text-[#A8231A]",
-    border: "border-[#A8231A]/15",
-    eyebrowColor: "text-[#A8231A]",
+    iconBg: "bg-[var(--danger-soft)]",
+    iconColor: "text-[var(--danger)]",
+    metricColor: "text-[var(--danger)]",
+    border: "border-[var(--danger)]/25",
+    eyebrowColor: "text-[var(--danger)]",
   },
   warn: {
-    iconBg: "bg-[#FEF3E2]",
-    iconColor: "text-[#D97706]",
-    metricColor: "text-[#D97706]",
-    border: "border-[#D97706]/15",
-    eyebrowColor: "text-[#D97706]",
+    iconBg: "bg-[var(--warning-soft)]",
+    iconColor: "text-[var(--warning)]",
+    metricColor: "text-[var(--warning)]",
+    border: "border-[var(--warning)]/25",
+    eyebrowColor: "text-[var(--warning)]",
   },
   info: {
-    iconBg: "bg-[#E8F5EE]",
-    iconColor: "text-[#0E3B2E]",
-    metricColor: "text-[#0E3B2E]",
-    border: "border-[#0E3B2E]/10",
-    eyebrowColor: "text-[#0E3B2E]",
+    iconBg: "bg-[var(--success-soft)]",
+    iconColor: "text-[var(--success)]",
+    metricColor: "text-[var(--success)]",
+    border: "border-[var(--border-card)]",
+    eyebrowColor: "text-[var(--success)]",
   },
   neutral: {
-    iconBg: "bg-[#FAF7EE]",
-    iconColor: "text-[#5A6470]",
-    metricColor: "text-[#0F1A14]",
-    border: "border-[#E8E4D8]",
-    eyebrowColor: "text-[#5A6470]",
+    iconBg: "bg-[var(--surface-2)]",
+    iconColor: "text-[var(--text-secondary)]",
+    metricColor: "text-[var(--text-primary)]",
+    border: "border-[var(--border-card)]",
+    eyebrowColor: "text-[var(--text-secondary)]",
   },
 };
 
@@ -106,11 +106,11 @@ export function AlertCard({
           >
             {eyebrow}
           </p>
-          <p className="text-[16px] font-bold text-[#0F1A14] leading-tight mt-0.5">
+          <p className="text-[16px] font-bold text-[var(--text-primary)] leading-tight mt-0.5">
             {title}
           </p>
           {hint && (
-            <p className="text-[12.5px] text-[#5A6470] mt-1 leading-snug">
+            <p className="text-[12.5px] text-[var(--text-secondary)] mt-1 leading-snug">
               {hint}
             </p>
           )}
@@ -126,14 +126,14 @@ export function AlertCard({
 
       {/* Detail rows */}
       {children && (
-        <div className="flex flex-col divide-y divide-[#E8E4D8]/60 -mx-1">
+        <div className="flex flex-col divide-y divide-[var(--border-hairline)] -mx-1">
           {children}
         </div>
       )}
 
       {/* CTA tap */}
       {isClickable && (
-        <div className="flex items-center justify-between text-[12px] font-bold text-[#0E3B2E] pt-1">
+        <div className="flex items-center justify-between text-[12px] font-bold text-[var(--primary-green-hover)] pt-1">
           <span>{ctaLabel}</span>
           <ChevronRight className="w-4 h-4" strokeWidth={2.4} />
         </div>
@@ -146,7 +146,7 @@ export function AlertCard({
       <button
         type="button"
         onClick={onTap}
-        className={`w-full text-left bg-white border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,59,46,0.06)] active:scale-[0.99] transition-transform`}
+        className={`w-full text-left bg-[var(--surface-1)] border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[var(--shadow-card)] active:scale-[0.99] transition-transform`}
       >
         {inner}
       </button>
@@ -155,7 +155,7 @@ export function AlertCard({
 
   return (
     <div
-      className={`bg-white border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[0_2px_12px_rgba(14,59,46,0.06)]`}
+      className={`bg-[var(--surface-1)] border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[var(--shadow-card)]`}
     >
       {inner}
     </div>
@@ -176,18 +176,18 @@ export function AlertCardRow({
 }) {
   const valueColor =
     accent === "danger"
-      ? "text-[#A8231A]"
+      ? "text-[var(--danger)]"
       : accent === "warn"
-        ? "text-[#D97706]"
-        : "text-[#0F1A14]";
+        ? "text-[var(--warning)]"
+        : "text-[var(--text-primary)]";
   return (
     <div className="flex items-center justify-between gap-3 px-1 py-2.5 first:pt-1 last:pb-1">
       <div className="min-w-0 flex-1">
-        <p className="text-[13.5px] font-semibold text-[#0F1A14] truncate">
+        <p className="text-[13.5px] font-semibold text-[var(--text-primary)] truncate">
           {label}
         </p>
         {meta && (
-          <p className="text-[11px] text-[#7B8693] mt-0.5 truncate">{meta}</p>
+          <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 truncate">{meta}</p>
         )}
       </div>
       <span

@@ -63,10 +63,9 @@ export function HeroKpi({
     <div
       className="relative overflow-hidden rounded-[28px] p-6 sm:p-7"
       style={{
-        background:
-          "linear-gradient(165deg, #0E3B2E 0%, #082A20 100%)",
+        background: "var(--hero-gradient)",
         boxShadow:
-          "0 12px 36px rgba(14, 59, 46, 0.22), inset 0 0 0 1px rgba(201, 162, 39, 0.12)",
+          "var(--shadow-elevated), inset 0 1px 0 var(--border-premium)",
       }}
     >
       {/* Halo radial or — chaleur sapin */}
@@ -75,7 +74,7 @@ export function HeroKpi({
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at 100% 0%, rgba(201, 162, 39, 0.22) 0%, transparent 55%)",
+            "radial-gradient(circle at 100% 0%, var(--accent-gold-soft) 0%, transparent 55%)",
         }}
       />
       {/* Trame or subtile bas-gauche pour anti-flat */}
@@ -84,7 +83,7 @@ export function HeroKpi({
         className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle, rgba(201, 162, 39, 0.10) 0%, transparent 70%)",
+            "radial-gradient(circle, var(--accent-gold-soft) 0%, transparent 70%)",
         }}
       />
 
@@ -92,16 +91,16 @@ export function HeroKpi({
         {/* Eyebrow hijri */}
         <div className="flex items-center gap-2 flex-wrap">
           <Sparkles
-            className="w-3.5 h-3.5 text-[#DDB31C]"
+            className="w-3.5 h-3.5 text-[var(--accent-gold-bright)]"
             strokeWidth={2.4}
             aria-hidden
           />
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#DDB31C]">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[var(--accent-gold-bright)]">
             {hijriEnCours ? "Période active" : "Prochaine échéance"}
           </p>
           <span
             aria-hidden
-            className="w-1 h-1 rounded-full bg-[#DDB31C]/50"
+            className="w-1 h-1 rounded-full bg-[var(--accent-gold-bright)]/50"
           />
           <p className="text-[10.5px] font-semibold tracking-[0.08em] text-white/70 truncate">
             {hijriMessage}
@@ -117,7 +116,7 @@ export function HeroKpi({
             className="text-[32px] sm:text-[36px] font-extrabold leading-none tracking-tight text-white"
           >
             {prenom}
-            <span className="text-[#DDB31C]">.</span>
+            <span className="text-[var(--accent-gold-bright)]">.</span>
           </h1>
         </div>
 
@@ -135,6 +134,7 @@ export function HeroKpi({
           ) : (
             <p
               className="text-[44px] sm:text-[52px] font-extrabold leading-[1] tracking-tight text-white tabular"
+              style={{ textShadow: "var(--bignum-glow)" }}
               aria-label={`Chiffre d'affaires de la veille : ${formatEur(caHier)}`}
             >
               {formatEur(caHier)}
@@ -146,11 +146,13 @@ export function HeroKpi({
         <div className="flex flex-wrap items-center gap-2">
           {deltaN1Pct !== null && (
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tabular ${
-                deltaPositive
-                  ? "bg-[#1F6B47]/85 text-white"
-                  : "bg-[#A8231A]/85 text-white"
-              }`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tabular"
+              style={{
+                background: deltaPositive
+                  ? "var(--success-soft)"
+                  : "var(--danger-soft)",
+                color: deltaPositive ? "var(--success)" : "var(--danger)",
+              }}
               aria-label={`Delta vs même jour semaine précédente : ${formatPct(deltaN1Pct)}`}
             >
               <TrendIcon className="w-3.5 h-3.5" strokeWidth={2.6} />
@@ -160,7 +162,8 @@ export function HeroKpi({
           )}
           {pctTarget !== null && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular bg-[#DDB31C]/20 text-[#F4E9C4] border border-[#DDB31C]/30"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular text-[var(--accent-gold-bright)] border border-[var(--border-premium)]"
+              style={{ background: "var(--accent-gold-soft)" }}
               aria-label={`Atteinte du target : ${pctTarget.toFixed(0)} pourcent`}
             >
               <span className="opacity-75 font-semibold text-[11px]">Target</span>

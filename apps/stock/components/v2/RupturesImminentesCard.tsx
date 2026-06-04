@@ -51,11 +51,11 @@ const TIER_RANK: Record<StockoutTier, number> = {
 };
 
 const TIER_CHIP: Record<StockoutTier, string> = {
-  out: "bg-[#A8231A] text-white",
-  blocker: "bg-[#A8231A] text-white",
-  crit: "bg-[#E5483D] text-white",
-  warn: "bg-[#D97706] text-white",
-  ok: "bg-success text-white",
+  out: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
+  blocker: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
+  crit: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/25",
+  warn: "bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning)]/25",
+  ok: "bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/25",
 };
 
 const TIER_LABEL: Record<StockoutTier, string> = {
@@ -137,15 +137,15 @@ export function RupturesImminentesCard({
 
   return (
     <div
-      className={`bg-white border border-rule shadow-card rounded-[20px] p-4 ${className}`}
+      className={`bg-[var(--surface-1)] border border-[var(--border-card)] shadow-[var(--shadow-card)] rounded-[20px] p-4 ${className}`}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#FBE9E7] text-[#A8231A]">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--danger-soft)] text-[var(--danger)]">
             <AlertTriangle className="w-4 h-4" />
           </span>
           <div>
-            <p className="text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[#C9A227]">
+            <p className="text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[var(--accent-gold-dim)]">
               03 — Forecast
             </p>
             <p className="text-[14.5px] font-extrabold text-text-primary leading-tight">
@@ -154,7 +154,7 @@ export function RupturesImminentesCard({
           </div>
         </div>
         {isHijriBoost && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F4E9C4] text-[#8B6F0E]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--accent-gold-soft)] text-[var(--accent-gold-dim)] border border-[var(--border-premium)]">
             <Moon className="w-3 h-3" />
             Hijri actif
           </span>
@@ -182,14 +182,10 @@ export function RupturesImminentesCard({
           {rows.map((r) => (
             <li
               key={`${r.produit_id}-${r.depot_id}`}
-              className="flex items-center gap-3 bg-[#FBE9E7]/40 border border-[#E5483D]/15 rounded-xl px-3 py-2"
+              className="flex items-center gap-3 bg-[var(--danger-soft)] border border-[var(--danger)]/20 rounded-xl px-3 py-2"
             >
               <span
-                className={`inline-flex items-center justify-center w-2 h-2 rounded-full shrink-0 ${
-                  r.tier === "out" || r.tier === "blocker"
-                    ? "bg-[#A8231A]"
-                    : "bg-[#E5483D]"
-                }`}
+                className="inline-flex items-center justify-center w-2 h-2 rounded-full shrink-0 bg-[var(--danger)]"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-bold text-text-primary truncate">
@@ -203,7 +199,7 @@ export function RupturesImminentesCard({
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-[13px] font-extrabold tabular text-[#A8231A] leading-none">
+                <p className="text-[13px] font-extrabold tabular text-[var(--danger)] leading-none">
                   {formatDays(r.days_cover)}
                 </p>
                 <span

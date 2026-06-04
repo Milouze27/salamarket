@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Delete, Fingerprint } from "lucide-react";
@@ -18,6 +18,16 @@ const ROLE_LABEL: Record<string, string> = {
   caisse: "Caisse",
 };
 
+function haptic(pattern: number | number[]) {
+  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* certains navigateurs bloquent vibrate hors interaction */
+    }
+  }
+}
+
 export default function V2LoginPage() {
   const router = useRouter();
   const hydrated = useV2((s) => s.hydrated);
@@ -28,6 +38,7 @@ export default function V2LoginPage() {
   const [loading, setLoading] = useState(false);
   const [employes, setEmployesList] = useState<Employe[]>([]);
   const [shake, setShake] = useState(false);
+  const [errored, setErrored] = useState(false);
   const submittedRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -38,14 +49,33 @@ export default function V2LoginPage() {
     if (hydrated && employe) router.replace("/v2");
   }, [hydrated, employe, router]);
 
-  function press(d: string) {
-    if (pin.length >= 4 || loading) return;
-    setPin((p) => (p.length >= 4 ? p : p + d));
-  }
-  function back() {
+  const press = useCallback(
+    (d: string) => {
+      if (pin.length >= 4 || loading) return;
+      haptic(10);
+      setPin((p) => (p.length >= 4 ? p : p + d));
+    },
+    [pin.length, loading],
+  );
+
+  const back = useCallback(() => {
     if (loading) return;
-    setPin((p) => p.slice(0, -1));
-  }
+    setPin((p) => {
+      if (p.length === 0) return p;
+      haptic(8);
+      return p.slice(0, -1);
+    });
+  }, [loading]);
+
+  // Saisie clavier physique (démo desktop / bornes avec pavé).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key >= "0" && e.key <= "9") press(e.key);
+      else if (e.key === "Backspace") back();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [press, back]);
 
   useEffect(() => {
     if (pin.length === 4 && !loading && submittedRef.current !== pin) {
@@ -57,11 +87,14 @@ export default function V2LoginPage() {
           if (!e) {
             toast.error("Code PIN incorrect", { id: "pin-error" });
             setShake(true);
+            setErrored(true);
+            haptic([12, 60, 12]);
             setTimeout(() => {
               setPin("");
               setShake(false);
+              setErrored(false);
               submittedRef.current = null;
-            }, 380);
+            }, 420);
           } else {
             setEmploye(e);
             if (e.depot_principal_id) {
@@ -94,141 +127,205 @@ export default function V2LoginPage() {
   const showDemoPins = process.env.NEXT_PUBLIC_SHOW_DEMO_PINS === "true";
 
   return (
-    <div className="min-h-screen bg-[#082A20] flex flex-col">
-      <div className="mx-auto w-full max-w-[460px] flex-1 flex flex-col">
-        <header className="gradient-header rounded-b-[28px] safe-top-hero pb-10 px-6 text-text-ondark relative overflow-hidden">
-          {/* subtle texture: gold orb top-right */}
-          <div
-            aria-hidden
-            className="absolute -top-12 -right-12 w-44 h-44 rounded-full opacity-[0.15]"
-            style={{
-              background:
-                "radial-gradient(closest-side, var(--accent-gold-bright), transparent 70%)",
-            }}
-          />
-          <div className="flex items-center gap-3 mb-7 relative">
-            <V2Logo size={40} variant="dark" />
+    <div
+      className="min-h-screen flex flex-col relative overflow-hidden"
+      style={{ background: "var(--bg-abyss)" }}
+    >
+      {/* Profondeur : double radial sapin derrière, jamais plat. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 60% at 50% -8%, rgba(27,106,74,0.30), transparent 62%), radial-gradient(90% 50% at 50% 108%, rgba(14,42,32,0.55), transparent 70%)",
+        }}
+      />
+
+      <div className="mx-auto w-full max-w-[440px] flex-1 flex flex-col relative">
+        <header className="safe-top-hero pb-8 px-7 relative">
+          {/* Logo + halo or */}
+          <div className="flex items-center gap-3.5 mb-9 relative">
+            <span className="relative inline-flex">
+              <span
+                aria-hidden
+                className="absolute inset-0 rounded-[14px] blur-md"
+                style={{
+                  background: "var(--accent-gold-bright)",
+                  opacity: 0.32,
+                  transform: "scale(1.25)",
+                }}
+              />
+              <V2Logo size={44} variant="dark" className="relative" />
+            </span>
             <div>
-              <p className="label-caps text-gold">Salam Stock</p>
-              <h1 className="text-[19px] font-bold leading-tight">
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.22em]"
+                style={{ color: "var(--accent-gold-dim)" }}
+              >
+                Salam Stock
+              </p>
+              <p
+                className="text-[13.5px] font-medium mt-0.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 Multi-dépôts · Toulouse
-              </h1>
+              </p>
             </div>
           </div>
-          <h2 className="display text-text-ondark relative">Code PIN</h2>
-          <p className="body-md text-text-ondarkmuted mt-2 relative">
+
+          <h1
+            className="text-[32px] font-bold leading-[1.05] tracking-[-0.02em]"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Code PIN
+          </h1>
+          <p
+            className="text-[14.5px] mt-2"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             Saisis tes 4 chiffres pour ouvrir ta session.
           </p>
         </header>
 
-        <div className="flex-1 px-5 pt-9 pb-6 flex flex-col">
+        <div className="flex-1 px-6 pt-2 flex flex-col">
+          {/* Dots PIN */}
           <motion.div
-            animate={shake ? { x: [-8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
-            transition={{ duration: 0.35, ease: [0.22, 0.61, 0.36, 1] }}
+            animate={shake ? { x: [-9, 9, -7, 7, -3, 3, 0] } : { x: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
             role="group"
             aria-label={`Code PIN, ${pin.length} chiffre${pin.length > 1 ? "s" : ""} sur 4`}
-            className="flex justify-center gap-3.5 mb-9"
+            className="flex justify-center gap-4 mb-10"
           >
             {[0, 1, 2, 3].map((i) => {
               const filled = pin.length > i;
+              const danger = errored;
               return (
                 <motion.div
                   key={i}
-                  animate={{
-                    scale: filled ? [1, 1.18, 1] : 1,
+                  animate={{ scale: filled ? [1, 1.16, 1] : 1 }}
+                  transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+                  className="w-[15px] h-[15px] rounded-full"
+                  style={{
+                    background: filled
+                      ? danger
+                        ? "var(--danger)"
+                        : "var(--accent-gold-bright)"
+                      : "transparent",
+                    boxShadow: filled
+                      ? danger
+                        ? "0 0 12px rgba(255,112,98,0.45)"
+                        : "var(--accent-gold-glow)"
+                      : "inset 0 0 0 1.5px var(--border-card)",
+                    transition:
+                      "background 180ms var(--ease-out-quart), box-shadow 220ms var(--ease-out-quart)",
                   }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className={`w-[52px] h-[52px] rounded-2xl border-2 flex items-center justify-center transition-colors ${
-                    filled
-                      ? "bg-gold border-gold"
-                      : "bg-white/8 border-white/20"
-                  }`}
-                >
-                  <AnimatePresence>
-                    {filled && (
-                      <motion.span
-                        key={`dot-${i}`}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                        className="w-2.5 h-2.5 rounded-full bg-[#082A20]"
-                      />
-                    )}
-                  </AnimatePresence>
-                </motion.div>
+                />
               );
             })}
           </motion.div>
 
-          <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto w-full">
+          {/* Keypad */}
+          <div className="grid grid-cols-3 gap-3.5 max-w-[300px] mx-auto w-full">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-              <button
+              <KeyButton
                 key={d}
-                onClick={() => press(String(d))}
+                onPress={() => press(String(d))}
                 disabled={loading || pin.length >= 4}
-                className="keypad-btn"
-                aria-label={`Chiffre ${d}`}
+                label={`Chiffre ${d}`}
               >
                 {d}
-              </button>
+              </KeyButton>
             ))}
             <div />
-            <button
-              onClick={() => press("0")}
+            <KeyButton
+              onPress={() => press("0")}
               disabled={loading || pin.length >= 4}
-              className="keypad-btn"
-              aria-label="Chiffre 0"
+              label="Chiffre 0"
             >
               0
-            </button>
+            </KeyButton>
             <button
+              type="button"
               onClick={back}
               disabled={pin.length === 0 || loading}
-              className="aspect-square rounded-2xl bg-white/8 border border-white/15 flex items-center justify-center text-white/75 active:scale-[0.96] transition-transform duration-150 ease-out disabled:opacity-30"
+              className="aspect-square rounded-[20px] flex items-center justify-center active:scale-[0.94] transition-transform duration-150 ease-out disabled:opacity-30"
+              style={{
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-hairline)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                color: "var(--text-secondary)",
+              }}
               aria-label="Effacer"
             >
-              <Delete className="w-5 h-5" />
+              <Delete className="w-[22px] h-[22px]" strokeWidth={2} />
             </button>
           </div>
 
-          <AnimatePresence mode="popLayout">
-            {loading && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                role="status"
-                className="mt-6 flex items-center justify-center gap-2 text-gold text-sm font-semibold"
-              >
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-gold/25 border-t-gold animate-spin" />
-                Authentification…
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="h-9 mt-6 flex items-center justify-center">
+            <AnimatePresence mode="popLayout">
+              {loading && (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  role="status"
+                  className="flex items-center gap-2 text-[13.5px] font-semibold"
+                  style={{ color: "var(--text-gold)" }}
+                >
+                  <span
+                    className="w-3.5 h-3.5 rounded-full animate-spin"
+                    style={{
+                      border: "2px solid rgba(242,212,105,0.25)",
+                      borderTopColor: "var(--accent-gold-bright)",
+                    }}
+                  />
+                  Authentification…
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {showDemoPins && employes.length > 0 && (
-            <div className="mt-10 px-1">
-              <p className="label-caps text-white/55 mb-3 inline-flex items-center gap-1.5">
+            <div
+              className="mt-6 mb-7 mx-auto w-full max-w-[300px] rounded-2xl px-4 py-3.5"
+              style={{
+                background: "var(--surface-1)",
+                border: "1px solid var(--border-hairline)",
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              <p
+                className="text-[10.5px] font-bold uppercase tracking-[0.18em] mb-2.5 inline-flex items-center gap-1.5"
+                style={{ color: "var(--text-tertiary)" }}
+              >
                 <Fingerprint className="w-3 h-3" />
                 Comptes démo
               </p>
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {employes.map((e) => (
                   <li
                     key={e.id}
                     className="flex items-center justify-between gap-3 text-[13px]"
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span className="mono font-bold tabular text-gold">
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className="font-bold tabular-nums tracking-wide"
+                        style={{ color: "var(--text-gold)" }}
+                      >
                         {e.pin_code}
                       </span>
-                      <span className="text-white/80 truncate">
+                      <span
+                        className="truncate"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
                         {e.prenom} {e.nom}
                       </span>
                     </span>
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-white/45 shrink-0">
+                    <span
+                      className="text-[10.5px] font-semibold uppercase tracking-wide shrink-0"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
                       {ROLE_LABEL[e.role] ?? e.role}
                     </span>
                   </li>
@@ -239,5 +336,53 @@ export default function V2LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * KeyButton — touche du keypad premium.
+ * Surface sapin avec inset highlight top ; au tap, flash sapin + glow léger.
+ */
+function KeyButton({
+  children,
+  onPress,
+  disabled,
+  label,
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  const [flash, setFlash] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (disabled) return;
+        setFlash(true);
+        setTimeout(() => setFlash(false), 200);
+        onPress();
+      }}
+      disabled={disabled}
+      aria-label={label}
+      className="relative aspect-square rounded-[20px] flex items-center justify-center select-none active:scale-[0.94] transition-transform duration-150 ease-out disabled:opacity-35 disabled:active:scale-100"
+      style={{
+        background: flash ? "var(--primary-green-soft)" : "var(--surface-1)",
+        border: `1px solid ${flash ? "var(--primary-green-hover)" : "var(--border-hairline)"}`,
+        boxShadow: flash
+          ? "0 0 0 3px var(--primary-green-soft), inset 0 1px 0 rgba(255,255,255,0.05)"
+          : "var(--shadow-card)",
+        color: "var(--text-primary)",
+        fontSize: 27,
+        fontWeight: 600,
+        fontVariantNumeric: "tabular-nums",
+        transition:
+          "transform 150ms var(--ease-out-quart), background 200ms var(--ease-out-quart), box-shadow 200ms var(--ease-out-quart), border-color 200ms var(--ease-out-quart)",
+      }}
+    >
+      {children}
+    </button>
   );
 }

@@ -1,25 +1,65 @@
 /**
- * middleware.ts — CORS handler global pour les routes /api/stripe/*.
+ * middleware.ts — deux responsabilités, scopes disjoints :
  *
- * Contexte : le front salamarket-drive (Vite, http://localhost:8081)
- * appelle l'API Stripe de salam-stock (Next.js, http://localhost:3000)
- * pour le flow manual capture (POST create-payment-intent, capture-
- * payment). Comme c'est cross-origin, le browser envoie un preflight
- * OPTIONS — sans CORS headers ici, il échoue → tout l'E2E pété.
+ * 1. LEGACY REDIRECTS (308) — les routes de l'app V1 (/dashboard,
+ *    /catalogue, /reception, /inventaire, /alertes, /assistant,
+ *    /compte, /login, /staff/preparation) ont été SUPPRIMÉES au profit
+ *    de l'app V2 sous /v2/*. Pour ne pas casser les vieux bookmarks ni
+ *    laisser des « portes dérobées » répondre en 404, on redirige en
+ *    308 (permanent, conserve la méthode) vers l'équivalent V2.
+ *    La racine `/` n'est PAS touchée (elle a son propre splash +
+ *    redirect côté client). Les routes /api/*, /v2/*, /po/* sont
+ *    explicitement préservées.
  *
- * Stratégie :
- *   - Whitelist d'origines (pas de wildcard `*` car Stripe Elements
- *     envoie potentiellement des cookies).
- *   - Le middleware court-circuite les OPTIONS avec un 204 + headers.
- *   - Pour les POST, il laisse Next.js traiter la requête puis ajoute
- *     les headers à la response sortante.
+ * 2. CORS /api/stripe/* — le front salamarket-drive (Vite,
+ *    http://localhost:8081) appelle l'API Stripe de salam-stock
+ *    (Next.js, http://localhost:3000) pour le flow manual capture
+ *    (POST create-payment-intent, capture-payment). Cross-origin →
+ *    preflight OPTIONS, qui échoue sans CORS headers → E2E pété.
  *
- * Webhook (/api/stripe/webhook) : Stripe appelle en serveur-à-serveur,
- * pas de header Origin → le middleware ne renvoie pas de
- * Access-Control-Allow-Origin (inutile), mais ne bloque pas la requête
- * non plus. Pas de régression.
+ *    Stratégie CORS :
+ *      - Whitelist d'origines (pas de wildcard `*` car Stripe Elements
+ *        envoie potentiellement des cookies).
+ *      - Court-circuit des OPTIONS avec un 204 + headers.
+ *      - Pour les POST, on laisse Next.js traiter puis on ajoute les
+ *        headers à la response sortante.
+ *
+ *    Webhook (/api/stripe/webhook) : Stripe appelle en serveur-à-
+ *    serveur, pas de header Origin → pas de Access-Control-Allow-Origin
+ *    renvoyé (inutile), mais la requête n'est pas bloquée. Pas de
+ *    régression.
  */
 import { NextResponse, type NextRequest } from "next/server";
+
+// ── Redirections legacy V1 → V2 ─────────────────────────────────────
+// Clé = préfixe de chemin V1 mort ; valeur = destination V2.
+// On matche par préfixe pour couvrir les sous-routes éventuelles
+// (ex. /catalogue/123 → /v2/stock). Ordre : du plus spécifique au
+// plus générique (Object iteration = ordre d'insertion).
+const LEGACY_REDIRECTS: Array<[prefix: string, target: string]> = [
+  ["/staff/preparation", "/v2/preparation"],
+  ["/dashboard", "/v2"],
+  ["/catalogue", "/v2/stock"],
+  ["/reception", "/v2/reception"],
+  ["/inventaire", "/v2/inventaire"],
+  ["/alertes", "/v2/admin/alertes"],
+  ["/assistant", "/v2/admin/assistant-ia"],
+  ["/compte", "/v2"],
+  ["/login", "/v2/login"],
+  // Fallback générique : tout /staff résiduel (layout + sous-routes
+  // hors preparation déjà mappée ci-dessus) → preparation V2. Placé en
+  // dernier pour que /staff/preparation matche d'abord sa cible exacte.
+  ["/staff", "/v2/preparation"],
+];
+
+function legacyRedirectTarget(pathname: string): string | null {
+  for (const [prefix, target] of LEGACY_REDIRECTS) {
+    if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+      return target;
+    }
+  }
+  return null;
+}
 
 // ── Whitelist d'origines ────────────────────────────────────────────
 const ALLOWED_ORIGINS = new Set<string>([
@@ -47,6 +87,23 @@ function corsHeadersFor(origin: string | null): Record<string, string> {
 }
 
 export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // ── 1. Legacy V1 → V2 redirects (308 permanent) ──────────────────
+  // Prioritaire sur tout le reste. Ne concerne JAMAIS /api/*, /v2/*,
+  // /po/* ni la racine `/` (legacyRedirectTarget renvoie null pour eux).
+  const target = legacyRedirectTarget(pathname);
+  if (target) {
+    const url = req.nextUrl.clone();
+    url.pathname = target;
+    // On vide la query string héritée des vieux deep-links V1 : les
+    // params V1 (ids store legacy, filtres) n'ont pas de sens en V2.
+    url.search = "";
+    // 308 = permanent + conserve la méthode HTTP (vs 307 temporaire).
+    return NextResponse.redirect(url, 308);
+  }
+
+  // ── 2. CORS /api/stripe/* ────────────────────────────────────────
   const origin = req.headers.get("origin");
 
   // Preflight OPTIONS → 204 + headers, court-circuit Next.js
@@ -67,11 +124,35 @@ export function middleware(req: NextRequest) {
   return res;
 }
 
-// Ne s'applique QU'aux routes Stripe pour éviter d'impacter le reste.
-// Le webhook est inclus mais Stripe (serveur-à-serveur) n'envoie pas
-// de header Origin → corsHeadersFor renvoie des headers sans
-// Access-Control-Allow-Origin, et le 200 OK normal du webhook n'est
-// pas affecté.
+// Le matcher couvre deux familles de chemins :
+//   - /api/stripe/* → CORS (cf. branche 2 de middleware()).
+//   - les préfixes legacy V1 morts → redirect 308 (branche 1).
+// Tout le reste (/, /v2/*, /po/*, autres /api/*, assets) n'entre PAS
+// dans le middleware : zéro overhead, zéro régression.
+//
+// Note : on liste les préfixes legacy explicitement plutôt qu'un
+// catch-all, pour garantir que /v2/reception, /v2/inventaire, etc. ne
+// soient jamais interceptés (ils ne matchent aucun préfixe ci-dessous).
 export const config = {
-  matcher: ["/api/stripe/:path*"],
+  matcher: [
+    "/api/stripe/:path*",
+    "/dashboard/:path*",
+    "/dashboard",
+    "/catalogue/:path*",
+    "/catalogue",
+    "/reception/:path*",
+    "/reception",
+    "/inventaire/:path*",
+    "/inventaire",
+    "/alertes/:path*",
+    "/alertes",
+    "/assistant/:path*",
+    "/assistant",
+    "/compte/:path*",
+    "/compte",
+    "/login/:path*",
+    "/login",
+    "/staff/:path*",
+    "/staff",
+  ],
 };

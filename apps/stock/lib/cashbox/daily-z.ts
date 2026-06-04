@@ -62,8 +62,12 @@ export interface DailyZSummary {
  */
 export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
   const sb = supabase();
-  const startParis = `${dateIso}T00:00:00+02:00`;
-  const endParis = `${dateIso}T23:59:59.999+02:00`;
+  // Offset Europe/Paris dynamique pour CETTE date (gère CEST +02:00 l'été
+  // et CET +01:00 l'hiver). Un offset en dur "+02:00" décalait le Z d'1h
+  // en hiver → fuite de commandes entre deux jours fiscaux.
+  const offset = parisOffsetForDate(dateIso);
+  const startParis = `${dateIso}T00:00:00.000${offset}`;
+  const endParis = `${dateIso}T23:59:59.999${offset}`;
 
   const generatedAt = new Date().toISOString();
 
@@ -234,20 +238,65 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
   };
 }
 
+/**
+ * Offset UTC de la zone Europe/Paris pour une date donnée, au format
+ * "+02:00" (CEST, été) ou "+01:00" (CET, hiver).
+ *
+ * Pourquoi : la France passe à l'heure d'été le dernier dimanche de mars
+ * et revient à l'heure d'hiver le dernier dimanche d'octobre. Coder
+ * "+02:00" en dur fait dériver les bornes du jour fiscal d'1 heure tout
+ * l'hiver — une commande passée à 23h30 le 5 janvier serait comptée le 6.
+ *
+ * On laisse l'ICU (Intl) faire le calcul DST plutôt que de réimplémenter
+ * les règles de bascule. On vise midi (12:00) pour être à l'abri des
+ * minutes de transition aux frontières du jour.
+ *
+ * @param dateIso YYYY-MM-DD
+ * @returns offset signé "+HH:MM"
+ */
+export function parisOffsetForDate(dateIso: string): string {
+  // Instant de référence : midi UTC ce jour-là. À midi, on est toujours
+  // dans le bon jour à Paris (offset max ±2h), donc l'offset calculé est
+  // bien celui applicable à minuit/23h59 du même jour civil parisien.
+  const ref = new Date(`${dateIso}T12:00:00Z`);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Paris",
+    timeZoneName: "longOffset",
+  }).formatToParts(ref);
+  const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+  // tzName ressemble à "GMT+02:00" / "GMT+01:00" (ou "UTC+02:00" selon ICU).
+  const m = tzName.match(/([+-])(\d{1,2})(?::(\d{2}))?/);
+  if (!m) return "+01:00"; // fallback prudent : heure d'hiver
+  const sign = m[1];
+  const hh = m[2].padStart(2, "0");
+  const mm = (m[3] ?? "00").padStart(2, "0");
+  return `${sign}${hh}:${mm}`;
+}
+
+/**
+ * Date civile YYYY-MM-DD à Paris pour un instant donné.
+ *
+ * On formate directement en locale en-CA (qui produit "YYYY-MM-DD") avec
+ * timeZone Europe/Paris. C'est déterministe et indépendant du fuseau du
+ * serveur — contrairement à `new Date(toLocaleString(...))` qui réinterprète
+ * la chaîne dans le fuseau local du process et pouvait décaler le jour d'un
+ * cran près de minuit (serveur Vercel en UTC).
+ */
+function parisDateString(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}
+
 /** Date YYYY-MM-DD pour "hier" en heure de Paris */
 export function yesterdayIsoParis(): string {
-  const now = new Date();
-  const paris = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
-  paris.setDate(paris.getDate() - 1);
-  return paris.toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return parisDateString(yesterday);
 }
 
 export function todayIsoParis(): string {
-  const now = new Date();
-  const paris = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
-  return paris.toISOString().slice(0, 10);
+  return parisDateString(new Date());
 }

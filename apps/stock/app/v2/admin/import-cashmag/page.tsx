@@ -11,6 +11,8 @@ interface ImportResult {
   ok: boolean;
   inserted: number;
   parsed: number;
+  /** Lignes ignorées car déjà en base (réimport) ou doublons internes. */
+  duplicates_skipped?: number;
   parseErrors?: Array<{ line: number; raw: string; reason: string }>;
   dbErrors?: string[];
   meta?: { separator: string; headers: string[]; columnIndex: Record<string, number> };
@@ -42,9 +44,19 @@ export default function ImportCashmagPage() {
       });
       const data = (await r.json()) as ImportResult;
       setResult(data);
-      if (data.ok) toast.success(`${data.inserted} ligne(s) importée(s)`);
-      else if (data.inserted > 0) toast.warning(`${data.inserted} importées, ${data.parseErrors?.length ?? 0} erreurs`);
-      else toast.error("Aucune ligne importée");
+      const dups = data.duplicates_skipped ?? 0;
+      if (data.ok && data.inserted > 0) {
+        toast.success(
+          `${data.inserted} ligne(s) importée(s)${dups > 0 ? ` · ${dups} déjà en base ignorée(s)` : ""}`
+        );
+      } else if (data.ok && data.inserted === 0 && dups > 0) {
+        // Réimport idempotent : tout était déjà là, ce n'est PAS une erreur.
+        toast.info(`Déjà importé — ${dups} ligne(s) ignorée(s), aucun doublon créé`);
+      } else if (data.inserted > 0) {
+        toast.warning(`${data.inserted} importées, ${data.parseErrors?.length ?? 0} erreurs`);
+      } else {
+        toast.error("Aucune ligne importée");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
     } finally { setBusy(false); }

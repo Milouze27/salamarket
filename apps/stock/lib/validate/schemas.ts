@@ -36,6 +36,10 @@ export const scanCartonSchema = z.object({
   ean: EAN,
   employe_id: UUID.optional(),
   lot_id: z.string().trim().max(40).optional(),
+  // Confirmation explicite du staff quand un scan ferait dépasser 150 % de
+  // la quantité attendue (sur-comptage / double scan probable). Sans ce
+  // flag, le serveur renvoie kind:"blocked" et N'INCRÉMENTE PAS.
+  confirm_over: z.boolean().optional(),
 });
 
 export type ScanCartonInput = z.infer<typeof scanCartonSchema>;

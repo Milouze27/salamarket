@@ -164,7 +164,7 @@ export default function V2TransfertPage() {
       });
       console.log(
         `[Transfert] succès en ${Date.now() - startedAt}ms`,
-        result?.id
+        result?.id,
       );
       // Push iPhone admin — transfert audit
       void import("@/lib/notifications").then((m) =>
@@ -173,10 +173,10 @@ export default function V2TransfertPage() {
           body: `${produit.nom} × ${quantite} · par ${employe.prenom ?? "employé"}`,
           url: "/v2/admin/activite",
           tag: `trf-${result?.id ?? Date.now()}`,
-        })
+        }),
       );
       toast.success(
-        `Transfert validé : ${quantite} × ${produit.nom} de ${source.nom} → ${destination.nom}`
+        `Transfert validé : ${quantite} × ${produit.nom} de ${source.nom} → ${destination.nom}`,
       );
       router.replace("/v2");
     } catch (err) {
@@ -200,7 +200,11 @@ export default function V2TransfertPage() {
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />
-        <EditorialEyebrow num="01" label="Transfert inter-dépôt" className="mt-3" />
+        <EditorialEyebrow
+          num="01"
+          label="Transfert inter-dépôt"
+          className="mt-3"
+        />
         <h1 className="h1-display mt-3">
           Bouger du <span className="gold">stock</span>.
         </h1>
@@ -264,7 +268,10 @@ export default function V2TransfertPage() {
                   {produit.nom}
                 </p>
                 <p className="text-xs text-text-tertiary">
-                  Stock source : <span className="font-bold text-text-primary">{stockSource ?? "…"}</span>
+                  Stock source :{" "}
+                  <span className="font-bold text-text-primary">
+                    {stockSource ?? "…"}
+                  </span>
                 </p>
               </div>
               <button
@@ -348,7 +355,9 @@ export default function V2TransfertPage() {
       {produit && (
         <section className="px-5 mt-6 space-y-4">
           <div>
-            <p className="label-caps text-text-tertiary mb-2">Quantité à transférer</p>
+            <p className="label-caps text-text-tertiary mb-2">
+              Quantité à transférer
+            </p>
             <input
               type="number"
               min={1}
@@ -362,18 +371,24 @@ export default function V2TransfertPage() {
                   setQuantite(Number.isNaN(n) ? "" : n);
                 }
               }}
-              placeholder={stockSource !== null ? `0 — ${stockSource} max` : "Quantité"}
+              placeholder={
+                stockSource !== null ? `0 — ${stockSource} max` : "Quantité"
+              }
               inputMode="numeric"
               className="input-field text-2xl font-bold text-center"
             />
           </div>
 
           <div>
-            <p className="label-caps text-text-tertiary mb-2">Photo (optionnel)</p>
+            <p className="label-caps text-text-tertiary mb-2">
+              Photo (optionnel)
+            </p>
             {photo ? (
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={photo}
                   alt="Transfert"
                   className="w-full h-36 object-cover rounded-2xl border border-rule"
@@ -470,13 +485,7 @@ function DepotPick({
 /** Champ destination en lecture seule pour un employé non-admin :
  *  on affiche son dépôt sapin et figé, pour qu'il sache où arrive le stock
  *  sans pouvoir le changer. */
-function DepotLocked({
-  label,
-  depot,
-}: {
-  label: string;
-  depot: Depot | null;
-}) {
+function DepotLocked({ label, depot }: { label: string; depot: Depot | null }) {
   return (
     <div>
       <p className="label-caps text-text-tertiary mb-2 text-center">{label}</p>

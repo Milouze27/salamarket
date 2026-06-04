@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Camera, AlertTriangle, RefreshCw, Check, ImageUp } from "lucide-react";
+import {
+  X,
+  Camera,
+  AlertTriangle,
+  RefreshCw,
+  Check,
+  ImageUp,
+} from "lucide-react";
 
 interface PhotoCaptureProps {
   open: boolean;
@@ -112,7 +119,13 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
         )}
         {preview && (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={preview} alt="Aperçu" className="w-full h-full object-contain" />
+          <img
+            loading="lazy"
+            decoding="async"
+            src={preview}
+            alt="Aperçu"
+            className="w-full h-full object-contain"
+          />
         )}
         {error && (
           <div className="px-6 text-center text-white">
@@ -122,7 +135,8 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
             <p className="font-semibold text-lg">Caméra inaccessible</p>
             <p className="text-sm text-white/70 mt-2">{error}</p>
             <p className="text-xs text-white/50 mt-3">
-              Autorise l&apos;accès à la caméra ou choisis une photo dans la galerie.
+              Autorise l&apos;accès à la caméra ou choisis une photo dans la
+              galerie.
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}

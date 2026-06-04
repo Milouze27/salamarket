@@ -52,6 +52,8 @@ export function LigneList({
                 {url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={url}
                     alt={`Palette ${slot}`}
                     className="absolute inset-0 w-full h-full object-cover"
@@ -80,6 +82,8 @@ export function LigneList({
           {bdl.photo_bdl_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              loading="lazy"
+              decoding="async"
               src={bdl.photo_bdl_url}
               alt="BDL papier"
               className="absolute inset-0 w-full h-full object-cover"

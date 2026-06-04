@@ -225,6 +225,8 @@ export function ProductRecognitionModal({
               {photo && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={photo}
                   alt="Analyse"
                   className="w-44 h-44 object-cover rounded-2xl mx-auto mb-6 border border-white/20"
@@ -233,7 +235,11 @@ export function ProductRecognitionModal({
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gold/20 mb-3">
                 <motion.span
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+                  transition={{
+                    duration: 1.4,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
                   className="w-6 h-6 rounded-full border-2 border-gold border-t-transparent"
                 />
               </div>
@@ -252,6 +258,8 @@ export function ProductRecognitionModal({
                 {photo && (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={photo}
                     alt="Analyse"
                     className="w-full aspect-video object-cover rounded-2xl mb-4"

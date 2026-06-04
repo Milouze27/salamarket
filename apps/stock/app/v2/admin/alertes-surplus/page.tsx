@@ -79,7 +79,7 @@ export default function AlertesSurplusPage() {
         `id, bdl_id, code_barre_scanne, produit_id, quantite_surplus, signale_par, signale_le, statut,
          decideur, decide_le, photo_preuve_url, notes,
          produits (id, nom, ean),
-         bons_de_livraison (id, numero_bdl, fournisseurs (id, nom))`
+         bons_de_livraison (id, numero_bdl, fournisseurs (id, nom))`,
       )
       .order("signale_le", { ascending: false });
     if (error) {
@@ -94,10 +94,7 @@ export default function AlertesSurplusPage() {
     void fetchAlertes();
   }, []);
 
-  async function decide(
-    alerte: AlerteSurplus,
-    statut: "accepte" | "refuse"
-  ) {
+  async function decide(alerte: AlerteSurplus, statut: "accepte" | "refuse") {
     const sb = supabase();
     if (!sb) return;
     const { error } = await sb
@@ -115,7 +112,7 @@ export default function AlertesSurplusPage() {
     toast.success(
       statut === "accepte"
         ? "Surplus accepté · facture fournisseur à émettre"
-        : "Surplus refusé · à retourner au fournisseur"
+        : "Surplus refusé · à retourner au fournisseur",
     );
     setDetail(null);
     void fetchAlertes();
@@ -149,7 +146,9 @@ export default function AlertesSurplusPage() {
         ) : enAttente.length === 0 ? (
           <div className="bg-success-soft border border-success/20 rounded-[20px] p-8 text-center">
             <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-2" />
-            <p className="font-bold text-text-primary">Aucune alerte en attente</p>
+            <p className="font-bold text-text-primary">
+              Aucune alerte en attente
+            </p>
             <p className="text-xs text-text-secondary mt-1">
               Tous les surplus signalés ont été traités.
             </p>
@@ -157,15 +156,12 @@ export default function AlertesSurplusPage() {
         ) : (
           <>
             <p className="label-caps text-text-tertiary mb-2">
-              {enAttente.length} alerte{enAttente.length > 1 ? "s" : ""} en attente
+              {enAttente.length} alerte{enAttente.length > 1 ? "s" : ""} en
+              attente
             </p>
             <div className="space-y-2.5">
               {enAttente.map((a) => (
-                <AlertCard
-                  key={a.id}
-                  alerte={a}
-                  onClick={() => setDetail(a)}
-                />
+                <AlertCard key={a.id} alerte={a} onClick={() => setDetail(a)} />
               ))}
             </div>
           </>
@@ -178,11 +174,7 @@ export default function AlertesSurplusPage() {
             </p>
             <div className="space-y-2 opacity-80">
               {historique.slice(0, 10).map((a) => (
-                <AlertCard
-                  key={a.id}
-                  alerte={a}
-                  onClick={() => setDetail(a)}
-                />
+                <AlertCard key={a.id} alerte={a} onClick={() => setDetail(a)} />
               ))}
             </div>
           </div>
@@ -257,9 +249,13 @@ export default function AlertesSurplusPage() {
 
               {detail.photo_preuve_url && (
                 <div className="mt-4">
-                  <p className="label-caps text-text-tertiary mb-1.5">Photo preuve</p>
+                  <p className="label-caps text-text-tertiary mb-1.5">
+                    Photo preuve
+                  </p>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={detail.photo_preuve_url}
                     alt="Preuve"
                     className="w-full aspect-[4/3] object-cover rounded-2xl border border-rule"

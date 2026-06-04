@@ -145,13 +145,13 @@ export default function AlertesPage() {
       .from("employes_public")
       .select("id, prenom, nom")
       .eq("is_active", true);
-    const targetEmp = ((emps ?? []) as Array<{
-      id: string;
-      prenom: string | null;
-      nom: string;
-    }>).find(
-      (e) => `${e.prenom ?? ""} ${e.nom}`.trim() === empName
-    );
+    const targetEmp = (
+      (emps ?? []) as Array<{
+        id: string;
+        prenom: string | null;
+        nom: string;
+      }>
+    ).find((e) => `${e.prenom ?? ""} ${e.nom}`.trim() === empName);
     if (!targetEmp) {
       toast.error(`Employé "${empName}" introuvable`);
       return;
@@ -163,20 +163,21 @@ export default function AlertesPage() {
       .eq("id", d.id);
     // Push notif iPhone vers l'employé
     // HOTFIX vague 7 : passer par server action (x-internal-secret).
-    void import("@/lib/actions/push-send").then((m) =>
-      m.sendPush({
-        title: `🔍 Clarification demandée`,
-        body: `${employe?.prenom ?? "Admin"} te demande de clarifier la sortie ${d.type} de ${d.produits?.nom ?? "produit"}.`,
-        url: "/v2/sortie",
-        tag: `clarif-${d.id}`,
-        urgent: true,
-        employe_ids: [targetEmp.id],
-      })
-    ).catch((e) => console.warn("[push clarif] fail:", e));
-    toast.warning(
-      `Clarification demandée à ${empName} (push iPhone envoyée)`,
-      { duration: 4000 }
-    );
+    void import("@/lib/actions/push-send")
+      .then((m) =>
+        m.sendPush({
+          title: `🔍 Clarification demandée`,
+          body: `${employe?.prenom ?? "Admin"} te demande de clarifier la sortie ${d.type} de ${d.produits?.nom ?? "produit"}.`,
+          url: "/v2/sortie",
+          tag: `clarif-${d.id}`,
+          urgent: true,
+          employe_ids: [targetEmp.id],
+        }),
+      )
+      .catch((e) => console.warn("[push clarif] fail:", e));
+    toast.warning(`Clarification demandée à ${empName} (push iPhone envoyée)`, {
+      duration: 4000,
+    });
     setDetail(null);
     void loadAll();
   }
@@ -220,7 +221,7 @@ export default function AlertesPage() {
         `id, type, motif_libre, quantite, photo_url, ia_coherence_score, ia_coherence_notes, created_at,
          produits (nom),
          employes (prenom, nom),
-         depots (nom)`
+         depots (nom)`,
       )
       .lt("ia_coherence_score", 0.7)
       .order("created_at", { ascending: false })
@@ -233,7 +234,7 @@ export default function AlertesPage() {
       .select(
         `id, code_barre_scanne, quantite_surplus, signale_le, statut, notes,
          produits (nom, ean),
-         bons_de_livraison (numero_bdl, fournisseurs (nom))`
+         bons_de_livraison (numero_bdl, fournisseurs (nom))`,
       )
       .order("signale_le", { ascending: false })
       .limit(20);
@@ -307,7 +308,7 @@ export default function AlertesPage() {
     const surplusEnAttente = surplus.filter((s) => s.statut === "en_attente");
     const surplusValue = surplusEnAttente.reduce(
       (s, r) => s + r.quantite_surplus * 7.5,
-      0
+      0,
     );
     return {
       urgentes: urgent + surplusEnAttente.length,
@@ -326,10 +327,12 @@ export default function AlertesPage() {
           <ShieldAlert className="w-3 h-3" />
           Centre d&apos;alertes IA
         </p>
-        <h1 className="h1 text-text-primary mt-1">Alertes &amp; surveillance</h1>
+        <h1 className="h1 text-text-primary mt-1">
+          Alertes &amp; surveillance
+        </h1>
         <p className="body-md text-text-secondary mt-1">
-          Sorties suspectes, démarque détectée et surplus fournisseurs.
-          Pour décision Otmane / Ahmed.
+          Sorties suspectes, démarque détectée et surplus fournisseurs. Pour
+          décision Otmane / Ahmed.
         </p>
       </header>
 
@@ -366,17 +369,17 @@ export default function AlertesPage() {
       </section>
 
       {/* Tabs — pas de sticky pour éviter de passer derrière le shell header */}
-      <nav
-        className="px-5 mt-5 pt-2 pb-3"
-        role="tablist"
-      >
+      <nav className="px-5 mt-5 pt-2 pb-3" role="tablist">
         <div className="flex gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide">
           <TabBtn active={tab === "sorties"} onClick={() => setTab("sorties")}>
             <PackageX className="w-3.5 h-3.5" />
             Sorties&nbsp;
             <Badge>{sorties.length}</Badge>
           </TabBtn>
-          <TabBtn active={tab === "demarque"} onClick={() => setTab("demarque")}>
+          <TabBtn
+            active={tab === "demarque"}
+            onClick={() => setTab("demarque")}
+          >
             <TrendingDown className="w-3.5 h-3.5" />
             Démarque&nbsp;
             <Badge>{demarque.length}</Badge>
@@ -405,10 +408,7 @@ export default function AlertesPage() {
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
         ) : tab === "sorties" ? (
-          <SortiesPanel
-            sorties={sorties}
-            onDetail={(s) => setDetail(s)}
-          />
+          <SortiesPanel sorties={sorties} onDetail={(s) => setDetail(s)} />
         ) : tab === "demarque" ? (
           <DemarquePanel rows={demarque} />
         ) : tab === "surplus" ? (
@@ -463,14 +463,17 @@ export default function AlertesPage() {
                 {detail.produits?.nom ?? "Produit inconnu"}
               </h2>
               <p className="text-[12px] text-text-secondary mt-1">
-                Sortie de {detail.quantite} unité{detail.quantite > 1 ? "s" : ""}{" "}
-                · {detail.type.replace(/_/g, " ")}
+                Sortie de {detail.quantite} unité
+                {detail.quantite > 1 ? "s" : ""} ·{" "}
+                {detail.type.replace(/_/g, " ")}
               </p>
 
               {detail.photo_url && (
                 <div className="mt-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
+                    loading="lazy"
+                    decoding="async"
                     src={detail.photo_url}
                     alt="Preuve"
                     className="w-full aspect-[4/3] object-cover rounded-2xl border border-rule"
@@ -508,16 +511,10 @@ export default function AlertesPage() {
               </div>
 
               <dl className="mt-4 space-y-2.5 text-[13px]">
-                <Row
-                  label="Employé"
-                  value={nameOf(detail.employes)}
-                />
+                <Row label="Employé" value={nameOf(detail.employes)} />
                 <Row label="Dépôt" value={detail.depots?.nom ?? "—"} />
                 <Row label="Quand" value={timeAgoFr(detail.created_at)} />
-                <Row
-                  label="Motif libre"
-                  value={detail.motif_libre ?? "—"}
-                />
+                <Row label="Motif libre" value={detail.motif_libre ?? "—"} />
               </dl>
 
               <div className="mt-6 space-y-2">
@@ -629,9 +626,7 @@ function SortiesPanel({
     return (
       <div className="bg-success-soft border border-success/20 rounded-2xl p-6 text-center">
         <CheckCircle2 className="w-7 h-7 text-success mx-auto mb-2" />
-        <p className="font-bold text-text-primary">
-          Aucune sortie suspecte
-        </p>
+        <p className="font-bold text-text-primary">Aucune sortie suspecte</p>
         <p className="text-xs text-text-secondary mt-1">
           Toutes les sorties récentes ont un score IA ≥ 0.7.
         </p>

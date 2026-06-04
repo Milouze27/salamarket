@@ -80,7 +80,7 @@ export default function BonsReceptionAdminPage() {
          photo_palette_url_1, photo_bdl_url,
          fournisseurs (nom),
          depots (nom),
-         bons_de_livraison_lignes (quantite_attendue, quantite_recue)`
+         bons_de_livraison_lignes (quantite_attendue, quantite_recue)`,
       )
       .eq("statut", "receptionnee")
       .order("receptionne_le", { ascending: false });
@@ -118,7 +118,7 @@ export default function BonsReceptionAdminPage() {
           r.numero_bdl.toLowerCase().includes(q) ||
           (r.numero_bdl_fournisseur?.toLowerCase().includes(q) ?? false) ||
           (r.fournisseurs?.nom.toLowerCase().includes(q) ?? false) ||
-          (r.depots?.nom.toLowerCase().includes(q) ?? false)
+          (r.depots?.nom.toLowerCase().includes(q) ?? false),
       );
     }
     return l;
@@ -150,7 +150,8 @@ export default function BonsReceptionAdminPage() {
         <h1 className="h1 text-text-primary mt-1">BR PDF générés</h1>
         <p className="body-md text-text-secondary mt-1">
           Historique des réceptions validées avec téléchargement du Bon de
-          Réception signé numériquement (à archiver avec la facture fournisseur).
+          Réception signé numériquement (à archiver avec la facture
+          fournisseur).
         </p>
 
         {/* KPI */}
@@ -209,8 +210,8 @@ export default function BonsReceptionAdminPage() {
               Aucun BR sur cette période
             </p>
             <p className="text-xs text-text-secondary mt-1">
-              Les BR apparaissent ici dès qu&apos;une réception est validée
-              sur /v2/reception.
+              Les BR apparaissent ici dès qu&apos;une réception est validée sur
+              /v2/reception.
             </p>
           </div>
         ) : (
@@ -219,11 +220,11 @@ export default function BonsReceptionAdminPage() {
               const totalLignes = r.bons_de_livraison_lignes.length;
               const totalAttendu = r.bons_de_livraison_lignes.reduce(
                 (s, l) => s + l.quantite_attendue,
-                0
+                0,
               );
               const totalRecu = r.bons_de_livraison_lignes.reduce(
                 (s, l) => s + l.quantite_recue,
-                0
+                0,
               );
               const ecart = totalRecu - totalAttendu;
               return (
@@ -272,11 +273,13 @@ export default function BonsReceptionAdminPage() {
                     </span>
                     <span className="inline-flex items-center gap-2 tabular">
                       <span>
-                        <b className="text-text-primary">{totalLignes}</b> lignes
+                        <b className="text-text-primary">{totalLignes}</b>{" "}
+                        lignes
                       </span>
                       <span className="text-text-tertiary">·</span>
                       <span>
-                        <b className="text-text-primary">{totalRecu}</b>/{totalAttendu} u.
+                        <b className="text-text-primary">{totalRecu}</b>/
+                        {totalAttendu} u.
                       </span>
                       {ecart !== 0 && (
                         <span
@@ -295,6 +298,8 @@ export default function BonsReceptionAdminPage() {
                       {r.photo_palette_url_1 && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
+                          loading="lazy"
+                          decoding="async"
                           src={r.photo_palette_url_1}
                           alt="Palette"
                           className="w-12 h-12 object-cover rounded-lg border border-rule"
@@ -303,6 +308,8 @@ export default function BonsReceptionAdminPage() {
                       {r.photo_bdl_url && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
+                          loading="lazy"
+                          decoding="async"
                           src={r.photo_bdl_url}
                           alt="BDL papier"
                           className="w-12 h-12 object-cover rounded-lg border border-rule"

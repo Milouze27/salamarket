@@ -40,13 +40,48 @@ const TYPES: {
   desc: string;
   icon: typeof Check;
 }[] = [
-  { value: "casse_manipulation", label: "Casse manip", desc: "Tombée pendant la manip", icon: HardHat },
-  { value: "casse_client", label: "Casse client", desc: "Cassée en magasin", icon: UserX },
-  { value: "perime_dlc", label: "Périmé DLC", desc: "Date limite consom.", icon: Clock },
-  { value: "perime_ddm", label: "Périmé DDM", desc: "Date durabilité min.", icon: TimerOff },
-  { value: "defaut_fournisseur", label: "Défaut fournisseur", desc: "Produit défectueux", icon: ShieldAlert },
-  { value: "demarque_inconnue", label: "Démarque inconnue", desc: "Écart sans cause", icon: AlertTriangle },
-  { value: "autre", label: "Autre motif", desc: "À préciser", icon: ClipboardEdit },
+  {
+    value: "casse_manipulation",
+    label: "Casse manip",
+    desc: "Tombée pendant la manip",
+    icon: HardHat,
+  },
+  {
+    value: "casse_client",
+    label: "Casse client",
+    desc: "Cassée en magasin",
+    icon: UserX,
+  },
+  {
+    value: "perime_dlc",
+    label: "Périmé DLC",
+    desc: "Date limite consom.",
+    icon: Clock,
+  },
+  {
+    value: "perime_ddm",
+    label: "Périmé DDM",
+    desc: "Date durabilité min.",
+    icon: TimerOff,
+  },
+  {
+    value: "defaut_fournisseur",
+    label: "Défaut fournisseur",
+    desc: "Produit défectueux",
+    icon: ShieldAlert,
+  },
+  {
+    value: "demarque_inconnue",
+    label: "Démarque inconnue",
+    desc: "Écart sans cause",
+    icon: AlertTriangle,
+  },
+  {
+    value: "autre",
+    label: "Autre motif",
+    desc: "À préciser",
+    icon: ClipboardEdit,
+  },
 ];
 
 export default function V2SortiePage() {
@@ -74,8 +109,7 @@ export default function V2SortiePage() {
     void listEmployes().then((emps) => {
       const admins = emps.filter(
         (e) =>
-          e.role === "admin" ||
-          ["Otmane", "Ahmed"].includes(e.prenom ?? "")
+          e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
       );
       setAdminIds(admins.map((e) => e.id));
     });
@@ -137,7 +171,10 @@ export default function V2SortiePage() {
           }),
         });
         if (r.ok) {
-          const j = (await r.json()) as { coherence_score: number; notes: string };
+          const j = (await r.json()) as {
+            coherence_score: number;
+            notes: string;
+          };
           iaScore = j.coherence_score;
           iaNotes = j.notes;
         }
@@ -161,47 +198,51 @@ export default function V2SortiePage() {
       if (iaScore !== null && iaScore < 0.6) {
         // 1. /api/notify (canal interne historique)
         // HOTFIX vague 7 : passer par server action qui injecte le secret.
-        void import("@/lib/actions/notify").then((m) =>
-          m.sendInternalNotify({
-            kind: "sortie_low_coherence",
-            payload: {
-              sortie_id: sortie.id,
-              depot: depot.nom,
-              employe: `${employe.prenom} ${employe.nom}`,
-              produit: produit.nom,
-              quantite,
-              type,
-              ia_score: iaScore,
-              ia_notes: iaNotes,
-            },
-          })
-        ).catch((e) => console.warn("[notify] fail:", e));
+        void import("@/lib/actions/notify")
+          .then((m) =>
+            m.sendInternalNotify({
+              kind: "sortie_low_coherence",
+              payload: {
+                sortie_id: sortie.id,
+                depot: depot.nom,
+                employe: `${employe.prenom} ${employe.nom}`,
+                produit: produit.nom,
+                quantite,
+                type,
+                ia_score: iaScore,
+                ia_notes: iaNotes,
+              },
+            }),
+          )
+          .catch((e) => console.warn("[notify] fail:", e));
 
         // 2. Web Push lock-screen iPhone vers Otmane + Ahmed
         if (adminIds.length > 0) {
           const scorePct = Math.round(iaScore * 100);
-          void import("@/lib/actions/push-send").then((m) =>
-            m.sendPush({
-              title: `🚨 Sortie suspecte · IA ${scorePct}%`,
-              body: `${produit.nom} × ${quantite} (${type}) · ${depot.nom}${
-                iaNotes ? ` · ${iaNotes.slice(0, 80)}` : ""
-              }`,
-              url: `/v2/admin/alertes`,
-              tag: `sortie-${sortie.id}`,
-              urgent: iaScore < 0.4,
-              employe_ids: adminIds,
-              alerte_id: sortie.id,
-            })
-          ).catch((e) => console.warn("[push] fail:", e));
+          void import("@/lib/actions/push-send")
+            .then((m) =>
+              m.sendPush({
+                title: `🚨 Sortie suspecte · IA ${scorePct}%`,
+                body: `${produit.nom} × ${quantite} (${type}) · ${depot.nom}${
+                  iaNotes ? ` · ${iaNotes.slice(0, 80)}` : ""
+                }`,
+                url: `/v2/admin/alertes`,
+                tag: `sortie-${sortie.id}`,
+                urgent: iaScore < 0.4,
+                employe_ids: adminIds,
+                alerte_id: sortie.id,
+              }),
+            )
+            .catch((e) => console.warn("[push] fail:", e));
         }
 
         toast.warning(
           `Score IA ${(iaScore * 100).toFixed(0)}% — Otmane + Ahmed notifiés (push iPhone).`,
-          { duration: 4500 }
+          { duration: 4500 },
         );
       } else if (iaScore !== null) {
         toast.success(
-          `Sortie validée. Cohérence IA ${(iaScore * 100).toFixed(0)}%.`
+          `Sortie validée. Cohérence IA ${(iaScore * 100).toFixed(0)}%.`,
         );
       } else {
         toast.success("Sortie validée.");
@@ -215,7 +256,11 @@ export default function V2SortiePage() {
     }
   }
 
-  const canSubmit = produit && type && photo && quantite > 0 &&
+  const canSubmit =
+    produit &&
+    type &&
+    photo &&
+    quantite > 0 &&
     (type !== "autre" || motifLibre.trim().length > 0);
 
   return (
@@ -223,7 +268,11 @@ export default function V2SortiePage() {
       <PageAccentStripe accent="bordeaux" />
       <header className="px-5 pt-7">
         <BackButton />
-        <EditorialEyebrow num="01" label="Déclarer une sortie" className="mt-3" />
+        <EditorialEyebrow
+          num="01"
+          label="Déclarer une sortie"
+          className="mt-3"
+        />
         <h1 className="h1-display mt-3">
           Sortie de <span className="gold">stock</span>.
         </h1>
@@ -348,9 +397,7 @@ export default function V2SortiePage() {
                   }`}
                 >
                   <div
-                    className={
-                      fullWidth ? "flex items-center gap-3" : "block"
-                    }
+                    className={fullWidth ? "flex items-center gap-3" : "block"}
                   >
                     <span
                       className={`inline-flex w-8 h-8 rounded-xl items-center justify-center shrink-0 transition-colors ${
@@ -421,6 +468,8 @@ export default function V2SortiePage() {
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={photo}
                   alt="Preuve"
                   className="w-full h-44 object-cover rounded-2xl border border-rule"
@@ -449,9 +498,9 @@ export default function V2SortiePage() {
           <div className="bg-cream border border-rule rounded-2xl p-3 flex items-start gap-2 text-xs text-text-secondary">
             <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <p>
-              À la validation, Claude vision analyse la photo et compare avec
-              ta déclaration. Score &lt; 0,60 → Otmane est notifié pour
-              révision manuelle.
+              À la validation, Claude vision analyse la photo et compare avec ta
+              déclaration. Score &lt; 0,60 → Otmane est notifié pour révision
+              manuelle.
             </p>
           </div>
         </section>

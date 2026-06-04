@@ -147,7 +147,7 @@ export default function BdlScanFirstPage() {
            id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue,
            nb_cartons_scannes, prix_achat_ht, ecart_qte, lot_id, statut,
            produits (id, nom, ean)
-         )`
+         )`,
       )
       .eq("id", bdlId)
       .single();
@@ -194,11 +194,11 @@ export default function BdlScanFirstPage() {
     if (!bdl) return { scanned: 0, total: 0 };
     const total = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + l.quantite_attendue,
-      0
+      0,
     );
     const scanned = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + Math.min(l.quantite_recue, l.quantite_attendue),
-      0
+      0,
     );
     return { scanned, total };
   }, [bdl]);
@@ -222,7 +222,7 @@ export default function BdlScanFirstPage() {
     if (!bdl) return 0;
     return bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + l.quantite_attendue * (l.prix_achat_ht ?? 0),
-      0
+      0,
     );
   }, [bdl]);
 
@@ -232,7 +232,7 @@ export default function BdlScanFirstPage() {
     bdl?.temperature_reception_c !== undefined &&
     bdl.temperature_reception_c <= seuilTemp;
   const photosOk = Boolean(
-    bdl?.photo_palette_url_1 && bdl?.photo_palette_url_2
+    bdl?.photo_palette_url_1 && bdl?.photo_palette_url_2,
   );
   const preambleOk = tempOk && photosOk;
 
@@ -241,8 +241,7 @@ export default function BdlScanFirstPage() {
   // marchandise dont la certif halal n'est plus à jour sans que le
   // comptable le reconnaisse explicitement (traçabilité du risque).
   const certifEtat = certifAlerte(bdl?.fournisseurs?.certif_expire_le);
-  const certifBloquant =
-    certifEtat === "expiree" || certifEtat === "manquante";
+  const certifBloquant = certifEtat === "expiree" || certifEtat === "manquante";
   const certifExpireLe = bdl?.fournisseurs?.certif_expire_le ?? null;
 
   // ─── Scan handler — délégué au serveur ────────────────────────
@@ -287,7 +286,7 @@ export default function BdlScanFirstPage() {
               `Sur-comptage détecté (>150 %).\n` +
                 `${data.label}\n` +
                 `Confirmer ${siConfirme}/${attendu} reçus ? ` +
-                `Annule si c'est un double scan.`
+                `Annule si c'est un double scan.`,
             );
           if (!ok) {
             return {
@@ -329,7 +328,7 @@ export default function BdlScanFirstPage() {
         };
       }
     },
-    [bdlId, employe?.id, fetchBdl]
+    [bdlId, employe?.id, fetchBdl],
   );
 
   // ─── Photo capture ────────────────────────────────────────────
@@ -352,7 +351,7 @@ export default function BdlScanFirstPage() {
       return;
     }
     toast.success(
-      photoSlot === 3 ? "Photo BDL papier OK" : `Palette ${photoSlot} OK`
+      photoSlot === 3 ? "Photo BDL papier OK" : `Palette ${photoSlot} OK`,
     );
     setPhotoOpen(false);
     setPhotoSlot(null);
@@ -392,7 +391,7 @@ export default function BdlScanFirstPage() {
       toast.success(
         data.push_sent
           ? "Réception validée — push Otmane envoyée"
-          : "Réception validée — BR PDF prêt"
+          : "Réception validée — BR PDF prêt",
       );
       setSignOffOpen(false);
       void fetchBdl();
@@ -453,10 +452,13 @@ export default function BdlScanFirstPage() {
               </h1>
               <p className="text-[12px] text-text-secondary mt-0.5">
                 Livraison <b>{bdl.depots?.nom ?? "—"}</b> ·{" "}
-                {new Date(bdl.date_livraison_prevue).toLocaleDateString("fr-FR", {
-                  day: "2-digit",
-                  month: "long",
-                })}
+                {new Date(bdl.date_livraison_prevue).toLocaleDateString(
+                  "fr-FR",
+                  {
+                    day: "2-digit",
+                    month: "long",
+                  },
+                )}
               </p>
             </div>
             <span
@@ -538,7 +540,9 @@ export default function BdlScanFirstPage() {
                     />
                   </span>
                   <div className="flex-1">
-                    <p className="label-caps text-text-tertiary">Photos palette</p>
+                    <p className="label-caps text-text-tertiary">
+                      Photos palette
+                    </p>
                     <p
                       className={`text-[12px] font-semibold mt-0.5 ${
                         photosOk ? "text-success" : "text-text-secondary"
@@ -569,6 +573,8 @@ export default function BdlScanFirstPage() {
                         {url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
+                            loading="lazy"
+                            decoding="async"
                             src={url}
                             alt={`Palette ${slot}`}
                             className="absolute inset-0 w-full h-full object-cover"
@@ -606,7 +612,8 @@ export default function BdlScanFirstPage() {
         <div className="space-y-2">
           {bdl.bons_de_livraison_lignes.map((l) => {
             const ecart = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
-            const isRecu = l.quantite_recue >= l.quantite_attendue && ecart === 0;
+            const isRecu =
+              l.quantite_recue >= l.quantite_attendue && ecart === 0;
             const isSurplus = ecart > 0;
             const isManquant = l.quantite_recue < l.quantite_attendue;
             return (
@@ -647,7 +654,8 @@ export default function BdlScanFirstPage() {
                     {l.code_barre_attendu ?? l.produits?.ean ?? "—"}
                     {l.nb_cartons_scannes > 0 && (
                       <span className="ml-2 text-primary font-semibold">
-                        · {l.nb_cartons_scannes} carton{l.nb_cartons_scannes > 1 ? "s" : ""}
+                        · {l.nb_cartons_scannes} carton
+                        {l.nb_cartons_scannes > 1 ? "s" : ""}
                       </span>
                     )}
                   </p>

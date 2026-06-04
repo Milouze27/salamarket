@@ -94,13 +94,14 @@ export default function V2ReceptionPage() {
 
   // Unknown EAN handling (learning workflow)
   const [unknownEan, setUnknownEan] = useState<string | null>(null);
-  const [learnMode, setLearnMode] = useState<"select" | "carton-qty" | "carton-unit-scan" | "search">(
-    "select"
-  );
+  const [learnMode, setLearnMode] = useState<
+    "select" | "carton-qty" | "carton-unit-scan" | "search"
+  >("select");
   const [cartonQty, setCartonQty] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Produit[]>([]);
-  const [pendingProduitForCarton, setPendingProduitForCarton] = useState<Produit | null>(null);
+  const [pendingProduitForCarton, setPendingProduitForCarton] =
+    useState<Produit | null>(null);
   const [recognitionOpen, setRecognitionOpen] = useState(false);
   /** Scanner ré-ouvert dans le mode apprentissage carton pour scanner
    *  un produit interne et l'identifier par son EAN. */
@@ -122,7 +123,7 @@ export default function V2ReceptionPage() {
           .select(
             `id, numero_bdl, date_livraison_prevue, statut,
              fournisseurs (nom), depots (nom),
-             bons_de_livraison_lignes (quantite_attendue, quantite_recue)`
+             bons_de_livraison_lignes (quantite_attendue, quantite_recue)`,
           )
           .or(`date_livraison_prevue.eq.${today},statut.eq.en_cours`)
           .neq("statut", "receptionnee")
@@ -170,11 +171,14 @@ export default function V2ReceptionPage() {
           produit,
           quantite: carton.quantite_par_carton,
           source: "carton",
-          cartonInfo: { ean: carton.ean_carton, multiplier: carton.quantite_par_carton },
+          cartonInfo: {
+            ean: carton.ean_carton,
+            multiplier: carton.quantite_par_carton,
+          },
         });
         toast.success(
           `Carton ${produit.nom} · +${carton.quantite_par_carton}`,
-          { duration: 2000 }
+          { duration: 2000 },
         );
         return;
       }
@@ -197,7 +201,9 @@ export default function V2ReceptionPage() {
   handleScanRef.current = handleScan;
 
   // Helper: lookup produit by id (prefer DB, fallback search)
-  async function findProduitByEanInternal(produitId: string): Promise<Produit | null> {
+  async function findProduitByEanInternal(
+    produitId: string,
+  ): Promise<Produit | null> {
     // Carton stores produit_id, but we don't have a direct getter; re-search by id via search.
     // For local mode, lookup in seed.
     const { SEED_PRODUITS } = await import("@/lib/db/seed-local");
@@ -280,7 +286,7 @@ export default function V2ReceptionPage() {
         typeof window !== "undefined" &&
         window.confirm(
           "Aucun produit scanné. Valider quand même une réception vide ?\n\n" +
-            "Cela enregistrera un bon de livraison fournisseur sans contenu — utile pour signaler une livraison incomplète. Une alerte sera levée sur le dashboard admin."
+            "Cela enregistrera un bon de livraison fournisseur sans contenu — utile pour signaler une livraison incomplète. Une alerte sera levée sur le dashboard admin.",
         );
       if (!ok) return;
     }
@@ -311,7 +317,9 @@ export default function V2ReceptionPage() {
       router.replace("/v2");
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "Erreur lors de la validation");
+      toast.error(
+        e instanceof Error ? e.message : "Erreur lors de la validation",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -349,17 +357,21 @@ export default function V2ReceptionPage() {
             quantite: cartonQty,
             source: "carton",
             cartonInfo: { ean: unknownEan, multiplier: cartonQty },
-          })
+          }),
         )
         .then(() => {
-          toast.success(
-            `Carton appris : ${produit.nom} × ${cartonQty}`,
-            { duration: 2200 }
-          );
+          toast.success(`Carton appris : ${produit.nom} × ${cartonQty}`, {
+            duration: 2200,
+          });
           closeLearn();
         });
     } else {
-      void pushScan({ code: unknownEan, produit, quantite: 1, source: "unit" }).then(() => {
+      void pushScan({
+        code: unknownEan,
+        produit,
+        quantite: 1,
+        source: "unit",
+      }).then(() => {
         toast.success(`${produit.nom} · +1`);
         closeLearn();
       });
@@ -390,7 +402,7 @@ export default function V2ReceptionPage() {
     }
     toast.warning(
       `EAN ${code} inconnu — cherche par nom ou utilise la reconnaissance IA.`,
-      { duration: 3500 }
+      { duration: 3500 },
     );
   }
 
@@ -434,7 +446,7 @@ export default function V2ReceptionPage() {
       });
       toast.success(
         `Produit créé par IA : ${newProduit.nom} · carton × ${qty}`,
-        { duration: 2500 }
+        { duration: 2500 },
       );
       closeLearn();
     } catch (err) {
@@ -445,7 +457,7 @@ export default function V2ReceptionPage() {
 
   const totalUnits = useMemo(
     () => scans.reduce((s, r) => s + r.quantite, 0),
-    [scans]
+    [scans],
   );
 
   return (
@@ -453,7 +465,11 @@ export default function V2ReceptionPage() {
       <PageAccentStripe accent="sapin" />
       <header className="px-5 pt-7">
         <BackButton />
-        <EditorialEyebrow num="01" label="Réception fournisseur" className="mt-3" />
+        <EditorialEyebrow
+          num="01"
+          label="Réception fournisseur"
+          className="mt-3"
+        />
         <h1 className="h1-display mt-3">
           {step === "intake" ? (
             <>
@@ -592,6 +608,8 @@ export default function V2ReceptionPage() {
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
+                  loading="lazy"
+                  decoding="async"
                   src={photoCarton}
                   alt="Photo carton"
                   className="w-full h-44 object-cover rounded-2xl border border-rule"
@@ -638,7 +656,9 @@ export default function V2ReceptionPage() {
                 </span>
                 <span className="text-left">
                   <span className="block label-caps text-gold">SCANNER</span>
-                  <span className="block font-bold">Scanner un code-barres</span>
+                  <span className="block font-bold">
+                    Scanner un code-barres
+                  </span>
                 </span>
               </span>
               <PackagePlus className="w-5 h-5 text-gold" />
@@ -795,7 +815,8 @@ export default function V2ReceptionPage() {
                   Carton ou unité ?
                 </h3>
                 <p className="text-sm text-text-secondary mt-1">
-                  Si c&apos;est un carton, on va apprendre combien d&apos;unités sont dedans pour la prochaine fois.
+                  Si c&apos;est un carton, on va apprendre combien d&apos;unités
+                  sont dedans pour la prochaine fois.
                 </p>
                 <div className="grid grid-cols-2 gap-3 mt-5">
                   <button
@@ -872,7 +893,8 @@ export default function V2ReceptionPage() {
                   Reconnaître automatiquement (IA)
                 </button>
                 <p className="text-[11px] text-text-tertiary text-center mt-2">
-                  Claude vision identifie le produit à partir d&apos;une photo de l&apos;étiquette.
+                  Claude vision identifie le produit à partir d&apos;une photo
+                  de l&apos;étiquette.
                 </p>
               </>
             )}
@@ -973,11 +995,11 @@ function BdlCard({
 }) {
   const totalUnits = bdl.bons_de_livraison_lignes.reduce(
     (s, l) => s + l.quantite_attendue,
-    0
+    0,
   );
   const recu = bdl.bons_de_livraison_lignes.reduce(
     (s, l) => s + Math.min(l.quantite_recue, l.quantite_attendue),
-    0
+    0,
   );
   const nbProduits = bdl.bons_de_livraison_lignes.length;
   const pct = totalUnits > 0 ? (recu / totalUnits) * 100 : 0;
@@ -985,9 +1007,7 @@ function BdlCard({
     <button
       onClick={onClick}
       className={`w-full bg-white border rounded-2xl p-4 flex flex-col gap-3 text-left press-card ${
-        variant === "encours"
-          ? "border-gold/40 shadow-card"
-          : "border-rule"
+        variant === "encours" ? "border-gold/40 shadow-card" : "border-rule"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -1032,10 +1052,7 @@ function BdlCard({
             </span>
           </div>
           <div className="h-1.5 rounded-full bg-cream overflow-hidden">
-            <div
-              className="h-full bg-primary"
-              style={{ width: `${pct}%` }}
-            />
+            <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
         </div>
       )}

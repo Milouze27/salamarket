@@ -49,10 +49,12 @@ interface MenuGroup {
 }
 
 /**
- * ARCH-02 — répertoire admin groupé par plan mental.
- *   PILOTER     — décider / surveiller (dashboard, alertes, activité)
+ * ARCH-02 / L99 — répertoire admin groupé par plan mental, intitulés et ordre
+ * alignés sur la palette ⌘K et le Plus-sheet (modèle mental unifié) :
+ *   PILOTER     — décider / surveiller (dashboard, alertes, surplus, activité)
  *   ADMINISTRER — back-office (fiscal, rapports, import, IA, historiques)
- * Réservé au rôle admin (gaté à l'affichage).
+ * Réservé au rôle admin (gaté à l'affichage). Les gestes terrain (OPÉRER)
+ * vivent dans la bottom-nav et le Plus-sheet, pas dans ce répertoire admin.
  */
 const ADMIN_GROUPS: MenuGroup[] = [
   {
@@ -60,27 +62,27 @@ const ADMIN_GROUPS: MenuGroup[] = [
     entries: [
       {
         href: "/v2/admin",
-        label: "Dashboard global",
+        label: "Dashboard admin",
         desc: "Vue 3 dépôts + KPIs + alertes",
         icon: LayoutDashboard,
         accent: "primary",
       },
       {
         href: "/v2/admin/alertes",
-        label: "Alertes IA",
+        label: "Centre d'alertes",
         desc: "Sorties suspectes, démarque, surplus",
         icon: AlertOctagon,
         accent: "danger",
       },
       {
         href: "/v2/admin/alertes-surplus",
-        label: "Surplus fournisseurs",
-        desc: "À accepter ou refuser",
+        label: "Alertes surplus",
+        desc: "Surstock à accepter ou refuser",
         icon: AlertTriangle,
       },
       {
         href: "/v2/admin/activite",
-        label: "Activité complète",
+        label: "Journal d'activité",
         desc: "Réceptions, sorties, transferts horodatés",
         icon: BarChart3,
       },
@@ -110,21 +112,21 @@ const ADMIN_GROUPS: MenuGroup[] = [
       },
       {
         href: "/v2/admin/assistant-ia",
-        label: "Assistant IA business",
-        desc: "Chat avec ton stock",
+        label: "Assistant IA",
+        desc: "Copilote analyse stock",
         icon: MessageSquare,
         accent: "gold",
       },
       {
         href: "/v2/inventaire/historique",
-        label: "Historique inventaire",
-        desc: "Tournants validés",
+        label: "Historique inventaires",
+        desc: "Tournants validés + écarts",
         icon: ClipboardCheck,
       },
       {
         href: "/v2/stock/sans-ean",
-        label: "Articles sans code-barre",
-        desc: "Produits sans EAN ou EAN illisible",
+        label: "Produits sans EAN",
+        desc: "À étiqueter en interne",
         icon: PackageX,
       },
     ],
@@ -187,235 +189,235 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
               boxShadow: "var(--shadow-elevated)",
             }}
           >
-              {/* HEADER */}
-              <div
-                className="safe-top px-5 pb-3 flex items-center justify-between"
-                style={{ borderBottom: "1px solid var(--border-hairline)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{
-                      background: "var(--accent-gold-soft)",
-                      color: "var(--accent-gold-bright)",
-                    }}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </span>
-                  <div>
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.14em]"
-                      style={{ color: "var(--accent-gold-dim)" }}
-                    >
-                      Répertoire
-                    </p>
-                    <p className="text-sm font-bold text-text-primary leading-tight">
-                      {isAdmin ? "Outils complets" : "Compte & réglages"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setOpen(false)}
-                  aria-label="Fermer"
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary"
-                  style={{ background: "var(--surface-1)" }}
+            {/* HEADER */}
+            <div
+              className="safe-top px-5 pb-3 flex items-center justify-between"
+              style={{ borderBottom: "1px solid var(--border-hairline)" }}
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: "var(--accent-gold-soft)",
+                    color: "var(--accent-gold-bright)",
+                  }}
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* LISTE — entrées admin groupées (admin only) */}
-              <nav className="flex-1 overflow-y-auto px-3 py-3">
-                {isAdmin &&
-                  ADMIN_GROUPS.map((group) => (
-                    <div key={group.heading} className="mb-1.5">
-                      <p
-                        className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--accent-gold-dim)" }}
-                      >
-                        {group.heading}
-                      </p>
-                      {group.entries.map((e) => {
-                        const Icon = e.icon;
-                        return (
-                          <Link
-                            key={e.href}
-                            href={e.href}
-                            onClick={() => setOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                          >
-                            <span
-                              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                              style={
-                                e.accent === "danger"
-                                  ? {
-                                      background: "var(--danger-soft)",
-                                      color: "var(--danger)",
-                                    }
-                                  : e.accent === "gold"
-                                    ? {
-                                        background: "var(--accent-gold-soft)",
-                                        color: "var(--accent-gold-bright)",
-                                      }
-                                    : {
-                                        background: "var(--surface-1)",
-                                        color: "var(--primary-green)",
-                                      }
-                              }
-                            >
-                              <Icon className="w-5 h-5" strokeWidth={2.1} />
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-text-primary truncate">
-                                {e.label}
-                              </p>
-                              <p className="text-[11px] text-text-secondary truncate">
-                                {e.desc}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ))}
-
-                {/* COMPTE & RÉGLAGES — toggles migrés du header (ARCH-11) */}
-                <div className="mb-1.5">
+                  <Settings className="w-4 h-4" />
+                </span>
+                <div>
                   <p
-                    className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                    className="text-[10px] font-bold uppercase tracking-[0.14em]"
                     style={{ color: "var(--accent-gold-dim)" }}
                   >
-                    Compte &amp; réglages
+                    Répertoire
                   </p>
+                  <p className="text-sm font-bold text-text-primary leading-tight">
+                    {isAdmin ? "Outils complets" : "Compte & réglages"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Fermer"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary"
+                style={{ background: "var(--surface-1)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-                  <button
-                    type="button"
-                    onClick={toggleTheme}
-                    aria-pressed={isNight}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                  >
-                    <span
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                      style={{
-                        background: "var(--surface-1)",
-                        color: "var(--text-primary)",
-                      }}
+            {/* LISTE — entrées admin groupées (admin only) */}
+            <nav className="flex-1 overflow-y-auto px-3 py-3">
+              {isAdmin &&
+                ADMIN_GROUPS.map((group) => (
+                  <div key={group.heading} className="mb-1.5">
+                    <p
+                      className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                      style={{ color: "var(--accent-gold-dim)" }}
                     >
-                      {isNight ? (
-                        <Moon className="w-5 h-5" strokeWidth={2.1} />
-                      ) : (
-                        <Sun className="w-5 h-5" strokeWidth={2.1} />
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-bold text-text-primary truncate">
-                        Mode atelier
-                      </p>
-                      <p className="text-[11px] text-text-secondary truncate">
-                        {isNight ? "Nuit (sombre)" : "Jour (cream)"}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                      style={{
-                        background: "var(--surface-1)",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {isNight ? "Passer jour" : "Passer nuit"}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleDensity}
-                    aria-pressed={isCompact}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                  >
-                    <span
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                      style={{
-                        background: "var(--surface-1)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {isCompact ? (
-                        <Rows4 className="w-5 h-5" strokeWidth={2.1} />
-                      ) : (
-                        <Rows3 className="w-5 h-5" strokeWidth={2.1} />
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="text-sm font-bold text-text-primary truncate">
-                        Densité
-                      </p>
-                      <p className="text-[11px] text-text-secondary truncate">
-                        {isCompact ? "Compact" : "Confort"}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                      style={{
-                        background: "var(--surface-1)",
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {isCompact ? "Confort" : "Compact"}
-                    </span>
-                  </button>
-
-                  {onLogout && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                    >
-                      <span
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: "var(--danger-soft)",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        <LogOut className="w-5 h-5" strokeWidth={2.1} />
-                      </span>
-                      <div className="flex-1 min-w-0 text-left">
-                        <p
-                          className="text-sm font-bold truncate"
-                          style={{ color: "var(--danger)" }}
+                      {group.heading}
+                    </p>
+                    {group.entries.map((e) => {
+                      const Icon = e.icon;
+                      return (
+                        <Link
+                          key={e.href}
+                          href={e.href}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
                         >
-                          Déconnexion
-                        </p>
-                        <p className="text-[11px] text-text-secondary truncate">
-                          Verrouiller la session
-                        </p>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              </nav>
+                          <span
+                            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                            style={
+                              e.accent === "danger"
+                                ? {
+                                    background: "var(--danger-soft)",
+                                    color: "var(--danger)",
+                                  }
+                                : e.accent === "gold"
+                                  ? {
+                                      background: "var(--accent-gold-soft)",
+                                      color: "var(--accent-gold-bright)",
+                                    }
+                                  : {
+                                      background: "var(--surface-1)",
+                                      color: "var(--primary-green)",
+                                    }
+                            }
+                          >
+                            <Icon className="w-5 h-5" strokeWidth={2.1} />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-text-primary truncate">
+                              {e.label}
+                            </p>
+                            <p className="text-[11px] text-text-secondary truncate">
+                              {e.desc}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
 
-              {isAdmin && (
-                <div
-                  className="px-5 pb-[calc(var(--safe-bottom)+12px)] pt-3"
-                  style={{ borderTop: "1px solid var(--border-hairline)" }}
+              {/* COMPTE & RÉGLAGES — toggles migrés du header (ARCH-11) */}
+              <div className="mb-1.5">
+                <p
+                  className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "var(--accent-gold-dim)" }}
                 >
-                  <p className="text-[10.5px] text-text-tertiary inline-flex items-center gap-1.5">
-                    <Sparkles
-                      className="w-3 h-3"
-                      style={{ color: "var(--accent-gold-bright)" }}
-                    />
-                    Outils admin visibles uniquement pour les admins
-                  </p>
-                </div>
-              )}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+                  Compte &amp; réglages
+                </p>
+
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-pressed={isNight}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                >
+                  <span
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: "var(--surface-1)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {isNight ? (
+                      <Moon className="w-5 h-5" strokeWidth={2.1} />
+                    ) : (
+                      <Sun className="w-5 h-5" strokeWidth={2.1} />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-bold text-text-primary truncate">
+                      Mode atelier
+                    </p>
+                    <p className="text-[11px] text-text-secondary truncate">
+                      {isNight ? "Nuit (sombre)" : "Jour (cream)"}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "var(--surface-1)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {isNight ? "Passer jour" : "Passer nuit"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleDensity}
+                  aria-pressed={isCompact}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                >
+                  <span
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: "var(--surface-1)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {isCompact ? (
+                      <Rows4 className="w-5 h-5" strokeWidth={2.1} />
+                    ) : (
+                      <Rows3 className="w-5 h-5" strokeWidth={2.1} />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-bold text-text-primary truncate">
+                      Densité
+                    </p>
+                    <p className="text-[11px] text-text-secondary truncate">
+                      {isCompact ? "Compact" : "Confort"}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "var(--surface-1)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    {isCompact ? "Confort" : "Compact"}
+                  </span>
+                </button>
+
+                {onLogout && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                  >
+                    <span
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                      style={{
+                        background: "var(--danger-soft)",
+                        color: "var(--danger)",
+                      }}
+                    >
+                      <LogOut className="w-5 h-5" strokeWidth={2.1} />
+                    </span>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p
+                        className="text-sm font-bold truncate"
+                        style={{ color: "var(--danger)" }}
+                      >
+                        Déconnexion
+                      </p>
+                      <p className="text-[11px] text-text-secondary truncate">
+                        Verrouiller la session
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </nav>
+
+            {isAdmin && (
+              <div
+                className="px-5 pb-[calc(var(--safe-bottom)+12px)] pt-3"
+                style={{ borderTop: "1px solid var(--border-hairline)" }}
+              >
+                <p className="text-[10.5px] text-text-tertiary inline-flex items-center gap-1.5">
+                  <Sparkles
+                    className="w-3 h-3"
+                    style={{ color: "var(--accent-gold-bright)" }}
+                  />
+                  Outils admin visibles uniquement pour les admins
+                </p>
+              </div>
+            )}
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 
   return (

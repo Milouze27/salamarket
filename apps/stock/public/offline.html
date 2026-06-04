@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0E3B2E" />
+    <title>Hors ligne — Salam Stock</title>
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <style>
+      /* Tout inline : on est hors ligne, aucune dépendance externe
+         (pas de Google Fonts, pas de feuille de style distante). */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        /* Fond sombre sapin (palette brand). */
+        background-color: #0e3b2e;
+        background-image: radial-gradient(
+          120% 90% at 50% 0%,
+          #134a36 0%,
+          #0a2419 70%
+        );
+        color: #f3f0e6;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        /* Safe-area iPad/iPhone standalone. */
+        padding: max(24px, env(safe-area-inset-top))
+          max(24px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom))
+          max(24px, env(safe-area-inset-left));
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      .icon-wrap {
+        width: 96px;
+        height: 96px;
+        background: rgba(201, 162, 39, 0.12);
+        border: 1px solid rgba(201, 162, 39, 0.32);
+        border-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 32px;
+      }
+      .icon-wrap svg {
+        width: 48px;
+        height: 48px;
+        /* Or brand (#C9A227) pour l'icône. */
+        stroke: #c9a227;
+      }
+      h1 {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: -0.01em;
+      }
+      p {
+        font-size: 16px;
+        color: #d8d2c2;
+        max-width: 340px;
+        line-height: 1.55;
+        margin-bottom: 32px;
+      }
+      button {
+        background-color: #c9a227;
+        color: #0e3b2e;
+        border: none;
+        padding: 14px 32px;
+        font-size: 16px;
+        font-weight: 700;
+        border-radius: 9999px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.15s ease;
+        -webkit-tap-highlight-color: transparent;
+        min-width: 200px;
+        min-height: 48px;
+      }
+      button:active {
+        opacity: 0.85;
+      }
+      button:focus-visible {
+        outline: 2px solid #f2d469;
+        outline-offset: 3px;
+      }
+      .small {
+        margin-top: 28px;
+        font-size: 13px;
+        color: #9aa79f;
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="icon-wrap" aria-hidden="true">
+      <!-- Cloud-off, inline pour ne dépendre d'aucun fetch externe. -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m2 2 20 20" />
+        <path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" />
+        <path
+          d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"
+        />
+      </svg>
+    </div>
+    <h1>Hors ligne</h1>
+    <p>
+      Vérifie ta connexion. Les pages déjà ouvertes restent accessibles.
+    </p>
+    <button type="button" onclick="window.location.reload()">Réessayer</button>
+    <p class="small">Salam Stock — K &amp; A FOOD</p>
+  </body>
+</html>

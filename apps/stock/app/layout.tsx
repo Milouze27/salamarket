@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { SWRegister } from "@/components/SWRegister";
+import { UpdatePrompt } from "@/components/v2/UpdatePrompt";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -164,6 +165,37 @@ const SPLASH_LINKS: { href: string; media: string }[] = [
     media:
       "(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)",
   },
+
+  // ─── iPad PAYSAGE (P0) ────────────────────────────────────────────────
+  // L'app staff tourne en standalone, le plus souvent en paysage sur iPad.
+  // Sans splash paysage, iOS affiche un écran BLANC au lancement (il ne
+  // recadre PAS un splash portrait). Tailles @2x générées par
+  // scripts/gen-splash.mjs (orientation paysage). device-width/height en
+  // CSS px = largeur > hauteur. Couvre les 4 iPad courants en service.
+  // iPad mini 6 (1133×744 @2x)
+  {
+    href: "/splash/splash-ipad-mini-landscape-2266x1488.png",
+    media:
+      "(device-width: 1133px) and (device-height: 744px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)",
+  },
+  // iPad 10e gén 10.9" (1180×820 @2x)
+  {
+    href: "/splash/splash-ipad-10th-landscape-2360x1640.png",
+    media:
+      "(device-width: 1180px) and (device-height: 820px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)",
+  },
+  // iPad Air / iPad Pro 11" (1194×834 @2x)
+  {
+    href: "/splash/splash-ipad-air-pro11-landscape-2388x1668.png",
+    media:
+      "(device-width: 1194px) and (device-height: 834px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)",
+  },
+  // iPad Pro 12.9" (1366×1024 @2x)
+  {
+    href: "/splash/splash-ipad-pro-12-9-landscape-2732x2048.png",
+    media:
+      "(device-width: 1366px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)",
+  },
 ];
 
 export default function RootLayout({
@@ -183,6 +215,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased bg-cream text-text-primary">
         <SWRegister />
+        <UpdatePrompt />
         {children}
         <Toaster
           position="top-center"

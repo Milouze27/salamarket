@@ -288,6 +288,9 @@ export default function V2PreparationKanbanPage() {
   const [actionFor, setActionFor] = useState<CommandeWithLignes | null>(null);
   const [updating, setUpdating] = useState(false);
   const [isLive, setIsLive] = useState(false);
+  // viewMode persisté entre sessions (clé 'prep-viewmode'). Restauré au
+  // mount via un effet pour rester safe SSR (pas d'accès localStorage à
+  // l'init côté serveur).
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [segmentFilter, setSegmentFilter] = useState<SegmentFilter>("tous");
   const [urgenceFilter, setUrgenceFilter] = useState<UrgenceFilter>("tous");
@@ -300,6 +303,19 @@ export default function V2PreparationKanbanPage() {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
     () => new Set(),
   );
+
+  // Restaure le mode de vue préféré au mount (guard SSR).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = window.localStorage.getItem("prep-viewmode");
+    if (saved === "kanban" || saved === "batch") setViewMode(saved);
+  }, []);
+
+  // Persiste le mode de vue à chaque changement.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("prep-viewmode", viewMode);
+  }, [viewMode]);
 
   async function reload() {
     // NOTE : /api/sync/drive-pull existe pour syncer les orders du
@@ -668,8 +684,10 @@ export default function V2PreparationKanbanPage() {
           Chargement…
         </p>
       ) : viewMode === "kanban" ? (
-        /* ────────────────── KANBAN VIEW ────────────────── */
-        <div className="px-5 mt-5 space-y-6 pb-nav-stack">
+        /* ────────────────── KANBAN VIEW ──────────────────
+           Mobile : colonnes empilées (space-y). iPad/desktop : grille
+           multi-colonnes pour voir les statuts côte à côte (md:2, lg:4). */
+        <div className="px-5 mt-5 space-y-6 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:items-start pb-nav-stack">
           {(() => {
             // Quand un filtre est actif, on masque les colonnes vides pour
             // garder l'écran lisible. Sans filtre, on garde toutes les
@@ -682,7 +700,7 @@ export default function V2PreparationKanbanPage() {
             if (filtersActive && visibleColumns.length === 0) {
               return (
                 <div
-                  className="border rounded-2xl p-6 text-center text-[13px] text-text-tertiary"
+                  className="border rounded-2xl p-6 text-center text-[13px] text-text-tertiary md:col-span-full"
                   style={{
                     background: "var(--surface-2)",
                     borderColor: "var(--border-light)",
@@ -1167,7 +1185,7 @@ export default function V2PreparationKanbanPage() {
               animate={{ y: 0 }}
               exit={{ y: 60 }}
               transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
+              className="bg-white w-full max-w-[460px] md:max-w-[600px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between mb-3">

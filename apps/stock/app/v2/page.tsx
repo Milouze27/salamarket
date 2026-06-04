@@ -101,11 +101,11 @@ const ADMIN_ONLY_ACTIONS = [
 /** C2-A — palette Salam strictement appliquée sur les cards secondaires. */
 const accentClass: Record<string, string> = {
   // Transfert inter-dépôt → or plein, icône blanche
-  gold: "bg-[#C9A227] text-white",
+  gold: "bg-[var(--accent-gold)] text-white",
   // Déclarer une sortie → rouge bordeaux plein, icône blanche
-  danger: "bg-[#A8231A] text-white",
+  danger: "bg-[var(--danger)] text-white",
   // Voir le stock → sapin foncé, icône or
-  neutral: "bg-[#0A2A20] text-[#C9A227]",
+  neutral: "bg-[var(--primary-green-dark)] text-[var(--accent-gold)]",
 };
 
 function greeting() {
@@ -222,7 +222,7 @@ export default function V2HomePage() {
             label={isAdmin ? "Espace admin" : "Espace manager"}
             className="mb-3"
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
             {/* Admin : tuiles globales (dashboard, cockpit) en tête, puis le
                 quotidien manager. Manager : uniquement le quotidien. */}
             {(isAdmin
@@ -258,7 +258,7 @@ export default function V2HomePage() {
                       isGlobal
                         ? {
                             background:
-                              "linear-gradient(135deg, #0E3B2E 0%, #14523F 55%, #C9A227 130%)",
+                              "linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 55%, var(--accent-gold) 130%)",
                           }
                         : undefined
                     }
@@ -268,11 +268,11 @@ export default function V2HomePage() {
                         isGlobal
                           ? "bg-white/15 text-white backdrop-blur-sm"
                           : isEtiquettes
-                            ? "bg-[#E0B83A] text-[#0E3B2E]"
+                            ? "bg-[var(--accent-gold-bright)] text-[var(--primary-green)]"
                             : isPrep
-                              ? "bg-[#C9A227] text-[#0E3B2E]"
+                              ? "bg-[var(--accent-gold)] text-[var(--primary-green)]"
                               : isInventaire
-                                ? "bg-[#C9A227] text-[#0E3B2E]"
+                                ? "bg-[var(--accent-gold)] text-[var(--primary-green)]"
                                 : "bg-cream text-primary"
                       }`}
                     >
@@ -305,9 +305,11 @@ export default function V2HomePage() {
           (audit manuel a constaté 01→02→04→03 avant). */}
       <WeeklyPicksRail />
 
-      <p className="text-center text-[11px] text-text-tertiary mt-12">
-        Salam Stock V2 · multi-dépôts Toulouse
-      </p>
+      <footer>
+        <p className="text-center text-[11px] text-text-tertiary mt-12">
+          Salam Stock V2 · multi-dépôts Toulouse
+        </p>
+      </footer>
     </V2Shell>
   );
 }

@@ -10,6 +10,7 @@ import {
   Clock,
   CreditCard,
   Loader2,
+  Lock,
   PackageMinus,
   Route,
   Scale,
@@ -801,7 +802,11 @@ function WeightLineRow({
               placeholder="0,00"
               value={ligne.weighedKg ?? ""}
               onChange={(e) => onChange({ weighedKg: e.target.value })}
-              className="w-24 px-3 py-2.5 rounded-xl border border-rule text-base text-right tabular-nums bg-cream focus:outline-none focus:border-primary"
+              // Anti-double-pesée : une fois la ligne enregistrée (ou pendant
+              // l'envoi), l'input est verrouillé pour empêcher une double
+              // capture. Pas de réactivation hors action explicite.
+              disabled={ligne.saved || ligne.saving}
+              className="w-24 px-3 py-2.5 rounded-xl border border-rule text-base text-right tabular-nums bg-cream focus:outline-none focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
               aria-label={`Poids pesé ${ligne.produit?.nom ?? ""}`}
             />
             <span className="text-[11px] text-text-tertiary">kg</span>
@@ -855,10 +860,11 @@ function WeightLineRow({
         </div>
       )}
 
-      {/* — Bouton Enregistrer / état saved — */}
+      {/* — Bouton Enregistrer / état saved (verrou anti-double-pesée) — */}
       <div className="flex justify-end">
         {ligne.saved ? (
           <span className="text-[12px] text-success inline-flex items-center gap-1 font-semibold">
+            <Lock className="w-3.5 h-3.5" aria-hidden />
             <Check className="w-4 h-4" />
             Pesée enregistrée
           </span>

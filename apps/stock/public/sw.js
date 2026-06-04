@@ -30,15 +30,23 @@ const BUILD_VERSION = (() => {
   }
 })();
 
-const CACHE_VERSION = `v2-${BUILD_VERSION}`;
+// Bump v2 → v3 : ajout de /offline.html au précache (page de repli
+// brandée autonome). Le changement de préfixe purge les anciens caches
+// offline à l'activate, garantissant que /offline.html est bien présent.
+const CACHE_VERSION = `v3-${BUILD_VERSION}`;
 const STATIC_CACHE = `salam-stock-static-${CACHE_VERSION}`;
 const OFFLINE_CACHE = `salam-stock-offline-${CACHE_VERSION}`;
 const SHELL_CACHE = `salam-stock-shell-${CACHE_VERSION}`;
 
-const OFFLINE_URL = "/v2/offline.html";
+// Page de repli brandée autonome (sapin/or, style inline, safe-area).
+const OFFLINE_URL = "/offline.html";
+// Repli historique /v2 (conservé : sert encore d'équivalent shell /v2).
+const OFFLINE_URL_LEGACY = "/v2/offline.html";
 
-// Coquille offline minimale (toujours dispo, même au 1er load).
-const OFFLINE_ASSETS = [OFFLINE_URL, "/icons/icon-192.png"];
+// Coquille offline minimale (toujours dispo, même au 1er load). On
+// précache les deux pages : /offline.html (dernier recours universel) et
+// /v2/offline.html (compat + repli interne aux routes /v2).
+const OFFLINE_ASSETS = [OFFLINE_URL, OFFLINE_URL_LEGACY, "/icons/icon-192.png"];
 
 // Routes /v2 chaudes pré-cachées à l'install pour que le staff puisse
 // ouvrir une route jamais visitée avant la coupure réseau et tomber sur
@@ -78,16 +86,16 @@ self.addEventListener("install", (event) => {
       caches.open(SHELL_CACHE).then((cache) =>
         Promise.all(
           SHELL_ROUTES.map((route) =>
-            cache.add(new Request(route, { credentials: "same-origin" })).catch(
-              () => {
+            cache
+              .add(new Request(route, { credentials: "same-origin" }))
+              .catch(() => {
                 /* Route non atteignable au install (offline au 1er lancement,
                    ou gate auth) : sera cachée à la 1ère navigation réussie. */
-              }
-            )
-          )
-        )
+              }),
+          ),
+        ),
       ),
-    ])
+    ]),
   );
   self.skipWaiting();
 });
@@ -104,12 +112,12 @@ self.addEventListener("activate", (event) => {
             // On ne touche qu'à NOS caches (préfixe salam-stock-) pour ne
             // pas écraser d'éventuels caches d'autres SW co-résidents.
             .filter(
-              (key) => key.startsWith("salam-stock-") && !allowed.has(key)
+              (key) => key.startsWith("salam-stock-") && !allowed.has(key),
             )
-            .map((key) => caches.delete(key))
-        )
+            .map((key) => caches.delete(key)),
+        ),
       )
-      .then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -140,7 +148,7 @@ async function matchShellRoute(pathname) {
   if (exact) return exact;
   // Préfixe le plus spécifique parmi les routes pré-cachées.
   const candidates = SHELL_ROUTES.filter(
-    (r) => pathname === r || pathname.startsWith(r + "/")
+    (r) => pathname === r || pathname.startsWith(r + "/"),
   ).sort((a, b) => b.length - a.length);
   for (const route of candidates) {
     const hit = await shell.match(route, { ignoreSearch: true });
@@ -196,17 +204,22 @@ self.addEventListener("fetch", (event) => {
             const shell = await matchShellRoute(url.pathname);
             if (shell) return shell;
           }
-          // …sinon écran offline dédié…
+          // …sinon écran offline dédié brandé (/offline.html)…
           const offline = await caches.match(OFFLINE_URL, {
             ignoreSearch: true,
           });
           if (offline) return offline;
+          // …sinon repli historique /v2/offline.html…
+          const offlineLegacy = await caches.match(OFFLINE_URL_LEGACY, {
+            ignoreSearch: true,
+          });
+          if (offlineLegacy) return offlineLegacy;
           // …sinon fallback texte minimal.
           return new Response(
             "<h1>Hors ligne</h1><p>Vérifiez votre connexion.</p>",
-            { headers: { "Content-Type": "text/html; charset=utf-8" } }
+            { headers: { "Content-Type": "text/html; charset=utf-8" } },
           );
-        })
+        }),
     );
     return;
   }
@@ -244,7 +257,7 @@ self.addEventListener("fetch", (event) => {
             // HTML offline rendu à la place d'un .js).
             return new Response("", { status: 504, statusText: "Offline" });
           });
-      })
+      }),
     );
     return;
   }
@@ -308,7 +321,10 @@ self.addEventListener("notificationclick", (event) => {
         //    inconstant). On NE return PAS prématurément avant d'avoir
         //    tenté de router.
         for (const client of clientList) {
-          if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          if (
+            client.url.startsWith(self.location.origin) &&
+            "focus" in client
+          ) {
             const focused = client.focus();
             if ("navigate" in client) {
               client.navigate(targetUrl).catch(() => {});
@@ -319,7 +335,7 @@ self.addEventListener("notificationclick", (event) => {
         }
         // 3. Aucune fenêtre exploitable → on en ouvre une.
         if (self.clients.openWindow) return self.clients.openWindow(target);
-      })
+      }),
   );
 });
 

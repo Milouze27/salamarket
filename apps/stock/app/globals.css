@@ -147,6 +147,18 @@ body {
   border-radius: 6px;
 }
 
+/* A11y clavier en DARK : le sapin (#1b6a4a) sur abysse (#08130f) ne
+   contraste pas assez pour un anneau de focus visible. On bascule sur
+   l'or clair (--accent-gold-bright, ~9:1) + double anneau pour rester
+   net sur toutes les surfaces sombres. Le mode jour garde le sapin. */
+:root:not([data-theme="jour"]) :focus-visible,
+[data-theme="nuit"] :focus-visible,
+body.theme-nuit :focus-visible {
+  outline: 2px solid var(--accent-gold-bright);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(8, 19, 15, 0.9);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -977,10 +989,13 @@ body.theme-nuit .input-field {
   border-color: var(--border-card);
   color: var(--text-primary);
 }
+/* Placeholder lisible en dark : --text-tertiary (#7c8a82, 4.7:1) reste
+   sous le seuil AA confortable pour du texte saisi ; on remonte à
+   --text-secondary (#a8b4ac, 8.2:1) pour AA franc sans masquer le label. */
 :root:not([data-theme="jour"]) .input-field::placeholder,
 [data-theme="nuit"] .input-field::placeholder,
 body.theme-nuit .input-field::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 :root:not([data-theme="jour"]) .input-field:focus,
 [data-theme="nuit"] .input-field:focus,
@@ -1000,14 +1015,17 @@ body.theme-nuit .h1-display em {
   text-shadow: var(--bignum-glow);
 }
 
-/* Eyebrow numéroté en or-dim (DARK : graisse retenue, accent discret). */
+/* Eyebrow numéroté en or clair (DARK : accent discret MAIS lisible).
+   A11y : --accent-gold-dim (#b89530, ~3:1) échoue WCAG AA en texte. On
+   passe à --or-text (#f2d469, ~7.9:1 sur abysse) pour satisfaire AA tout
+   en gardant l'or comme accent éditorial. */
 :root:not([data-theme="jour"]) .eyebrow,
 :root:not([data-theme="jour"]) .eyebrow .num,
 [data-theme="nuit"] .eyebrow,
 [data-theme="nuit"] .eyebrow .num,
 body.theme-nuit .eyebrow,
 body.theme-nuit .eyebrow .num {
-  color: var(--accent-gold-dim);
+  color: var(--or-text);
 }
 
 /* TYPO dark : graisses -1 cran sur les gros titres (extrabold → bold) +

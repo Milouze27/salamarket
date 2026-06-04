@@ -5,11 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
+  Activity,
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpRight,
+  BarChart3,
+  Boxes,
   ChevronRight,
   ClipboardList,
+  Clock,
   Compass,
+  FileSpreadsheet,
   Gauge,
   Home,
   LayoutDashboard,
@@ -20,14 +26,17 @@ import {
   PackageSearch,
   QrCode,
   Repeat2,
+  ScanLine,
   Search,
   ShoppingBag,
+  Sparkles,
   Tag,
   Truck,
   X,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
 import { dataMode, countDlcAlerts } from "@/lib/db";
+import { filterItemsForRole } from "@/lib/nav-roles";
 import { DepotSwitcher } from "./DepotSwitcher";
 import { V2Logo } from "./V2Logo";
 import { AdminMenu } from "./AdminMenu";
@@ -157,6 +166,77 @@ const ITEMS: Record<string, NavItem> = {
     icon: Compass,
     desc: "Lots courte date + remises auto",
   },
+  // Routes admin/back-office — alignées sur ⌘K (mêmes destinations).
+  alertes: {
+    label: "Alertes",
+    fullLabel: "Centre d'alertes",
+    href: "/v2/admin/alertes",
+    icon: AlertTriangle,
+    desc: "Toutes les alertes stock + IA",
+  },
+  alertesSurplus: {
+    label: "Surplus",
+    fullLabel: "Alertes surplus",
+    href: "/v2/admin/alertes-surplus",
+    icon: Boxes,
+    desc: "Surstock à écouler",
+  },
+  activite: {
+    label: "Activité",
+    fullLabel: "Journal d'activité",
+    href: "/v2/admin/activite",
+    icon: Activity,
+    desc: "Flux des mouvements staff",
+  },
+  bonsReception: {
+    label: "Bons récep.",
+    fullLabel: "Bons de réception",
+    href: "/v2/admin/bons-reception",
+    icon: ArrowDownToLine,
+    desc: "Archives BDL validés",
+  },
+  importCashmag: {
+    label: "Import",
+    fullLabel: "Import Cashmag",
+    href: "/v2/admin/import-cashmag",
+    icon: FileSpreadsheet,
+    desc: "Sync caisse / ventes",
+  },
+  recapFiscal: {
+    label: "Récap fiscal",
+    fullLabel: "Récap fiscal du jour",
+    href: "/v2/admin/recap-fiscal",
+    icon: FileSpreadsheet,
+    desc: "TVA, ventes, ticket Z",
+  },
+  rapportMensuel: {
+    label: "Rapport",
+    fullLabel: "Rapport mensuel",
+    href: "/v2/admin/rapport-mensuel",
+    icon: BarChart3,
+    desc: "Synthèse du mois",
+  },
+  assistantIa: {
+    label: "Assistant IA",
+    fullLabel: "Assistant IA",
+    href: "/v2/admin/assistant-ia",
+    icon: Sparkles,
+    desc: "Copilote analyse stock",
+  },
+  inventaireHisto: {
+    label: "Histo. invent.",
+    fullLabel: "Historique inventaires",
+    href: "/v2/inventaire/historique",
+    icon: Clock,
+    desc: "Comptages passés + écarts",
+  },
+  stockSansEan: {
+    label: "Sans EAN",
+    fullLabel: "Produits sans EAN",
+    href: "/v2/stock/sans-ean",
+    icon: ScanLine,
+    desc: "À étiqueter en interne",
+  },
 };
 
 /**
@@ -192,10 +272,15 @@ interface SheetGroup {
  * Le Plus-sheet range tout sous 3 plans mentaux (même modèle que ⌘K) :
  *   OPÉRER     — les gestes terrain (sortie, réception, transfert, étiq, stock, prépa)
  *   PILOTER    — décider / surveiller (cockpit, forecast, alertes DLC, comptoir)
- *   ADMINISTRER— back-office (admin hub, fournisseurs, PO, lots, inventaire)
+ *   ADMINISTRER— back-office (admin hub, fournisseurs, PO, lots, inventaire,
+ *                alertes, activité, fiscal, rapports, import, assistant IA)
  *
- * On filtre, par groupe, les entrées déjà épinglées sur la bottom-bar (primary)
- * pour éviter les doublons, et on retire les groupes vides.
+ * L99 / ARCH — on applique le MÊME filtrage par rôle que la palette ⌘K
+ * (filterItemsForRole, source unique `@/lib/nav-roles`) : un `caisse` ne voit
+ * jamais /v2/reception ni le pilotage, et un `reception` ne voit pas le
+ * back-office admin (hormis ses bons de réception). On filtre ensuite les
+ * entrées déjà épinglées sur la bottom-bar (primary) pour éviter les doublons,
+ * et on retire les groupes vides.
  */
 function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   const operer = [
@@ -204,6 +289,7 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.transfert,
     ITEMS.etiquettes,
     ITEMS.stock,
+    ITEMS.stockSansEan,
     ITEMS.preparation,
   ];
   const piloter = [
@@ -213,31 +299,34 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.alertesDlc,
     ITEMS.counter,
   ];
-  const administrer =
-    role === "reception" || role === "preparation"
-      ? [ITEMS.lots, ITEMS.inventaire]
-      : [
-          ITEMS.admin,
-          ITEMS.fournisseurs,
-          ITEMS.po,
-          ITEMS.lots,
-          ITEMS.inventaire,
-        ];
+  // Back-office complet, aligné sur le groupe ADMINISTRER de ⌘K. Le filtrage
+  // par rôle se charge de masquer ce qui dépasse le périmètre (un `reception`
+  // ne gardera ici que lots + inventaire + historique + bons de réception).
+  const administrer = [
+    ITEMS.admin,
+    ITEMS.alertes,
+    ITEMS.alertesSurplus,
+    ITEMS.activite,
+    ITEMS.fournisseurs,
+    ITEMS.po,
+    ITEMS.bonsReception,
+    ITEMS.lots,
+    ITEMS.inventaire,
+    ITEMS.inventaireHisto,
+    ITEMS.recapFiscal,
+    ITEMS.rapportMensuel,
+    ITEMS.importCashmag,
+    ITEMS.assistantIa,
+  ];
 
-  const dedup = (items: NavItem[]) =>
-    items.filter((it) => !primaryHrefs.has(it.href));
-
-  // Sémantique terrain : pour les rôles opérationnels, "Administrer" devient
-  // "Autres tâches" (ils ne pilotent pas le back-office, ils dépannent).
-  const lastHeading =
-    role === "reception" || role === "preparation"
-      ? "Autres tâches"
-      : "Administrer";
+  // 1) périmètre par rôle (cohérent ⌘K) puis 2) dédup avec la bottom-bar.
+  const prepare = (items: NavItem[]) =>
+    filterItemsForRole(role, items).filter((it) => !primaryHrefs.has(it.href));
 
   return [
-    { heading: "Opérer", items: dedup(operer) },
-    { heading: "Piloter", items: dedup(piloter) },
-    { heading: lastHeading, items: dedup(administrer) },
+    { heading: "Opérer", items: prepare(operer) },
+    { heading: "Piloter", items: prepare(piloter) },
+    { heading: "Administrer", items: prepare(administrer) },
   ].filter((g) => g.items.length > 0);
 }
 
@@ -458,11 +547,11 @@ export function V2Shell({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            // BUG-008 : pb-nav-stack mobile (164px+) car nav bottom flotte.
-            // Sur ≥md la nav devient md:hidden → on rabat à pb-8 (32px) pour
-            // pas laisser un trou noir en bas d'écran. Le user a explicitement
-            // pointé que la nav bottom ne doit JAMAIS cacher du contenu utile.
-            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack md:pb-8"} pt-2`}
+            // BUG-008 / L99-iPad : la nav bottom flotte à TOUTES les tailles
+            // (plus de md:hidden) → on garde pb-nav-stack y compris ≥md pour que
+            // la pill flottante ne chevauche jamais le contenu utile. Quand la
+            // nav est masquée (hideNav), on rabat sur le seul espace du CTA.
+            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack"} pt-2`}
           >
             {!depot && (
               <div className="px-5 pt-6">
@@ -477,10 +566,13 @@ export function V2Shell({
           {/* BOTTOM NAV — DARK-08 glassmorphism : 4 primary + "Plus".
             Verre teinté sapin (--glass-nav, blur 20px) + border-top hairline.
             L'item actif est souligné d'un trait OR qui glow (accent, jamais
-            un fill de surface). Lisible sur n'importe quel fond de page. */}
+            un fill de surface). Lisible sur n'importe quel fond de page.
+            L99-iPad : visible à toutes les tailles (plus de md:hidden) ; la pill
+            flottante reste centrée et capée à 820px ≥md (cohérent avec le
+            Plus-sheet), iPad/tablette gardent donc leur navigation. */}
           {!hideNav && (
             <nav
-              className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none md:hidden"
+              className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none"
               aria-label="Navigation principale"
             >
               <div className="mx-auto max-w-[460px] md:max-w-[820px] px-3 pb-2 pt-2 pointer-events-auto">

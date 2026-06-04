@@ -7,11 +7,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Gauge,
   PackageOpen,
   ShieldCheck,
   ShoppingBag,
   Timer,
   TrendingUp,
+  Users,
   Wifi,
   XCircle,
 } from "lucide-react";
@@ -315,6 +317,71 @@ export function DriveDashboardSection() {
     };
   }, [commandes, nowMs]);
 
+  // Capacité & pilotage retraits (Otmane). Trois KPI dérivés UNIQUEMENT de
+  // colonnes réellement présentes côté commandes_drive / lignes :
+  //   (a) temps moyen de préparation = moyenne(max(prepare_at) - created_at)
+  //       sur les commandes du jour dont la prépa est terminée (pret|retire).
+  //       commandes_drive n'a pas de `pret_at` → on dérive du dernier
+  //       `prepare_at` des lignes (horodatage réel de fin de prépa).
+  //   (b) préparateurs actifs = nb d'employés distincts (prepare_par_employe_id)
+  //       sur les lignes des commandes en_preparation. Fallback propre si
+  //       aucune ligne n'est encore affectée : nb de commandes en cours.
+  //   (c) taux de retrait = retire / (pret + retire) en %.
+  // Tout KPI non calculable faute de donnée affiche un placeholder "-".
+  const PREP_TARGET_MIN = 15;
+  const capacite = useMemo(() => {
+    const today = new Date().toDateString();
+
+    // (a) Temps moyen de prépa du jour (minutes).
+    const durations: number[] = [];
+    for (const c of commandes) {
+      if (c.statut !== "pret" && c.statut !== "retire") continue;
+      if (new Date(c.created_at).toDateString() !== today) continue;
+      const ends = c.lignes
+        .map((l) => l.prepare_at)
+        .filter((t): t is string => Boolean(t))
+        .map((t) => new Date(t).getTime());
+      if (ends.length === 0) continue;
+      const start = new Date(c.created_at).getTime();
+      const mins = (Math.max(...ends) - start) / 60_000;
+      if (Number.isFinite(mins) && mins >= 0) durations.push(mins);
+    }
+    const avgPrepMin =
+      durations.length > 0
+        ? durations.reduce((s, m) => s + m, 0) / durations.length
+        : null;
+
+    // (b) Préparateurs actifs (employés distincts sur lignes en cours).
+    const enPrep = commandes.filter((c) => c.statut === "en_preparation");
+    const prepareurs = new Set<string>();
+    for (const c of enPrep) {
+      for (const l of c.lignes) {
+        if (l.prepare_par_employe_id) prepareurs.add(l.prepare_par_employe_id);
+      }
+    }
+    const preparateursActifs =
+      prepareurs.size > 0 ? prepareurs.size : enPrep.length > 0 ? null : 0;
+    // null = on a des commandes en cours mais aucune ligne affectée à un
+    // employé identifiable → on n'invente pas, fallback sur le nb de commandes.
+    const commandesEnCours = enPrep.length;
+
+    // (c) Taux de retrait sur les commandes prêtes/retirées.
+    const pret = byStatut.pret;
+    const retire = byStatut.retire;
+    const denom = pret + retire;
+    const tauxRetrait = denom > 0 ? (retire / denom) * 100 : null;
+
+    return {
+      avgPrepMin,
+      prepCount: durations.length,
+      preparateursActifs,
+      commandesEnCours,
+      tauxRetrait,
+      retire,
+      denom,
+    };
+  }, [commandes, byStatut]);
+
   // Top 5 produits (par quantité totale), résolus en noms + catégorie.
   const topProduits = useMemo(() => {
     const byProduit = new Map<string, number>();
@@ -355,7 +422,8 @@ export function DriveDashboardSection() {
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="bg-white border border-rule rounded-[20px] p-4 space-y-2"
+            className="border border-rule rounded-[20px] p-5 space-y-2"
+            style={{ background: "var(--surface-1)" }}
           >
             <div className="skeleton h-3 w-32" />
             <div className="skeleton h-6 w-24" />
@@ -368,7 +436,10 @@ export function DriveDashboardSection() {
   if (commandes.length === 0) {
     return (
       <section className="px-5 mt-5">
-        <div className="bg-white border border-rule rounded-[20px] p-8 text-center">
+        <div
+          className="border border-rule rounded-[20px] p-5 text-center"
+          style={{ background: "var(--surface-1)" }}
+        >
           <ShoppingBag className="w-8 h-8 text-text-tertiary mx-auto mb-3" />
           <p className="text-sm font-bold text-text-primary">
             Pas encore de commande drive
@@ -390,15 +461,15 @@ export function DriveDashboardSection() {
         : "Polling 20s";
   const liveDotColor =
     liveStatus === "live"
-      ? "#22D67A"
+      ? "var(--success)"
       : liveStatus === "connecting"
-        ? "#F2C314"
-        : "#9CA3AF";
+        ? "var(--warning)"
+        : "var(--text-tertiary)";
   const sinceUpdate = Math.floor((Date.now() - lastUpdate.getTime()) / 1000);
 
   return (
     <>
-      {/* CHART CA Drive — courbe néon violet */}
+      {/* CHART CA Drive : courbe néon violet */}
       <section className="px-5 mt-5">
         <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-[11px] inline-flex items-center gap-1.5 font-bold uppercase tracking-wide text-text-secondary">
@@ -433,7 +504,8 @@ export function DriveDashboardSection() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-          className="bg-white border border-rule rounded-[20px] p-4 shadow-card"
+          className="border border-rule rounded-[20px] p-5 shadow-card"
+          style={{ background: "var(--surface-1)" }}
         >
           <p className="section-eyebrow">
             <TrendingUp className="w-3 h-3" />
@@ -477,7 +549,10 @@ export function DriveDashboardSection() {
           <Timer className="w-3 h-3" />
           En retard &amp; à venir
         </p>
-        <div className="bg-white border border-rule rounded-[20px] p-4 shadow-card">
+        <div
+          className="border border-rule rounded-[20px] p-5 shadow-card"
+          style={{ background: "var(--surface-1)" }}
+        >
           {/* Chips compteurs */}
           <div className="flex flex-wrap items-center gap-2">
             {pickupTracking.enRetard > 0 ? (
@@ -579,6 +654,120 @@ export function DriveDashboardSection() {
         </div>
       </section>
 
+      {/* Capacité & retraits : pilotage charge prépa (Otmane). */}
+      <section className="px-5 mt-7">
+        <p className="section-eyebrow mb-3">
+          <Gauge className="w-3 h-3" />
+          Capacité &amp; retraits
+        </p>
+        <div
+          className="border border-rule rounded-[20px] p-5 shadow-card"
+          style={{ background: "var(--surface-1)" }}
+        >
+          <div className="grid grid-cols-3 gap-3">
+            {/* (a) Temps moyen de préparation vs cible 15 min */}
+            <div className="text-center">
+              <span
+                className="inline-flex w-9 h-9 rounded-xl items-center justify-center mb-1.5"
+                style={{
+                  background:
+                    capacite.avgPrepMin === null
+                      ? "var(--surface-2)"
+                      : capacite.avgPrepMin <= PREP_TARGET_MIN
+                        ? "var(--success-soft)"
+                        : "var(--warning-soft)",
+                  color:
+                    capacite.avgPrepMin === null
+                      ? "var(--text-tertiary)"
+                      : capacite.avgPrepMin <= PREP_TARGET_MIN
+                        ? "var(--success)"
+                        : "var(--warning)",
+                }}
+              >
+                <Timer className="w-4 h-4" strokeWidth={2.2} />
+              </span>
+              <p
+                className="text-[19px] font-extrabold tabular leading-none text-text-primary"
+                style={
+                  capacite.avgPrepMin === null
+                    ? undefined
+                    : {
+                        color:
+                          capacite.avgPrepMin <= PREP_TARGET_MIN
+                            ? "var(--success)"
+                            : "var(--warning)",
+                      }
+                }
+              >
+                {capacite.avgPrepMin === null
+                  ? "-"
+                  : `${Math.round(capacite.avgPrepMin)} min`}
+              </p>
+              <p className="text-[9.5px] text-text-tertiary uppercase tracking-wide font-bold mt-1 leading-tight">
+                Prépa moy.
+              </p>
+              <p className="text-[10px] text-text-secondary mt-0.5 tabular leading-tight">
+                {capacite.avgPrepMin === null
+                  ? "aucune prépa terminée"
+                  : `cible ${PREP_TARGET_MIN} min · ${capacite.prepCount} cmd`}
+              </p>
+            </div>
+
+            {/* (b) Préparateurs actifs (employés distincts en cours) */}
+            <div className="text-center">
+              <span
+                className="inline-flex w-9 h-9 rounded-xl items-center justify-center mb-1.5"
+                style={{
+                  background: "var(--primary-green-soft)",
+                  color: "var(--text-primary)",
+                }}
+              >
+                <Users className="w-4 h-4" strokeWidth={2.2} />
+              </span>
+              <p className="text-[19px] font-extrabold tabular leading-none text-text-primary">
+                {capacite.preparateursActifs ?? "-"}
+              </p>
+              <p className="text-[9.5px] text-text-tertiary uppercase tracking-wide font-bold mt-1 leading-tight">
+                Préparateurs
+              </p>
+              <p className="text-[10px] text-text-secondary mt-0.5 tabular leading-tight">
+                {capacite.preparateursActifs === null
+                  ? `${capacite.commandesEnCours} cmd en cours`
+                  : capacite.preparateursActifs === 0
+                    ? "aucune prépa active"
+                    : `${capacite.commandesEnCours} cmd en cours`}
+              </p>
+            </div>
+
+            {/* (c) Taux de retrait = retire / (pret + retire) */}
+            <div className="text-center">
+              <span
+                className="inline-flex w-9 h-9 rounded-xl items-center justify-center mb-1.5"
+                style={{
+                  background: "var(--accent-gold-soft)",
+                  color: "var(--accent-gold)",
+                }}
+              >
+                <PackageOpen className="w-4 h-4" strokeWidth={2.2} />
+              </span>
+              <p className="text-[19px] font-extrabold tabular leading-none text-text-primary">
+                {capacite.tauxRetrait === null
+                  ? "-"
+                  : `${Math.round(capacite.tauxRetrait)} %`}
+              </p>
+              <p className="text-[9.5px] text-text-tertiary uppercase tracking-wide font-bold mt-1 leading-tight">
+                Taux retrait
+              </p>
+              <p className="text-[10px] text-text-secondary mt-0.5 tabular leading-tight">
+                {capacite.tauxRetrait === null
+                  ? "aucune commande prête"
+                  : `${capacite.retire}/${capacite.denom} retirées`}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Créneaux à venir 24h */}
       {upcomingSlots.length > 0 && (
         <section className="px-5 mt-7">
@@ -586,7 +775,10 @@ export function DriveDashboardSection() {
             <Clock className="w-3 h-3" />
             Créneaux 24h
           </p>
-          <div className="bg-white border border-rule rounded-[20px] divide-y divide-rule overflow-hidden">
+          <div
+            className="border border-rule rounded-[20px] divide-y divide-rule overflow-hidden"
+            style={{ background: "var(--surface-1)" }}
+          >
             {upcomingSlots.map(([creneau, cmds]) => {
               const total = cmds.reduce((s, c) => s + Number(c.total_ttc), 0);
               return (
@@ -622,7 +814,10 @@ export function DriveDashboardSection() {
             <ShoppingBag className="w-3 h-3" />
             Top 5 produits commandés
           </p>
-          <div className="bg-white border border-rule rounded-[20px] divide-y divide-rule overflow-hidden">
+          <div
+            className="border border-rule rounded-[20px] divide-y divide-rule overflow-hidden"
+            style={{ background: "var(--surface-1)" }}
+          >
             {topProduits.map(({ produitId, qty, nom, categorie }, idx) => (
               <div
                 key={produitId}
@@ -631,7 +826,7 @@ export function DriveDashboardSection() {
                 <span
                   className={`inline-flex w-7 h-7 rounded-full items-center justify-center text-[12px] font-extrabold ${
                     idx === 0
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-text-ondark"
                       : "bg-cream text-text-primary"
                   } tabular shrink-0`}
                 >
@@ -662,7 +857,10 @@ export function DriveDashboardSection() {
           <AlertCircle className="w-3 h-3" />
           Commandes récentes
         </p>
-        <div className="bg-white border border-rule rounded-[20px] divide-y divide-rule overflow-hidden">
+        <div
+          className="border border-rule rounded-[20px] divide-y divide-rule overflow-hidden"
+          style={{ background: "var(--surface-1)" }}
+        >
           {recent.map((c) => {
             const meta = STATUT_META[c.statut];
             const Icon = meta.icon;

@@ -38,6 +38,7 @@ import {
 import { useV2 } from "@/lib/v2-store";
 import { listDepots, searchProduits } from "@/lib/db";
 import type { Depot, Produit } from "@/lib/types/db";
+import { filterItemsForRole } from "@/lib/nav-roles";
 
 /**
  * CommandPalette — ⌘K, l'autoroute universelle de Stock (ARCH-04).
@@ -397,51 +398,10 @@ const ADMINISTRER: PaletteItem[] = [
 ];
 
 /**
- * Filtrage par rôle (cohérent avec sheetGroupsFor() de V2Shell).
- *
- * Un 'caisse' ne doit pas voir "Préparer une commande drive" hors de son
- * périmètre, ni un 'reception' "Lancer le forecast". On masque par href les
- * destinations hors-périmètre pour ces deux rôles ; manager/admin/preparation
- * voient tout (la palette reste leur autoroute universelle).
- *
- * Principe : on liste l'ensemble AUTORISÉ par rôle restreint ; tout href absent
- * de l'ensemble est masqué. La recherche fuzzy reste intacte sur le reste.
+ * Filtrage par rôle : centralisé dans `@/lib/nav-roles` (ROLE_ALLOWED +
+ * filterItemsForRole), partagé avec le Plus-sheet de V2Shell pour garantir le
+ * MÊME périmètre par rôle sur toutes les surfaces de navigation.
  */
-const ROLE_ALLOWED: Partial<Record<string, Set<string>>> = {
-  // Caisse : stock, retrait au comptoir, suivi prépa, étiquettes de dépannage.
-  caisse: new Set([
-    "/v2",
-    "/v2/stock",
-    "/v2/stock/sans-ean",
-    "/v2/preparation",
-    "/v2/counter",
-    "/v2/etiquettes",
-  ]),
-  // Réception : gestes d'entrée + stock + tâches de dépannage, pas le pilotage.
-  reception: new Set([
-    "/v2",
-    "/v2/reception",
-    "/v2/sortie",
-    "/v2/transfert",
-    "/v2/etiquettes",
-    "/v2/stock",
-    "/v2/stock/sans-ean",
-    "/v2/inventaire",
-    "/v2/inventaire/historique",
-    "/v2/lots",
-    "/v2/admin/bons-reception",
-  ]),
-};
-
-function filterItemsForRole<T extends { href: string }>(
-  role: string | undefined,
-  items: T[],
-): T[] {
-  if (!role) return items;
-  const allowed = ROLE_ALLOWED[role];
-  if (!allowed) return items; // manager / admin / preparation : tout
-  return items.filter((it) => allowed.has(it.href));
-}
 
 function depotIcon(d: Depot) {
   if (d.type === "entrepot") return Warehouse;

@@ -1220,6 +1220,32 @@ export async function setCommandeStatut(
   if (row) row.statut = statut;
 }
 
+/* ────────────────── Alertes DLC (badge count) ────────────────── */
+
+/**
+ * Nombre de lots en alerte DLC active (tous niveaux sauf "ok").
+ * Câblé sur la vue Supabase `v_dlc_alerts` — même source que la page
+ * /v2/admin/alertes-dlc. Utilisé pour le badge du bouton "Menu" dans la
+ * bottom-nav (ARCH-12) et la commande "Voir les ruptures/DLC" du ⌘K.
+ *
+ * Résilient : retourne 0 en mode démo local ou si la vue est indisponible
+ * (jamais d'exception qui casse le render de la nav).
+ */
+export async function countDlcAlerts(): Promise<number> {
+  const sb = supabase();
+  if (!sb) return 0;
+  try {
+    const { count, error } = await sb
+      .from("v_dlc_alerts")
+      .select("lot_id", { count: "exact", head: true })
+      .neq("niveau_alerte", "ok");
+    if (error) return 0;
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 /* ────────────────── Mode info (for UI badge) ────────────────── */
 
 export function dataMode(): "supabase" | "local" {

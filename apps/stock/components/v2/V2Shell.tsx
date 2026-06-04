@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
-import { dataMode } from "@/lib/db";
+import { dataMode, countDlcAlerts } from "@/lib/db";
 import { DepotSwitcher } from "./DepotSwitcher";
 import { V2Logo } from "./V2Logo";
 import { AdminMenu } from "./AdminMenu";
@@ -144,10 +144,34 @@ export function V2Shell({
   const logout = useV2((s) => s.logoutEmploye);
   const [mode, setMode] = useState<"supabase" | "local">("local");
   const [sheetOpen, setSheetOpen] = useState(false);
+  // ARCH-12 — badge alertes DLC sur le bouton "Menu" (admin/manager only :
+  // les rôles terrain n'agissent pas sur la démarque). Résilient : 0 en
+  // démo locale ou si la vue est indisponible.
+  const [dlcCount, setDlcCount] = useState(0);
 
   useEffect(() => {
     setMode(dataMode());
   }, []);
+
+  const role = employe?.role;
+  useEffect(() => {
+    if (role !== "admin" && role !== "manager") {
+      setDlcCount(0);
+      return;
+    }
+    let alive = true;
+    void countDlcAlerts()
+      .then((n) => {
+        if (alive) setDlcCount(n);
+      })
+      .catch(() => {
+        if (alive) setDlcCount(0);
+      });
+    return () => {
+      alive = false;
+    };
+    // Recompte au changement de dépôt (vue globale, mais on rafraîchit).
+  }, [role, depot?.id]);
 
   useEffect(() => {
     if (hydrated && !employe) router.replace("/v2/login");
@@ -389,7 +413,11 @@ export function V2Shell({
                   <button
                     type="button"
                     onClick={() => setSheetOpen(true)}
-                    aria-label="Ouvrir le menu"
+                    aria-label={
+                      dlcCount > 0
+                        ? `Ouvrir le menu — ${dlcCount} alerte${dlcCount > 1 ? "s" : ""} DLC`
+                        : "Ouvrir le menu"
+                    }
                     aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
                     className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -403,7 +431,7 @@ export function V2Shell({
                         }}
                       />
                     )}
-                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-full">
+                    <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-full">
                       <MoreHorizontal
                         className="w-[22px] h-[22px]"
                         style={{
@@ -413,6 +441,21 @@ export function V2Shell({
                         }}
                         strokeWidth={2}
                       />
+                      {/* ARCH-12 — badge alertes DLC (or accent, jamais fill rouge
+                          criard) : signale qu'il y a des décisions démarque qui
+                          attendent dans le menu. */}
+                      {dlcCount > 0 && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[9.5px] font-extrabold tabular-nums"
+                          style={{
+                            background: "var(--accent-gold-bright)",
+                            color: "var(--text-on-gold)",
+                            boxShadow: "var(--accent-gold-glow)",
+                          }}
+                        >
+                          {dlcCount > 9 ? "9+" : dlcCount}
+                        </span>
+                      )}
                     </span>
                     <span
                       className="text-[10.5px] leading-tight mt-0.5 whitespace-nowrap"
@@ -423,7 +466,7 @@ export function V2Shell({
                         fontWeight: sheetOpen ? 700 : 600,
                       }}
                     >
-                      Plus
+                      Menu
                     </span>
                   </button>
               </div>

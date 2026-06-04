@@ -10,40 +10,60 @@ import {
   useState,
 } from "react";
 import {
+  Activity,
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpRight,
+  BarChart3,
+  Boxes,
+  Building2,
   ClipboardList,
   Clock,
   Compass,
+  CornerDownLeft,
+  FileSpreadsheet,
   Gauge,
   Home,
   LayoutDashboard,
   LineChart,
   MonitorPlay,
   PackageSearch,
+  Printer,
   Repeat2,
+  ScanLine,
   Search,
   ShoppingBag,
+  Sparkles,
   Store,
   Tag,
+  TrendingUp,
   Truck,
   Warehouse,
-  Building2,
-  Boxes,
+  Zap,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
 import { listDepots, searchProduits } from "@/lib/db";
 import type { Depot, Produit } from "@/lib/types/db";
 
 /**
- * CommandPalette — ⌘K Linear-grade pour Stock.
+ * CommandPalette — ⌘K, l'autoroute universelle de Stock (ARCH-04).
  *
  * Trigger : ⌘K / Ctrl+K depuis n'importe quelle page Stock. Sur mobile,
- * fallback long-press sur le logo S du header (géré dans V2Logo wrapper
- * de V2Shell).
+ * la loupe du header (et le long-press du logo S) émettent l'évènement
+ * `salam-stock-cmdk:open` capté ici.
  *
- * Sections : Navigation, Dépôts, Actions, Produits (live search).
- * Recent actions stockées dans localStorage (max 5).
+ * Quatre familles de résultats :
+ *   1. ACTIONS  — verbes terrain ("Déclarer une casse", "Imprimer une
+ *      étiquette", "Lancer le forecast"…) : on commence par le geste, pas
+ *      par la destination.
+ *   2. NAVIGATION — les 32 routes /v2, rangées sous 3 plans mentaux
+ *      OPÉRER / PILOTER / ADMINISTRER (même modèle que le Plus-sheet).
+ *   3. DÉPÔTS    — bascule du dépôt courant.
+ *   4. PRODUITS  — recherche live (debounce) dans le catalogue.
+ *
+ * Recherche fuzzy : chaque entrée embarque des SYNONYMES dans son `value`
+ * (ex. "demarque/perte" trouvent DLC/casse) pour que le langage du terrain
+ * trouve toujours la bonne porte. Recent dans localStorage (max 5).
  */
 
 const RECENT_KEY = "salam-stock-cmdk-recent";
@@ -57,10 +77,10 @@ interface RecentAction {
 }
 
 /**
- * ARCH-02 — 3 plans mentaux. La palette ⌘K (comme le Plus-sheet) range
- * toutes les destinations sous : OPÉRER (gestes terrain) / PILOTER (décider,
- * surveiller) / ADMINISTRER (back-office, fiscal, IA). Un seul modèle mental,
- * réutilisé partout, pour que l'utilisateur sache toujours où chercher.
+ * ARCH-02 / ARCH-04 — 3 plans mentaux. La palette ⌘K (comme le Plus-sheet)
+ * range toutes les destinations sous : OPÉRER (gestes terrain) / PILOTER
+ * (décider, surveiller) / ADMINISTRER (back-office, fiscal, IA). Un seul
+ * modèle mental, réutilisé partout.
  */
 type PaletteItem = {
   id: string;
@@ -68,32 +88,119 @@ type PaletteItem = {
   href: string;
   icon: typeof Home;
   hint: string;
+  /** Mots-clés / synonymes terrain pour la recherche fuzzy. */
+  keywords?: string;
 };
 
+/** ACTIONS — on commence par le verbe, pas par la page. */
+const ACTIONS: PaletteItem[] = [
+  {
+    id: "act-reception",
+    label: "Nouvelle réception",
+    href: "/v2/reception",
+    icon: ArrowDownToLine,
+    hint: "Scanner un BDL fournisseur",
+    keywords: "recevoir livraison bdl bon de livraison arrivage carton scan entree marchandise",
+  },
+  {
+    id: "act-casse",
+    label: "Déclarer une casse",
+    href: "/v2/sortie",
+    icon: ArrowUpRight,
+    hint: "Casse, périmé, vol, défaut",
+    keywords: "perte casse perdu casser brise jeter poubelle perime peremption defaut vol demarque sortie retrait deteriore",
+  },
+  {
+    id: "act-etiquette",
+    label: "Imprimer une étiquette",
+    href: "/v2/etiquettes",
+    icon: Printer,
+    hint: "Code-barres EAN-13 interne",
+    keywords: "etiquette imprimer label code barre ean13 ean prix gencod tag impression",
+  },
+  {
+    id: "act-transfert",
+    label: "Transférer du stock",
+    href: "/v2/transfert",
+    icon: Repeat2,
+    hint: "Bouger entre dépôts",
+    keywords: "transfert deplacer bouger entre depot inter-depot mouvement migrer",
+  },
+  {
+    id: "act-forecast",
+    label: "Lancer le forecast",
+    href: "/v2/forecast",
+    icon: TrendingUp,
+    hint: "Prévisions ruptures (hijri)",
+    keywords: "forecast prevision prevoir rupture stockout commander anticiper aid ramadan hijri demande pic",
+  },
+  {
+    id: "act-ruptures",
+    label: "Voir les ruptures du jour",
+    href: "/v2/cockpit",
+    icon: AlertTriangle,
+    hint: "Cockpit — alertes terrain",
+    keywords: "rupture manque vide zero alerte urgent critique cockpit stockout dispo",
+  },
+  {
+    id: "act-dlc",
+    label: "Voir les alertes DLC",
+    href: "/v2/admin/alertes-dlc",
+    icon: Zap,
+    hint: "Lots courte date + remise",
+    keywords: "dlc demarque remise solde courte date peremption perime ddm date limite lot bradage promo",
+  },
+  {
+    id: "act-inventaire",
+    label: "Compter l'inventaire du jour",
+    href: "/v2/inventaire",
+    icon: ClipboardList,
+    hint: "5–10 produits tournants",
+    keywords: "inventaire compter comptage recompte tournant ecart verifier stock physique",
+  },
+  {
+    id: "act-prepa",
+    label: "Préparer une commande drive",
+    href: "/v2/preparation",
+    icon: ShoppingBag,
+    hint: "Picking commandes client",
+    keywords: "preparation preparer picking commande drive client panier prep colis",
+  },
+];
+
 const OPERER: PaletteItem[] = [
-  { id: "nav-sortie", label: "Sortie de stock", href: "/v2/sortie", icon: ArrowUpRight, hint: "Casse, périmé, défaut" },
-  { id: "nav-reception", label: "Réception", href: "/v2/reception", icon: ArrowDownToLine, hint: "Scan + photo + valid BDL" },
-  { id: "nav-transfert", label: "Transfert inter-dépôt", href: "/v2/transfert", icon: Repeat2, hint: "Bouger du stock" },
-  { id: "nav-etiquettes", label: "Étiquettes EAN-13", href: "/v2/etiquettes", icon: Tag, hint: "Imprimer codes-barres" },
-  { id: "nav-stock", label: "Stock du dépôt", href: "/v2/stock", icon: PackageSearch, hint: "Catalogue produits" },
-  { id: "nav-preparation", label: "Préparation drive", href: "/v2/preparation", icon: ShoppingBag, hint: "Commandes à préparer" },
+  { id: "nav-sortie", label: "Sortie de stock", href: "/v2/sortie", icon: ArrowUpRight, hint: "Casse, périmé, défaut", keywords: "perte casse perime demarque retrait vol defaut" },
+  { id: "nav-reception", label: "Réception", href: "/v2/reception", icon: ArrowDownToLine, hint: "Scan + photo + valid BDL", keywords: "recevoir livraison bdl arrivage entree" },
+  { id: "nav-transfert", label: "Transfert inter-dépôt", href: "/v2/transfert", icon: Repeat2, hint: "Bouger du stock", keywords: "deplacer bouger entre depot mouvement" },
+  { id: "nav-etiquettes", label: "Étiquettes EAN-13", href: "/v2/etiquettes", icon: Tag, hint: "Imprimer codes-barres", keywords: "etiquette label code barre prix impression" },
+  { id: "nav-stock", label: "Stock du dépôt", href: "/v2/stock", icon: PackageSearch, hint: "Catalogue produits", keywords: "catalogue produits articles references inventaire quantite" },
+  { id: "nav-stock-sans-ean", label: "Produits sans EAN", href: "/v2/stock/sans-ean", icon: ScanLine, hint: "À étiqueter en interne", keywords: "sans ean sans code barre non scanne vrac generer code manquant" },
+  { id: "nav-preparation", label: "Préparation drive", href: "/v2/preparation", icon: ShoppingBag, hint: "Commandes à préparer", keywords: "picking preparer commande client drive panier" },
 ];
 
 const PILOTER: PaletteItem[] = [
-  { id: "nav-accueil", label: "Accueil", href: "/v2", icon: Home, hint: "Vue d'ensemble" },
-  { id: "nav-cockpit", label: "Cockpit", href: "/v2/cockpit", icon: Gauge, hint: "Vue 30 sec : ventes, alertes, staff" },
-  { id: "nav-forecast", label: "Prévisions ruptures", href: "/v2/forecast", icon: LineChart, hint: "Stockouts prévus (hijri-aware)" },
-  { id: "nav-dlc", label: "Alertes DLC", href: "/v2/admin/alertes-dlc", icon: Compass, hint: "Lots courte date + remises auto" },
-  { id: "nav-counter", label: "Écran comptoir", href: "/v2/counter", icon: MonitorPlay, hint: "TV/iPad — commandes prêtes" },
+  { id: "nav-accueil", label: "Accueil", href: "/v2", icon: Home, hint: "Vue d'ensemble", keywords: "home menu dashboard tableau de bord depart" },
+  { id: "nav-cockpit", label: "Cockpit", href: "/v2/cockpit", icon: Gauge, hint: "Vue 30 sec : ventes, alertes, staff", keywords: "cockpit pilotage live temps reel ventes alertes equipe rupture" },
+  { id: "nav-forecast", label: "Prévisions ruptures", href: "/v2/forecast", icon: LineChart, hint: "Stockouts prévus (hijri-aware)", keywords: "forecast prevision rupture stockout commander aid ramadan pic demande" },
+  { id: "nav-dlc", label: "Alertes DLC", href: "/v2/admin/alertes-dlc", icon: Compass, hint: "Lots courte date + remises auto", keywords: "dlc demarque remise courte date peremption perime solde promo bradage" },
+  { id: "nav-counter", label: "Écran comptoir", href: "/v2/counter", icon: MonitorPlay, hint: "TV/iPad — commandes prêtes", keywords: "comptoir counter tv borne retrait pret client appel numero" },
 ];
 
 const ADMINISTRER: PaletteItem[] = [
-  { id: "nav-admin", label: "Dashboard admin", href: "/v2/admin", icon: LayoutDashboard, hint: "Vue 3 dépôts + alertes IA" },
-  { id: "nav-fournisseurs", label: "Fournisseurs", href: "/v2/fournisseurs", icon: Truck, hint: "Fiches + certif halal" },
-  { id: "nav-po", label: "Commandes fournisseurs", href: "/v2/po", icon: ClipboardList, hint: "PO auto-générés + suivi" },
-  { id: "nav-lots", label: "Lots & DLC", href: "/v2/lots", icon: Boxes, hint: "Traçabilité lots halal" },
-  { id: "nav-inventaire", label: "Inventaire tournant", href: "/v2/inventaire", icon: ClipboardList, hint: "5–10 produits/jour" },
-  { id: "nav-recap", label: "Récap fiscal du jour", href: "/v2/admin/recap-fiscal", icon: Compass, hint: "TVA, ventes, ticket Z" },
+  { id: "nav-admin", label: "Dashboard admin", href: "/v2/admin", icon: LayoutDashboard, hint: "Vue 3 dépôts + alertes IA", keywords: "admin direction patron dashboard global multi depot" },
+  { id: "nav-fournisseurs", label: "Fournisseurs", href: "/v2/fournisseurs", icon: Truck, hint: "Fiches + certif halal", keywords: "fournisseur supplier certificat halal avs argml contact fiche" },
+  { id: "nav-po", label: "Commandes fournisseurs", href: "/v2/po", icon: ClipboardList, hint: "PO auto-générés + suivi", keywords: "po purchase order commande fournisseur achat reassort approvisionnement" },
+  { id: "nav-lots", label: "Lots & DLC", href: "/v2/lots", icon: Boxes, hint: "Traçabilité lots halal", keywords: "lot tracabilite qr code halal certif numero lot batch" },
+  { id: "nav-inventaire", label: "Inventaire tournant", href: "/v2/inventaire", icon: ClipboardList, hint: "5–10 produits/jour", keywords: "inventaire comptage tournant ecart recompte verifier" },
+  { id: "nav-inventaire-histo", label: "Historique inventaires", href: "/v2/inventaire/historique", icon: Clock, hint: "Comptages passés + écarts", keywords: "historique inventaire passe ecart archive journal comptage" },
+  { id: "nav-recap", label: "Récap fiscal du jour", href: "/v2/admin/recap-fiscal", icon: FileSpreadsheet, hint: "TVA, ventes, ticket Z", keywords: "recap fiscal tva ventes ticket z cloture journee chiffre affaire comptable" },
+  { id: "nav-rapport", label: "Rapport mensuel", href: "/v2/admin/rapport-mensuel", icon: BarChart3, hint: "Synthèse du mois", keywords: "rapport mensuel mois synthese bilan ca chiffre affaire comptable export" },
+  { id: "nav-activite", label: "Journal d'activité", href: "/v2/admin/activite", icon: Activity, hint: "Flux des mouvements staff", keywords: "activite journal log historique mouvements staff audit trace qui quoi" },
+  { id: "nav-alertes", label: "Centre d'alertes", href: "/v2/admin/alertes", icon: AlertTriangle, hint: "Toutes les alertes stock", keywords: "alertes centre notifications urgent stock seuil ia" },
+  { id: "nav-surplus", label: "Alertes surplus", href: "/v2/admin/alertes-surplus", icon: Boxes, hint: "Surstock à écouler", keywords: "surplus surstock trop stock dormant ecouler immobilisation overstock" },
+  { id: "nav-bons", label: "Bons de réception", href: "/v2/admin/bons-reception", icon: ArrowDownToLine, hint: "Archives BDL validés", keywords: "bon reception bdl archive validation livraison historique" },
+  { id: "nav-import", label: "Import Cashmag", href: "/v2/admin/import-cashmag", icon: FileSpreadsheet, hint: "Sync caisse / ventes", keywords: "import cashmag caisse ventes sync csv export pos integration" },
+  { id: "nav-assistant", label: "Assistant IA", href: "/v2/admin/assistant-ia", icon: Sparkles, hint: "Copilote analyse stock", keywords: "assistant ia ai copilote question chat analyse intelligence aide" },
 ];
 
 function depotIcon(d: Depot) {
@@ -124,6 +231,32 @@ function pushRecent(action: RecentAction) {
   } catch {
     /* noop */
   }
+}
+
+/** Rangée nav réutilisable — même rendu pour OPÉRER/PILOTER/ADMINISTRER. */
+function NavRow({
+  item,
+  prefix,
+  type,
+  onPick,
+}: {
+  item: PaletteItem;
+  prefix: string;
+  type: RecentAction["type"];
+  onPick: (a: { id: string; label: string; href: string; type: RecentAction["type"] }) => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Command.Item
+      value={`${prefix} ${item.label} ${item.hint} ${item.keywords ?? ""}`}
+      onSelect={() => onPick({ id: item.id, label: item.label, href: item.href, type })}
+      className="cmdk-item"
+    >
+      <Icon className="w-4 h-4 text-primary shrink-0" strokeWidth={2.2} />
+      <span className="flex-1 truncate font-semibold text-text-primary">{item.label}</span>
+      <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{item.hint}</span>
+    </Command.Item>
+  );
 }
 
 export function CommandPalette() {
@@ -247,7 +380,8 @@ export function CommandPalette() {
         }}
       />
 
-      {/* Modale — surface-3 (popover/palette) via .cmdk-root-wrap en dark */}
+      {/* Modale — surface-3 (popover/palette) via .cmdk-root-wrap en dark.
+          Liseré or premium en haut (accent, jamais fill). */}
       <div
         className="relative w-full max-w-[640px] bg-white rounded-[20px] border border-rule overflow-hidden cmdk-root-wrap"
         style={{ boxShadow: "var(--shadow-elevated)" }}
@@ -259,7 +393,7 @@ export function CommandPalette() {
               autoFocus
               value={query}
               onValueChange={setQuery}
-              placeholder="Naviguer, switcher dépôt, chercher un produit…"
+              placeholder="Que voulez-vous faire ? casse, étiquette, forecast, produit…"
               className="flex-1 bg-transparent outline-none text-[15px] text-text-primary placeholder:text-text-tertiary font-medium"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-text-tertiary bg-cream border border-rule rounded-md px-1.5 py-0.5 tracking-wider">
@@ -296,33 +430,39 @@ export function CommandPalette() {
               </Command.Group>
             )}
 
-            <Command.Group heading="Opérer" className="cmdk-group">
-              {OPERER.map(({ id, label, href, icon: Icon, hint }) => (
+            {/* ACTIONS — on commence par le verbe terrain. Liseré or-accent. */}
+            <Command.Group heading="Actions" className="cmdk-group">
+              {ACTIONS.map(({ id, label, href, icon: Icon, hint, keywords }) => (
                 <Command.Item
                   key={id}
-                  value={`operer ${label} ${hint}`}
-                  onSelect={() => handleSelect({ id, label, href, type: "nav" })}
+                  value={`action ${label} ${hint} ${keywords ?? ""}`}
+                  onSelect={() => handleSelect({ id, label, href, type: "action" })}
                   className="cmdk-item"
                 >
-                  <Icon className="w-4 h-4 text-primary shrink-0" strokeWidth={2.2} />
+                  <span
+                    className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                    style={{
+                      background: "var(--accent-gold-soft)",
+                      boxShadow: "inset 0 0 0 1px var(--accent-gold-hairline)",
+                    }}
+                  >
+                    <Icon className="w-3.5 h-3.5 text-gold" strokeWidth={2.3} />
+                  </span>
                   <span className="flex-1 truncate font-semibold text-text-primary">{label}</span>
                   <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{hint}</span>
                 </Command.Item>
               ))}
             </Command.Group>
 
+            <Command.Group heading="Opérer" className="cmdk-group">
+              {OPERER.map((item) => (
+                <NavRow key={item.id} item={item} prefix="operer" type="nav" onPick={handleSelect} />
+              ))}
+            </Command.Group>
+
             <Command.Group heading="Piloter" className="cmdk-group">
-              {PILOTER.map(({ id, label, href, icon: Icon, hint }) => (
-                <Command.Item
-                  key={id}
-                  value={`piloter ${label} ${hint}`}
-                  onSelect={() => handleSelect({ id, label, href, type: "nav" })}
-                  className="cmdk-item"
-                >
-                  <Icon className="w-4 h-4 text-primary shrink-0" strokeWidth={2.2} />
-                  <span className="flex-1 truncate font-semibold text-text-primary">{label}</span>
-                  <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{hint}</span>
-                </Command.Item>
+              {PILOTER.map((item) => (
+                <NavRow key={item.id} item={item} prefix="piloter" type="nav" onPick={handleSelect} />
               ))}
             </Command.Group>
 
@@ -334,7 +474,7 @@ export function CommandPalette() {
                   return (
                     <Command.Item
                       key={`depot-${d.id}`}
-                      value={`depot ${d.nom} ${d.type ?? ""}`}
+                      value={`depot basculer changer ${d.nom} ${d.type ?? ""}`}
                       onSelect={() => handleSelectDepot(d)}
                       className="cmdk-item"
                     >
@@ -354,17 +494,8 @@ export function CommandPalette() {
             )}
 
             <Command.Group heading="Administrer" className="cmdk-group">
-              {ADMINISTRER.map(({ id, label, href, icon: Icon, hint }) => (
-                <Command.Item
-                  key={id}
-                  value={`administrer ${label} ${hint}`}
-                  onSelect={() => handleSelect({ id, label, href, type: "action" })}
-                  className="cmdk-item"
-                >
-                  <Icon className="w-4 h-4 text-text-secondary shrink-0" strokeWidth={2.2} />
-                  <span className="flex-1 truncate font-semibold text-text-primary">{label}</span>
-                  <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">{hint}</span>
-                </Command.Item>
+              {ADMINISTRER.map((item) => (
+                <NavRow key={item.id} item={item} prefix="administrer" type="nav" onPick={handleSelect} />
               ))}
             </Command.Group>
 
@@ -403,8 +534,10 @@ export function CommandPalette() {
             <span className="inline-flex items-center gap-2">
               <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5">↑↓</kbd>
               Naviguer
-              <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5 ml-2">↵</kbd>
-              Sélectionner
+              <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5 ml-2 inline-flex items-center gap-0.5">
+                <CornerDownLeft className="w-2.5 h-2.5" strokeWidth={2.5} />
+              </kbd>
+              Ouvrir
             </span>
             <span className="inline-flex items-center gap-1">
               <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5">⌘K</kbd>

@@ -27,6 +27,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { GlossaryTerm } from "@/components/v2/GlossaryTerm";
 import { supabase } from "@/lib/supabase";
 import {
   ProductRecognitionModal,
@@ -582,7 +583,10 @@ export default function V2ReceptionPage() {
           {/* ─── RÉCEPTION LIBRE ─────────────────────────────────── */}
           <section className="px-5 mt-6">
             <p className="label-caps text-text-tertiary mb-2">
-              Réception libre
+              <GlossaryTerm
+                term="Réception libre"
+                def="Livraison sans bon de livraison attendu (surprise)."
+              />
             </p>
             <button
               onClick={() => setShowLibre(true)}
@@ -1063,7 +1067,11 @@ function BdlCard({
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-text-tertiary">
-            BDL {bdl.numero_bdl}
+            <GlossaryTerm
+              term="BDL"
+              def="Bon de Livraison : document du fournisseur listant la marchandise."
+            />{" "}
+            {bdl.numero_bdl}
           </p>
           <h3 className="text-[15px] font-extrabold text-text-primary truncate mt-0.5">
             {bdl.fournisseurs?.nom ?? "Fournisseur inconnu"}

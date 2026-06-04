@@ -1,9 +1,10 @@
 /**
  * EditorialEyebrow — eyebrow numéroté style magazine
  *
- * Pattern Drive porté sur Stock : `01 — L'INDEX` en or saturé,
+ * Pattern Drive porté sur Stock : `01 · L'INDEX` en or saturé,
  * tracking 0.18em, font-weight 700, 12px. Le numéro tabular
- * pour rester aligné si on stacke plusieurs eyebrows.
+ * pour rester aligné si on stacke plusieurs eyebrows. Le séparateur
+ * est un middot discret (L99 : l'em-dash reste réservé au contenu).
  *
  * Usage :
  *   <EditorialEyebrow num="01" label="Le hub" />
@@ -39,13 +40,17 @@ export function EditorialEyebrow({
       {num !== undefined && (
         <>
           <span className="num">{pad2(num)}</span>
-          <span aria-hidden> — </span>
+          <span aria-hidden className="text-text-tertiary/40">
+            {" · "}
+          </span>
         </>
       )}
       <span>{label}</span>
       {count !== undefined && (
         <>
-          <span aria-hidden> · </span>
+          <span aria-hidden className="text-text-tertiary/40">
+            {" · "}
+          </span>
           <span className="num">{count}</span>
         </>
       )}

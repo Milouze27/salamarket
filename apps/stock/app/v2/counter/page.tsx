@@ -15,7 +15,14 @@
  * - Marche portrait iPad (768×1024) ET landscape TV (1920×1080).
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, Clock3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -52,8 +59,18 @@ function formatHm(iso: string | null): string {
 
 /** Ordre stable : par bay_label (A1, A2 … B6, OVERFLOW dernier). */
 const BAY_ORDER: Record<string, number> = {
-  A1: 1, A2: 2, A3: 3, A4: 4, A5: 5, A6: 6,
-  B1: 7, B2: 8, B3: 9, B4: 10, B5: 11, B6: 12,
+  A1: 1,
+  A2: 2,
+  A3: 3,
+  A4: 4,
+  A5: 5,
+  A6: 6,
+  B1: 7,
+  B2: 8,
+  B3: 9,
+  B4: 10,
+  B5: 11,
+  B6: 12,
 };
 
 function bayWeight(bay: string | null): number {
@@ -107,7 +124,9 @@ export default function CounterPage() {
     }
     const { data, error } = await sb
       .from("commandes_drive")
-      .select("id, numero_commande, client_nom, bay_label, pret_at, creneau_retrait")
+      .select(
+        "id, numero_commande, client_nom, bay_label, pret_at, creneau_retrait",
+      )
       .eq("statut", "pret")
       .is("retired_at", null)
       .order("pret_at", { ascending: true });
@@ -197,8 +216,12 @@ export default function CounterPage() {
         }}
       />
 
-      {/* Header */}
-      <header className="relative px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
+      {/* Header
+          L99-iPad : contenu capé à 820px centré dès `md` pour ne pas gaspiller
+          l'espace iPad paysage. Le cap est LEVÉ en `2xl` (≥1536px) → le mode
+          TV/fullscreen (~1920px) reprend toute la largeur (pleine surface
+          néon, inchangé). Le fond/vignette du <main> reste pleine page. */}
+      <header className="relative w-full md:max-w-[820px] md:mx-auto 2xl:max-w-none 2xl:mx-0 px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
         <div className="min-w-0">
           <p
             className="font-bold tracking-[0.32em] uppercase text-[var(--accent-gold-dim)]"
@@ -310,7 +333,10 @@ function CounterGrid({
   }, [sorted.length, loaded]);
 
   return (
-    <section className="px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] relative">
+    // L99-iPad : même cadrage que le header (820px centré ≥md, levé en 2xl
+    // pour le mode TV/fullscreen). overflow badge + EmptyState restent dans ce
+    // cadre, donc l'écran iPad paysage ne disperse plus les bornes au bord.
+    <section className="w-full md:max-w-[820px] md:mx-auto 2xl:max-w-none 2xl:mx-0 px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] relative">
       {!loaded ? null : sorted.length === 0 ? (
         <EmptyState />
       ) : (
@@ -356,8 +382,8 @@ function CounterGrid({
                   boxShadow: "var(--accent-gold-glow)",
                 }}
               >
-                <ArrowDown className="w-4 h-4" aria-hidden />
-                +{overflowCount} en attente
+                <ArrowDown className="w-4 h-4" aria-hidden />+{overflowCount} en
+                attente
               </div>
             </motion.div>
           )}
@@ -367,14 +393,11 @@ function CounterGrid({
   );
 }
 
-function BayCard({
-  row,
-  isOldest,
-}: {
-  row: CounterRow;
-  isOldest: boolean;
-}) {
-  const isOverflow = row.bay_label === "OVERFLOW";
+function BayCard({ row, isOldest }: { row: CounterRow; isOldest: boolean }) {
+  // L99 : "OVERFLOW" ET bay non assignée (null) → couleur danger distincte.
+  // Une commande sans borne lisible ne doit jamais se fondre dans l'or des
+  // autres : on la signale en rouge pour ne pas la perdre visuellement.
+  const isOverflow = row.bay_label === "OVERFLOW" || row.bay_label == null;
   return (
     <motion.div
       layout
@@ -405,7 +428,7 @@ function BayCard({
             : "0 0 32px rgba(242,212,105,0.42), 0 0 64px rgba(242,212,105,0.18)",
         }}
       >
-        {row.bay_label ?? "—"}
+        {row.bay_label ?? "OVERFLOW"}
       </p>
 
       {/* Numero commande */}

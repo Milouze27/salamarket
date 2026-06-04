@@ -5,27 +5,40 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertOctagon,
+  Activity,
   AlertTriangle,
+  ArrowDownToLine,
+  ArrowUpRight,
   BarChart3,
-  Calculator,
-  ClipboardCheck,
+  Boxes,
+  ClipboardList,
+  Clock,
+  Compass,
   FileSpreadsheet,
+  Gauge,
+  Home,
   LayoutDashboard,
+  LineChart,
   LogOut,
   Menu,
-  MessageSquare,
+  MonitorPlay,
   Moon,
-  PackageX,
+  PackageSearch,
+  Repeat2,
   Rows3,
   Rows4,
+  ScanLine,
   Settings,
+  ShoppingBag,
   Sparkles,
   Sun,
+  Tag,
+  Truck,
   X,
 } from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
+import { filterItemsForRole } from "@/lib/nav-roles";
 
 interface AdminMenuProps {
   /** Le rôle de l'employé. Les entrées admin ne s'affichent que pour "admin". */
@@ -49,42 +62,103 @@ interface MenuGroup {
 }
 
 /**
- * ARCH-02 / L99 — répertoire admin groupé par plan mental, intitulés et ordre
- * alignés sur la palette ⌘K et le Plus-sheet (modèle mental unifié) :
- *   PILOTER     — décider / surveiller (dashboard, alertes, surplus, activité)
- *   ADMINISTRER — back-office (fiscal, rapports, import, IA, historiques)
- * Réservé au rôle admin (gaté à l'affichage). Les gestes terrain (OPÉRER)
- * vivent dans la bottom-nav et le Plus-sheet, pas dans ce répertoire admin.
+ * ARCH-02 / L99 — répertoire groupé par plan mental, intitulés / ordre / hrefs
+ * STRICTEMENT alignés sur le Plus-sheet (V2Shell) et la palette ⌘K
+ * (CommandPalette). Modèle mental unifié sur les 3 surfaces :
+ *   OPÉRER      — gestes terrain (sortie, réception, transfert, étiq, stock, prépa)
+ *   PILOTER     — décider / surveiller (accueil, cockpit, forecast, DLC, comptoir)
+ *   ADMINISTRER — back-office (admin hub, fournisseurs, PO, lots, inventaire,
+ *                 alertes, activité, fiscal, rapports, import, assistant IA)
+ *
+ * Le drawer montre le PÉRIMÈTRE ACCESSIBLE DU RÔLE : on applique le MÊME
+ * `filterItemsForRole` (source unique `@/lib/nav-roles`) qu'ailleurs, au lieu
+ * de masquer les groupes en bloc pour les non-admins. Un manager voit donc son
+ * pilotage, un préparateur ses tâches, un caisse/réception leur périmètre.
+ * Les groupes vides après filtre sont masqués. « Compte & réglages » reste
+ * visible pour tous (déconnexion + toggles y vivent).
  */
 const ADMIN_GROUPS: MenuGroup[] = [
+  {
+    heading: "Opérer",
+    entries: [
+      {
+        href: "/v2/sortie",
+        label: "Sortie de stock",
+        desc: "Casse, périmé, défaut",
+        icon: ArrowUpRight,
+      },
+      {
+        href: "/v2/reception",
+        label: "Réception",
+        desc: "Scan + photo + valid BDL",
+        icon: ArrowDownToLine,
+      },
+      {
+        href: "/v2/transfert",
+        label: "Transfert inter-dépôt",
+        desc: "Bouger du stock",
+        icon: Repeat2,
+      },
+      {
+        href: "/v2/etiquettes",
+        label: "Étiquettes EAN-13",
+        desc: "Imprimer codes-barres",
+        icon: Tag,
+      },
+      {
+        href: "/v2/stock",
+        label: "Stock du dépôt",
+        desc: "Catalogue produits",
+        icon: PackageSearch,
+      },
+      {
+        href: "/v2/stock/sans-ean",
+        label: "Produits sans EAN",
+        desc: "À étiqueter en interne",
+        icon: ScanLine,
+      },
+      {
+        href: "/v2/preparation",
+        label: "Préparation drive",
+        desc: "Commandes à préparer",
+        icon: ShoppingBag,
+      },
+    ],
+  },
   {
     heading: "Piloter",
     entries: [
       {
-        href: "/v2/admin",
-        label: "Dashboard admin",
-        desc: "Vue 3 dépôts + KPIs + alertes",
-        icon: LayoutDashboard,
+        href: "/v2",
+        label: "Accueil",
+        desc: "Vue d'ensemble",
+        icon: Home,
+      },
+      {
+        href: "/v2/cockpit",
+        label: "Cockpit",
+        desc: "Vue 30 sec : ventes, alertes, staff",
+        icon: Gauge,
         accent: "primary",
       },
       {
-        href: "/v2/admin/alertes",
-        label: "Centre d'alertes",
-        desc: "Sorties suspectes, démarque, surplus",
-        icon: AlertOctagon,
+        href: "/v2/forecast",
+        label: "Prévisions ruptures",
+        desc: "Stockouts prévus (hijri-aware)",
+        icon: LineChart,
+      },
+      {
+        href: "/v2/admin/alertes-dlc",
+        label: "Alertes DLC",
+        desc: "Lots courte date + remises auto",
+        icon: Compass,
         accent: "danger",
       },
       {
-        href: "/v2/admin/alertes-surplus",
-        label: "Alertes surplus",
-        desc: "Surstock à accepter ou refuser",
-        icon: AlertTriangle,
-      },
-      {
-        href: "/v2/admin/activite",
-        label: "Journal d'activité",
-        desc: "Réceptions, sorties, transferts horodatés",
-        icon: BarChart3,
+        href: "/v2/counter",
+        label: "Écran comptoir",
+        desc: "TV/iPad - commandes prêtes",
+        icon: MonitorPlay,
       },
     ],
   },
@@ -92,42 +166,92 @@ const ADMIN_GROUPS: MenuGroup[] = [
     heading: "Administrer",
     entries: [
       {
+        href: "/v2/admin",
+        label: "Dashboard admin",
+        desc: "Vue 3 dépôts + alertes IA",
+        icon: LayoutDashboard,
+        accent: "primary",
+      },
+      {
+        href: "/v2/fournisseurs",
+        label: "Fournisseurs",
+        desc: "Fiches + certif halal",
+        icon: Truck,
+      },
+      {
+        href: "/v2/po",
+        label: "Commandes fournisseurs",
+        desc: "PO auto-générés + suivi",
+        icon: ClipboardList,
+      },
+      {
+        href: "/v2/lots",
+        label: "Lots & DLC",
+        desc: "Traçabilité lots halal",
+        icon: Boxes,
+      },
+      {
+        href: "/v2/inventaire",
+        label: "Inventaire tournant",
+        desc: "5-10 produits du jour",
+        icon: ClipboardList,
+      },
+      {
+        href: "/v2/inventaire/historique",
+        label: "Historique inventaires",
+        desc: "Comptages passés + écarts",
+        icon: Clock,
+      },
+      {
         href: "/v2/admin/recap-fiscal",
         label: "Récap fiscal du jour",
         desc: "TVA, ventes, ticket Z",
-        icon: Calculator,
+        icon: FileSpreadsheet,
         accent: "gold",
       },
       {
         href: "/v2/admin/rapport-mensuel",
         label: "Rapport mensuel",
-        desc: "CA, top produits, comparatifs",
+        desc: "Synthèse du mois",
         icon: BarChart3,
+      },
+      {
+        href: "/v2/admin/activite",
+        label: "Journal d'activité",
+        desc: "Flux des mouvements staff",
+        icon: Activity,
+      },
+      {
+        href: "/v2/admin/alertes",
+        label: "Centre d'alertes",
+        desc: "Toutes les alertes stock + IA",
+        icon: AlertTriangle,
+        accent: "danger",
+      },
+      {
+        href: "/v2/admin/alertes-surplus",
+        label: "Alertes surplus",
+        desc: "Surstock à écouler",
+        icon: Boxes,
+      },
+      {
+        href: "/v2/admin/bons-reception",
+        label: "Bons de réception",
+        desc: "Archives BDL validés",
+        icon: ArrowDownToLine,
       },
       {
         href: "/v2/admin/import-cashmag",
         label: "Import Cashmag",
-        desc: "Charger les ventes caisse",
+        desc: "Sync caisse / ventes",
         icon: FileSpreadsheet,
       },
       {
         href: "/v2/admin/assistant-ia",
         label: "Assistant IA",
         desc: "Copilote analyse stock",
-        icon: MessageSquare,
+        icon: Sparkles,
         accent: "gold",
-      },
-      {
-        href: "/v2/inventaire/historique",
-        label: "Historique inventaires",
-        desc: "Tournants validés + écarts",
-        icon: ClipboardCheck,
-      },
-      {
-        href: "/v2/stock/sans-ean",
-        label: "Produits sans EAN",
-        desc: "À étiqueter en interne",
-        icon: PackageX,
       },
     ],
   },
@@ -140,6 +264,17 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
   const { density, toggle: toggleDensity } = useDensity();
   const isNight = resolved === "nuit";
   const isCompact = density === "compact";
+
+  // P0 nav/rôles — le drawer montre le PÉRIMÈTRE ACCESSIBLE du rôle, pas un
+  // masquage en bloc admin-only. On applique le MÊME `filterItemsForRole`
+  // (source unique `@/lib/nav-roles`) qu'au Plus-sheet et à ⌘K, puis on retire
+  // les groupes devenus vides. Un manager voit son pilotage, un préparateur ses
+  // tâches, etc. — au lieu de ne voir que « Compte & réglages ».
+  const groups = ADMIN_GROUPS.map((group) => ({
+    ...group,
+    entries: filterItemsForRole(role, group.entries),
+  })).filter((group) => group.entries.length > 0);
+  const hasNavGroups = groups.length > 0;
 
   // Ferme avec Escape
   useEffect(() => {
@@ -212,7 +347,11 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
                     Répertoire
                   </p>
                   <p className="text-sm font-bold text-text-primary leading-tight">
-                    {isAdmin ? "Outils complets" : "Compte & réglages"}
+                    {isAdmin
+                      ? "Outils complets"
+                      : hasNavGroups
+                        ? "Outils & réglages"
+                        : "Compte & réglages"}
                   </p>
                 </div>
               </div>
@@ -226,60 +365,59 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
               </button>
             </div>
 
-            {/* LISTE — entrées admin groupées (admin only) */}
+            {/* LISTE — périmètre du rôle (filterItemsForRole), groupes vides masqués */}
             <nav className="flex-1 overflow-y-auto px-3 py-3">
-              {isAdmin &&
-                ADMIN_GROUPS.map((group) => (
-                  <div key={group.heading} className="mb-1.5">
-                    <p
-                      className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                      style={{ color: "var(--accent-gold-dim)" }}
-                    >
-                      {group.heading}
-                    </p>
-                    {group.entries.map((e) => {
-                      const Icon = e.icon;
-                      return (
-                        <Link
-                          key={e.href}
-                          href={e.href}
-                          onClick={() => setOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                        >
-                          <span
-                            className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                            style={
-                              e.accent === "danger"
+              {groups.map((group) => (
+                <div key={group.heading} className="mb-1.5">
+                  <p
+                    className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--accent-gold-dim)" }}
+                  >
+                    {group.heading}
+                  </p>
+                  {group.entries.map((e) => {
+                    const Icon = e.icon;
+                    return (
+                      <Link
+                        key={e.href}
+                        href={e.href}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                      >
+                        <span
+                          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                          style={
+                            e.accent === "danger"
+                              ? {
+                                  background: "var(--danger-soft)",
+                                  color: "var(--danger)",
+                                }
+                              : e.accent === "gold"
                                 ? {
-                                    background: "var(--danger-soft)",
-                                    color: "var(--danger)",
+                                    background: "var(--accent-gold-soft)",
+                                    color: "var(--accent-gold-bright)",
                                   }
-                                : e.accent === "gold"
-                                  ? {
-                                      background: "var(--accent-gold-soft)",
-                                      color: "var(--accent-gold-bright)",
-                                    }
-                                  : {
-                                      background: "var(--surface-1)",
-                                      color: "var(--primary-green)",
-                                    }
-                            }
-                          >
-                            <Icon className="w-5 h-5" strokeWidth={2.1} />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-text-primary truncate">
-                              {e.label}
-                            </p>
-                            <p className="text-[11px] text-text-secondary truncate">
-                              {e.desc}
-                            </p>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))}
+                                : {
+                                    background: "var(--surface-1)",
+                                    color: "var(--primary-green)",
+                                  }
+                          }
+                        >
+                          <Icon className="w-5 h-5" strokeWidth={2.1} />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-text-primary truncate">
+                            {e.label}
+                          </p>
+                          <p className="text-[11px] text-text-secondary truncate">
+                            {e.desc}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
 
               {/* COMPTE & RÉGLAGES — toggles migrés du header (ARCH-11) */}
               <div className="mb-1.5">
@@ -400,7 +538,7 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
               </div>
             </nav>
 
-            {isAdmin && (
+            {hasNavGroups && (
               <div
                 className="px-5 pb-[calc(var(--safe-bottom)+12px)] pt-3"
                 style={{ borderTop: "1px solid var(--border-hairline)" }}
@@ -410,7 +548,9 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
                     className="w-3 h-3"
                     style={{ color: "var(--accent-gold-bright)" }}
                   />
-                  Outils admin visibles uniquement pour les admins
+                  {isAdmin
+                    ? "Outils admin visibles uniquement pour les admins"
+                    : "Menu adapté à votre rôle"}
                 </p>
               </div>
             )}

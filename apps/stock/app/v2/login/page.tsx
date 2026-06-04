@@ -85,7 +85,10 @@ export default function V2LoginPage() {
         try {
           const e = await loginByPin(pin);
           if (!e) {
-            toast.error("Code PIN incorrect", { id: "pin-error" });
+            toast.error(
+              "PIN incorrect. Vérifie ta carte ou appelle le manager.",
+              { id: "pin-error" },
+            );
             setShake(true);
             setErrored(true);
             haptic([12, 60, 12]);
@@ -110,7 +113,10 @@ export default function V2LoginPage() {
           }
         } catch (err) {
           console.error(err);
-          toast.error("Erreur de connexion", { id: "pin-network-error" });
+          toast.error(
+            "Connexion impossible. Vérifie le Wi-Fi boutique et réessaie.",
+            { id: "pin-network-error" },
+          );
           setPin("");
           submittedRef.current = null;
         } finally {

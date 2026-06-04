@@ -11,14 +11,18 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Inbox,
   Layers,
   ListChecks,
   Lock,
   PackageCheck,
+  PackageOpen,
   PlayCircle,
   Scale,
+  Sparkles,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
@@ -202,6 +206,9 @@ const COLUMNS: Array<{
   nextLabel: string | null;
   accent: string;
   textAccent: string;
+  /** État vide explicite par colonne (icône + texte court positif). */
+  emptyIcon: LucideIcon;
+  emptyLabel: string;
 }> = [
   {
     key: "a_preparer",
@@ -210,6 +217,8 @@ const COLUMNS: Array<{
     nextLabel: "Accepter la commande",
     accent: "bg-danger-soft border-danger/30",
     textAccent: "text-danger",
+    emptyIcon: Inbox,
+    emptyLabel: "Rien à préparer pour l'instant",
   },
   {
     key: "en_preparation",
@@ -218,6 +227,8 @@ const COLUMNS: Array<{
     nextLabel: "Marquer prête",
     accent: "bg-warning-soft border-warning/30",
     textAccent: "text-warning",
+    emptyIcon: PackageOpen,
+    emptyLabel: "Aucune préparation en cours",
   },
   {
     key: "pret",
@@ -226,6 +237,8 @@ const COLUMNS: Array<{
     nextLabel: "Marquer retirée",
     accent: "bg-gold-soft border-gold/30",
     textAccent: "text-primary-dark",
+    emptyIcon: PackageCheck,
+    emptyLabel: "Aucune commande prête",
   },
   {
     key: "retire",
@@ -234,6 +247,8 @@ const COLUMNS: Array<{
     nextLabel: null,
     accent: "bg-success-soft border-success/20",
     textAccent: "text-success",
+    emptyIcon: Sparkles,
+    emptyLabel: "Aucun retrait encore",
   },
 ];
 
@@ -537,7 +552,12 @@ export default function V2PreparationKanbanPage() {
   }
 
   return (
-    <V2Shell>
+    // L99-iPad : `wide` cape le shell à 820px ≥md (cohérent avec la
+    // bottom-nav, le Plus-sheet et les modales déjà capés à 820px). Sans ça
+    // la grille kanban md:grid-cols-4 n'avait aucun cadrage propre — elle
+    // sprawlait jusqu'au bord sur iPad paysage (1366px), incohérent avec les
+    // modales centrées. 820px → 4 colonnes lisibles + alignement visuel global.
+    <V2Shell wide>
       <PageAccentStripe accent="sapin-or" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -607,10 +627,14 @@ export default function V2PreparationKanbanPage() {
         </p>
       </header>
 
-      {/* Filtres suivi-drive : sticky sous le header, communs aux 2 vues */}
+      {/* Filtres suivi-drive : sticky sous le header, communs aux 2 vues.
+          Z-INDEX documenté (L99-iPad) : z-20 < header sapin du shell (z-30)
+          < bottom-nav (z-40) < modales/sheet (z-[60]/[70]). Au-dessus du
+          contenu kanban pour rester lisible, mais jamais devant le header
+          au scroll rapide iPad (évite tout overlap visuel). */}
       {!loading && (
         <div
-          className="sticky top-0 z-50 px-5 py-3 mt-4 space-y-2 border-b backdrop-blur-sm"
+          className="sticky top-0 z-20 px-5 py-3 mt-4 space-y-2 border-b backdrop-blur-sm"
           style={{
             background: "var(--surface-1)",
             borderColor: "var(--border-light)",
@@ -686,8 +710,13 @@ export default function V2PreparationKanbanPage() {
       ) : viewMode === "kanban" ? (
         /* ────────────────── KANBAN VIEW ──────────────────
            Mobile : colonnes empilées (space-y). iPad/desktop : grille
-           multi-colonnes pour voir les statuts côte à côte (md:2, lg:4). */
-        <div className="px-5 mt-5 space-y-6 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:items-start pb-nav-stack">
+           multi-colonnes pour voir les statuts côte à côte.
+           L99-iPad : la grille hérite du cadrage du shell `wide` (820px),
+           donc aucun sprawl pleine largeur. Les 4 colonnes passent dès `md`
+           (le shell capant à 820px, `lg` ne s'activerait jamais à l'intérieur
+           et laisserait 2 colonnes sur iPad paysage). À 820px → 4 colonnes
+           lisibles, cohérent avec les modales centrées. */
+        <div className="px-5 mt-5 space-y-6 md:space-y-0 md:grid md:grid-cols-4 md:gap-4 md:items-start pb-nav-stack">
           {(() => {
             // Quand un filtre est actif, on masque les colonnes vides pour
             // garder l'écran lisible. Sans filtre, on garde toutes les
@@ -712,6 +741,7 @@ export default function V2PreparationKanbanPage() {
             }
             return visibleColumns.map((col) => {
               const items = byColumn.get(col.key) ?? [];
+              const EmptyIcon = col.emptyIcon;
               return (
                 <section key={col.key}>
                   <div className="flex items-baseline justify-between mb-2 px-1">
@@ -723,10 +753,32 @@ export default function V2PreparationKanbanPage() {
                     </span>
                   </div>
                   {items.length === 0 ? (
+                    /* État vide explicite par colonne (L99) : icône or dans un
+                       disque surface-2 cerclé d'un hairline or + message court
+                       positif, dans l'esprit du composant EmptyState mais
+                       compacté pour une colonne kanban étroite. Évite la
+                       colonne muette. */
                     <div
-                      className={`border rounded-2xl p-4 text-center text-[12px] text-text-tertiary ${col.accent}`}
+                      className={`border rounded-2xl px-3 py-6 flex flex-col items-center justify-center text-center ${col.accent}`}
                     >
-                      Aucune commande dans cette colonne.
+                      <span
+                        className="w-10 h-10 rounded-full flex items-center justify-center mb-2"
+                        style={{
+                          background: "var(--surface-2)",
+                          boxShadow:
+                            "inset 0 0 0 1px var(--accent-gold-hairline)",
+                        }}
+                      >
+                        <EmptyIcon
+                          className="w-5 h-5"
+                          style={{ color: "var(--accent-gold)" }}
+                          strokeWidth={1.8}
+                          aria-hidden
+                        />
+                      </span>
+                      <p className="text-[12px] font-semibold text-text-secondary leading-snug max-w-[18ch]">
+                        {col.emptyLabel}
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-2">

@@ -80,28 +80,28 @@ const TIER_STYLE: Record<
   { chip: string; border: string; daysColor: string; bg: string }
 > = {
   out: {
-    chip: "bg-[#A8231A] text-white",
-    border: "border-[#A8231A]/60",
-    daysColor: "text-[#8A1A12]",
-    bg: "bg-[#FBE9E7]",
+    chip: "bg-[var(--status-danger)] text-white",
+    border: "border-[var(--status-danger)]/60",
+    daysColor: "text-[var(--status-danger-text)]",
+    bg: "bg-[var(--status-danger-bg)]",
   },
   blocker: {
-    chip: "bg-[#A8231A] text-white",
-    border: "border-[#A8231A]/40",
-    daysColor: "text-[#A8231A]",
-    bg: "bg-[#FBE9E7]",
+    chip: "bg-[var(--status-danger)] text-white",
+    border: "border-[var(--status-danger)]/40",
+    daysColor: "text-[var(--status-danger-text)]",
+    bg: "bg-[var(--status-danger-bg)]",
   },
   crit: {
-    chip: "bg-[#E5483D] text-white",
-    border: "border-[#E5483D]/40",
-    daysColor: "text-[#A8231A]",
-    bg: "bg-[#FBE9E7]",
+    chip: "bg-[var(--status-danger)] text-white",
+    border: "border-[var(--status-danger)]/40",
+    daysColor: "text-[var(--status-danger-text)]",
+    bg: "bg-[var(--status-danger-bg)]",
   },
   warn: {
-    chip: "bg-[#D97706] text-white",
-    border: "border-[#D97706]/40",
-    daysColor: "text-[#92400E]",
-    bg: "bg-[#FEF3E2]",
+    chip: "bg-[var(--status-warning)] text-white",
+    border: "border-[var(--status-warning)]/40",
+    daysColor: "text-[var(--status-warning-text)]",
+    bg: "bg-[var(--status-warning-bg)]",
   },
   ok: {
     chip: "bg-success text-white",
@@ -281,7 +281,7 @@ export default function ForecastPage() {
           className="relative overflow-hidden rounded-[22px] p-5 text-white"
           style={{
             background:
-              "linear-gradient(135deg, #0E3B2E 0%, #14523F 60%, #C9A227 140%)",
+              "linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 60%, var(--accent-gold) 140%)",
           }}
         >
           <div
@@ -294,10 +294,10 @@ export default function ForecastPage() {
           />
           <div className="relative flex items-start gap-3">
             <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm shrink-0">
-              <Moon className="w-5 h-5 text-[#F4E9C4]" />
+              <Moon className="w-5 h-5 text-[var(--accent-gold-bright)]" />
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[#F4E9C4]">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[var(--accent-gold-bright)]">
                 Phase courante · {formatHijri(hijriCtx.hijri)}
               </p>
               <p className="text-[17px] font-extrabold leading-tight mt-1">
@@ -438,7 +438,7 @@ export default function ForecastPage() {
                           {r.depot_nom}
                         </span>
                         {r.multiplicateur > 1.1 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[#F4E9C4] text-[#8B6F0E]">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[var(--accent-gold-soft)] text-[var(--or-text)]">
                             × {r.multiplicateur.toFixed(2)} hijri
                           </span>
                         )}
@@ -596,19 +596,19 @@ function KpiCard({
 }) {
   const palette = {
     danger: {
-      bg: "bg-[#FBE9E7]",
-      chip: "bg-[#A8231A] text-white",
-      value: "text-[#8A1A12]",
+      bg: "bg-[var(--status-danger-bg)]",
+      chip: "bg-[var(--status-danger)] text-white",
+      value: "text-[var(--status-danger-text)]",
     },
     warn: {
-      bg: "bg-[#FEF3E2]",
-      chip: "bg-[#D97706] text-white",
-      value: "text-[#92400E]",
+      bg: "bg-[var(--status-warning-bg)]",
+      chip: "bg-[var(--status-warning)] text-white",
+      value: "text-[var(--status-warning-text)]",
     },
     gold: {
-      bg: "bg-[#FBF4D4]",
-      chip: "bg-[#C9A227] text-[#3A2D08]",
-      value: "text-[#8B6F0E]",
+      bg: "bg-[var(--accent-gold-soft)]",
+      chip: "bg-[var(--accent-gold-bright)] text-[var(--text-on-gold)]",
+      value: "text-[var(--or-text)]",
     },
     neutral: {
       bg: "bg-white border border-rule",

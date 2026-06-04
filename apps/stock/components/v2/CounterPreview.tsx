@@ -35,7 +35,7 @@ export function CounterPreview() {
     >
       {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-[#0E3B2E] text-[#C9A227] flex items-center justify-center shrink-0">
+        <span className="w-10 h-10 rounded-xl bg-[var(--primary-green)] text-[var(--accent-gold-bright)] flex items-center justify-center shrink-0">
           <Monitor className="w-4 h-4" strokeWidth={2.2} />
         </span>
         <div className="flex-1 min-w-0">
@@ -52,11 +52,11 @@ export function CounterPreview() {
       </div>
 
       {/* Preview iframe — scaled to fit the card */}
-      <div className="relative mx-4 mb-4 rounded-2xl overflow-hidden bg-[#082A20] border border-rule/40 aspect-[16/9]">
+      <div className="relative mx-4 mb-4 rounded-2xl overflow-hidden bg-[var(--bg-abyss)] border border-rule/40 aspect-[16/9]">
         {/* Loading shimmer */}
         {!loaded && (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0E3B2E] to-[#082A20] flex items-center justify-center">
-            <div className="text-[#C9A227]/50 text-[10px] font-bold tracking-[0.32em] uppercase animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-green)] to-[var(--bg-abyss)] flex items-center justify-center">
+            <div className="text-[var(--accent-gold-bright)]/50 text-[10px] font-bold tracking-[0.32em] uppercase animate-pulse">
               Chargement…
             </div>
           </div>

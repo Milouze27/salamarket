@@ -84,6 +84,41 @@
   /* Safe-area top (parity with Drive, LAY-06) */
   --safe-top: env(safe-area-inset-top, 0px);
 
+  /* ── ÉCHELLE D'ESPACEMENT tokenisée (modulo 8) — VSP-01 ──────────────────
+     Source de vérité unique pour le rythme vertical/horizontal. Les pages
+     consomment ces noms au lieu de littéraux Tailwind hétérogènes (gap-3,
+     py-6, mb-5…). Intention :
+       --space-subsection : respiration entre éléments d'un même bloc (16px)
+       --space-section    : entre deux sections d'une page (24px)
+       --space-hero       : autour d'un hero / bloc d'ouverture (32px)
+     Échelle complète disponible pour les cas intermédiaires. */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-subsection: 16px; /* = --space-md, alias sémantique */
+  --space-section: 24px; /* = --space-lg, alias sémantique */
+  --space-hero: 32px; /* = --space-xl, alias sémantique */
+
+  /* ── GAPS de grille/flex — VSP-02 ───────────────────────────────────────
+     Trois densités canoniques pour les grilles de cards/KPI/listes :
+       dense       : grilles serrées (chips, mini-KPI)             8px
+       base        : grille par défaut (cards hub, listes)        12px
+       comfortable : grilles aérées (hero detail, dashboards)     16px */
+  --grid-gap-dense: 8px;
+  --grid-gap-base: 12px;
+  --grid-gap-comfortable: 16px;
+
+  /* ── PADDING CARTE — VSP-03 ─────────────────────────────────────────────
+     --card-padding         : standard hero/detail (20px)
+     --card-padding-compact : listes/grilles denses (16px)
+     Surchargé plus bas par body.density-compact (12px). */
+  --card-padding: 20px;
+  --card-padding-compact: 16px;
+
   /* ── Tokens partagés jour↔nuit (valeurs JOUR ici, surchargées en dark) ──
      Déclarés au :root pour que le mode jour ait toujours une valeur définie
      (jamais d'undefined). Les vagues suivantes consomment ces noms ; en jour
@@ -108,10 +143,22 @@
   --shadow-elevated: var(--shadow-card-lg);
   --glow-cta: 0 8px 24px rgba(14, 59, 46, 0.18);
   --bignum-glow: none;
+  /* Hero action card (jour) : ombre sapin portée + halo or radial. Tokens
+     dédiés pour bannir les rgba() codés en dur dans .hero-action-card.
+     Surchargés en dark (gradient + glow or) plus bas. */
+  --hero-card-shadow: 0 10px 32px rgba(14, 59, 46, 0.18);
+  --hero-card-glow: rgba(201, 162, 39, 0.18);
   --glass-overlay: rgba(255, 255, 255, 0.72);
   --glass-overlay-blur: blur(16px);
   --glass-nav: rgba(255, 255, 255, 0.86);
   --glass-nav-blur: blur(20px);
+
+  /* ── EYEBROW color token — DSN-07 / a11y ────────────────────────────────
+     L'or saturé (--accent-gold #c9a227) échoue WCAG AA en TEXTE sur cream.
+     En JOUR les eyebrows utilisent l'or sombre AA-safe (--or-text, ~7.3:1).
+     En DARK ce token est remappé sur l'or clair lisible (--or-text dark,
+     ~11:1). Centraliser ici évite le double-remap implicite par sélecteur. */
+  --eyebrow-color: var(--or-text);
 }
 
 * {
@@ -141,10 +188,15 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Focus clavier : anneau net, offset 3px pour dégager l'outline des ombres
+   de cards (--shadow-card-*). position/z-index remontent l'élément focusé
+   au-dessus de ses voisins pour que l'anneau ne soit jamais masqué. */
 :focus-visible {
   outline: 2px solid var(--primary-green);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 /* A11y clavier en DARK : le sapin (#1b6a4a) sur abysse (#08130f) ne
@@ -155,8 +207,10 @@ body {
 [data-theme="nuit"] :focus-visible,
 body.theme-nuit :focus-visible {
   outline: 2px solid var(--accent-gold-bright);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(8, 19, 15, 0.9);
+  outline-offset: 3px;
+  /* Anneau de séparation abysse entre l'outline or et l'ombre de la card,
+     pour que le focus reste net même posé sur une surface élevée. */
+  box-shadow: 0 0 0 4px var(--focus-ring-halo);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -297,12 +351,17 @@ button,
     background: linear-gradient(180deg, #0e3b2e 0%, #082a20 100%);
   }
 
+  /* Card standard (hero/detail) : padding 20px via token. Pour les listes
+     et grilles denses, utiliser .card-compact (padding 16px). */
   .card {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: 20px;
     box-shadow: var(--shadow-card);
-    padding: 20px;
+    padding: var(--card-padding);
+  }
+  .card-compact {
+    padding: var(--card-padding-compact);
   }
   .card-tappable {
     transition:
@@ -522,6 +581,10 @@ button,
     font-size: 11px;
     color: var(--primary-green);
   }
+  /* Variante or : eyebrow accentué or AA-safe (jour) / or clair (dark). */
+  .section-eyebrow.is-gold {
+    color: var(--eyebrow-color);
+  }
   .section-eyebrow::before {
     content: "";
     width: 5px;
@@ -561,12 +624,12 @@ button,
     letter-spacing: 0.18em;
     font-weight: 700;
     font-size: 12px;
-    color: var(--accent-gold);
+    color: var(--eyebrow-color);
     line-height: 1.2;
   }
   .eyebrow .num {
     font-variant-numeric: tabular-nums;
-    color: var(--accent-gold);
+    color: var(--eyebrow-color);
   }
 
   /* ─── P0-4 — Hero action card sapin plein ─────────────────
@@ -576,12 +639,12 @@ button,
     background: var(--primary-green);
     color: var(--text-on-dark);
     border-radius: 24px;
-    padding: 24px;
+    padding: var(--space-section);
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    box-shadow: 0 10px 32px rgba(14, 59, 46, 0.18);
-    border: 1px solid rgba(201, 162, 39, 0.15);
+    gap: var(--space-subsection);
+    box-shadow: var(--hero-card-shadow);
+    border: 1px solid var(--accent-gold-hairline);
     position: relative;
     overflow: hidden;
   }
@@ -591,7 +654,7 @@ button,
     inset: 0;
     background: radial-gradient(
       circle at 100% 0%,
-      rgba(201, 162, 39, 0.18) 0%,
+      var(--hero-card-glow) 0%,
       transparent 55%
     );
     pointer-events: none;
@@ -908,12 +971,22 @@ body.theme-nuit {
   --glow-cta:
     0 0 0 1px rgba(232, 194, 74, 0.2), 0 6px 24px rgba(232, 194, 74, 0.18);
   --bignum-glow: 0 0 18px rgba(242, 212, 105, 0.25);
+  /* Hero card en dark : ombre profonde élévée + halo or accent (le glow
+     animé heroCtaBreathe s'ajoute par-dessus dans le bloc DARK-05). */
+  --hero-card-shadow: var(--shadow-elevated);
+  --hero-card-glow: var(--accent-gold-hairline);
+
+  /* Eyebrow en dark : l'or clair AA-safe sur abysse (~7.9:1). */
+  --eyebrow-color: var(--or-text);
 
   /* ── Glass ── */
   --glass-overlay: rgba(11, 28, 22, 0.72);
   --glass-overlay-blur: blur(16px);
   --glass-nav: rgba(14, 33, 26, 0.86);
   --glass-nav-blur: blur(20px);
+
+  /* Anneau de séparation du focus clavier en dark (abysse semi-opaque). */
+  --focus-ring-halo: rgba(8, 19, 15, 0.9);
 }
 
 /* En dark, le canvas pose l'abysse direct (et non plus le cream Tailwind). */
@@ -1141,14 +1214,75 @@ body.theme-nuit .hero-action-card:active {
    vagues suivantes migreront ces composants vers les tokens ; en attendant
    ce filet de sécurité garde tout lisible. `!important` requis car Tailwind
    compile bg-white en `#fff`. Scopé sur dark, jamais déclenché en jour.
-   ────────────────────────────────────────────────────────────────────── */
+
+   ⚠️ COUVERTURE D'OPACITÉ (VSP/DARK-bgwhite) :
+   Tailwind génère une classe LITTÉRALE distincte par opacité (`bg-white/70`,
+   `bg-white/95`…), donc `[class*="bg-white/"]` les capture toutes. MAIS deux
+   usages opposés coexistent :
+     • HAUTE opacité (/70–/95) = SURFACE glass quasi-opaque (sheets, cards)
+       → on remappe sur surface-1 EN PRÉSERVANT la translucidité (color-mix).
+     • BASSE opacité (/05–/40) = OVERLAY de surbrillance sur fond sapin/sombre
+       (icônes, chips, badges sur hero) → un blanc translucide sur sombre est
+       DÉJÀ correct en dark ; les forcer en surface-1 opaque casserait l'effet.
+       On les LAISSE donc tels quels (exclus du remap surface).
+   `.bg-white` plein (sans opacité) → surface-1 opaque. */
 :root:not([data-theme="jour"]) .bg-white,
-:root:not([data-theme="jour"]) [class*="bg-white/"],
 [data-theme="nuit"] .bg-white,
-[data-theme="nuit"] [class*="bg-white/"],
-body.theme-nuit .bg-white,
-body.theme-nuit [class*="bg-white/"] {
+body.theme-nuit .bg-white {
   background-color: var(--surface-1) !important;
+  color: var(--text-primary);
+}
+
+/* Surfaces glass haute opacité : surface-1 + translucidité préservée.
+   color-mix avec transparent reproduit l'alpha (/70 = 70% surface-1). */
+:root:not([data-theme="jour"]) .bg-white\/70,
+[data-theme="nuit"] .bg-white\/70,
+body.theme-nuit .bg-white\/70 {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-1) 70%,
+    transparent
+  ) !important;
+  color: var(--text-primary);
+}
+:root:not([data-theme="jour"]) .bg-white\/80,
+[data-theme="nuit"] .bg-white\/80,
+body.theme-nuit .bg-white\/80 {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-1) 80%,
+    transparent
+  ) !important;
+  color: var(--text-primary);
+}
+:root:not([data-theme="jour"]) .bg-white\/85,
+[data-theme="nuit"] .bg-white\/85,
+body.theme-nuit .bg-white\/85 {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-1) 85%,
+    transparent
+  ) !important;
+  color: var(--text-primary);
+}
+:root:not([data-theme="jour"]) .bg-white\/90,
+[data-theme="nuit"] .bg-white\/90,
+body.theme-nuit .bg-white\/90 {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-1) 90%,
+    transparent
+  ) !important;
+  color: var(--text-primary);
+}
+:root:not([data-theme="jour"]) .bg-white\/95,
+[data-theme="nuit"] .bg-white\/95,
+body.theme-nuit .bg-white\/95 {
+  background-color: color-mix(
+    in srgb,
+    var(--surface-1) 95%,
+    transparent
+  ) !important;
   color: var(--text-primary);
 }
 

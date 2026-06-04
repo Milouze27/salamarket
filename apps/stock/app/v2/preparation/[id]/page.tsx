@@ -7,6 +7,7 @@ import {
   Building2,
   Camera,
   Check,
+  CheckCircle2,
   Clock,
   CreditCard,
   Loader2,
@@ -89,6 +90,19 @@ const ZONE_EMOJI: Record<"particulier" | "professionnel" | "traiteur", string> =
     traiteur: "🍽️",
   };
 
+/**
+ * Parse un poids saisi au clavier FR. CRITIQUE : les balances/employés
+ * tapent la virgule décimale ("2,50"), or `parseFloat("2,50")` renvoie 2.
+ * On normalise la virgule en point AVANT parseFloat afin d'accepter
+ * indifféremment "2,5" et "2.5" → 2.5 kg. Retourne NaN si non parsable.
+ */
+function parseWeightInput(val: string | number | null | undefined): number {
+  if (val == null) return NaN;
+  const normalized = String(val).trim().replace(",", ".");
+  if (normalized === "") return NaN;
+  return parseFloat(normalized);
+}
+
 /** Formate un poids en kg, virgule française, 2 décimales max. */
 function formatKg(kg: number): string {
   return kg.toLocaleString("fr-FR", {
@@ -123,6 +137,10 @@ export default function V2PreparationDetailPage() {
   const [depots, setDepots] = useState<Depot[]>([]);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [missingPhotoFor, setMissingPhotoFor] = useState<string | null>(null);
+  // Ligne tout juste scannée : déclenche un pop visuel persistant sur la
+  // carte (au-delà du toast éphémère). On le remet à null après l'anim pour
+  // ne pas rejouer le pop au re-render, mais l'état "prepare" lui reste.
+  const [justScannedId, setJustScannedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -245,6 +263,13 @@ export default function V2PreparationDetailPage() {
           : l,
       ),
     );
+    // Feedback visuel PERSISTANT (au-delà du toast 1.8s) : la carte passe
+    // en état "fait" net (CheckCircle + fond success-soft) et reçoit un pop
+    // d'entrée. justScannedId ne sert qu'au pop ; l'état prepare persiste.
+    setJustScannedId(ligne.id);
+    setTimeout(() => {
+      setJustScannedId((cur) => (cur === ligne.id ? null : cur));
+    }, 600);
     toast.success(`${p.nom} préparé`);
   };
   handleScanRef.current = handleScan;
@@ -285,7 +310,7 @@ export default function V2PreparationDetailPage() {
   function computeMontantReel(l: EnrichedLigne): number | null {
     const ut = l.produit?.unit_type ?? "unit";
     if (ut === "weight") {
-      const kg = parseFloat(l.weighedKg ?? "");
+      const kg = parseWeightInput(l.weighedKg);
       if (!Number.isFinite(kg) || kg <= 0) return null;
       const ppk = l.produit?.price_per_kg ?? 0;
       if (ppk <= 0) return null;
@@ -306,7 +331,7 @@ export default function V2PreparationDetailPage() {
     const ut = l.produit?.unit_type ?? "unit";
     const quantiteReelle =
       ut === "weight"
-        ? parseFloat(l.weighedKg ?? "0")
+        ? parseWeightInput(l.weighedKg)
         : (l.weighedBracket ?? 0) + 1;
     setLignes((prev) =>
       prev.map((x) => (x.id === l.id ? { ...x, saving: true } : x)),
@@ -502,7 +527,10 @@ export default function V2PreparationDetailPage() {
         </section>
       )}
 
-      <section className="px-5 mt-5 space-y-4">
+      {/* pb-cta-only : la dernière ligne scrollable ne doit jamais passer
+          sous le CTA fixe (cta-height + safe-bottom + respiration). hideNav
+          ici => pas de nav-height à compter. */}
+      <section className="px-5 mt-5 space-y-4 pb-cta-only">
         {groupedByZone.map((group) => (
           <div key={group.zone}>
             <p className="label-caps text-text-tertiary mb-2 inline-flex items-center gap-1">
@@ -514,16 +542,39 @@ export default function V2PreparationDetailPage() {
               {group.items.map((l, i) => {
                 const cold = COLD_CATEGORIES.has(l.produit?.categorie ?? "");
                 const done = l.statut_preparation !== "en_attente";
+                const prepared = l.statut_preparation === "prepare";
+                const missing = l.statut_preparation === "manquant";
                 const weight = isWeightLine(l);
+                const justScanned = justScannedId === l.id;
+                // État visuel persistant :
+                //  - préparé   => fond success-soft + bordure success (net)
+                //  - manquant  => estompé neutre
+                //  - en attente=> carte blanche standard
+                const cardState = prepared
+                  ? "bg-success-soft border-success"
+                  : missing
+                    ? "bg-white opacity-60 border-rule"
+                    : "bg-white border-rule";
                 return (
                   <motion.div
                     key={l.id}
                     initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className={`bg-white border rounded-2xl p-3 ${
+                    animate={
+                      // Pop d'entrée persistant après un scan réussi (~360ms,
+                      // ease-out). framer-motion + MotionConfig reducedMotion
+                      // ="user" neutralise le scale si l'OS le demande.
+                      justScanned
+                        ? { opacity: 1, y: 0, scale: [1, 1.03, 1] }
+                        : { opacity: 1, y: 0 }
+                    }
+                    transition={
+                      justScanned
+                        ? { duration: 0.36, ease: [0.16, 1, 0.3, 1] }
+                        : { delay: i * 0.03 }
+                    }
+                    className={`border rounded-2xl p-3 transition-colors duration-300 ease-out ${
                       weight ? "flex flex-col gap-3" : "flex items-center gap-3"
-                    } ${done ? "opacity-60 border-rule" : "border-rule"}`}
+                    } ${cardState}`}
                   >
                     <div className="flex items-center gap-3 w-full">
                       <ProductThumbnail
@@ -563,10 +614,11 @@ export default function V2PreparationDetailPage() {
                           </span>
                         </div>
                       </div>
-                      {/* — Ligne UNIT : scan / manquant / Check classique — */}
+                      {/* — Ligne UNIT : état "fait" persistant / manquant / action — */}
                       {!weight && l.statut_preparation === "prepare" && (
-                        <span className="text-success">
-                          <Check className="w-5 h-5" />
+                        <span className="inline-flex shrink-0 items-center gap-1 text-success font-bold text-[12px]">
+                          <CheckCircle2 className="w-5 h-5" aria-hidden />
+                          Préparé
                         </span>
                       )}
                       {!weight && l.statut_preparation === "manquant" && (
@@ -577,9 +629,9 @@ export default function V2PreparationDetailPage() {
                       {!weight && l.statut_preparation === "en_attente" && (
                         <button
                           onClick={() => setMissingPhotoFor(l.id)}
-                          className="text-xs font-bold text-danger px-2 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
+                          className="min-h-[44px] text-xs font-bold text-danger px-3 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
                         >
-                          <PackageMinus className="w-3 h-3" />
+                          <PackageMinus className="w-3.5 h-3.5" />
                           Manquant
                         </button>
                       )}
@@ -606,8 +658,11 @@ export default function V2PreparationDetailPage() {
         ))}
       </section>
 
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
+      {/* CTA fixe ancré AU-DESSUS du safe-area iPad (home-indicator/notch) :
+          cta-above-safe => bottom: var(--safe-bottom). Sans ça le bouton
+          était coupé sous le home-indicator en PWA plein écran. */}
+      <div className="fixed cta-above-safe inset-x-0 z-30 pointer-events-none">
+        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-4 pointer-events-auto">
           <button
             onClick={finalize}
             disabled={prepCount < totalCount}
@@ -676,7 +731,7 @@ function WeightLineRow({
   const reelKg =
     ut === "weight"
       ? (() => {
-          const kg = parseFloat(ligne.weighedKg ?? "");
+          const kg = parseWeightInput(ligne.weighedKg);
           return Number.isFinite(kg) && kg > 0 ? kg : null;
         })()
       : null;
@@ -795,19 +850,31 @@ function WeightLineRow({
         {ut === "weight" && (
           <div className="flex items-center gap-1.5">
             <input
-              type="number"
+              // type="text" (pas "number") : un input number rejette la
+              // virgule décimale FR selon la locale navigateur (iPad FR), ce
+              // qui vidait silencieusement la saisie "2,50". En texte +
+              // inputMode="decimal" on garde le pavé numérique iOS tout en
+              // acceptant virgule ET point ; le parse FR est fait au calcul.
+              type="text"
               inputMode="decimal"
-              step="0.01"
-              min="0"
               placeholder="0,00"
               value={ligne.weighedKg ?? ""}
-              onChange={(e) => onChange({ weighedKg: e.target.value })}
+              onChange={(e) => {
+                // On filtre pour ne garder que chiffres + un séparateur
+                // décimal (virgule ou point), sans convertir : l'employé
+                // voit exactement ce qu'il tape ("2,5"). La normalisation
+                // virgule→point se fait à la lecture (parseWeightInput).
+                const cleaned = e.target.value
+                  .replace(/[^0-9.,]/g, "")
+                  .replace(/([.,].*)[.,]/g, "$1");
+                onChange({ weighedKg: cleaned });
+              }}
               // Anti-double-pesée : une fois la ligne enregistrée (ou pendant
               // l'envoi), l'input est verrouillé pour empêcher une double
               // capture. Pas de réactivation hors action explicite.
               disabled={ligne.saved || ligne.saving}
-              className="w-24 px-3 py-2.5 rounded-xl border border-rule text-base text-right tabular-nums bg-cream focus:outline-none focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
-              aria-label={`Poids pesé ${ligne.produit?.nom ?? ""}`}
+              className="w-24 min-h-[44px] px-3 py-3 rounded-xl border border-rule text-base text-right tabular-nums bg-cream focus:outline-none focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed"
+              aria-label={`Poids pesé ${ligne.produit?.nom ?? ""} en kilogrammes`}
             />
             <span className="text-[11px] text-text-tertiary">kg</span>
           </div>
@@ -824,44 +891,67 @@ function WeightLineRow({
         )}
       </div>
 
-      {/* — Bannière validation client (écart > 20 %) — */}
+      {/* — Bannière validation client (écart > 20 %) —
+          Feedback visuel FORT, indépendant de la Vibration API : bandeau
+          pleine largeur bg-danger + texte blanc. L'icône pulse uniquement
+          si l'utilisateur tolère le motion (motion-safe). */}
       {needsClientValidation && !ligne.saved && (
-        <div className="rounded-xl border border-danger bg-danger-soft px-3 py-3">
-          <p className="text-[13px] font-bold text-danger inline-flex items-center gap-1.5">
-            <TriangleAlert className="w-4 h-4 shrink-0" />
-            Écart &gt; 20 % : le client doit valider.
-          </p>
-          <p className="text-[12px] text-text-secondary mt-1">
-            Estimé {formatEur(estimeTtc)} € · réel {formatEur(reelTtcLive ?? 0)}{" "}
-            € ({eurEcart >= 0 ? "+" : ""}
-            {formatEur(eurEcart)} €). Confirmes-tu cet écart ?
-          </p>
+        <div
+          role="alert"
+          className={`-mx-3 rounded-xl px-3.5 py-3.5 ${
+            confirmedHighEcart
+              ? "bg-success-soft border border-success"
+              : "bg-danger text-white"
+          }`}
+        >
           {confirmedHighEcart ? (
-            <p className="text-[12px] font-semibold text-success mt-2 inline-flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" />
+            <p className="text-[13px] font-bold text-success inline-flex items-center gap-1.5">
+              <Check className="w-4 h-4 shrink-0" aria-hidden />
               Écart confirmé, tu peux enregistrer.
             </p>
           ) : (
-            <div className="flex gap-2 mt-2.5">
-              <button
-                onClick={() => setConfirmedHighEcart(true)}
-                className="flex-1 min-h-[44px] rounded-xl bg-danger text-white text-sm font-bold px-3"
-              >
-                Oui, confirmer
-              </button>
-              <button
-                onClick={() => onChange({ weighedKg: "" })}
-                className="flex-1 min-h-[44px] rounded-xl border border-rule bg-white text-text-primary text-sm font-bold px-3"
-              >
-                Non, repeser
-              </button>
-            </div>
+            <>
+              <p className="text-[14px] font-extrabold text-white inline-flex items-center gap-1.5">
+                <TriangleAlert
+                  className="w-5 h-5 shrink-0 motion-safe:animate-pulse"
+                  aria-hidden
+                />
+                Écart &gt; 20 % : le client doit valider.
+              </p>
+              <p className="text-[12px] text-white/90 mt-1 tabular-nums">
+                Estimé {formatEur(estimeTtc)} € · réel{" "}
+                {formatEur(reelTtcLive ?? 0)} € ({eurEcart >= 0 ? "+" : ""}
+                {formatEur(eurEcart)} €). Confirmes-tu cet écart ?
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => setConfirmedHighEcart(true)}
+                  className="flex-1 min-h-[44px] rounded-xl bg-white text-danger text-sm font-extrabold px-3"
+                >
+                  Oui, confirmer
+                </button>
+                <button
+                  onClick={() => onChange({ weighedKg: "" })}
+                  className="flex-1 min-h-[44px] rounded-xl border border-white/60 bg-transparent text-white text-sm font-bold px-3"
+                >
+                  Non, repeser
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
 
       {/* — Bouton Enregistrer / état saved (verrou anti-double-pesée) — */}
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {/* Rappel explicite du blocage tant que l'écart fort n'est pas
+            confirmé (renforce la désactivation visuelle du bouton). */}
+        {saveBlocked && !ligne.saved && (
+          <span className="text-[12px] font-semibold text-danger inline-flex items-center gap-1">
+            <Lock className="w-3.5 h-3.5" aria-hidden />
+            Confirme l&apos;écart d&apos;abord
+          </span>
+        )}
         {ligne.saved ? (
           <span className="text-[12px] text-success inline-flex items-center gap-1 font-semibold">
             <Lock className="w-3.5 h-3.5" aria-hidden />
@@ -872,7 +962,7 @@ function WeightLineRow({
           <button
             onClick={() => void onSave()}
             disabled={ligne.saving || reelTtcLive == null || saveBlocked}
-            className="min-h-[44px] text-sm font-bold text-white bg-primary px-4 rounded-xl disabled:opacity-50 inline-flex items-center gap-1.5"
+            className="min-h-[44px] text-sm font-bold text-white bg-primary px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
           >
             {ligne.saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />

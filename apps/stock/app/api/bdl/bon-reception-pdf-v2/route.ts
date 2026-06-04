@@ -22,6 +22,19 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { generateLotQrUrl } from "@/lib/qr-lot";
+import {
+  createBrandDoc,
+  drawHeader,
+  drawFooterAllPages,
+  setBrandFont,
+  setInk,
+  hairline,
+  formatDateLongFr,
+  formatDateTimeFr,
+  PALETTE,
+  MARGIN,
+  PAGE_W,
+} from "@/lib/pdf/brand";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -66,31 +79,12 @@ interface BdlFull {
   bons_de_livraison_lignes: BdlLigne[];
 }
 
-function fmtDateFr(iso: string | null) {
-  if (!iso) return "—";
-  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
-  return d.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function fmtDateTimeFr(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("fr-FR", {
-    timeZone: "Europe/Paris",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// Dates : helpers brand pour cohérence cross-docs.
+const fmtDateFr = (iso: string | null) => formatDateLongFr(iso);
+const fmtDateTimeFr = (iso: string | null) => formatDateTimeFr(iso);
 
 function line(doc: any, x1: number, y: number, x2: number) {
-  doc.setLineWidth(0.2);
-  doc.line(x1, y, x2, y);
+  hairline(doc, x1, y, x2);
 }
 
 /**
@@ -165,49 +159,18 @@ export async function GET(req: Request) {
 
   try {
     const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const pageW = 210;
-    const margin = 16;
+    const doc = createBrandDoc(jsPDF);
+    const pageW = PAGE_W;
+    const margin = MARGIN;
     const colW = pageW - margin * 2;
-    let y = margin;
 
-    // ─── HEADER ──────────────────────────────────────────────
-    const headerYStart = y;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("SALAM MARKET", margin, y);
-    y += 5;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("K & A FOOD · SIRET 802 773 812", margin, y);
-    y += 4;
-    doc.text("8 av. Larrieu-Thibaud, 31100 Toulouse", margin, y);
-    const headerYLeft = y;
-
-    let headerYRight = headerYStart;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("BON DE RÉCEPTION · SCAN", pageW - margin, headerYRight + 1, {
-      align: "right",
+    // ─── HEADER BRAND ────────────────────────────────────────
+    let y = drawHeader(doc, {
+      titre: "Bon de réception · Scan",
+      sousTitre: bdl.fournisseurs?.nom ?? undefined,
+      reference: `N° ${bdl.numero_bdl}`,
+      meta: `Émis le ${fmtDateTimeFr(bdl.receptionne_le ?? new Date().toISOString())}`,
     });
-    headerYRight += 6;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`N° ${bdl.numero_bdl}`, pageW - margin, headerYRight + 1, {
-      align: "right",
-    });
-    headerYRight += 4;
-    doc.text(
-      `Émis le ${fmtDateTimeFr(bdl.receptionne_le ?? new Date().toISOString())}`,
-      pageW - margin,
-      headerYRight + 1,
-      { align: "right" }
-    );
-    headerYRight += 4;
-
-    y = Math.max(headerYLeft, headerYRight) + 4;
-    line(doc, margin, y, pageW - margin);
-    y += 6;
 
     // ─── BANDEAU ÉCART (PREMIER CHOC VISUEL POUR LE COMPTABLE) ─
     const ecartEur = Number(bdl.ecart_valeur_eur ?? 0);
@@ -220,33 +183,33 @@ export async function GET(req: Request) {
 
     // Fond ambre si dépasse seuil, vert sinon
     if (ecartCritique) {
-      doc.setFillColor(254, 243, 226); // warning-soft
-      doc.setDrawColor(217, 119, 6); // warning
+      doc.setFillColor(...PALETTE.warningSoft.rgb);
+      doc.setDrawColor(...PALETTE.warning.rgb);
     } else if (Math.abs(ecartEur) < 0.01) {
-      doc.setFillColor(232, 245, 238); // success-soft
-      doc.setDrawColor(45, 122, 79);
+      doc.setFillColor(...PALETTE.successSoft.rgb);
+      doc.setDrawColor(...PALETTE.success.rgb);
     } else {
-      doc.setFillColor(250, 247, 238); // cream
-      doc.setDrawColor(209, 204, 184);
+      doc.setFillColor(...PALETTE.creamSoft.rgb);
+      doc.setDrawColor(...PALETTE.hairline.rgb);
     }
     doc.setLineWidth(0.3);
     doc.roundedRect(margin, y, colW, 18, 2, 2, "FD");
 
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
+    setInk(doc, PALETTE.muted.rgb);
     doc.text("ÉCART VALORISÉ", margin + 4, y + 6);
 
     doc.setFontSize(18);
-    if (ecartCritique) doc.setTextColor(217, 119, 6);
-    else if (Math.abs(ecartEur) < 0.01) doc.setTextColor(45, 122, 79);
-    else doc.setTextColor(40, 40, 40);
+    if (ecartCritique) setInk(doc, PALETTE.warning.rgb);
+    else if (Math.abs(ecartEur) < 0.01) setInk(doc, PALETTE.success.rgb);
+    else setInk(doc, PALETTE.ink.rgb);
     const ecartTxt = `${ecartEur > 0 ? "+" : ""}${ecartEur.toFixed(2)} €`;
     doc.text(ecartTxt, margin + 4, y + 14);
 
     doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
+    setBrandFont(doc, "normal");
+    setInk(doc, PALETTE.muted.rgb);
     doc.text(
       `${(ratio * 100).toFixed(2)} % du BDL attendu (${valeurAttendue.toFixed(2)} €)`,
       pageW - margin - 4,
@@ -254,8 +217,8 @@ export async function GET(req: Request) {
       { align: "right" }
     );
     if (ecartCritique) {
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(217, 119, 6);
+      setBrandFont(doc, "bold");
+      setInk(doc, PALETTE.warning.rgb);
       doc.text(
         "Dépasse seuil 2 % — validation comptable requise",
         pageW - margin - 4,
@@ -263,8 +226,8 @@ export async function GET(req: Request) {
         { align: "right" }
       );
     }
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "normal");
+    setInk(doc);
+    setBrandFont(doc, "normal");
     y += 22;
 
     // ─── BLOC FOURNISSEUR + LIVRAISON + TEMPÉRATURE ──────────
@@ -275,13 +238,13 @@ export async function GET(req: Request) {
     let yRight = y;
 
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("FOURNISSEUR", colLeftX, yLeft);
     doc.text("LIVRAISON & CHAÎNE DU FROID", colRightX, yRight);
     yLeft += 5;
     yRight += 5;
 
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     doc.text(bdl.fournisseurs?.nom ?? "—", colLeftX, yLeft);
     yLeft += 4;
     if (bdl.fournisseurs?.adresse) {
@@ -290,15 +253,15 @@ export async function GET(req: Request) {
       yLeft += lines.length * 4;
     }
     if (bdl.fournisseurs?.siret) {
-      doc.setTextColor(120, 120, 120);
+      setInk(doc, PALETTE.muted.rgb);
       doc.text(`SIRET ${bdl.fournisseurs.siret}`, colLeftX, yLeft);
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       yLeft += 4;
     }
     if (bdl.numero_bdl_fournisseur) {
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.text(`N° BDL fourn. : ${bdl.numero_bdl_fournisseur}`, colLeftX, yLeft);
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       yLeft += 4;
     }
 
@@ -312,21 +275,21 @@ export async function GET(req: Request) {
     const seuil = bdl.temperature_seuil_max_c ?? 4;
     if (tempC !== null && tempC !== undefined) {
       const tempOk = tempC <= seuil;
-      if (tempOk) doc.setTextColor(45, 122, 79);
-      else doc.setTextColor(229, 72, 61);
-      doc.setFont("helvetica", "bold");
+      if (tempOk) setInk(doc, PALETTE.success.rgb);
+      else setInk(doc, PALETTE.danger.rgb);
+      setBrandFont(doc, "bold");
       doc.text(
         `Temp. palette : ${tempC.toFixed(1)} °C (seuil ${seuil} °C) ${tempOk ? "OK" : "DÉPASSÉ"}`,
         colRightX,
         yRight
       );
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
+      setBrandFont(doc, "normal");
+      setInk(doc);
       yRight += 4;
     } else {
-      doc.setTextColor(229, 72, 61);
+      setInk(doc, PALETTE.danger.rgb);
       doc.text(`Temp. palette : NON RELEVÉE (seuil ${seuil} °C)`, colRightX, yRight);
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       yRight += 4;
     }
 
@@ -335,9 +298,9 @@ export async function GET(req: Request) {
         (new Date(bdl.scan_completed_at).getTime() -
           new Date(bdl.scan_started_at).getTime()) /
         60000;
-      doc.setTextColor(120, 120, 120);
+      setInk(doc, PALETTE.muted.rgb);
       doc.text(`Durée scan : ${dur.toFixed(1)} min`, colRightX, yRight);
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       yRight += 4;
     }
 
@@ -357,12 +320,12 @@ export async function GET(req: Request) {
     const COL_NOM_W = COL_EAN - COL_NOM_X - 2;
 
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("LIGNES SCANNÉES", margin, y);
     y += 5;
 
     doc.setFontSize(8);
-    doc.setFillColor(245, 240, 225);
+    doc.setFillColor(...PALETTE.cream.rgb);
     doc.rect(margin, y - 3, colW, 6, "F");
     doc.text("PRODUIT", COL_NOM_X, y + 1);
     doc.text("EAN", COL_EAN, y + 1);
@@ -373,7 +336,7 @@ export async function GET(req: Request) {
     doc.text("Écart €", COL_ECART_EUR, y + 1, { align: "right" });
     y += 6;
 
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     let totalAttendu = 0;
     let totalRecu = 0;
     let totalEcart = 0;
@@ -410,9 +373,9 @@ export async function GET(req: Request) {
       doc.text(String(l.nb_cartons_scannes), COL_CART, y, { align: "right" });
       doc.text(String(l.quantite_recue), COL_RECU, y, { align: "right" });
 
-      if (ecart < 0) doc.setTextColor(229, 72, 61);
-      else if (ecart > 0) doc.setTextColor(217, 119, 6);
-      else doc.setTextColor(120, 120, 120);
+      if (ecart < 0) setInk(doc, PALETTE.danger.rgb);
+      else if (ecart > 0) setInk(doc, PALETTE.warning.rgb);
+      else setInk(doc, PALETTE.muted.rgb);
       doc.text(`${ecart > 0 ? "+" : ""}${ecart}`, COL_ECART, y, { align: "right" });
       doc.text(
         `${ecartLineEur > 0 ? "+" : ""}${ecartLineEur.toFixed(2)}`,
@@ -420,16 +383,16 @@ export async function GET(req: Request) {
         y,
         { align: "right" }
       );
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       y += 4.5;
 
       // Note "lot scanné" sous la ligne si lot_id renseigné
       if (l.lot_id) {
-        doc.setTextColor(120, 120, 120);
+        setInk(doc, PALETTE.muted.rgb);
         doc.setFontSize(7);
         doc.text(`↳ Lot ${l.lot_id} (QR en annexe)`, COL_NOM_X + 3, y);
         doc.setFontSize(8);
-        doc.setTextColor(0, 0, 0);
+        setInk(doc);
         y += 3.5;
         lotsToRender.push({ ligneNom: fullNom, lotId: l.lot_id });
       }
@@ -439,13 +402,13 @@ export async function GET(req: Request) {
     line(doc, margin, y, pageW - margin);
     y += 5;
 
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("TOTAUX", COL_NOM_X, y);
     doc.text(String(totalAttendu), COL_ATT, y, { align: "right" });
     doc.text(String(totalCartons), COL_CART, y, { align: "right" });
     doc.text(String(totalRecu), COL_RECU, y, { align: "right" });
-    if (totalEcart < 0) doc.setTextColor(229, 72, 61);
-    else if (totalEcart > 0) doc.setTextColor(217, 119, 6);
+    if (totalEcart < 0) setInk(doc, PALETTE.danger.rgb);
+    else if (totalEcart > 0) setInk(doc, PALETTE.warning.rgb);
     doc.text(`${totalEcart > 0 ? "+" : ""}${totalEcart}`, COL_ECART, y, {
       align: "right",
     });
@@ -455,7 +418,7 @@ export async function GET(req: Request) {
       y,
       { align: "right" }
     );
-    doc.setTextColor(0, 0, 0);
+    setInk(doc);
     y += 8;
 
     // ─── ANNEXE : QR LOTS (traçabilité halal scannable) ──────
@@ -464,19 +427,19 @@ export async function GET(req: Request) {
         doc.addPage();
         y = margin;
       }
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.setFontSize(10);
       doc.text("TRAÇABILITÉ HALAL — QR LOTS", margin, y);
       y += 5;
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       doc.setFontSize(8);
-      doc.setTextColor(120, 120, 120);
+      setInk(doc, PALETTE.muted.rgb);
       doc.text(
         "Scanne un QR avec ton téléphone pour ouvrir la fiche publique du lot (certificateur, abattoir, DLC).",
         margin,
         y
       );
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       y += 5;
 
       const qrSize = 26; // mm
@@ -502,7 +465,7 @@ export async function GET(req: Request) {
           }
         } else {
           // Fallback : encadré gris avec le texte du lot
-          doc.setDrawColor(180, 180, 180);
+          doc.setDrawColor(...PALETTE.hairline.rgb);
           doc.rect(x, y, qrSize, qrSize);
         }
         doc.setFontSize(7);
@@ -510,9 +473,9 @@ export async function GET(req: Request) {
         doc.text(labelLines[0], x + qrSize / 2, y + qrSize + 3, {
           align: "center",
         });
-        doc.setTextColor(80, 80, 80);
+        setInk(doc, PALETTE.muted.rgb);
         doc.text(lot.lotId, x + qrSize / 2, y + qrSize + 6.5, { align: "center" });
-        doc.setTextColor(0, 0, 0);
+        setInk(doc);
 
         col++;
         if (col >= qrPerRow) {
@@ -538,11 +501,11 @@ export async function GET(req: Request) {
         doc.addPage();
         y = margin;
       }
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.setFontSize(10);
       doc.text("PIÈCES JOINTES", margin, y);
       y += 6;
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       doc.setFontSize(8);
 
       const gap = 4;
@@ -563,7 +526,7 @@ export async function GET(req: Request) {
                 : "JPEG";
             doc.addImage(ph.url, supported as any, x, photoY, photoW, photoH);
           } else {
-            doc.setFillColor(245, 240, 225);
+            doc.setFillColor(...PALETTE.cream.rgb);
             doc.rect(x, photoY, photoW, photoH, "F");
             doc.text("(photo distante)", x + photoW / 2, photoY + photoH / 2, {
               align: "center",
@@ -586,11 +549,11 @@ export async function GET(req: Request) {
         doc.addPage();
         y = margin;
       }
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.setFontSize(9);
       doc.text("NOTES", margin, y);
       y += 4;
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       doc.setFontSize(8);
       const noteLines = doc.splitTextToSize(bdl.notes, colW);
       doc.text(noteLines, margin, y);
@@ -604,11 +567,11 @@ export async function GET(req: Request) {
     }
     line(doc, margin, y, pageW - margin);
     y += 6;
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.setFontSize(10);
     doc.text("VALIDATION", margin, y);
     y += 5;
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     doc.setFontSize(9);
 
     const employeNom =
@@ -621,17 +584,17 @@ export async function GET(req: Request) {
     y += 6;
 
     // Bloc compta : signé si valide_par_comptable, sinon cases à cocher
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("Validation comptable :", margin, y);
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     if (bdl.valide_par_comptable_le) {
-      doc.setTextColor(45, 122, 79);
+      setInk(doc, PALETTE.success.rgb);
       doc.text(
         `  Validé le ${fmtDateTimeFr(bdl.valide_par_comptable_le)}`,
         margin + 60,
         y
       );
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
     } else {
       // Case à cocher manuelle si la validation n'est pas encore faite
       doc.rect(margin + 60, y - 3.5, 4, 4);
@@ -640,14 +603,11 @@ export async function GET(req: Request) {
     }
     y += 6;
 
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
-    doc.text(
-      "Document généré numériquement par Salam Stock (scanner-first). À archiver avec la facture fournisseur.",
-      pageW / 2,
-      287,
-      { align: "center" }
-    );
+    // Footer légal brand sur toutes les pages
+    drawFooterAllPages(doc, {
+      mentionFiscale:
+        "Document généré numériquement par Salamarket (scanner-first). À archiver avec la facture fournisseur.",
+    });
 
     const pdfBytes = doc.output("arraybuffer");
     return new NextResponse(pdfBytes, {

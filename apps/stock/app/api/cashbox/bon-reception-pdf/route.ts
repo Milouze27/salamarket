@@ -14,6 +14,19 @@
  */
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import {
+  createBrandDoc,
+  drawHeader,
+  drawFooterAllPages,
+  setBrandFont,
+  setInk,
+  hairline,
+  formatDateLongFr,
+  formatDateTimeFr,
+  PALETTE,
+  MARGIN,
+  PAGE_W,
+} from "@/lib/pdf/brand";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -47,31 +60,13 @@ interface BdlFull {
   bons_de_livraison_lignes: BdlLigne[];
 }
 
-function fmtDateFr(iso: string | null) {
-  if (!iso) return "—";
-  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
-  return d.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function fmtDateTimeFr(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("fr-FR", {
-    timeZone: "Europe/Paris",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+// Dates : on délègue aux helpers brand (formatDateLongFr / formatDateTimeFr)
+// pour une présentation cohérente sur tous les docs.
+const fmtDateFr = (iso: string | null) => formatDateLongFr(iso);
+const fmtDateTimeFr = (iso: string | null) => formatDateTimeFr(iso);
 
 function line(doc: any, x1: number, y: number, x2: number) {
-  doc.setLineWidth(0.2);
-  doc.line(x1, y, x2, y);
+  hairline(doc, x1, y, x2);
 }
 
 /**
@@ -148,52 +143,18 @@ export async function GET(req: Request) {
 
   try {
     const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const pageW = 210;
-    const margin = 16;
+    const doc = createBrandDoc(jsPDF);
+    const pageW = PAGE_W;
+    const margin = MARGIN;
     const colW = pageW - margin * 2;
-    let y = margin;
 
-    // ─── HEADER ──────────────────────────────────────────────
-    // Deux colonnes : identité magasin à gauche, type de doc à droite,
-    // trackées indépendamment puis y = max des deux + séparateur.
-    const headerYStart = y;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("SALAM MARKET", margin, y);
-    y += 5;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("K & A FOOD · SIRET 802 773 812", margin, y);
-    y += 4;
-    doc.text("8 av. Larrieu-Thibaud, 31100 Toulouse", margin, y);
-    const headerYLeft = y;
-
-    // À droite : type de document
-    let headerYRight = headerYStart;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("BON DE RÉCEPTION", pageW - margin, headerYRight + 1, {
-      align: "right",
+    // ─── HEADER BRAND ────────────────────────────────────────
+    let y = drawHeader(doc, {
+      titre: "Bon de réception",
+      sousTitre: bdl.fournisseurs?.nom ?? undefined,
+      reference: `N° ${bdl.numero_bdl}`,
+      meta: `Émis le ${fmtDateTimeFr(bdl.receptionne_le ?? new Date().toISOString())}`,
     });
-    headerYRight += 6;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`N° ${bdl.numero_bdl}`, pageW - margin, headerYRight + 1, {
-      align: "right",
-    });
-    headerYRight += 4;
-    doc.text(
-      `Émis le ${fmtDateTimeFr(bdl.receptionne_le ?? new Date().toISOString())}`,
-      pageW - margin,
-      headerYRight + 1,
-      { align: "right" }
-    );
-    headerYRight += 4;
-
-    y = Math.max(headerYLeft, headerYRight) + 4;
-    line(doc, margin, y, pageW - margin);
-    y += 8;
 
     // ─── BLOC FOURNISSEUR + LIVRAISON ────────────────────────
     // Trackers indépendants pour les 2 colonnes — évite que la colonne
@@ -206,13 +167,13 @@ export async function GET(req: Request) {
     let yRight = y;
 
     doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("FOURNISSEUR", colLeftX, yLeft);
     doc.text("LIVRAISON", colRightX, yRight);
     yLeft += 5;
     yRight += 5;
 
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
 
     // LEFT : nom + adresse fournisseur multiligne + SIRET si dispo
     doc.text(bdl.fournisseurs?.nom ?? "—", colLeftX, yLeft);
@@ -223,9 +184,9 @@ export async function GET(req: Request) {
       yLeft += lines.length * 4;
     }
     if (bdl.fournisseurs?.siret) {
-      doc.setTextColor(120, 120, 120);
+      setInk(doc, PALETTE.muted.rgb);
       doc.text(`SIRET ${bdl.fournisseurs.siret}`, colLeftX, yLeft);
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
       yLeft += 4;
     }
 
@@ -239,13 +200,13 @@ export async function GET(req: Request) {
     );
     yRight += 4;
     if (bdl.numero_bdl_fournisseur) {
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.text(
         `N° BDL fourn. : ${bdl.numero_bdl_fournisseur}`,
         colRightX,
         yRight
       );
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       yRight += 4;
     }
 
@@ -268,12 +229,12 @@ export async function GET(req: Request) {
     const COL_NOM_W = COL_EAN - COL_NOM_X - 2; // ~81mm pour le nom
 
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("LIGNES RÉCEPTIONNÉES", margin, y);
     y += 5;
 
     doc.setFontSize(8);
-    doc.setFillColor(245, 240, 225);
+    doc.setFillColor(...PALETTE.cream.rgb);
     doc.rect(margin, y - 3, colW, 6, "F");
     doc.text("PRODUIT", COL_NOM_X, y + 1);
     doc.text("EAN", COL_EAN, y + 1);
@@ -283,7 +244,7 @@ export async function GET(req: Request) {
     doc.text("Statut", COL_STATUT, y + 1, { align: "right" });
     y += 6;
 
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     let totalAttendu = 0;
     let totalRecu = 0;
     let totalEcart = 0;
@@ -315,13 +276,13 @@ export async function GET(req: Request) {
       doc.text(String(l.quantite_recue), COL_RECU, y, { align: "right" });
 
       // Écart : rouge si négatif, ambre si positif, gris si zéro
-      if (ecart < 0) doc.setTextColor(229, 72, 61);
-      else if (ecart > 0) doc.setTextColor(217, 119, 6);
-      else doc.setTextColor(120, 120, 120);
+      if (ecart < 0) setInk(doc, PALETTE.danger.rgb);
+      else if (ecart > 0) setInk(doc, PALETTE.warning.rgb);
+      else setInk(doc, PALETTE.muted.rgb);
       doc.text(`${ecart > 0 ? "+" : ""}${ecart}`, COL_ECART, y, {
         align: "right",
       });
-      doc.setTextColor(0, 0, 0);
+      setInk(doc);
 
       const statutLabel =
         l.statut === "recu"
@@ -339,19 +300,19 @@ export async function GET(req: Request) {
     line(doc, margin, y, pageW - margin);
     y += 5;
 
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.text("TOTAUX", COL_NOM_X, y);
     doc.text(String(totalAttendu), COL_ATT, y, { align: "right" });
     doc.text(String(totalRecu), COL_RECU, y, { align: "right" });
-    if (totalEcart < 0) doc.setTextColor(229, 72, 61);
-    else if (totalEcart > 0) doc.setTextColor(217, 119, 6);
+    if (totalEcart < 0) setInk(doc, PALETTE.danger.rgb);
+    else if (totalEcart > 0) setInk(doc, PALETTE.warning.rgb);
     doc.text(
       `${totalEcart > 0 ? "+" : ""}${totalEcart}`,
       COL_ECART,
       y,
       { align: "right" }
     );
-    doc.setTextColor(0, 0, 0);
+    setInk(doc);
     y += 8;
 
     // ─── PHOTOS PALETTE ──────────────────────────────────────
@@ -366,11 +327,11 @@ export async function GET(req: Request) {
         doc.addPage();
         y = margin;
       }
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.setFontSize(10);
       doc.text("PIÈCES JOINTES", margin, y);
       y += 6;
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       doc.setFontSize(8);
 
       const gap = 4;
@@ -392,7 +353,7 @@ export async function GET(req: Request) {
                 : "JPEG";
             doc.addImage(ph.url, supported as any, x, photoY, photoW, photoH);
           } else {
-            doc.setFillColor(245, 240, 225);
+            doc.setFillColor(...PALETTE.cream.rgb);
             doc.rect(x, photoY, photoW, photoH, "F");
             doc.text("(photo distante)", x + photoW / 2, photoY + photoH / 2, {
               align: "center",
@@ -416,11 +377,11 @@ export async function GET(req: Request) {
         doc.addPage();
         y = margin;
       }
-      doc.setFont("helvetica", "bold");
+      setBrandFont(doc, "bold");
       doc.setFontSize(9);
       doc.text("NOTES", margin, y);
       y += 4;
-      doc.setFont("helvetica", "normal");
+      setBrandFont(doc, "normal");
       doc.setFontSize(8);
       const noteLines = doc.splitTextToSize(bdl.notes, colW);
       doc.text(noteLines, margin, y);
@@ -434,11 +395,11 @@ export async function GET(req: Request) {
     }
     line(doc, margin, y, pageW - margin);
     y += 6;
-    doc.setFont("helvetica", "bold");
+    setBrandFont(doc, "bold");
     doc.setFontSize(10);
     doc.text("VALIDATION", margin, y);
     y += 5;
-    doc.setFont("helvetica", "normal");
+    setBrandFont(doc, "normal");
     doc.setFontSize(9);
     const employeNom =
       bdl.employes_reception
@@ -450,15 +411,11 @@ export async function GET(req: Request) {
     y += 4.5;
     doc.text(`Statut : ${bdl.statut}`, margin, y);
 
-    // Footer mention
-    doc.setFontSize(7);
-    doc.setTextColor(120, 120, 120);
-    doc.text(
-      "Document généré numériquement par Salam Stock. À archiver avec la facture fournisseur.",
-      pageW / 2,
-      287,
-      { align: "center" }
-    );
+    // Footer légal brand sur toutes les pages
+    drawFooterAllPages(doc, {
+      mentionFiscale:
+        "Document généré numériquement par Salamarket. À archiver avec la facture fournisseur.",
+    });
 
     const pdfBytes = doc.output("arraybuffer");
     return new NextResponse(pdfBytes, {

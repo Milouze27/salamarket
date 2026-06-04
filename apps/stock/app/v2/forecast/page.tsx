@@ -11,12 +11,12 @@
  * pré-trié SQL : out → blocker → crit → warn, ascending par days_cover.
  *
  * Filtre par tier en pills horizontales (scroll-x sur mobile).
- * Action principale par ligne : "Préparer commande" → /v2/admin (où
- * l'orchestrateur PO drafté pourra se brancher plus tard — pour l'instant
- * mock toast).
+ * Action principale par ligne : "Préparer commande" → ouvre le réassort
+ * (/v2/po) où les bons de commande sont générés/confirmés depuis le forecast.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -203,6 +203,8 @@ export default function ForecastPage() {
     return rows.filter((r) => r.tier === filter);
   }, [rows, filter]);
 
+  const router = useRouter();
+
   async function handleRecompute() {
     setRecomputing(true);
     try {
@@ -232,14 +234,19 @@ export default function ForecastPage() {
     }
   }
 
-  async function handleDraftPO(row: ForecastRow) {
+  function handleDraftPO(row: ForecastRow) {
     const rec = recommendedOrder(row);
-    // Démo : mock. La vraie intégration PO arrivera quand /v2/admin
-    // intègrera le module purchase-orders (migration 0036 déjà prête).
+    // Le réassort réel (génération + envoi des bons de commande depuis le
+    // forecast) vit sur /v2/po (POST /api/po/auto-generate). On y amène le
+    // staff avec la reco en tête, plutôt qu'un faux "draft" non persistant.
     toast.success(
-      `Commande draftée : ${rec.qty} ${rec.unit} de ${row.produit_nom}`,
-      { description: rec.rationale, duration: 4500 },
+      `Réassort suggéré · ${rec.qty} ${rec.unit} — ${row.produit_nom}`,
+      {
+        description: `${rec.rationale} · Génère et confirme les bons de commande dans Réassort.`,
+        duration: 3500,
+      },
     );
+    router.push("/v2/po");
   }
 
   const lastComputedAt = rows[0]?.computed_at

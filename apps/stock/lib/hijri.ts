@@ -228,6 +228,297 @@ function capitalize(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
 
+// ════════════════════════════════════════════════════════════════════
+// MYTH-05 — Mode saisonnier ACTIONNABLE
+//
+// Le calendrier hijri ne sert à rien s'il ne déclenche pas une ACTION.
+// Ici on transforme "Ramadan dans 7 jours" en : un mode visible, une
+// checklist de constitution de stocks, des multiplicateurs de demande
+// par catégorie (alignés sur la table hijri_demand_curve / lib/forecast),
+// et un compte à rebours hero. C'est ce qui rend le moat hijri MYTHOS :
+// l'app ne sait pas seulement QUAND, elle dit QUOI FAIRE.
+// ════════════════════════════════════════════════════════════════════
+
+/** Les 4 modes saisonniers majeurs qui justifient un plan de réassort. */
+export type SeasonalModeKind =
+  | "pre_ramadan"
+  | "ramadan"
+  | "pre_aid_adha"
+  | "aid_adha";
+
+/** Catégories métier sur lesquelles on raisonne en demande (clés alignées
+ *  sur lib/forecast/recompute.ts categorieKey + hijri_demand_curve). */
+export type DemandCategorie =
+  | "viande_fraiche"
+  | "dattes"
+  | "pates"
+  | "epicerie_seche"
+  | "boissons";
+
+export interface CategorieMultiplier {
+  categorie: DemandCategorie;
+  /** Libellé humain pour la card / page. */
+  label: string;
+  /** Multiplicateur de demande appliqué pendant la fenêtre saisonnière. */
+  multiplicateur: number;
+}
+
+export interface ChecklistItem {
+  /** Clé stable pour persistance locale d'un cochage UI. */
+  key: string;
+  label: string;
+  /** Catégorie reliée, pour cross-link avec le réassort. */
+  categorie: DemandCategorie | null;
+}
+
+export interface SeasonalMode {
+  kind: SeasonalModeKind;
+  /** Titre court pour bannières ("Mode Ramadan", "Mode Aïd al-Adha"). */
+  titre: string;
+  /** Sous-titre humain ("Pré-Ramadan — constituez les stocks"). */
+  sous_titre: string;
+  /** Compte à rebours hero ("J-7 avant Aïd al-Adha"). */
+  countdown_label: string;
+  /** Jours jusqu'à l'événement pivot (≤0 = en cours). */
+  jours_jusqua: number;
+  /** True si on est DANS la fête/le mois (pas en pré-fenêtre). */
+  en_cours: boolean;
+  /** Le multiplicateur le plus fort actif (pour la pastille de la card). */
+  multiplicateur_max: number;
+  /** Multiplicateurs par catégorie (triés décroissant). */
+  multiplicateurs: CategorieMultiplier[];
+  /** Checklist de constitution de stocks à cocher. */
+  checklist: ChecklistItem[];
+}
+
+const CAT_LABEL: Record<DemandCategorie, string> = {
+  viande_fraiche: "Viande fraîche",
+  dattes: "Dattes",
+  pates: "Pâtes & semoule",
+  epicerie_seche: "Épicerie sèche",
+  boissons: "Boissons",
+};
+
+/**
+ * Courbe de demande hardcodée — MIROIR de la table hijri_demand_curve
+ * (migration 20260530000004). On garde une copie côté code pour deux
+ * raisons identiques à HIJRI_EVENTS : fallback si Supabase down, et
+ * affichage instantané sans roundtrip. On mappe les phases fines du
+ * moteur forecast (pre_ramadan_j7, ramadan_debut, …) vers le multiplicateur
+ * le plus saillant du MODE (ce qu'Otmane doit anticiper sur la fenêtre).
+ *
+ * IMPORTANT : si tu changes la table SQL, change cette copie.
+ */
+const SEASONAL_MULT: Record<SeasonalModeKind, Record<DemandCategorie, number>> = {
+  // Pré-Ramadan = constitution massive des foyers (dattes en pic d'achat).
+  pre_ramadan: {
+    dattes: 4.5,
+    epicerie_seche: 1.6,
+    pates: 1.4,
+    viande_fraiche: 1.35,
+    boissons: 1.3,
+  },
+  // Ramadan = on prend le pic du mois (1re décade + 10 dernières nuits).
+  ramadan: {
+    dattes: 3.2,
+    viande_fraiche: 1.8,
+    boissons: 1.85,
+    pates: 1.55,
+    epicerie_seche: 1.45,
+  },
+  // Pré-Aïd al-Adha = sacrifice, le mouton/viande explose.
+  pre_aid_adha: {
+    viande_fraiche: 2.2,
+    epicerie_seche: 1.4,
+    dattes: 1.2,
+    pates: 1.15,
+    boissons: 1.15,
+  },
+  // Aïd al-Adha = pic absolu viande.
+  aid_adha: {
+    viande_fraiche: 3.0,
+    epicerie_seche: 1.5,
+    boissons: 1.3,
+    dattes: 1.2,
+    pates: 1.1,
+  },
+};
+
+const SEASONAL_CHECKLIST: Record<SeasonalModeKind, ChecklistItem[]> = {
+  pre_ramadan: [
+    { key: "dattes", label: "Constituer le stock de dattes (rupture ftour)", categorie: "dattes" },
+    { key: "semoule", label: "Semoule, vermicelle & pâtes chorba/harira", categorie: "pates" },
+    { key: "epices", label: "Épices : cumin, gingembre, smen, tomate", categorie: "epicerie_seche" },
+    { key: "boissons", label: "Sirops, jus & laits fermentés pour le ftour", categorie: "boissons" },
+    { key: "viande", label: "Sécuriser l'appro viande (premiers ftours)", categorie: "viande_fraiche" },
+    { key: "horaires", label: "Adapter horaires d'ouverture (soirée)", categorie: null },
+  ],
+  ramadan: [
+    { key: "dattes", label: "Réassort dattes en continu (forte rotation)", categorie: "dattes" },
+    { key: "viande", label: "Viande fraîche quotidienne pour le ftour", categorie: "viande_fraiche" },
+    { key: "boissons", label: "Boissons : ne jamais tomber en rupture le soir", categorie: "boissons" },
+    { key: "pates", label: "Pâtes & semoule (chorba tous les soirs)", categorie: "pates" },
+    { key: "laylat", label: "Renforcer pour les 10 dernières nuits", categorie: null },
+  ],
+  pre_aid_adha: [
+    { key: "mouton", label: "Confirmer les commandes mouton/agneau", categorie: "viande_fraiche" },
+    { key: "boucherie", label: "Renforcer l'équipe boucherie (pic sacrifice)", categorie: null },
+    { key: "epices", label: "Épices & accompagnements de fête", categorie: "epicerie_seche" },
+    { key: "charbon", label: "Charbon, brochettes & consommables grillade", categorie: "epicerie_seche" },
+    { key: "froid", label: "Vérifier capacité chambre froide", categorie: null },
+  ],
+  aid_adha: [
+    { key: "viande", label: "Tenir le pic viande (×3 demande)", categorie: "viande_fraiche" },
+    { key: "frais", label: "Réassort frais & accompagnements", categorie: "epicerie_seche" },
+    { key: "boissons", label: "Boissons pour les repas de fête", categorie: "boissons" },
+    { key: "post", label: "Anticiper le creux post-Aïd (ne pas surcommander)", categorie: null },
+  ],
+};
+
+const MODE_TITRE: Record<SeasonalModeKind, string> = {
+  pre_ramadan: "Mode pré-Ramadan",
+  ramadan: "Mode Ramadan",
+  pre_aid_adha: "Mode pré-Aïd al-Adha",
+  aid_adha: "Mode Aïd al-Adha",
+};
+
+const MODE_SOUS_TITRE: Record<SeasonalModeKind, string> = {
+  pre_ramadan: "Constituez les stocks avant le premier ftour",
+  ramadan: "Pic de demande — réassort en continu",
+  pre_aid_adha: "Sécurisez la viande avant le sacrifice",
+  aid_adha: "Pic absolu viande — tenez la cadence",
+};
+
+function buildMode(
+  kind: SeasonalModeKind,
+  joursJusqua: number,
+  enCours: boolean,
+  eventLabel: string,
+): SeasonalMode {
+  const multMap = SEASONAL_MULT[kind];
+  const multiplicateurs: CategorieMultiplier[] = (
+    Object.keys(multMap) as DemandCategorie[]
+  )
+    .map((cat) => ({
+      categorie: cat,
+      label: CAT_LABEL[cat],
+      multiplicateur: multMap[cat],
+    }))
+    .sort((a, b) => b.multiplicateur - a.multiplicateur);
+
+  const multiplicateurMax = multiplicateurs[0]?.multiplicateur ?? 1;
+
+  let countdown: string;
+  if (enCours) countdown = `${eventLabel} en cours`;
+  else if (joursJusqua === 0) countdown = `${eventLabel} aujourd'hui`;
+  else if (joursJusqua === 1) countdown = `J-1 avant ${eventLabel}`;
+  else countdown = `J-${joursJusqua} avant ${eventLabel}`;
+
+  return {
+    kind,
+    titre: MODE_TITRE[kind],
+    sous_titre: MODE_SOUS_TITRE[kind],
+    countdown_label: countdown,
+    jours_jusqua: joursJusqua,
+    en_cours: enCours,
+    multiplicateur_max: multiplicateurMax,
+    multiplicateurs,
+    checklist: SEASONAL_CHECKLIST[kind],
+  };
+}
+
+/**
+ * Résout le MODE SAISONNIER actif (ou null hors fenêtre). Un mode
+ * s'active dès J-7 d'un événement majeur et reste actif pendant la
+ * fête / le mois.
+ *
+ * Fenêtres d'activation :
+ *   • pre_ramadan  : J-7 → J-1 avant le début de Ramadan
+ *   • ramadan      : pendant tout le mois de Ramadan (date_debut..fin)
+ *   • pre_aid_adha : J-7 → J-1 avant l'Aïd al-Adha
+ *   • aid_adha     : pendant les 3 jours de l'Aïd al-Adha
+ *
+ * Priorité si chevauchement (rare) : la fête EN COURS prime sur une
+ * pré-fenêtre ; Aïd al-Adha prime sur Ramadan ; le plus proche prime.
+ *
+ * Réutilise getHijriContext() pour ne pas dupliquer la logique de dates.
+ */
+export function getSeasonalMode(today: Date = todayLocal()): SeasonalMode | null {
+  const todayMs = today.getTime();
+  const PRE_WINDOW = 7; // jours d'anticipation
+
+  const enriched = HIJRI_EVENTS.map((e) => {
+    const debut = parseDateLocal(e.date_debut);
+    const fin = parseDateLocal(e.date_fin);
+    return {
+      event: e,
+      debut,
+      fin,
+      joursDebut: Math.round((debut.getTime() - todayMs) / 86_400_000),
+      joursFin: Math.round((fin.getTime() - todayMs) / 86_400_000),
+    };
+  });
+
+  type Cand = { mode: SeasonalMode; priorite: number; proximite: number };
+  const cands: Cand[] = [];
+
+  for (const x of enriched) {
+    const ev = x.event.evenement;
+    const enCours = x.debut.getTime() <= todayMs && x.fin.getTime() >= todayMs;
+    const inPreWindow = x.joursDebut > 0 && x.joursDebut <= PRE_WINDOW;
+
+    // Ramadan : fenêtre = du début au fin_10j (couvre tout le mois utile).
+    if (ev === "ramadan_debut") {
+      if (inPreWindow) {
+        cands.push({
+          mode: buildMode("pre_ramadan", x.joursDebut, false, "Ramadan"),
+          priorite: 2,
+          proximite: x.joursDebut,
+        });
+      }
+    }
+    // Tout événement Ramadan en cours → mode ramadan.
+    if (
+      (ev === "ramadan_debut" ||
+        ev === "ramadan_milieu" ||
+        ev === "ramadan_fin_10j" ||
+        ev === "ramadan_fin") &&
+      enCours
+    ) {
+      cands.push({
+        mode: buildMode("ramadan", x.joursDebut, true, "Ramadan"),
+        priorite: 3,
+        proximite: 0,
+      });
+    }
+    // Aïd al-Adha : pré-fenêtre + en cours.
+    if (ev === "aid_adha") {
+      if (inPreWindow) {
+        cands.push({
+          mode: buildMode("pre_aid_adha", x.joursDebut, false, "l'Aïd al-Adha"),
+          priorite: 4,
+          proximite: x.joursDebut,
+        });
+      }
+      if (enCours) {
+        cands.push({
+          mode: buildMode("aid_adha", x.joursDebut, true, "l'Aïd al-Adha"),
+          priorite: 5,
+          proximite: 0,
+        });
+      }
+    }
+  }
+
+  if (cands.length === 0) return null;
+
+  // Priorité décroissante, puis proximité (le plus imminent gagne).
+  cands.sort((a, b) =>
+    b.priorite !== a.priorite ? b.priorite - a.priorite : a.proximite - b.proximite,
+  );
+  return cands[0].mode;
+}
+
 /** Salutation contextuelle selon l'heure (matin = "Sabah el khir"). */
 export function getSalutation(now: Date = new Date()): string {
   const h = now.getHours();

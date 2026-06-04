@@ -2,30 +2,42 @@
  * ─────────────────────────
  * L'algo qui prépare les brouillons de PO. Appelé soit par le cron
  * Supabase (auto-generate-pos edge function, daily 06:00 Europe/Paris),
- * soit manuellement depuis /v2/po (bouton "Régénérer").
+ * soit manuellement depuis /v2/po (bouton "Régénérer") ou depuis le mode
+ * saisonnier /v2/admin/ramadan (PO prévisionnel anticipé).
  *
- * Stratégie (T+10 — version honnête mais simple, à enrichir post-démo) :
- *   1. Pour chaque dépôt actif :
- *      a. Charger les produits avec stock < seuil de réassort
- *         (heuristique T+10 : si stock_par_depot.quantite ≤ 0, on
- *         considère qu'il faut recommander un "lot standard")
- *      b. Trouver le fournisseur principal (produits_fournisseurs
- *         est_principal=true)
- *      c. Si certif principal expiré → essayer un fournisseur backup
- *         (autre produits_fournisseurs sur le même produit avec certif OK)
- *      d. Si toujours rien → ligne ajoutée au "PO bloqué" du principal
- *         (Otmane voit le brouillon + le badge rouge)
- *   2. Regrouper par (fournisseur, dépôt) → un PO brouillon
- *   3. Respecter min_commande_euros → si <, on garde quand même comme
- *      brouillon mais on flag dans notes (Otmane décide)
+ * ML-6 — RÉASSORT PROACTIF (MYTHOS Wave 5)
+ * ──────────────────────────────────────
+ * Avant : on ne réassortissait QUE le stock ≤ 0 (rupture déjà consommée).
+ * Trop tard. Maintenant le moteur lit `stockout_forecast` (Holt + courbe
+ * hijri) et déclenche AVANT la rupture :
+ *
+ *   • days_cover < lead_time × FACTEUR_SECU (1.5) → on commande.
+ *   • Quantité dimensionnée sur velocity_adj (vélocité AJUSTÉE de la phase
+ *     hijri) × horizon de couverture cible — pas un lot standard arbitraire.
+ *   • Pendant une fenêtre saisonnière (Ramadan/Aïd), on GONFLE l'horizon
+ *     cible (× multiplicateur hijri du mode) pour ne jamais tomber court
+ *     au pic. C'est le moat : Otmane ouvre l'app, le PO d'anticipation est
+ *     DÉJÀ prêt, il valide.
+ *
+ * Garde-fou halal (inchangé, ML-5) : aucune ligne n'est routée vers un
+ * fournisseur dont la certif halal est expirée/manquante. On bascule sur
+ * un backup certifié ou on consigne la ligne comme bloquée.
+ *
+ * Payload optionnel (JSON body) :
+ *   { mode: "proactif" | "rupture", seasonalBoost?: number, depotId?: string }
+ *   - mode "rupture"  : ancien comportement (stock ≤ 0 uniquement).
+ *   - mode "proactif" : défaut, lit le forecast.
+ *   - seasonalBoost   : multiplicateur d'horizon imposé (sinon auto depuis
+ *                       le mode saisonnier hijri courant).
  *
  * Ne JAMAIS créer un PO si un brouillon non envoyé existe déjà pour le
- * même couple (fournisseur, dépôt) — on l'update à la place.
+ * même couple (fournisseur, dépôt) — on l'update à la place (idempotent).
  */
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { certifAlerte } from "@/lib/types/po";
+import { getSeasonalMode } from "@/lib/hijri";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,37 +48,191 @@ interface ReassortCandidate {
   produit_id: string;
   depot_id: string;
   manquant: number;
+  /** Raison lisible de la suggestion (pour les notes du PO). */
+  raison: string;
 }
 
-const DEFAULT_REASSORT_QTY = 12; // T+10 : lot standard si on ne sait pas
+const DEFAULT_REASSORT_QTY = 12; // fallback rupture : lot standard si on ne sait rien
+const FACTEUR_SECU = 1.5; // days_cover < lead_time × 1.5 → on commande
+const HORIZON_BASE_JOURS = 10; // couverture cible visée (jours) hors saison
+const HORIZON_CAP_JOURS = 35; // plafond de couverture même en pic (anti-surstock)
 
-export async function POST() {
+type ReassortMode = "proactif" | "rupture";
+
+interface AutoGenBody {
+  mode?: ReassortMode;
+  seasonalBoost?: number;
+  depotId?: string;
+}
+
+interface ForecastRow {
+  produit_id: string;
+  depot_id: string;
+  stock_actuel: number | string;
+  velocity_adj: number | string;
+  days_cover: number | string | null;
+  tier: string;
+  multiplicateur: number | string;
+  phase_courante: string;
+}
+
+export async function POST(req: Request) {
   const sb = supabaseServer();
   const startedAt = Date.now();
 
+  // ─── Parse body (tolérant : pas de body = défauts proactifs) ──────
+  let body: AutoGenBody = {};
+  try {
+    const raw = await req.text();
+    if (raw) body = JSON.parse(raw) as AutoGenBody;
+  } catch {
+    /* body optionnel — on garde les défauts */
+  }
+  const mode: ReassortMode = body.mode === "rupture" ? "rupture" : "proactif";
+
+  // ─── Mode saisonnier hijri → boost d'horizon de couverture ────────
+  // Pendant Ramadan/Aïd on vise plus de couverture (le pic dure plusieurs
+  // jours et le lead time fournisseur ne se compresse pas).
+  const seasonal = getSeasonalMode();
+  const seasonalBoost =
+    typeof body.seasonalBoost === "number" && body.seasonalBoost > 0
+      ? body.seasonalBoost
+      : seasonal
+        ? // On amortit le multiplicateur max (un ×3 sur l'horizon ferait
+          // surstocker) : boost = 1 + (mult_max - 1) × 0.5, plafonné à 2.2.
+          Math.min(2.2, 1 + (seasonal.multiplicateur_max - 1) * 0.5)
+        : 1;
+  const horizonCible = Math.min(
+    HORIZON_CAP_JOURS,
+    Math.round(HORIZON_BASE_JOURS * seasonalBoost),
+  );
+
   // 1. Charge tous les dépôts actifs
-  const { data: depots } = await sb
+  let depotQuery = sb
     .from("depots")
     .select("id, nom, type")
     .eq("is_active", true);
+  if (body.depotId) depotQuery = depotQuery.eq("id", body.depotId);
+  const { data: depots } = await depotQuery;
   if (!depots || depots.length === 0) {
     return NextResponse.json({ ok: true, created: 0, reason: "no depots" });
   }
+  const depotIds = new Set(depots.map((d: any) => d.id));
 
-  // 2. Charge le stock à 0 (ou négatif) — candidats au réassort
-  const { data: stockBas } = await sb
-    .from("stock_par_depot")
-    .select("produit_id, depot_id, quantite")
-    .lte("quantite", 0);
+  // 2. Charge les candidats au réassort.
+  const candidates: ReassortCandidate[] = [];
+  let forecastUsed = false;
 
-  const candidates: ReassortCandidate[] = (stockBas ?? []).map((s: any) => ({
-    produit_id: s.produit_id,
-    depot_id: s.depot_id,
-    manquant: DEFAULT_REASSORT_QTY,
-  }));
+  if (mode === "proactif") {
+    // ── PROACTIF : on lit le forecast (Holt × hijri) + lead time ────
+    // Couverture cible = max(horizon, lead_time × FACTEUR_SECU). On
+    // déclenche quand days_cover < lead_time × FACTEUR_SECU. La quantité
+    // comble l'écart jusqu'à l'horizon cible (gonflé en saison).
+    const { data: fcRows, error: fcErr } = await sb
+      .from("stockout_forecast")
+      .select(
+        "produit_id, depot_id, stock_actuel, velocity_adj, days_cover, tier, multiplicateur, phase_courante",
+      )
+      .limit(5000);
+
+    if (!fcErr && fcRows && fcRows.length > 0) {
+      forecastUsed = true;
+      // On a besoin du lead_time par produit → via produits_fournisseurs.
+      // On le résout plus bas (byProduit), mais pour le seuil on prend un
+      // lead time prudent par défaut ; affiné ligne par ligne ensuite.
+      const LEAD_DEFAULT = 3;
+      for (const r of fcRows as ForecastRow[]) {
+        if (!depotIds.has(r.depot_id)) continue;
+        const velocity = Number(r.velocity_adj) || 0;
+        const stock = Number(r.stock_actuel) || 0;
+        const daysCover = r.days_cover === null ? null : Number(r.days_cover);
+        const mult = Number(r.multiplicateur) || 1;
+
+        // Pas de vélocité → pas de risque, on saute (sauf rupture sèche).
+        if (velocity <= 0.01) {
+          if (stock <= 0) {
+            candidates.push({
+              produit_id: r.produit_id,
+              depot_id: r.depot_id,
+              manquant: DEFAULT_REASSORT_QTY,
+              raison: "Rupture sèche (pas de vélocité mesurée).",
+            });
+          }
+          continue;
+        }
+
+        // Seuil de déclenchement proactif.
+        const seuilDecl = LEAD_DEFAULT * FACTEUR_SECU;
+        const cover = daysCover ?? stock / velocity;
+        if (cover >= seuilDecl) continue; // assez de couverture → on attend
+
+        // Quantité = ce qu'il faut pour atteindre l'horizon cible.
+        // On vise (horizon + lead) jours de couverture au rythme ajusté.
+        const horizonAvecLead = horizonCible + LEAD_DEFAULT;
+        const besoin = Math.max(
+          0,
+          Math.ceil(velocity * horizonAvecLead - stock),
+        );
+        if (besoin <= 0) continue;
+
+        const raisonParts: string[] = [
+          `Couverture ${cover.toFixed(1)} j < seuil ${seuilDecl.toFixed(1)} j`,
+        ];
+        if (mult > 1.1) {
+          raisonParts.push(
+            `demande × ${mult.toFixed(2)} (${r.phase_courante})`,
+          );
+        }
+        if (seasonalBoost > 1.05 && seasonal) {
+          raisonParts.push(`horizon gonflé ×${seasonalBoost.toFixed(2)} (${seasonal.titre})`);
+        }
+
+        candidates.push({
+          produit_id: r.produit_id,
+          depot_id: r.depot_id,
+          manquant: besoin,
+          raison: raisonParts.join(" · ") + ".",
+        });
+      }
+    }
+  }
+
+  // ── Fallback / mode rupture : stock ≤ 0 → lot standard ────────────
+  // Si le forecast est vide (jamais recompute) ou en mode rupture, on
+  // garde le filet de sécurité historique : on ne laisse JAMAIS passer
+  // une rupture sèche non commandée.
+  if (mode === "rupture" || !forecastUsed) {
+    let stockQuery = sb
+      .from("stock_par_depot")
+      .select("produit_id, depot_id, quantite")
+      .lte("quantite", 0);
+    if (body.depotId) stockQuery = stockQuery.eq("depot_id", body.depotId);
+    const { data: stockBas } = await stockQuery;
+    const dejaVus = new Set(candidates.map((c) => `${c.produit_id}::${c.depot_id}`));
+    for (const s of (stockBas ?? []) as any[]) {
+      if (!depotIds.has(s.depot_id)) continue;
+      const key = `${s.produit_id}::${s.depot_id}`;
+      if (dejaVus.has(key)) continue;
+      candidates.push({
+        produit_id: s.produit_id,
+        depot_id: s.depot_id,
+        manquant: DEFAULT_REASSORT_QTY,
+        raison: "Stock épuisé — lot standard de réassort.",
+      });
+    }
+  }
 
   if (candidates.length === 0) {
-    return NextResponse.json({ ok: true, created: 0, reason: "rien à réassortir" });
+    return NextResponse.json({
+      ok: true,
+      created: 0,
+      reason: "rien à réassortir",
+      mode,
+      forecast_used: forecastUsed,
+      horizon_cible_jours: horizonCible,
+      seasonal_boost: seasonalBoost,
+      seasonal_mode: seasonal?.titre ?? null,
+    });
   }
 
   // 3. Charge les liaisons produit → fournisseur(s)
@@ -98,6 +264,7 @@ export async function POST() {
     fournisseur_nom: string;
     reference_fourn: string | null;
     prix_achat_ht: number;
+    raison: string;
     blocked: boolean;
   };
   const picks: Picked[] = [];
@@ -166,6 +333,7 @@ export async function POST() {
       fournisseur_nom: chosen.fournisseurs?.nom ?? "",
       reference_fourn: chosen.reference_fourn ?? null,
       prix_achat_ht: Number(chosen.prix_achat_ht) || 0,
+      raison: c.raison,
       blocked: false,
     });
   }
@@ -188,6 +356,15 @@ export async function POST() {
     groups.set(key, g);
   }
 
+  // Note de tête du PO : explique d'où vient la suggestion (proactif vs
+  // rupture, mode saisonnier). Otmane voit le RAISONNEMENT, pas une magie.
+  const noteTete =
+    mode === "proactif" && forecastUsed
+      ? `Brouillon de réassort PROACTIF Salam Stock — couverture cible ${horizonCible} j` +
+        (seasonal ? ` · ${seasonal.titre} (horizon ×${seasonalBoost.toFixed(2)})` : "") +
+        "."
+      : "Brouillon généré automatiquement par l'algo de réassort Salam Stock (rupture).";
+
   // 6. Pour chaque groupe, upsert un brouillon
   let created = 0;
   let updated = 0;
@@ -209,7 +386,12 @@ export async function POST() {
       poId = existing.id;
       await sb
         .from("purchase_orders")
-        .update({ total_ht: total, total_ttc: total * 1.055, updated_at: new Date().toISOString() })
+        .update({
+          total_ht: total,
+          total_ttc: total * 1.055,
+          notes: noteTete,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", poId);
       // Strip anciennes lignes (idempotence)
       await sb.from("purchase_order_lignes").delete().eq("po_id", poId);
@@ -235,8 +417,7 @@ export async function POST() {
           total_ht: total,
           total_ttc: total * 1.055,
           date_livraison_prevue: dliv.toISOString().slice(0, 10),
-          notes:
-            "Brouillon généré automatiquement par l'algo de réassort Salam Stock.",
+          notes: noteTete,
         })
         .select("id")
         .single();
@@ -250,7 +431,8 @@ export async function POST() {
 
     // Insert toutes les lignes du groupe. À ce stade, toute ligne
     // routée vers un PO a un fournisseur dont la certif halal est
-    // valide (les lignes bloquées ont été écartées en amont).
+    // valide (les lignes bloquées ont été écartées en amont). On garde
+    // la raison de la suggestion dans les notes de ligne (traçabilité).
     const lignesPayload = g.lignes.map((l) => ({
       po_id: poId,
       produit_id: l.produit_id,
@@ -258,7 +440,7 @@ export async function POST() {
       quantite_commandee: l.qty,
       prix_achat_ht: l.prix_achat_ht,
       tva_pct: 5.5,
-      notes: null,
+      notes: l.raison,
     }));
     if (lignesPayload.length > 0) {
       await sb.from("purchase_order_lignes").insert(lignesPayload);
@@ -269,6 +451,11 @@ export async function POST() {
     ok: true,
     created,
     updated,
+    mode,
+    forecast_used: forecastUsed,
+    horizon_cible_jours: horizonCible,
+    seasonal_boost: Math.round(seasonalBoost * 100) / 100,
+    seasonal_mode: seasonal?.titre ?? null,
     candidates: candidates.length,
     groups: groups.size,
     // ML-5 — réassorts NON commandés faute de fournisseur halal valide.

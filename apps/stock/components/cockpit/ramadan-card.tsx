@@ -19,7 +19,8 @@
  * L'or reste accent (filet/glow/chiffre), jamais fill grande surface.
  */
 import type { CSSProperties } from "react";
-import { Moon } from "lucide-react";
+import { ChevronRight, Moon, TrendingUp } from "lucide-react";
+import { getSeasonalMode } from "@/lib/hijri";
 
 interface RamadanCardProps {
   message: string;                 // ex "Ramadan dans 28 jours"
@@ -30,6 +31,8 @@ interface RamadanCardProps {
   impactCa: "faible" | "moyen" | "fort" | "critique" | null;
   /** Mini-timeline événements suivants (libellé + jours). */
   fenetre?: Array<{ libelle: string; jours: number; impact: string }>;
+  /** MYTH-05 — tap sur le bandeau "mode saisonnier" → /v2/admin/ramadan. */
+  onSeasonalTap?: () => void;
 }
 
 function formatDateFr(iso: string): string {
@@ -76,8 +79,13 @@ export function RamadanCard({
   enCours,
   impactCa,
   fenetre = [],
+  onSeasonalTap,
 }: RamadanCardProps) {
   const impact = impactCa ? IMPACT_STYLES[impactCa] : null;
+  // MYTH-05 — résolution locale du mode saisonnier actif (pré-Ramadan /
+  // Ramadan / pré-Aïd / Aïd). Si actif, on montre le multiplicateur de
+  // demande dominant + un CTA vers le centre de pilotage saisonnier.
+  const seasonal = getSeasonalMode();
 
   return (
     <div
@@ -146,6 +154,40 @@ export function RamadanCard({
             )}
           </div>
         </div>
+
+        {/* MYTH-05 — bandeau mode saisonnier actif (multiplicateur + CTA) */}
+        {seasonal && (
+          <button
+            type="button"
+            onClick={onSeasonalTap}
+            disabled={!onSeasonalTap}
+            className="group flex items-center gap-3 w-full text-left rounded-[14px] px-3 py-2.5 active:scale-[0.99] transition disabled:active:scale-100"
+            style={{
+              background: "var(--primary-green-soft)",
+              border: "1px solid var(--border-premium)",
+            }}
+          >
+            <TrendingUp
+              className="w-4 h-4 shrink-0 text-[var(--accent-gold-bright)]"
+              strokeWidth={2.6}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12.5px] font-bold text-[var(--text-primary)] truncate">
+                {seasonal.titre}
+              </p>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate">
+                Demande jusqu&apos;à ×{seasonal.multiplicateur_max.toFixed(1)} ·
+                plan de réassort
+              </p>
+            </div>
+            {onSeasonalTap && (
+              <ChevronRight
+                className="w-4 h-4 shrink-0 text-[var(--accent-gold-dim)] group-active:translate-x-0.5 transition-transform"
+                strokeWidth={2.4}
+              />
+            )}
+          </button>
+        )}
 
         {/* Mini timeline événements suivants */}
         {fenetre.length > 0 && (

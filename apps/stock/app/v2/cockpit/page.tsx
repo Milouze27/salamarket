@@ -273,6 +273,7 @@ export default function CockpitPage() {
           enCours={hijriEnCours}
           impactCa={hijriImpact}
           fenetre={fenetreHijri}
+          onSeasonalTap={() => router.push("/v2/admin/ramadan")}
         />
 
         {/* ZONE 3 — DLC */}

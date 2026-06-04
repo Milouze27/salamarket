@@ -17,9 +17,11 @@ import { ArrowLeft } from "lucide-react";
  *    quand on utilise router.push à la place de back (qui empile au lieu
  *    de dépiler l'historique).
  *
- * Spec visuelle :
+ * Spec visuelle (tokens MYTHOS, dark par défaut) :
  *  - Pill 40px de haut → min tap-target 44pt PRODUCT.md avec touch-zone.
- *  - bg-white + border-rule + shadow-card → visible sur tout background.
+ *  - surface-1 + border-card + shadow-card → élévation Linear (inset highlight
+ *    top en dark), visible sur tout background sans dépendre du filet bg-white.
+ *  - Le disque interne monte d'un cran (surface-2) pour matérialiser la touche.
  *  - active:scale-[0.97] feedback tactile <100ms.
  */
 export function BackButton({
@@ -49,9 +51,18 @@ export function BackButton({
       type="button"
       onClick={handleClick}
       aria-label={label}
-      className={`inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary active:scale-[0.97] transition-transform ${className}`}
+      className={`inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full border text-[13px] font-bold active:scale-[0.97] transition-transform ${className}`}
+      style={{
+        background: "var(--surface-1)",
+        borderColor: "var(--border-card)",
+        boxShadow: "var(--shadow-card)",
+        color: "var(--text-primary)",
+      }}
     >
-      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cream">
+      <span
+        className="inline-flex items-center justify-center w-6 h-6 rounded-full"
+        style={{ background: "var(--surface-2)" }}
+      >
         <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.4} />
       </span>
       {label}

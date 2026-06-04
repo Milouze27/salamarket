@@ -6,10 +6,15 @@
  * S'affiche en haut des pages quand des lots approchent leur DLC.
  * Lit `v_dlc_alerts` (créée par la migration 0032) via supabase client.
  *
- * 3 niveaux visuels (du plus fort au plus subtil) :
- *   - `forcé` ou `critique` → rouge danger, pulse animé
- *   - `attention`           → ambre/warning
- *   - `surveillance`        → jaune subtil
+ * 3 niveaux visuels (du plus fort au plus subtil), dark par défaut :
+ *   - `forcé` ou `critique` → danger lumineux, pulse animé, palier démarque
+ *   - `attention`           → warning ambre, palier -20%
+ *   - `surveillance`        → warning atténué, simple veille
+ *
+ * Doctrine dark MYTHOS : surface translucide soft (--danger-soft /
+ * --warning-soft) posée sur la card, hairline du même teint, texte status
+ * lumineux. Aucune grande surface or. Le palier démarque (ATTENTION -20% /
+ * CRITIQUE -40% / FORCÉ -50%, cf. lib/dlc.ts) s'affiche en chip tabular-nums.
  *
  * Auto-hide si aucune alerte. Click → `/v2/admin/alertes-dlc`.
  * Pas de props : le composant fetch lui-même pour pouvoir être posé
@@ -20,6 +25,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { DLC_MIN_DISCOUNT_PCT } from "@/lib/dlc";
 
 type Niveau = "forcé" | "critique" | "attention" | "surveillance" | "ok";
 
@@ -52,30 +58,47 @@ function strongestLevel(c: Counts): "critique" | "attention" | "surveillance" | 
   return null;
 }
 
+type Level = "critique" | "attention" | "surveillance";
+
+/**
+ * Palette token-driven (dark par défaut, suit le thème jour via les mêmes
+ * vars). On pointe sur les status tokens : surface = soft translucide,
+ * texte/dot/hairline = couleur status lumineuse. Zéro hex hardcodé.
+ *
+ * `palier` = clé lib/dlc.ts pour afficher le plancher de démarque (%).
+ */
 const PALETTE: Record<
-  "critique" | "attention" | "surveillance",
-  { bg: string; border: string; text: string; dot: string; pulse: boolean }
+  Level,
+  {
+    surfaceVar: string;
+    textVar: string;
+    pulse: boolean;
+    /** Niveau lib/dlc.ts pour le % de démarque affiché en chip. */
+    palier: "critique" | "attention" | null;
+    /** Libellé court du palier. */
+    palierLabel: string | null;
+  }
 > = {
   critique: {
-    bg: "bg-[#FBE9E7]",
-    border: "border-[#E5483D]/40",
-    text: "text-[#A8231A]",
-    dot: "bg-[#E5483D]",
+    surfaceVar: "--danger-soft",
+    textVar: "--danger",
     pulse: true,
+    palier: "critique",
+    palierLabel: "CRITIQUE",
   },
   attention: {
-    bg: "bg-[#FEF3E2]",
-    border: "border-[#D97706]/40",
-    text: "text-[#92400E]",
-    dot: "bg-[#D97706]",
+    surfaceVar: "--warning-soft",
+    textVar: "--warning",
     pulse: false,
+    palier: "attention",
+    palierLabel: "ATTENTION",
   },
   surveillance: {
-    bg: "bg-[#FBF4D4]",
-    border: "border-[#C9A227]/40",
-    text: "text-[#8B6F0E]",
-    dot: "bg-[#C9A227]",
+    surfaceVar: "--warning-soft",
+    textVar: "--warning",
     pulse: false,
+    palier: null,
+    palierLabel: null,
   },
 };
 
@@ -133,6 +156,15 @@ export function DlcBanner() {
   if (!level) return null;
 
   const p = PALETTE[level];
+  // forcé est plus grave que critique : on remonte le plancher démarque le
+  // plus agressif présent dans le set (FORCÉ -50% > CRITIQUE -40%).
+  const demarquePct =
+    counts.forcé > 0
+      ? DLC_MIN_DISCOUNT_PCT.forcé
+      : p.palier
+        ? DLC_MIN_DISCOUNT_PCT[p.palier]
+        : 0;
+  const palierLabel = counts.forcé > 0 ? "FORCÉ" : p.palierLabel;
 
   // Détail textuel : on liste les niveaux non-nuls dans l'ordre de gravité.
   const parts: string[] = [];
@@ -141,36 +173,66 @@ export function DlcBanner() {
   if (counts.attention > 0) parts.push(`${counts.attention} attention`);
   if (counts.surveillance > 0) parts.push(`${counts.surveillance} surveillance`);
 
+  const statusColor = `var(${p.textVar})`;
+
   return (
     <Link
       href="/v2/admin/alertes-dlc"
-      className={`flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border ${p.bg} ${p.border} card-tappable outline-none focus-visible:ring-2 focus-visible:ring-primary/30`}
+      className="flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border card-tappable outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      style={{
+        background: `var(${p.surfaceVar})`,
+        borderColor: statusColor,
+        // hairline status discret : le border token serait trop neutre ici,
+        // on garde la teinte status mais atténuée par la surface soft.
+        borderWidth: 1,
+      }}
       aria-label={`${counts.total} lots en alerte DLC — voir détails`}
     >
       <span className="relative flex items-center justify-center shrink-0">
-        <AlertTriangle className={`w-4 h-4 ${p.text}`} strokeWidth={2.4} />
+        <AlertTriangle className="w-4 h-4" style={{ color: statusColor }} strokeWidth={2.4} />
         {p.pulse && (
           <>
             <span
-              className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${p.dot}`}
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+              style={{ background: statusColor }}
               aria-hidden
             />
             <span
-              className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${p.dot} animate-ping opacity-75`}
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-ping opacity-75"
+              style={{ background: statusColor }}
               aria-hidden
             />
           </>
         )}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={`text-[12.5px] font-extrabold leading-tight ${p.text}`}>
+        <p
+          className="text-[12.5px] font-extrabold leading-tight"
+          style={{ color: statusColor }}
+        >
           {counts.total} lot{counts.total > 1 ? "s" : ""} en alerte DLC
         </p>
-        <p className={`text-[10.5px] mt-0.5 font-semibold leading-tight ${p.text} opacity-80 truncate`}>
+        <p
+          className="text-[10.5px] mt-0.5 font-semibold leading-tight opacity-80 truncate"
+          style={{ color: statusColor }}
+        >
           {parts.join(" · ")}
         </p>
       </div>
-      <ChevronRight className={`w-4 h-4 ${p.text} shrink-0`} />
+      {palierLabel && demarquePct > 0 && (
+        <span
+          className="shrink-0 inline-flex items-center gap-1 px-2 h-6 rounded-full text-[10px] font-extrabold tracking-wide tabular-nums"
+          style={{
+            color: statusColor,
+            background: "var(--surface-2)",
+            boxShadow: `inset 0 0 0 1px ${statusColor}`,
+          }}
+          aria-label={`Palier démarque ${palierLabel} moins ${demarquePct} pourcent`}
+        >
+          {palierLabel} −{demarquePct}%
+        </span>
+      )}
+      <ChevronRight className="w-4 h-4 shrink-0" style={{ color: statusColor }} />
     </Link>
   );
 }

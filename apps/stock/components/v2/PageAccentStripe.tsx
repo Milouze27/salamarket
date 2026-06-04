@@ -4,12 +4,17 @@
  * Filet 4px de couleur en tout en haut de chaque page V2.
  * Permet à Otmane de reconnaître la fonction de la page d'un coup d'œil.
  *
- * Couleurs Salam strictes :
- *   - sapin   #0E3B2E (réception, étiquettes)
- *   - bordeaux #A8231A (sortie)
- *   - or      #C9A227 (transfert, inventaire)
- *   - foncé   #0A2A20 (stock)
- *   - sapin+or gradient (preparation, admin)
+ * Token-driven (dark par défaut) : on pointe sur les vars thème-aware au lieu
+ * d'hex en dur. En dark le sapin/or/danger remontent en luminosité (primary
+ * #1B6A4A, gold-bright #F2D469, danger #FF7062) → le filet reste lisible sur
+ * l'abysse au lieu de se fondre. En jour ils retombent sur la charte cream.
+ *
+ * Rôle couleur :
+ *   - sapin    primary-green (réception, étiquettes)
+ *   - bordeaux danger        (sortie)
+ *   - or       gold-bright    (transfert, inventaire)
+ *   - foncé    surface-3      (stock — neutre profond, lisible des 2 côtés)
+ *   - sapin+or / or+sapin     gradients (preparation, admin)
  */
 type Accent =
   | "sapin"
@@ -20,15 +25,17 @@ type Accent =
   | "or-sapin";
 
 const STYLE: Record<Accent, React.CSSProperties> = {
-  sapin: { background: "#0E3B2E" },
-  bordeaux: { background: "#A8231A" },
-  or: { background: "#C9A227" },
-  fonce: { background: "#0A2A20" },
+  sapin: { background: "var(--primary-green)" },
+  bordeaux: { background: "var(--danger)" },
+  or: { background: "var(--accent-gold-bright)" },
+  fonce: { background: "var(--surface-3)" },
   "sapin-or": {
-    background: "linear-gradient(90deg, #C9A227 0%, #0E3B2E 100%)",
+    background:
+      "linear-gradient(90deg, var(--accent-gold-bright) 0%, var(--primary-green) 100%)",
   },
   "or-sapin": {
-    background: "linear-gradient(90deg, #0A2A20 0%, #C9A227 100%)",
+    background:
+      "linear-gradient(90deg, var(--primary-green) 0%, var(--accent-gold-bright) 100%)",
   },
 };
 

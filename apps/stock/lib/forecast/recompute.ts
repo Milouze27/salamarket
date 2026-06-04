@@ -4,8 +4,9 @@
  * Pipeline :
  *   1. Charge stock_par_depot (stock courant)
  *   2. Charge ventes_cashmag_import sur les 14 derniers jours, agrégées
- *      par (produit, dépôt, date) — la liaison code_barre → produit se
- *      fait via produits.code_barre.
+ *      par (produit, dépôt, date) — la liaison se fait entre
+ *      ventes_cashmag_import.code_barre et produits.ean (l'EAN du produit
+ *      est ce qui est scanné en caisse).
  *      NB : ventes_cashmag_import n'a pas de depot_id. Pour la démo, on
  *      attribue toutes les ventes au dépôt 'Particulier' (heuristique
  *      acceptable — c'est celui qui a 80% des passages caisse). Une V2
@@ -41,7 +42,7 @@ interface StockRow {
 interface ProduitRow {
   id: string;
   nom: string;
-  code_barre: string | null;
+  ean: string | null;
   categorie: string | null;
 }
 
@@ -168,7 +169,7 @@ export async function recomputeStockoutForecast(
   const [{ data: prodRows }, { data: depotRows }] = await Promise.all([
     client
       .from("produits")
-      .select("id, nom, code_barre, categorie")
+      .select("id, nom, ean, categorie")
       .in("id", produitIds),
     client.from("depots").select("id, nom").in("id", depotIds),
   ]);
@@ -197,13 +198,18 @@ export async function recomputeStockoutForecast(
       ventesByEan.set(v.code_barre, new Map());
     }
     const dayMap = ventesByEan.get(v.code_barre)!;
-    dayMap.set(v.date_vente, (dayMap.get(v.date_vente) ?? 0) + Number(v.quantite));
+    dayMap.set(
+      v.date_vente,
+      (dayMap.get(v.date_vente) ?? 0) + Number(v.quantite),
+    );
   }
 
   // 4) Charger état Holt précédent
   const { data: velRows } = await client
     .from("velocity_state")
-    .select("produit_id, depot_id, level, trend, alpha, beta, last_observed_at");
+    .select(
+      "produit_id, depot_id, level, trend, alpha, beta, last_observed_at",
+    );
   const velByKey = new Map<string, VelocityRow>(
     ((velRows ?? []) as VelocityRow[]).map((v) => [
       `${v.produit_id}::${v.depot_id}`,
@@ -274,10 +280,10 @@ export async function recomputeStockoutForecast(
       ? { level: Number(prevVel.level), trend: Number(prevVel.trend) }
       : null;
 
-    // Vélocité observée du jour : moyenne sur 14j de ventes pour ce code_barre.
+    // Vélocité observée du jour : moyenne sur 14j de ventes pour cet EAN.
     let observation = 0;
-    if (prod.code_barre && ventesByEan.has(prod.code_barre)) {
-      observation = avgVelocity(ventesByEan.get(prod.code_barre)!, 14);
+    if (prod.ean && ventesByEan.has(prod.ean)) {
+      observation = avgVelocity(ventesByEan.get(prod.ean)!, 14);
     } else if (useDemoFallback && !prevVel) {
       // Fallback démo : pas de ventes réelles importées → on génère une
       // vélocité pseudo-aléatoire stable à partir du code_barre/id pour
@@ -294,7 +300,7 @@ export async function recomputeStockoutForecast(
               : cat === "pates"
                 ? [1, 6]
                 : [0.5, 4];
-      observation = pseudoVelocity(prod.code_barre ?? prod.id, range);
+      observation = pseudoVelocity(prod.ean ?? prod.id, range);
     }
 
     const params = prevVel

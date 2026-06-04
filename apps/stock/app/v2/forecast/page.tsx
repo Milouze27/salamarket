@@ -55,7 +55,7 @@ interface ForecastRow {
   produit_id: string;
   depot_id: string;
   produit_nom: string;
-  code_barre: string | null;
+  ean: string | null;
   depot_nom: string;
   stock_actuel: number;
   velocity_adj: number;
@@ -162,7 +162,7 @@ export default function ForecastPage() {
     let query = sb
       .from("v_stockout_critiques")
       .select(
-        "produit_id, depot_id, produit_nom, code_barre, depot_nom, stock_actuel, velocity_adj, days_cover, tier, phase_courante, multiplicateur, reason, computed_at",
+        "produit_id, depot_id, produit_nom, ean, depot_nom, stock_actuel, velocity_adj, days_cover, tier, phase_courante, multiplicateur, reason, computed_at",
       )
       .limit(300);
     if (!allDepots && depot?.id) {
@@ -446,9 +446,9 @@ export default function ForecastPage() {
                       <p className="text-[14.5px] font-extrabold text-text-primary mt-1.5 truncate">
                         {r.produit_nom}
                       </p>
-                      {r.code_barre && (
+                      {r.ean && (
                         <p className="text-[11px] mono text-text-tertiary mt-0.5 truncate">
-                          EAN {r.code_barre}
+                          EAN {r.ean}
                         </p>
                       )}
                     </div>

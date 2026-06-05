@@ -30,6 +30,11 @@ import {
   unitHint,
 } from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
+import {
+  DlcPriceTag,
+  HalalBadgeLink,
+  useDlcDiscount,
+} from "@/components/HalalBadgeLink";
 import { cn } from "@/lib/utils";
 import { cdnImage } from "@/lib/imageUrl";
 
@@ -46,9 +51,7 @@ const ProductDetail = () => {
   const { data: allProducts } = useProducts();
 
   const addItem = useCartStore((s) => s.addItem);
-  const cartQty = useCartStore((s) =>
-    id ? s.getQuantity(id) : 0,
-  );
+  const cartQty = useCartStore((s) => (id ? s.getQuantity(id) : 0));
 
   const unitType = product?.unitType ?? "unit";
   const brackets = useMemo(
@@ -110,7 +113,11 @@ const ProductDetail = () => {
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // @ts-expect-error - startViewTransition not yet in TS lib.dom default
-    if (!reduce && typeof document !== "undefined" && document.startViewTransition) {
+    if (
+      !reduce &&
+      typeof document !== "undefined" &&
+      document.startViewTransition
+    ) {
       // @ts-expect-error - same
       document.startViewTransition(run);
     } else {
@@ -175,22 +182,26 @@ const ProductDetail = () => {
   const showHalalBadge =
     product?.category === "boucherie" || product?.category === "charcuterie";
 
-  // FUNC-04 — traçabilité par produit. Si le produit porte un lot courant
-  // (current_lot_id, ex. la barquette du jour pour la boucherie), le CTA
-  // pointe vers CE lot précis. Sinon on retombe sur le lot de démo générique.
-  // Accès optionnel typé large : le champ peut ne pas exister sur le type
-  // Product selon le mapping API, on ne casse pas la compilation.
-  const currentLotId =
-    (product as { current_lot_id?: string | null } | undefined)
-      ?.current_lot_id ?? null;
-  const traceabilityLotPath = `/lot/${currentLotId ?? "L2026-05-A23"}`;
+  // Remise DLC anti-gaspi (source réelle : vue v_dlc_alerts). Hook appelé
+  // inconditionnellement (avant les early returns) — `enabled` coupe la requête
+  // tant que le produit n'est pas chargé ou s'il est vendu au poids (prix €/kg,
+  // remise lot hors périmètre PDP). null si aucune remise exploitable.
+  const dlcDiscount = useDlcDiscount(
+    product?.id,
+    product?.priceCents ?? 0,
+    !!product && product.unitType !== "weight",
+  );
+  const showDlcPrice =
+    dlcDiscount != null && product != null && product.unitType !== "weight";
+
+  // Traçabilité par produit : le passeport halal (HalalBadgeLink, plus bas)
+  // résout le lot RÉEL le plus récent via produits_lots et draine vers
+  // /lot/{id}. Plus de fallback lot démo codé en dur ici.
 
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-[#FAF7EE]">
-        <div
-          className="aspect-square w-full max-w-2xl mx-auto bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer"
-        />
+        <div className="aspect-square w-full max-w-2xl mx-auto bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
         <div className="px-4 py-5 space-y-3 max-w-2xl mx-auto">
           <div className="h-8 w-2/3 rounded bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
           <div className="h-5 w-1/3 rounded bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
@@ -232,7 +243,9 @@ const ProductDetail = () => {
     <div className="flex items-center gap-2 bg-[#FAF7EE] rounded-2xl p-2 border border-[#0E3B2E]/15">
       <button
         type="button"
-        onClick={() => setKg((v) => Math.max(MIN_KG, Math.round((v - STEP_KG) * 10) / 10))}
+        onClick={() =>
+          setKg((v) => Math.max(MIN_KG, Math.round((v - STEP_KG) * 10) / 10))
+        }
         disabled={kg <= MIN_KG}
         aria-label="Diminuer le poids estimé"
         className="w-11 h-11 rounded-full bg-white border border-[#0E3B2E]/12 flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform shadow-sm disabled:opacity-30"
@@ -272,7 +285,9 @@ const ProductDetail = () => {
       </div>
       <button
         type="button"
-        onClick={() => setKg((v) => Math.min(MAX_KG, Math.round((v + STEP_KG) * 10) / 10))}
+        onClick={() =>
+          setKg((v) => Math.min(MAX_KG, Math.round((v + STEP_KG) * 10) / 10))
+        }
         disabled={kg >= MAX_KG}
         aria-label="Augmenter le poids estimé"
         className="w-11 h-11 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm disabled:opacity-40"
@@ -332,7 +347,9 @@ const ProductDetail = () => {
   // s'adapte. Vérifié 320/375/390/430 : ni débordement ni wrap cassé.
   const CtaCluster = ({ compact = false }: { compact?: boolean }) => (
     <div className="flex flex-col gap-3 min-w-0">
-      <div className={cn("flex items-center min-w-0", compact ? "gap-2" : "gap-3")}>
+      <div
+        className={cn("flex items-center min-w-0", compact ? "gap-2" : "gap-3")}
+      >
         {/* Stepper unités OU stepper kg OU rien si bracket (les cards font le job) */}
         {unitType === "unit" && (
           <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-1 border border-[#0E3B2E]/15 shrink-0">
@@ -385,7 +402,9 @@ const ProductDetail = () => {
               {product.inStock && (
                 <>
                   <span className="opacity-50 shrink-0">·</span>
-                  <span className="tabular-nums shrink-0">{formatPrice(totalCents)}</span>
+                  <span className="tabular-nums shrink-0">
+                    {formatPrice(totalCents)}
+                  </span>
                   <ArrowRight
                     size={16}
                     className="transition-transform group-hover:translate-x-0.5 shrink-0"
@@ -455,21 +474,21 @@ const ProductDetail = () => {
             {isPlaceholderUrl(product.imageUrl) || heroFailed ? (
               <ProductImageFallback category={product.category} size="lg" />
             ) : (
-            <img
-              src={cdnImage(product.imageUrl, { width: 1200 })}
-              alt={product.name}
-              width={1200}
-              height={1200}
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-              onError={() => setHeroFailed(true)}
-              /* View Transitions API — partage le même name que la card
+              <img
+                src={cdnImage(product.imageUrl, { width: 1200 })}
+                alt={product.name}
+                width={1200}
+                height={1200}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                onError={() => setHeroFailed(true)}
+                /* View Transitions API — partage le même name que la card
                  source pour un morph natif Safari/Chrome récents. Sur
                  browsers sans support, propriété ignorée silencieusement. */
-              style={{ viewTransitionName: id ? `product-${id}` : undefined }}
-              className="w-full h-full object-cover"
-            />
+                style={{ viewTransitionName: id ? `product-${id}` : undefined }}
+                className="w-full h-full object-cover"
+              />
             )}
             <div
               aria-hidden
@@ -516,9 +535,14 @@ const ProductDetail = () => {
               {product.name}
             </h1>
             <div className="mt-3 flex items-baseline gap-3 flex-wrap">
-              <span className="text-[26px] md:text-[32px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.02em]">
-                {formatPriceWithUnit(product)}
-              </span>
+              {showDlcPrice && dlcDiscount ? (
+                // Prix barré + remisé + tag "-X% · DLC courte" (remise réelle).
+                <DlcPriceTag discount={dlcDiscount} variant="detail" />
+              ) : (
+                <span className="text-[26px] md:text-[32px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.02em]">
+                  {formatPriceWithUnit(product)}
+                </span>
+              )}
               {unitType === "unit" && (
                 <span className="text-sm text-[#6B7280]">
                   · {unitLabel(product.unit)}
@@ -538,9 +562,15 @@ const ProductDetail = () => {
             <FeatPill
               icon={
                 product.inStock ? (
-                  <span className="w-2 h-2 rounded-full bg-[#2D7A4F]" aria-hidden />
+                  <span
+                    className="w-2 h-2 rounded-full bg-[#2D7A4F]"
+                    aria-hidden
+                  />
                 ) : (
-                  <span className="w-2 h-2 rounded-full bg-[#E5483D]" aria-hidden />
+                  <span
+                    className="w-2 h-2 rounded-full bg-[#E5483D]"
+                    aria-hidden
+                  />
                 )
               }
               label={product.inStock ? "Disponible" : "Indisponible"}
@@ -604,7 +634,9 @@ const ProductDetail = () => {
               <Truck size={18} className="text-[#0E3B2E]" aria-hidden />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[#0E3B2E]">Retrait en magasin</p>
+              <p className="text-sm font-bold text-[#0E3B2E]">
+                Retrait en magasin
+              </p>
               <p className="text-xs text-[#0F1A14]/60 mt-0.5">
                 Salamarket Toulouse · 8 av. Larrieu&#8209;Thibaud
               </p>
@@ -614,31 +646,27 @@ const ProductDetail = () => {
             </div>
           </section>
 
-          {/* Traçabilité halal — boucherie/charcuterie uniquement.
-              Le lot QR est la promesse différenciante Salamarket : chaque
-              barquette est traçable jusqu'à l'éleveur. On le pose ici sur
-              chaque PDP viande pour ancrer la promesse marque et drainer
-              vers /lot/L… qui montre le détail. */}
+          {/* Passeport halal — boucherie/charcuterie uniquement. En évidence
+              sur la PDP : HalalBadgeLink (variant detail) résout le lot RÉEL le
+              plus récent (produits_lots) et draine vers /lot/{id} (page de
+              traçabilité publique). Bloc statique propre si aucun lot — jamais
+              de lien démo codé en dur. Suivi d'une ligne explicative QR. */}
           {showHalalBadge && (
-            <section className="mt-3 flex items-start gap-3 rounded-3xl border border-[#C9A227]/40 bg-[#FBF6E2] p-4 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:340ms] [animation-fill-mode:backwards]">
-              <div className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center">
-                <QrCode size={18} className="text-[#C9A227]" aria-hidden />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#3E2E0A]">
-                  Traçabilité halal
-                </p>
-                <p className="text-xs text-[#3E2E0A]/75 mt-0.5 leading-relaxed">
-                  Chaque lot a son QR code unique pour vérifier l&apos;origine
-                  et la certification.{" "}
-                  <Link
-                    to={traceabilityLotPath}
-                    className="underline underline-offset-2 font-semibold text-[#0E3B2E] hover:text-[#082A20]"
-                  >
-                    {currentLotId ? "Voir le lot de ce produit" : "Voir un lot d’exemple"}
-                  </Link>
-                </p>
-              </div>
+            <section className="mt-3 flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:340ms] [animation-fill-mode:backwards]">
+              <HalalBadgeLink
+                productId={product.id}
+                isCertifiable={showHalalBadge}
+                variant="detail"
+              />
+              <p className="px-1 text-[11px] text-[#3E2E0A]/70 inline-flex items-center gap-1.5 leading-relaxed">
+                <QrCode
+                  size={12}
+                  className="text-[#C9A227] shrink-0"
+                  aria-hidden
+                />
+                Chaque lot a son QR code unique pour vérifier l&apos;origine et
+                la certification.
+              </p>
             </section>
           )}
 
@@ -669,9 +697,7 @@ const ProductDetail = () => {
           (CtaCluster) gère son propre rétrécissement, ce padding ne fait que
           border la gouttière. */}
       <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-border md:hidden">
-        <div
-          className="max-w-2xl mx-auto px-3 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        >
+        <div className="max-w-2xl mx-auto px-3 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <CtaCluster compact />
         </div>
       </div>

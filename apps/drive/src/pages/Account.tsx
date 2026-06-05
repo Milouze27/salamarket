@@ -24,15 +24,25 @@ export default function Account() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDone, setDeleteDone] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  const DELETE_KEYWORD = "SUPPRIMER";
+  const canConfirmDelete =
+    deleteConfirmText.trim().toUpperCase() === DELETE_KEYWORD;
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteConfirmText("");
+  };
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/", { replace: true });
   };
 
-  const displayEmail = profile?.email ?? user?.email ?? "—";
-  const displayName = profile?.full_name || "—";
-  const displayPhone = profile?.phone || "—";
+  const displayEmail = profile?.email ?? user?.email ?? "·";
+  const displayName = profile?.full_name || "·";
+  const displayPhone = profile?.phone || "·";
 
   /**
    * RGPD art. 20 — droit à la portabilité. On rassemble les données du compte
@@ -84,7 +94,9 @@ export default function Account() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "L'export de vos données a échoué.",
+        err instanceof Error
+          ? err.message
+          : "L'export de vos données a échoué.",
       );
     } finally {
       setExporting(false);
@@ -92,33 +104,40 @@ export default function Account() {
   };
 
   /**
-   * RGPD art. 17 — droit à l'effacement. La clé anon ne permet pas (à juste
-   * titre) de supprimer l'enregistrement auth.users : cette suppression
-   * irréversible est faite côté serveur. Ici on exécute ce que l'utilisateur
-   * PEUT faire lui-même en toute sécurité : anonymiser immédiatement son profil
-   * (suppression des PII nom + téléphone via l'UPDATE self autorisé par la RLS),
-   * puis déconnexion. Les commandes passées sont conservées sous forme
+   * RGPD art. 17 · droit à l'effacement. L'effacement (anonymisation des PII +
+   * révocation des sessions) est réalisé côté serveur par l'edge function
+   * `gdpr-delete-account`, appelée avec le JWT de l'utilisateur : la fonction
+   * dérive l'identité du token seul, donc un utilisateur ne peut effacer QUE
+   * son propre compte. Les commandes passées sont conservées sous forme
    * pseudonymisée pour les obligations comptables (10 ans), comme indiqué dans
-   * la politique de confidentialité. La purge complète du compte est finalisée
-   * sous 30 jours.
+   * la politique de confidentialité.
    */
   const handleDeleteConfirmed = async () => {
-    if (!user) return;
+    if (!user || !canConfirmDelete) return;
     setActionError(null);
     setDeleting(true);
     try {
-      const { error: anonError } = await supabase
-        .from("profiles")
-        .update({ full_name: null, phone: null })
-        .eq("id", user.id);
-      if (anonError) throw anonError;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Session expirée, reconnectez-vous.");
+
+      const { error: fnError } = await supabase.functions.invoke(
+        "gdpr-delete-account",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+      if (fnError) throw fnError;
 
       setDeleteDone(true);
+      setDeleteConfirmText("");
       await signOut();
       window.setTimeout(() => navigate("/", { replace: true }), 2800);
     } catch (err) {
       setActionError(
-        err instanceof Error ? err.message : "La demande de suppression a échoué.",
+        err instanceof Error
+          ? err.message
+          : "La demande de suppression a échoué.",
       );
       setDeleting(false);
     }
@@ -129,7 +148,11 @@ export default function Account() {
       <AppHeader showBack title="Mon compte" />
       <main className="max-w-md mx-auto px-4 py-6 flex flex-col gap-5">
         {loading ? (
-          <ul className="flex flex-col gap-3" aria-busy="true" aria-label="Chargement du compte">
+          <ul
+            className="flex flex-col gap-3"
+            aria-busy="true"
+            aria-label="Chargement du compte"
+          >
             <li className="h-32 rounded-2xl bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
             <li className="h-12 rounded-xl bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
             <li className="h-12 rounded-xl bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
@@ -190,7 +213,11 @@ export default function Account() {
                 <Package size={17} strokeWidth={2.25} />
               </span>
               <span className="flex-1 text-left">Mes commandes</span>
-              <ChevronRight size={18} className="text-muted shrink-0" aria-hidden />
+              <ChevronRight
+                size={18}
+                className="text-muted shrink-0"
+                aria-hidden
+              />
             </button>
 
             {/* RGPD — privacy controls */}
@@ -252,7 +279,12 @@ export default function Account() {
                 }}
                 className="min-h-[48px] rounded-xl border border-red-200 px-4 flex items-center gap-3 text-red-600 font-semibold active:scale-[0.99] hover:bg-red-50 transition-all"
               >
-                <Trash2 size={17} strokeWidth={2.25} className="shrink-0" aria-hidden />
+                <Trash2
+                  size={17}
+                  strokeWidth={2.25}
+                  className="shrink-0"
+                  aria-hidden
+                />
                 <span className="flex-1 text-left">Supprimer mon compte</span>
               </button>
             </section>
@@ -279,13 +311,15 @@ export default function Account() {
           aria-labelledby="delete-account-title"
           onClick={(e) => {
             if (e.target === e.currentTarget && !deleting && !deleteDone) {
-              setShowDeleteModal(false);
+              closeDeleteModal();
             }
           }}
         >
           <div
             className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
+            style={{
+              paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)",
+            }}
           >
             {deleteDone ? (
               <>
@@ -324,10 +358,43 @@ export default function Account() {
                   passées sont conservées de façon anonymisée pour nos
                   obligations comptables.
                 </p>
+
+                <div className="mt-5">
+                  <label
+                    htmlFor="delete-confirm-input"
+                    className="block text-[13px] font-medium text-ink/75"
+                  >
+                    Pour confirmer, tapez{" "}
+                    <span className="font-bold text-red-600 tracking-wide">
+                      {DELETE_KEYWORD}
+                    </span>
+                  </label>
+                  <input
+                    id="delete-confirm-input"
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    disabled={deleting}
+                    placeholder={DELETE_KEYWORD}
+                    aria-describedby="delete-confirm-hint"
+                    className="mt-2 w-full min-h-[48px] rounded-xl border border-border bg-white px-4 text-[16px] text-text font-semibold tracking-wide placeholder:font-normal placeholder:tracking-normal placeholder:text-muted focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:opacity-50 transition-all"
+                  />
+                  <p
+                    id="delete-confirm-hint"
+                    className="mt-1.5 text-[12px] text-muted"
+                  >
+                    Le bouton se débloque une fois le mot saisi.
+                  </p>
+                </div>
+
                 <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowDeleteModal(false)}
+                    onClick={closeDeleteModal}
                     disabled={deleting}
                     className="min-h-[44px] px-5 rounded-xl border border-border text-sapin font-semibold active:scale-[0.98] hover:bg-sapin/5 disabled:opacity-50 transition-all"
                   >
@@ -336,10 +403,12 @@ export default function Account() {
                   <button
                     type="button"
                     onClick={handleDeleteConfirmed}
-                    disabled={deleting}
-                    className="min-h-[44px] px-5 rounded-xl bg-red-600 text-white font-semibold active:scale-[0.98] hover:bg-red-700 disabled:opacity-50 transition-all inline-flex items-center justify-center gap-2"
+                    disabled={deleting || !canConfirmDelete}
+                    className="min-h-[44px] px-5 rounded-xl bg-red-600 text-white font-semibold active:scale-[0.98] hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all inline-flex items-center justify-center gap-2"
                   >
-                    {deleting && <Loader2 size={16} className="animate-spin" aria-hidden />}
+                    {deleting && (
+                      <Loader2 size={16} className="animate-spin" aria-hidden />
+                    )}
                     {deleting ? "Suppression…" : "Confirmer la suppression"}
                   </button>
                 </div>

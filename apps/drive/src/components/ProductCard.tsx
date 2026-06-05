@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { BadgeCheck, Plus, Scale } from "lucide-react";
+import { Plus, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, unitLabel } from "@/lib/format";
@@ -11,6 +11,11 @@ import {
   isPlaceholderUrl,
 } from "@/components/ProductImageFallback";
 import { cdnImage } from "@/lib/imageUrl";
+import {
+  DlcPriceTag,
+  HalalBadgeLink,
+  useDlcDiscount,
+} from "@/components/HalalBadgeLink";
 
 interface Props {
   product: Product;
@@ -107,6 +112,17 @@ export const ProductCard = ({ product }: Props) => {
   const showHalalBadge =
     product.category === "boucherie" || product.category === "charcuterie";
 
+  // Remise DLC anti-gaspi (source réelle : vue v_dlc_alerts via useDlcDiscount).
+  // On ne l'applique qu'au prix fixe à l'unité : pour le Drive au poids le prix
+  // affiché est un €/kg (la remise lot serait à appliquer côté préparation, hors
+  // périmètre de cette card). null si aucune remise exploitable → prix plein.
+  const dlcDiscount = useDlcDiscount(
+    product.id,
+    product.priceCents,
+    unitType !== "weight",
+  );
+  const showDlcPrice = dlcDiscount != null && unitType !== "weight";
+
   // Texte affiché sous le prix : "au kg" / "à la pièce" pour unit,
   // "Vente au poids" pour weight, "3 tailles" pour bracket.
   const unitMeta =
@@ -148,16 +164,15 @@ export const ProductCard = ({ product }: Props) => {
         )}
 
         {/* Layout original : HALAL en haut-gauche, AU POIDS en haut-droite.
-            Taille réduite (h=20, text-[9px]) pour éviter le chevauchement
-            qui se produisait avec le format précédent (h=24, text-[10px]). */}
+            Passeport halal discret (HalalBadgeLink, variant card) : cliquable
+            vers /lot/{id} quand un lot existe, sinon pill statique. */}
         {showHalalBadge && (
-          <span
-            className="absolute top-2 left-2 z-10 inline-flex items-center gap-0.5 pl-1 pr-1.5 h-[20px] rounded-full bg-[#FAF7EE]/95 backdrop-blur text-[#0E3B2E] text-[9px] font-extrabold uppercase tracking-[0.06em] shadow-sm ring-1 ring-black/5"
-            aria-label="Produit halal certifié"
-          >
-            <BadgeCheck size={11} className="text-[#C9A227]" aria-hidden />
-            Halal
-          </span>
+          <HalalBadgeLink
+            productId={product.id}
+            isCertifiable={showHalalBadge}
+            variant="card"
+            className="absolute top-2 left-2 z-10"
+          />
         )}
         {isVariable && !isOutOfStock && (
           <span
@@ -219,11 +234,16 @@ export const ProductCard = ({ product }: Props) => {
           {product.name}
         </h3>
         <div className="mt-1 flex flex-col gap-0.5">
-          <span className="text-[15.5px] md:text-[16px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.01em] leading-tight">
-            {unitType === "weight" && product.pricePerKg != null
-              ? `${product.pricePerKg.toFixed(2).replace(".", ",")} €/kg`
-              : formatPrice(product.priceCents)}
-          </span>
+          {showDlcPrice && dlcDiscount ? (
+            // Prix barré + remisé + tag "-X% · DLC courte" (remise réelle DLC).
+            <DlcPriceTag discount={dlcDiscount} variant="card" />
+          ) : (
+            <span className="text-[15.5px] md:text-[16px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.01em] leading-tight">
+              {unitType === "weight" && product.pricePerKg != null
+                ? `${product.pricePerKg.toFixed(2).replace(".", ",")} €/kg`
+                : formatPrice(product.priceCents)}
+            </span>
+          )}
           <span className="text-[10.5px] uppercase tracking-[0.12em] text-[#0F1A14]/55 font-semibold truncate">
             {unitMeta}
           </span>
@@ -232,11 +252,7 @@ export const ProductCard = ({ product }: Props) => {
 
       {/* Région live polie — annonce l'ajout au panier aux lecteurs d'écran
           (le chip volant + bump compteur sont aria-hidden). sr-only. */}
-      <span
-        key={announce?.key}
-        aria-live="polite"
-        className="sr-only"
-      >
+      <span key={announce?.key} aria-live="polite" className="sr-only">
         {announce?.msg ?? ""}
       </span>
     </article>

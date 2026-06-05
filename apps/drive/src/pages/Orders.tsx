@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowRight,
@@ -20,6 +21,7 @@ import { toZonedTime } from "date-fns-tz";
 import { toast } from "sonner";
 
 import { AppHeader } from "@/components/AppHeader";
+import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserOrders, type UserOrder } from "@/hooks/useUserOrders";
 import { supabase } from "@/integrations/supabase/client";
@@ -151,6 +153,17 @@ const StatusPill = ({ status }: { status: string }) => {
   );
 };
 
+// Statuts pour lesquels la frise de suivi temps-réel est pertinente
+// (commande en cours, ni annulée ni archivée). On couvre EN + FR.
+const ACTIVE_STATUSES = new Set([
+  "confirmed",
+  "preparing",
+  "ready",
+  "a_preparer",
+  "en_preparation",
+  "pret",
+]);
+
 const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
   const items = Array.isArray(order.items) ? order.items : [];
   const itemCount = items.reduce((n, i) => n + i.quantity, 0);
@@ -169,7 +182,9 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
 
     try {
       // Collect unique product IDs
-      const productIds = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
+      const productIds = [
+        ...new Set(items.map((i) => i.product_id).filter(Boolean)),
+      ];
       if (productIds.length === 0) {
         toast.error("Aucun produit à ajouter");
         return;
@@ -221,11 +236,16 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
       }
 
       if (unavailable > 0) {
-        toast.success(`${added} produit${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""} au panier`, {
-          description: `${unavailable} produit${unavailable > 1 ? "s" : ""} non disponible${unavailable > 1 ? "s" : ""}`,
-        });
+        toast.success(
+          `${added} produit${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""} au panier`,
+          {
+            description: `${unavailable} produit${unavailable > 1 ? "s" : ""} non disponible${unavailable > 1 ? "s" : ""}`,
+          },
+        );
       } else {
-        toast.success(`${added} produit${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""} au panier`);
+        toast.success(
+          `${added} produit${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""} au panier`,
+        );
       }
 
       navigate("/panier");
@@ -267,7 +287,10 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
           .map((item) => `${item.quantity} × ${item.name}`)
           .join(" · ")}
         {remaining > 0 && (
-          <span className="font-medium text-[#0E3B2E]"> +{remaining} autre{remaining > 1 ? "s" : ""}</span>
+          <span className="font-medium text-[#0E3B2E]">
+            {" "}
+            +{remaining} autre{remaining > 1 ? "s" : ""}
+          </span>
         )}
       </p>
 
@@ -283,9 +306,21 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
           ) : (
             <Banknote size={12} className="text-[#0E3B2E]" aria-hidden />
           )}
-          <span>{itemCount} article{itemCount > 1 ? "s" : ""}</span>
+          <span>
+            {itemCount} article{itemCount > 1 ? "s" : ""}
+          </span>
         </span>
       </div>
+
+      {/* Suivi temps-réel : frise de statut (commandes en cours) */}
+      {ACTIVE_STATUSES.has(order.status) && (
+        <div className="mt-3 pt-3 border-t border-border">
+          <OrderStatusTimeline
+            status={order.status}
+            slotStart={order.pickup_slot?.slot_start ?? null}
+          />
+        </div>
+      )}
 
       {/* Actions row : reorder (44×44 tap) + voir détail */}
       <div className="mt-3 flex items-center gap-2">
@@ -317,9 +352,86 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
   );
 };
 
+/** Statut FR (commandes_drive) -> statut EN (UI / STATUS_CONFIG). */
+const STATUT_FR_TO_EN: Record<string, string> = {
+  a_preparer: "confirmed",
+  en_preparation: "preparing",
+  pret: "ready",
+  retire: "picked_up",
+  annule: "cancelled",
+};
+
 export default function Orders() {
   const { user, loading: authLoading } = useAuth();
-  const { data: orders, isLoading, isError, refetch } = useUserOrders(user?.id, user?.email);
+  const userId = user?.id;
+  const email = user?.email;
+  const queryClient = useQueryClient();
+  const {
+    data: orders,
+    isLoading,
+    isError,
+    refetch,
+  } = useUserOrders(userId, email);
+
+  // Suivi temps-réel : on écoute les changements de statut côté
+  // commandes_drive (filtré sur l'email du client) ET côté orders (filtré
+  // sur user_id). À chaque UPDATE on patche le cache React Query en live,
+  // puis on invalide pour resynchroniser items / créneau si besoin.
+  useEffect(() => {
+    if (!userId || !email) return;
+
+    const queryKey = ["user-orders", userId, email] as const;
+
+    const patchStatus = (orderId: string, statusEn: string) => {
+      queryClient.setQueryData<UserOrder[]>(queryKey, (prev) =>
+        prev
+          ? prev.map((o) => (o.id === orderId ? { ...o, status: statusEn } : o))
+          : prev,
+      );
+    };
+
+    const channel = supabase
+      .channel(`user-orders-${userId}`)
+      // Drive au poids : commandes_drive filtré sur l'email du client.
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "commandes_drive",
+          filter: `client_email=eq.${email}`,
+        },
+        (payload) => {
+          const row = payload.new as { id?: string; statut?: string };
+          if (row?.id && row.statut) {
+            patchStatus(row.id, STATUT_FR_TO_EN[row.statut] ?? row.statut);
+          }
+          queryClient.invalidateQueries({ queryKey });
+        },
+      )
+      // Commandes legacy (Stripe Checkout) : orders filtré sur user_id.
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as { id?: string; status?: string };
+          if (row?.id && row.status) {
+            patchStatus(row.id, row.status);
+          }
+          queryClient.invalidateQueries({ queryKey });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, email, queryClient]);
 
   return (
     <div className="min-h-dvh bg-[#FAF7EE] pb-20 md:pb-0">
@@ -367,7 +479,8 @@ export default function Orders() {
                 Aucune commande pour le moment
               </h2>
               <p className="text-sm text-muted max-w-xs">
-                Vos prochaines commandes apparaîtront ici. Découvrez notre sélection halal pour commencer.
+                Vos prochaines commandes apparaîtront ici. Découvrez notre
+                sélection halal pour commencer.
               </p>
             </div>
             <Link

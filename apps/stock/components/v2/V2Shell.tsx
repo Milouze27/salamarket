@@ -11,7 +11,9 @@ import {
   ArrowUpRight,
   BarChart3,
   Boxes,
+  Building2,
   ChevronRight,
+  ClipboardCheck,
   ClipboardList,
   Clock,
   Compass,
@@ -27,6 +29,7 @@ import {
   MoreHorizontal,
   PackageSearch,
   QrCode,
+  Receipt,
   Repeat2,
   ScanLine,
   Search,
@@ -263,6 +266,28 @@ const ITEMS: Record<string, NavItem> = {
     icon: TrendingDown,
     desc: "Surveillance casse & démarque",
   },
+  // Espace Pro (B2B) — admin/manager only, absents des allowlists rôle.
+  comptesPro: {
+    label: "Comptes pro",
+    fullLabel: "Comptes pro",
+    href: "/v2/admin/comptes-pro",
+    icon: Building2,
+    desc: "Clients B2B + conditions",
+  },
+  commandesPro: {
+    label: "Cmd. pro",
+    fullLabel: "Commandes pro",
+    href: "/v2/admin/commandes-pro",
+    icon: ClipboardCheck,
+    desc: "Commandes B2B à traiter",
+  },
+  facturesPro: {
+    label: "Factures pro",
+    fullLabel: "Factures pro",
+    href: "/v2/admin/factures-pro",
+    icon: Receipt,
+    desc: "Facturation B2B + encours",
+  },
 };
 
 /**
@@ -334,6 +359,9 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.alertes,
     ITEMS.alertesSurplus,
     ITEMS.activite,
+    ITEMS.comptesPro,
+    ITEMS.commandesPro,
+    ITEMS.facturesPro,
     ITEMS.fournisseurs,
     ITEMS.po,
     ITEMS.bonsReception,

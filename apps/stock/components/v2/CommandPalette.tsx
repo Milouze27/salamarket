@@ -15,7 +15,9 @@ import {
   Clock,
   Compass,
   CornerDownLeft,
+  Fingerprint,
   FileSpreadsheet,
+  FlaskConical,
   Gauge,
   Home,
   LayoutDashboard,
@@ -30,6 +32,7 @@ import {
   Sparkles,
   Store,
   Tag,
+  TrendingDown,
   TrendingUp,
   Truck,
   Warehouse,
@@ -267,6 +270,15 @@ const PILOTER: PaletteItem[] = [
       "dlc demarque remise courte date peremption perime solde promo bradage",
   },
   {
+    id: "nav-casse-anomalies",
+    label: "Anomalies casse",
+    href: "/v2/admin/casse-anomalies",
+    icon: TrendingDown,
+    hint: "Surveillance casse & démarque",
+    keywords:
+      "casse anomalie demarque perte vol perime ecart surveillance suivi fuite manquant",
+  },
+  {
     id: "nav-counter",
     label: "Écran comptoir",
     href: "/v2/counter",
@@ -311,6 +323,15 @@ const ADMINISTRER: PaletteItem[] = [
     keywords: "lot tracabilite qr code halal certif numero lot batch",
   },
   {
+    id: "nav-labo",
+    label: "Recettes & marges",
+    href: "/v2/labo",
+    icon: FlaskConical,
+    hint: "Recettes, coûts, marges",
+    keywords:
+      "labo laboratoire recette marge cout cuisine production fabrication transformation prix revient nomenclature",
+  },
+  {
     id: "nav-inventaire",
     label: "Inventaire tournant",
     href: "/v2/inventaire",
@@ -325,6 +346,15 @@ const ADMINISTRER: PaletteItem[] = [
     icon: Clock,
     hint: "Comptages passés + écarts",
     keywords: "historique inventaire passe ecart archive journal comptage",
+  },
+  {
+    id: "nav-pointage",
+    label: "Pointage staff",
+    href: "/v2/admin/pointage",
+    icon: Fingerprint,
+    hint: "Présences et heures staff",
+    keywords:
+      "pointage staff presence heures badge horaire planning employe equipe entree sortie temps travail",
   },
   {
     id: "nav-recap",

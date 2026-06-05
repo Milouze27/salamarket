@@ -14,7 +14,9 @@ import {
   ClipboardList,
   Clock,
   Compass,
+  Fingerprint,
   FileSpreadsheet,
+  FlaskConical,
   Gauge,
   Home,
   LayoutDashboard,
@@ -33,6 +35,7 @@ import {
   Sparkles,
   Sun,
   Tag,
+  TrendingDown,
   Truck,
   X,
 } from "lucide-react";
@@ -155,6 +158,13 @@ const ADMIN_GROUPS: MenuGroup[] = [
         accent: "danger",
       },
       {
+        href: "/v2/admin/casse-anomalies",
+        label: "Anomalies casse",
+        desc: "Surveillance casse & démarque",
+        icon: TrendingDown,
+        accent: "danger",
+      },
+      {
         href: "/v2/counter",
         label: "Écran comptoir",
         desc: "TV/iPad - commandes prêtes",
@@ -191,6 +201,12 @@ const ADMIN_GROUPS: MenuGroup[] = [
         icon: Boxes,
       },
       {
+        href: "/v2/labo",
+        label: "Recettes & marges",
+        desc: "Recettes, coûts, marges",
+        icon: FlaskConical,
+      },
+      {
         href: "/v2/inventaire",
         label: "Inventaire tournant",
         desc: "5-10 produits du jour",
@@ -201,6 +217,12 @@ const ADMIN_GROUPS: MenuGroup[] = [
         label: "Historique inventaires",
         desc: "Comptages passés + écarts",
         icon: Clock,
+      },
+      {
+        href: "/v2/admin/pointage",
+        label: "Pointage staff",
+        desc: "Présences et heures staff",
+        icon: Fingerprint,
       },
       {
         href: "/v2/admin/recap-fiscal",

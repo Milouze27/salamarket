@@ -7,12 +7,15 @@ import {
   ArrowUpRight,
   ArrowRight,
   ClipboardList,
+  Fingerprint,
+  FlaskConical,
   Gauge,
   PackageSearch,
   Repeat2,
   ShoppingBag,
   Sparkles,
   Tag,
+  TrendingDown,
 } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
 import { V2Shell } from "@/components/v2/V2Shell";
@@ -80,6 +83,24 @@ const MANAGER_ACTIONS = [
     title: "Imprimer étiquettes",
     desc: "EAN-13 Brother QL-820",
     icon: Tag,
+  },
+  {
+    href: "/v2/labo",
+    title: "Recettes & marges",
+    desc: "Recettes, coûts, marges",
+    icon: FlaskConical,
+  },
+  {
+    href: "/v2/admin/pointage",
+    title: "Pointage staff",
+    desc: "Présences et heures staff",
+    icon: Fingerprint,
+  },
+  {
+    href: "/v2/admin/casse-anomalies",
+    title: "Anomalies casse",
+    desc: "Surveillance casse & démarque",
+    icon: TrendingDown,
   },
 ] as const;
 

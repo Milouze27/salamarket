@@ -15,7 +15,9 @@ import {
   ClipboardList,
   Clock,
   Compass,
+  Fingerprint,
   FileSpreadsheet,
+  FlaskConical,
   Gauge,
   Home,
   LayoutDashboard,
@@ -31,6 +33,7 @@ import {
   ShoppingBag,
   Sparkles,
   Tag,
+  TrendingDown,
   Truck,
   X,
 } from "lucide-react";
@@ -237,6 +240,29 @@ const ITEMS: Record<string, NavItem> = {
     icon: ScanLine,
     desc: "À étiqueter en interne",
   },
+  // Modules admin/manager only (absents des allowlists rôle → masqués pour
+  // caisse/reception/preparation, source unique @/lib/nav-roles).
+  labo: {
+    label: "Labo",
+    fullLabel: "Recettes & marges",
+    href: "/v2/labo",
+    icon: FlaskConical,
+    desc: "Recettes, coûts, marges",
+  },
+  pointage: {
+    label: "Pointage",
+    fullLabel: "Pointage staff",
+    href: "/v2/admin/pointage",
+    icon: Fingerprint,
+    desc: "Présences et heures staff",
+  },
+  casseAnomalies: {
+    label: "Casse",
+    fullLabel: "Anomalies casse",
+    href: "/v2/admin/casse-anomalies",
+    icon: TrendingDown,
+    desc: "Surveillance casse & démarque",
+  },
 };
 
 /**
@@ -297,6 +323,7 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.cockpit,
     ITEMS.forecast,
     ITEMS.alertesDlc,
+    ITEMS.casseAnomalies,
     ITEMS.counter,
   ];
   // Back-office complet, aligné sur le groupe ADMINISTRER de ⌘K. Le filtrage
@@ -311,8 +338,10 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.po,
     ITEMS.bonsReception,
     ITEMS.lots,
+    ITEMS.labo,
     ITEMS.inventaire,
     ITEMS.inventaireHisto,
+    ITEMS.pointage,
     ITEMS.recapFiscal,
     ITEMS.rapportMensuel,
     ITEMS.importCashmag,

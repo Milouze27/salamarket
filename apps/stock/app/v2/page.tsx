@@ -19,6 +19,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
 import { WeeklyPicksRail } from "@/components/v2/WeeklyPicksRail";
+import { OnboardingOverlay } from "@/components/v2/OnboardingOverlay";
 
 /** Hero action — promoted card sapin plein en tête du hub. */
 const HERO_ACTION = {
@@ -310,6 +311,10 @@ export default function V2HomePage() {
           Salam Stock V2 · multi-dépôts Toulouse
         </p>
       </footer>
+
+      {/* Accueil premier login — role-aware, montré une fois (localStorage).
+          Auto-guard SSR : ne se monte qu'après hydratation du store. */}
+      <OnboardingOverlay />
     </V2Shell>
   );
 }

@@ -76,16 +76,20 @@ export default function FournisseursPage() {
     }
     const { data, error } = await sb
       .from("fournisseurs")
-      .select(`
+      .select(
+        `
         id, nom, email, email_commandes, lead_time_jours, min_commande_euros,
         franco_de_port, jours_livraison, certif_organisme, certif_numero,
         certif_expire_le, certif_pdf_url, actif, adresse, siret
-      `)
+      `,
+      )
       .eq("actif", true)
       .order("nom");
     if (error) {
       console.error("[fournisseurs] load", error);
-      toast.error("Impossible de charger les fournisseurs");
+      toast.error(
+        "Impossible de charger les fournisseurs. Vérifie ta connexion.",
+      );
     } else {
       setList((data ?? []) as unknown as FournisseurFull[]);
     }
@@ -99,7 +103,7 @@ export default function FournisseursPage() {
           (f) =>
             f.nom.toLowerCase().includes(q) ||
             (f.certif_numero ?? "").toLowerCase().includes(q) ||
-            (f.certif_organisme ?? "").toLowerCase().includes(q)
+            (f.certif_organisme ?? "").toLowerCase().includes(q),
         )
       : list;
     return [...filteredList].sort((a, b) => {
@@ -133,9 +137,12 @@ export default function FournisseursPage() {
           <h1 className="h1-display mt-2">
             <em className="gold">Fournisseurs</em> halal
           </h1>
-          <p className="body-md mt-2" style={{ color: "var(--text-secondary)" }}>
-            Tous tes fournisseurs, triés par urgence de renouvellement de certif.
-            Une commande ne part jamais avec un certif KO.
+          <p
+            className="body-md mt-2"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Tous tes fournisseurs, triés par urgence de renouvellement de
+            certif. Une commande ne part jamais avec un certif KO.
           </p>
         </header>
 
@@ -155,7 +162,9 @@ export default function FournisseursPage() {
             className="absolute top-1/2 -translate-y-1/2 left-4 pointer-events-none"
           />
           <input
+            id="fournisseurs-search"
             type="search"
+            aria-label="Chercher un fournisseur par nom ou numéro de certificat"
             placeholder="Chercher un fournisseur, n° AVS/ARGML…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -166,12 +175,19 @@ export default function FournisseursPage() {
 
         {/* Liste */}
         {loading ? (
-          <div className="flex items-center gap-2 text-[14px]" style={{ color: "var(--text-secondary)" }}>
+          <div
+            className="flex items-center gap-2 text-[14px]"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <Loader2 size={16} className="animate-spin" /> Chargement…
           </div>
         ) : filtered.length === 0 ? (
           <div className="card text-center" style={{ padding: 28 }}>
-            <Building2 size={32} color="var(--text-tertiary)" className="mx-auto mb-2" />
+            <Building2
+              size={32}
+              color="var(--text-tertiary)"
+              className="mx-auto mb-2"
+            />
             <p className="body-md">Aucun fournisseur ne correspond.</p>
           </div>
         ) : (
@@ -185,12 +201,15 @@ export default function FournisseursPage() {
                 <div className="card" style={{ padding: 14 }}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h3 className="h3" style={{ color: "var(--text-primary)" }}>
+                      <h3
+                        className="h3"
+                        style={{ color: "var(--text-primary)" }}
+                      >
                         {f.nom}
                       </h3>
                       <p className="body-sm mt-0.5 flex items-center gap-1.5">
                         <Mail size={12} />
-                        {f.email_commandes ?? f.email ?? "—"}
+                        {f.email_commandes ?? f.email ?? "Email non renseigné"}
                       </p>
                     </div>
                     <button
@@ -262,12 +281,18 @@ function StatPill({
       style={{
         padding: 10,
         textAlign: "center",
-        background: value === 0 && tone !== "success" ? "var(--bg-card)" : "var(--bg-card)",
+        background:
+          value === 0 && tone !== "success"
+            ? "var(--bg-card)"
+            : "var(--bg-card)",
       }}
     >
       <p
         className="font-bold tabular leading-none"
-        style={{ fontSize: 22, color: value > 0 ? color : "var(--text-tertiary)" }}
+        style={{
+          fontSize: 22,
+          color: value > 0 ? color : "var(--text-tertiary)",
+        }}
       >
         {value}
       </p>
@@ -330,7 +355,9 @@ function EditDrawer({
     setSaving(false);
     if (error) {
       console.error(error);
-      toast.error("Impossible d'enregistrer");
+      toast.error(
+        "Impossible d'enregistrer le fournisseur. Réessaie dans un instant.",
+      );
       return;
     }
     toast.success("Fournisseur mis à jour");
@@ -375,7 +402,10 @@ function EditDrawer({
             type="button"
             onClick={onClose}
             className="absolute right-4 top-3 p-2 rounded-full"
-            style={{ background: "var(--bg-card)", border: "1px solid var(--border-light)" }}
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-light)",
+            }}
           >
             <X size={18} color="var(--text-secondary)" />
           </button>
@@ -411,7 +441,9 @@ function EditDrawer({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    lead_time_jours: e.target.value ? Number(e.target.value) : null,
+                    lead_time_jours: e.target.value
+                      ? Number(e.target.value)
+                      : null,
                   })
                 }
               />
@@ -426,7 +458,9 @@ function EditDrawer({
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    min_commande_euros: e.target.value ? Number(e.target.value) : null,
+                    min_commande_euros: e.target.value
+                      ? Number(e.target.value)
+                      : null,
                   })
                 }
               />
@@ -443,7 +477,9 @@ function EditDrawer({
               onChange={(e) =>
                 setForm({
                   ...form,
-                  franco_de_port: e.target.value ? Number(e.target.value) : null,
+                  franco_de_port: e.target.value
+                    ? Number(e.target.value)
+                    : null,
                 })
               }
             />
@@ -453,7 +489,7 @@ function EditDrawer({
             className="rounded-2xl p-4"
             style={{
               background: "var(--accent-gold-soft)",
-              border: "1px solid #E2D196",
+              border: "1px solid var(--accent-gold-hairline)",
             }}
           >
             <p className="section-eyebrow mb-3 flex items-center gap-1.5">
@@ -463,6 +499,7 @@ function EditDrawer({
             <Field label="Organisme">
               <select
                 className="input-field"
+                aria-label="Organisme certificateur halal"
                 value={form.certif_organisme ?? ""}
                 onChange={(e) =>
                   setForm({
@@ -472,7 +509,7 @@ function EditDrawer({
                   })
                 }
               >
-                <option value="">— Aucun —</option>
+                <option value="">Aucun</option>
                 {ORGANISMES.map((o) => (
                   <option key={o} value={o}>
                     {ORGANISME_LABELS[o]}

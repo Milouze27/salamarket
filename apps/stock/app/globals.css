@@ -252,11 +252,20 @@ body {
    ══════════════════════════════════════════════════════════════════════ */
 
 /* Anti-zoom-au-focus iOS : police ≥16px sur les contrôles de saisie, mais
-   SEULEMENT sur écrans tactiles. Préserve l'échelle typo desktop/souris. */
+   SEULEMENT sur écrans tactiles. Préserve l'échelle typo desktop/souris.
+   IMPORTANT : .input-field fixe font-size:15px avec une spécificité (0,1,0)
+   qui écrasait la règle d'élément (0,0,1) → le zoom au focus persistait sur
+   iPad. On remonte donc la spécificité ici en ciblant aussi la/les classe(s)
+   d'input. Les sélecteurs combinés (input.input-field…) gagnent sur .input-field
+   tout en restant scopés à la media coarse — le 15px desktop reste intact. */
 @media (pointer: coarse) {
   input,
   select,
-  textarea {
+  textarea,
+  input.input-field,
+  select.input-field,
+  textarea.input-field,
+  .input-field {
     font-size: max(16px, 1rem);
   }
 }

@@ -7,6 +7,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
+import { GlossaryTerm } from "@/components/v2/GlossaryTerm";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot } from "@/lib/db";
 import type { ProduitInDepot } from "@/lib/types/db";
@@ -109,7 +110,7 @@ export default function V2EtiquettesPage() {
     const ignored = selected.length - priced.length;
     if (priced.length === 0) {
       toast.error(
-        "Aucun produit sélectionné n'a de prix de vente — renseigne-le avant l'étiquette gondole.",
+        "Aucun produit sélectionné n'a de prix de vente. Renseigne-le avant l'étiquette gondole.",
       );
       return;
     }
@@ -149,7 +150,7 @@ export default function V2EtiquettesPage() {
         <p className="label-caps text-primary mt-3">Étiquettes</p>
         <h1 className="h1 text-text-primary mt-1">Imprimer les étiquettes</h1>
         <p className="body-md text-text-secondary mt-1">
-          Brother QL-820 (62×29 mm) ou gondole rayon (100×70 mm) — prix produit,
+          Brother QL-820 (62×29 mm) ou gondole rayon (100×70 mm) · prix produit,
           code-barres et picto halal.
         </p>
       </header>
@@ -199,7 +200,15 @@ export default function V2EtiquettesPage() {
                       {p.nom}
                     </p>
                     <p className="text-[11px] text-text-tertiary font-mono">
-                      {p.ean ?? "EAN —"}
+                      {p.ean ?? (
+                        <>
+                          <GlossaryTerm
+                            term="EAN"
+                            def="Code-barres article, 13 chiffres."
+                          />{" "}
+                          absent
+                        </>
+                      )}
                       {prix != null && (
                         <span className="text-text-secondary not-italic">
                           {"  ·  "}
@@ -270,9 +279,18 @@ export default function V2EtiquettesPage() {
           </button>
           <p className="text-xs text-text-tertiary text-center mt-2 inline-flex items-center gap-1 justify-center w-full">
             <Tag className="w-3 h-3" />
-            {format === "brother"
-              ? "PDF Brother QL-820 — EAN-13 avec fallback Code128."
-              : "PDF gondole A6 — prix géant + prix/kg + picto halal."}
+            {format === "brother" ? (
+              <>
+                PDF Brother QL-820 ·{" "}
+                <GlossaryTerm
+                  term="EAN-13"
+                  def="Code-barres standard à 13 chiffres."
+                />{" "}
+                avec fallback Code128.
+              </>
+            ) : (
+              "PDF gondole A6 · prix géant + prix/kg + picto halal."
+            )}
           </p>
         </section>
       )}

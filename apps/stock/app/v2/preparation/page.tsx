@@ -570,10 +570,9 @@ export default function V2PreparationKanbanPage() {
           </div>
           <span
             className={`inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full ${
-              isLive
-                ? "bg-success-soft text-success"
-                : "bg-cream text-text-tertiary"
+              isLive ? "bg-success-soft text-success" : "text-text-tertiary"
             }`}
+            style={isLive ? undefined : { background: "var(--surface-2)" }}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
@@ -771,7 +770,7 @@ export default function V2PreparationKanbanPage() {
                       >
                         <EmptyIcon
                           className="w-5 h-5"
-                          style={{ color: "var(--accent-gold)" }}
+                          style={{ color: "var(--accent-gold-dim)" }}
                           strokeWidth={1.8}
                           aria-hidden
                         />
@@ -840,12 +839,12 @@ export default function V2PreparationKanbanPage() {
                           ? "text-primary-dark"
                           : isLate
                             ? "text-text-tertiary"
-                            : "bg-cream text-text-primary";
+                            : "text-text-primary";
                         const chipStyle: CSSProperties = isUrgent
                           ? { background: "var(--accent-gold)" }
                           : isLate
                             ? { background: "var(--border-light)" }
-                            : {};
+                            : { background: "var(--surface-2)" };
                         return (
                           <motion.div
                             key={cmd.id}
@@ -853,7 +852,7 @@ export default function V2PreparationKanbanPage() {
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.18 }}
-                            className={`bg-white border rounded-2xl p-3.5 shadow-card ${cardClass}`}
+                            className={`bg-card-bg border rounded-2xl p-3.5 shadow-card ${cardClass}`}
                             style={cardStyle}
                           >
                             {isUrgent && (
@@ -909,7 +908,8 @@ export default function V2PreparationKanbanPage() {
                                 {isPreAutorise ? (
                                   <span
                                     title="Stripe pré-autorisé, capture après pesée"
-                                    className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold bg-cream text-primary px-2 py-0.5 rounded-full"
+                                    className="ml-1 inline-flex items-center gap-1 text-[10.5px] font-bold text-primary px-2 py-0.5 rounded-full"
+                                    style={{ background: "var(--surface-2)" }}
                                   >
                                     <Lock className="w-3 h-3" aria-hidden />
                                     Pré-aut.{" "}
@@ -942,7 +942,12 @@ export default function V2PreparationKanbanPage() {
                             <div className="mt-3 flex gap-2">
                               <Link
                                 href={`/v2/preparation/${cmd.id}`}
-                                className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-primary bg-cream rounded-full py-2 active:scale-[0.98] transition-transform"
+                                className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] text-[12px] font-bold text-text-primary rounded-full py-2 active:scale-[0.98] transition-transform"
+                                style={{
+                                  background: "var(--surface-2)",
+                                  boxShadow:
+                                    "inset 0 0 0 1px var(--border-card)",
+                                }}
                               >
                                 Détail
                                 <ChevronRight className="w-3.5 h-3.5" />
@@ -950,7 +955,7 @@ export default function V2PreparationKanbanPage() {
                               {!isFinal && (
                                 <button
                                   onClick={() => setActionFor(cmd)}
-                                  className="flex-1 inline-flex items-center justify-center gap-1 text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform"
+                                  className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform"
                                 >
                                   Avancer
                                   <ArrowRight className="w-3.5 h-3.5" />
@@ -1017,7 +1022,12 @@ export default function V2PreparationKanbanPage() {
                 : "Aucune commande en attente de préparation."}
             </div>
           ) : (
-            <div className="space-y-4">
+            /* L99-iPad : mobile = catégories empilées (space-y-4). Sur md+
+               (iPad paysage, shell wide 820px) on passe en 2 colonnes pour
+               exploiter la largeur. Chaque <section> est autonome (header +
+               liste collapsible), la grille gère les hauteurs auto par ligne
+               donc les animations de collapse restent stables. */
+            <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4 md:items-start">
               {batchCategories.map((cat) => {
                 const isCollapsed = collapsedCategories.has(cat.categorie);
                 return (
@@ -1062,10 +1072,10 @@ export default function V2PreparationKanbanPage() {
                               return (
                                 <div
                                   key={product.produit_id}
-                                  className={`bg-white rounded-lg border transition-opacity ${
+                                  className={`bg-card-bg rounded-lg border transition-opacity ${
                                     isPicked ? "opacity-60" : ""
                                   }`}
-                                  style={{ borderColor: "var(--border-light)" }}
+                                  style={{ borderColor: "var(--border-card)" }}
                                 >
                                   <div className="flex items-center gap-3 p-3">
                                     {/* Checkbox */}
@@ -1237,7 +1247,7 @@ export default function V2PreparationKanbanPage() {
               animate={{ y: 0 }}
               exit={{ y: 60 }}
               transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="bg-white w-full max-w-[460px] md:max-w-[600px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
+              className="bg-card-bg w-full max-w-[460px] md:max-w-[600px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between mb-3">
@@ -1287,7 +1297,11 @@ export default function V2PreparationKanbanPage() {
                 )}
                 <Link
                   href={`/v2/preparation/${actionFor.id}`}
-                  className="w-full bg-white border border-rule text-text-primary rounded-[18px] py-3 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
+                  className="w-full border text-text-primary rounded-[18px] py-3 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
+                  style={{
+                    background: "var(--surface-2)",
+                    borderColor: "var(--border-card)",
+                  }}
                 >
                   <PlayCircle className="w-4 h-4 text-primary" />
                   Ouvrir le détail

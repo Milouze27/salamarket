@@ -121,7 +121,7 @@ export default function V2TransfertPage() {
       setProduit(p);
       toast.success(p.nom);
     } else {
-      toast.warning("Code inconnu — recherche par nom");
+      toast.warning("Code inconnu · recherche par nom");
       setShowSearch(true);
     }
   };
@@ -237,12 +237,12 @@ export default function V2TransfertPage() {
         </div>
         {!isAdmin && (
           <p className="text-[11px] text-text-tertiary mt-2 leading-relaxed">
-            Tu peux faire entrer du stock vers <b>{destination?.nom ?? "—"}</b>{" "}
-            depuis{" "}
+            Tu peux faire entrer du stock vers{" "}
+            <b>{destination?.nom ?? "Aucun"}</b> depuis{" "}
             <b>
               {allowedSources(destination)
                 .map((d) => d.nom)
-                .join(" ou ") || "—"}
+                .join(" ou ") || "Aucun"}
             </b>
             . Demande à un admin pour les autres directions.
           </p>
@@ -309,6 +309,9 @@ export default function V2TransfertPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Nom, marque, code…"
+                      aria-label={`Rechercher un produit dans ${source.nom}`}
+                      inputMode="search"
+                      autoComplete="off"
                       className="input-field !pl-10 !text-base"
                       autoFocus
                     />
@@ -355,10 +358,13 @@ export default function V2TransfertPage() {
       {produit && (
         <section className="px-5 mt-6 space-y-4">
           <div>
-            <p className="label-caps text-text-tertiary mb-2">
-              Quantité à transférer
-            </p>
+            <label htmlFor="transfert-quantite">
+              <span className="label-caps text-text-tertiary mb-2 block">
+                Quantité à transférer
+              </span>
+            </label>
             <input
+              id="transfert-quantite"
               type="number"
               min={1}
               max={stockSource ?? undefined}
@@ -372,8 +378,9 @@ export default function V2TransfertPage() {
                 }
               }}
               placeholder={
-                stockSource !== null ? `0 — ${stockSource} max` : "Quantité"
+                stockSource !== null ? `0 · ${stockSource} max` : "Quantité"
               }
+              aria-label="Quantité à transférer"
               inputMode="numeric"
               className="input-field text-2xl font-bold text-center"
             />
@@ -425,7 +432,7 @@ export default function V2TransfertPage() {
                 {submitting ? "Validation…" : "Valider le transfert"}
               </p>
               <p className="text-[15px] font-extrabold mt-0.5">
-                {source?.nom ?? "—"} → {destination?.nom ?? "—"}
+                {source?.nom ?? "Source"} → {destination?.nom ?? "Destination"}
               </p>
             </div>
             <span className="bg-white/30 rounded-full p-2.5">
@@ -460,18 +467,25 @@ function DepotPick({
   value: Depot | null;
   onChange: (d: Depot) => void;
 }) {
+  const selectId = `depot-pick-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div>
-      <p className="label-caps text-text-tertiary mb-2 text-center">{label}</p>
+      <label htmlFor={selectId}>
+        <span className="label-caps text-text-tertiary mb-2 text-center block">
+          {label}
+        </span>
+      </label>
       <select
+        id={selectId}
         value={value?.id ?? ""}
         onChange={(e) => {
           const d = depots.find((x) => x.id === e.target.value);
           if (d) onChange(d);
         }}
+        aria-label={`Choisir le dépôt ${label.toLowerCase()}`}
         className="w-full bg-white border border-rule rounded-2xl px-3 py-3 text-base font-bold text-text-primary appearance-none text-center"
       >
-        <option value="">— choisir —</option>
+        <option value="">Choisir</option>
         {depots.map((d) => (
           <option key={d.id} value={d.id}>
             {d.nom}
@@ -491,7 +505,7 @@ function DepotLocked({ label, depot }: { label: string; depot: Depot | null }) {
       <p className="label-caps text-text-tertiary mb-2 text-center">{label}</p>
       <div className="w-full bg-primary text-white rounded-2xl px-3 py-3 text-sm font-bold text-center inline-flex items-center justify-center gap-1.5">
         <Building2 className="w-3.5 h-3.5 text-gold" />
-        {depot?.nom ?? "—"}
+        {depot?.nom ?? "Aucun"}
       </div>
     </div>
   );

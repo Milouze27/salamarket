@@ -180,7 +180,7 @@ export default function V2StockPage() {
           label={
             view === "regroupe"
               ? "Catalogue · 3 dépôts"
-              : `Catalogue · ${depot?.nom ?? "—"}`
+              : `Catalogue · ${depot?.nom ?? "dépôt"}`
           }
           className="mt-3"
         />
@@ -199,7 +199,7 @@ export default function V2StockPage() {
         </h1>
         <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           {view === "regroupe"
-            ? `Vue regroupée — ${aggregated.length} produit${aggregated.length > 1 ? "s" : ""} sur les 3 dépôts.`
+            ? `Vue regroupée · ${aggregated.length} produit${aggregated.length > 1 ? "s" : ""} sur les 3 dépôts.`
             : `${items.length} produit${items.length > 1 ? "s" : ""} référencé${items.length > 1 ? "s" : ""} dans ce dépôt.`}
         </p>
 
@@ -248,13 +248,13 @@ export default function V2StockPage() {
               {employe?.role === "admin"
                 ? "Édition stock active (admin)"
                 : windowOpen
-                  ? "Inventaire en cours — édition autorisée"
+                  ? "Inventaire en cours · édition autorisée"
                   : "Édition autorisée"}
             </>
           ) : (
             <>
               <Lock className="w-3 h-3" />
-              Lecture seule — admin ou inventaire requis
+              Lecture seule · admin ou inventaire requis
             </>
           )}
         </div>
@@ -264,6 +264,9 @@ export default function V2StockPage() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
           <input
+            id="stock-search"
+            type="search"
+            aria-label="Rechercher un produit par nom, marque ou EAN"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher un produit, une marque, un EAN…"
@@ -279,8 +282,15 @@ export default function V2StockPage() {
             {cats.map((c) => (
               <button
                 key={c}
+                type="button"
                 onClick={() => setCat(c)}
                 data-active={cat === c}
+                aria-pressed={cat === c}
+                aria-label={
+                  c === "Tout"
+                    ? "Afficher toutes les catégories"
+                    : `Filtrer par catégorie ${c}`
+                }
                 className="pill-filter shrink-0"
               >
                 {c}

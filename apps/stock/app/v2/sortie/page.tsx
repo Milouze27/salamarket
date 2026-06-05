@@ -123,7 +123,7 @@ export default function V2SortiePage() {
       setProduit(p);
       toast.success(p.nom);
     } else {
-      toast.warning("Code inconnu — recherche par nom");
+      toast.warning("Code inconnu · recherche par nom");
       setShowSearch(true);
     }
   };
@@ -237,7 +237,7 @@ export default function V2SortiePage() {
         }
 
         toast.warning(
-          `Score IA ${(iaScore * 100).toFixed(0)}% — Otmane + Ahmed notifiés (push iPhone).`,
+          `Score IA ${(iaScore * 100).toFixed(0)}% · Otmane + Ahmed notifiés (push iPhone).`,
           { duration: 4500 },
         );
       } else if (iaScore !== null) {
@@ -336,6 +336,7 @@ export default function V2SortiePage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nom, marque, code…"
+                    aria-label="Rechercher un produit par nom, marque ou code"
                     inputMode="search"
                     autoComplete="off"
                     className="input-field !pl-10 !text-base"
@@ -388,6 +389,7 @@ export default function V2SortiePage() {
                   key={t.value}
                   onClick={() => setType(t.value)}
                   aria-pressed={active}
+                  aria-label={`Motif : ${t.label} · ${t.desc}`}
                   className={`relative text-left rounded-2xl border transition-all duration-200 ease-out press-card ${
                     fullWidth ? "col-span-2 px-4 py-3" : "p-3"
                   } ${
@@ -436,6 +438,7 @@ export default function V2SortiePage() {
               value={motifLibre}
               onChange={(e) => setMotifLibre(e.target.value)}
               placeholder="Détaillez le motif…"
+              aria-label="Motif libre de la sortie"
               autoComplete="off"
               className="input-field mt-3 !text-base"
               autoFocus
@@ -448,8 +451,13 @@ export default function V2SortiePage() {
       {produit && type && (
         <section className="px-5 mt-6 space-y-4">
           <div>
-            <p className="label-caps text-text-tertiary mb-2">Quantité</p>
+            <label htmlFor="sortie-quantite">
+              <span className="label-caps text-text-tertiary mb-2 block">
+                Quantité
+              </span>
+            </label>
             <input
+              id="sortie-quantite"
               type="number"
               min={1}
               value={quantite}

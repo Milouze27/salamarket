@@ -309,7 +309,7 @@ export default function V2ReceptionPage() {
         typeof window !== "undefined" &&
         window.confirm(
           "Aucun produit scanné. Valider quand même une réception vide ?\n\n" +
-            "Cela enregistrera un bon de livraison fournisseur sans contenu — utile pour signaler une livraison incomplète. Une alerte sera levée sur le dashboard admin.",
+            "Cela enregistrera un bon de livraison fournisseur sans contenu · utile pour signaler une livraison incomplète. Une alerte sera levée sur le dashboard admin.",
         );
       if (!ok) return;
     }
@@ -424,7 +424,7 @@ export default function V2ReceptionPage() {
       return;
     }
     toast.warning(
-      `EAN ${code} inconnu — cherche par nom ou utilise la reconnaissance IA.`,
+      `EAN ${code} inconnu · cherche par nom ou utilise la reconnaissance IA.`,
       { duration: 3500 },
     );
   }
@@ -628,6 +628,7 @@ export default function V2ReceptionPage() {
               value={fournisseur}
               onChange={(e) => setFournisseur(e.target.value)}
               placeholder="Maamora, Doux Halal…"
+              aria-label="Fournisseur (optionnel)"
               className="input-field !text-base"
             />
           </Field>
@@ -636,6 +637,7 @@ export default function V2ReceptionPage() {
               value={numeroBl}
               onChange={(e) => setNumeroBl(e.target.value)}
               placeholder="BL-2026-…"
+              aria-label="Numéro de bon de livraison (optionnel)"
               className="input-field !text-base"
             />
           </Field>
@@ -853,7 +855,11 @@ export default function V2ReceptionPage() {
             {learnMode === "select" && (
               <>
                 <h3 className="text-lg font-bold text-text-primary mt-5">
-                  Carton ou unité ?
+                  <GlossaryTerm
+                    term="Carton"
+                    def="Emballage groupé contenant plusieurs unités du même produit."
+                  />{" "}
+                  ou unité ?
                 </h3>
                 <p className="text-sm text-text-secondary mt-1">
                   Si c&apos;est un carton, on va apprendre combien d&apos;unités
@@ -891,6 +897,7 @@ export default function V2ReceptionPage() {
                   }
                   inputMode="numeric"
                   placeholder="ex : 12"
+                  aria-label="Nombre d'unités dans le carton"
                   className="input-field mt-4 text-2xl font-bold text-center"
                   autoFocus
                 />
@@ -918,7 +925,7 @@ export default function V2ReceptionPage() {
                   disabled={cartonQty <= 0}
                   className="btn-primary w-full mt-5 disabled:opacity-50"
                 >
-                  Suivant — choisir le produit
+                  Suivant · choisir le produit
                 </button>
                 <div className="relative my-4 text-center">
                   <span className="text-[10px] uppercase tracking-[0.18em] text-text-tertiary font-bold bg-white px-2 relative z-10">
@@ -959,9 +966,11 @@ export default function V2ReceptionPage() {
                 <div className="relative mt-3">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                   <input
+                    type="search"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Nom, marque, code…"
+                    aria-label="Rechercher un produit par nom, marque ou code"
                     className="input-field !pl-10 !text-base"
                     autoFocus
                   />
@@ -1080,7 +1089,7 @@ function BdlCard({
             {nbProduits} produit{nbProduits > 1 ? "s" : ""} ·{" "}
             <b className="text-text-primary">{totalUnits} u.</b>{" "}
             <span className="bg-gold-soft text-primary-dark font-bold px-2 py-0.5 rounded-full ml-1 text-[10px] uppercase tracking-wide">
-              {bdl.depots?.nom ?? "—"}
+              {bdl.depots?.nom ?? "·"}
             </span>
           </p>
         </div>

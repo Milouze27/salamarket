@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // a11y : après un échec d'authentification, on redonne le focus au 1er
+  // champ (email) pour que l'utilisateur clavier/lecteur d'écran reprenne
+  // la saisie sans chasser le curseur. La bannière d'erreur est annoncée
+  // via role="alert" aria-live.
+  const emailRef = useRef<HTMLInputElement>(null);
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     // Guard anti double-submit (BUG-001) : un clic en cours bloque les
@@ -29,6 +35,7 @@ export default function Login() {
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(translateAuthError(err));
+      emailRef.current?.focus();
     } finally {
       setLoading(false);
     }
@@ -52,12 +59,15 @@ export default function Login() {
             </label>
             <input
               id="email"
+              ref={emailRef}
               type="email"
               inputMode="email"
               autoComplete="email"
               autoCapitalize="none"
               spellCheck={false}
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
@@ -73,17 +83,24 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
               required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+          <div role="alert" aria-live="polite">
+            {error && (
+              <p
+                id="login-error"
+                className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+              >
+                {error}
+              </p>
+            )}
+          </div>
 
           <button
             type="submit"

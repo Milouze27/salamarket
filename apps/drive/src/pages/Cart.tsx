@@ -12,16 +12,12 @@ import {
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { TrustBar } from "@/components/TrustBar";
+import { HalalSeal } from "@/components/HalalSeal";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice, unitLabel } from "@/lib/format";
-import {
-  computePrixEstime,
-  formatKg,
-  getBrackets,
-} from "@salamarket/shared";
+import { MIN_ORDER_CENTS } from "@/lib/constants";
+import { computePrixEstime, formatKg, getBrackets } from "@salamarket/shared";
 import { cdnImage } from "@/lib/imageUrl";
-
-const MIN_ORDER_CENTS = 1500;
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -36,9 +32,7 @@ const Cart = () => {
   // Calcul du sous-total en cents — gère unit/weight/weight_bracket
   const subtotal = items.reduce((sum, i) => {
     const qty =
-      i.unitType === "weight"
-        ? (i.quantiteKg ?? 0) * i.quantity
-        : i.quantity;
+      i.unitType === "weight" ? (i.quantiteKg ?? 0) * i.quantity : i.quantity;
     const eur = computePrixEstime(i.product, qty, i.bracketIndex ?? 0);
     return sum + Math.round(eur * 100);
   }, 0);
@@ -225,11 +219,17 @@ const Cart = () => {
                               className="w-16 px-2 py-1.5 text-base font-semibold text-[#0E3B2E] tabular-nums bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
                               aria-label={`Poids estimé de ${item.product.name} en kg`}
                             />
-                            <span className="text-xs text-muted">kg estimés</span>
+                            <span className="text-xs text-muted">
+                              kg estimés
+                            </span>
                           </label>
                           {item.product.pricePerKg != null && (
                             <span className="text-[11px] text-muted">
-                              · {item.product.pricePerKg.toFixed(2).replace(".", ",")} €/kg
+                              ·{" "}
+                              {item.product.pricePerKg
+                                .toFixed(2)
+                                .replace(".", ",")}{" "}
+                              €/kg
                             </span>
                           )}
                         </div>
@@ -258,7 +258,8 @@ const Cart = () => {
                             >
                               {brackets.map((b, bi) => (
                                 <option key={bi} value={bi}>
-                                  {b.label} — {b.prix.toFixed(2).replace(".", ",")} €
+                                  {b.label} —{" "}
+                                  {b.prix.toFixed(2).replace(".", ",")} €
                                 </option>
                               ))}
                             </select>
@@ -298,7 +299,11 @@ const Cart = () => {
                             className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center text-text active:scale-90 transition-transform shadow-sm"
                           >
                             {item.quantity === 1 ? (
-                              <Trash2 size={14} className="text-destructive" strokeWidth={2.4} />
+                              <Trash2
+                                size={14}
+                                className="text-destructive"
+                                strokeWidth={2.4}
+                              />
                             ) : (
                               <Minus size={14} strokeWidth={2.5} />
                             )}
@@ -324,9 +329,16 @@ const Cart = () => {
 
             {/* Récap éditorial */}
             <section className="mt-5 px-1 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 [animation-fill-mode:backwards]">
-              <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-4">
-                Récapitulatif
-              </p>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227]">
+                  Récapitulatif
+                </p>
+                {/* Signal de confiance discret avant paiement (CRO trust). */}
+                <HalalSeal
+                  size="sm"
+                  className="shrink-0 scale-[0.7] origin-right -my-2"
+                />
+              </div>
               <div className="space-y-2.5 text-[14px]">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[#6B7280]">
@@ -381,9 +393,34 @@ const Cart = () => {
             }}
           >
             {subtotal < MIN_ORDER_CENTS && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 mb-3 text-sm">
-                Commande minimum : {formatPrice(MIN_ORDER_CENTS)}. Il vous manque{" "}
-                {formatPrice(MIN_ORDER_CENTS - subtotal)} pour commander.
+              <div className="mb-3">
+                <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                  <span className="text-[13px] font-semibold text-[#0E3B2E]">
+                    Plus que{" "}
+                    <span className="tabular-nums">
+                      {formatPrice(MIN_ORDER_CENTS - subtotal)}
+                    </span>{" "}
+                    pour valider
+                  </span>
+                  <span className="text-[12px] text-[#6B7280] tabular-nums">
+                    {formatPrice(subtotal)} / {formatPrice(MIN_ORDER_CENTS)}
+                  </span>
+                </div>
+                <div
+                  className="h-2 w-full overflow-hidden rounded-full bg-[#0E3B2E]/10"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={MIN_ORDER_CENTS}
+                  aria-valuenow={subtotal}
+                  aria-label="Progression vers la commande minimum"
+                >
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#0E3B2E] to-[#C9A227] transition-[width] duration-300"
+                    style={{
+                      width: `${Math.min(100, Math.round((subtotal / MIN_ORDER_CENTS) * 100))}%`,
+                    }}
+                  />
+                </div>
               </div>
             )}
             <button

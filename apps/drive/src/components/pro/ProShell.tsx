@@ -18,6 +18,7 @@ interface Props {
 
 const NAV_ITEMS: { to: string; label: string }[] = [
   { to: "/pro/catalogue", label: "Catalogue" },
+  { to: "/pro/commandes", label: "Mes commandes" },
   { to: "/pro/factures", label: "Factures" },
   { to: "/pro/compte", label: "Mon compte" },
 ];
@@ -31,7 +32,9 @@ export const ProShell = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const count = useProCartStore((s) => s.items.reduce((sum, i) => sum + i.quantite_conditionnements, 0));
+  const count = useProCartStore((s) =>
+    s.items.reduce((sum, i) => sum + i.quantite_conditionnements, 0),
+  );
 
   const goBack = () => {
     if (location.key !== "default") navigate(-1);
@@ -60,7 +63,10 @@ export const ProShell = ({
                 <ArrowLeft size={20} aria-hidden />
               </button>
             )}
-            <Link to="/pro/catalogue" className="flex items-center gap-2 min-w-0">
+            <Link
+              to="/pro/catalogue"
+              className="flex items-center gap-2 min-w-0"
+            >
               <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
                 Drive Pro
               </span>
@@ -117,7 +123,9 @@ export const ProShell = ({
           })}
         </nav>
       </header>
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">{children}</main>
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+        {children}
+      </main>
     </div>
   );
 };

@@ -3,7 +3,12 @@ import { BRAND } from "./src/config/brand";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -32,6 +37,14 @@ export default {
         foreground: "hsl(var(--foreground))",
         bg: BRAND.colors.bg,
         text: BRAND.colors.text,
+        // Tokens marque Salamarket — utilisés massivement dans le code
+        // (text-sapin, bg-sapin-deep, text-gold…) mais qui n'étaient PAS
+        // déclarés ici → Tailwind les ignorait silencieusement et les
+        // couleurs sapin/or disparaissaient. Mappés sur la palette BRAND
+        // (source de vérité, alignée Salam Stock V2).
+        sapin: BRAND.colors.primary,
+        "sapin-deep": BRAND.colors.primaryDark,
+        gold: BRAND.colors.accent,
         muted: {
           DEFAULT: BRAND.colors.muted,
           foreground: "hsl(var(--muted-foreground))",
@@ -131,7 +144,8 @@ export default {
         shimmer: "shimmer 2.5s ease-in-out infinite",
         "skeleton-shimmer": "skeleton-shimmer 1.6s ease-in-out infinite",
         "cart-bump": "cart-bump 0.4s ease-out",
-        "success-pop": "success-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "success-pop":
+          "success-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
         "draw-check": "draw-check 0.5s ease-out 0.4s forwards",
         "halo-ping": "halo-ping 1.4s ease-out forwards",
       },

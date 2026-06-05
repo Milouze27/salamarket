@@ -18,7 +18,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Building2, CheckCircle2, User } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  User,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,18 +64,10 @@ const PHONE_RE = /^(\+33|0)[1-9]\d{8}$/;
 const InscriptionSchema = z.object({
   // Étape 1
   raison_sociale: z.string().min(2, "Min. 2 caractères").max(160),
-  siret: z
-    .string()
-    .regex(SIRET_RE, "SIRET = 14 chiffres exactement"),
+  siret: z.string().regex(SIRET_RE, "SIRET = 14 chiffres exactement"),
   forme_juridique: z.enum(["SARL", "SAS", "EI", "Association"]),
-  tva_intracom: z
-    .string()
-    .max(20)
-    .optional()
-    .or(z.literal("")),
-  adresse_facturation: z
-    .string()
-    .min(10, "Adresse complète attendue"),
+  tva_intracom: z.string().max(20).optional().or(z.literal("")),
+  adresse_facturation: z.string().min(10, "Adresse complète attendue"),
   adresse_livraison: z.string().optional().or(z.literal("")),
   // Étape 2
   delegue_nom: z.string().min(2, "Min. 2 caractères").max(120),
@@ -104,7 +102,10 @@ interface StepperProps {
 }
 
 const Stepper = ({ current }: StepperProps) => (
-  <ol className="flex items-center justify-between mb-8" aria-label="Progression">
+  <ol
+    className="flex items-center justify-between mb-8"
+    aria-label="Progression"
+  >
     {STEPS.map((step, idx) => {
       const Icon = step.icon;
       const done = idx < current;
@@ -149,11 +150,24 @@ const Stepper = ({ current }: StepperProps) => (
 // ─────────────────────────────────────────────────────────────────────
 
 const FORMES: readonly FormeJuridique[] = ["SARL", "SAS", "EI", "Association"];
-const CONDITIONS: { value: ConditionsPaiement; label: string; sub: string }[] = [
-  { value: "comptant", label: "Comptant", sub: "À la commande (CB / virement)" },
-  { value: "30_jours", label: "30 jours", sub: "Paiement à 30 jours date de facture" },
-  { value: "45_jours_fin_mois", label: "45 jours fin de mois", sub: "Délai légal LME" },
-];
+const CONDITIONS: { value: ConditionsPaiement; label: string; sub: string }[] =
+  [
+    {
+      value: "comptant",
+      label: "Comptant",
+      sub: "À la commande (CB / virement)",
+    },
+    {
+      value: "30_jours",
+      label: "30 jours",
+      sub: "Paiement à 30 jours date de facture",
+    },
+    {
+      value: "45_jours_fin_mois",
+      label: "45 jours fin de mois",
+      sub: "Délai légal LME",
+    },
+  ];
 
 export default function ProInscription() {
   const navigate = useNavigate();
@@ -213,17 +227,18 @@ export default function ProInscription() {
       //    un signIn pour récupérer l'user.id et brancher comptes_pro
       //    sur le compte existant).
       let userId: string | null = null;
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: values.delegue_email.trim(),
-        password: values.delegue_password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/pro/login`,
-          data: {
-            full_name: values.delegue_nom,
-            phone: values.delegue_telephone.replace(/\s/g, ""),
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: values.delegue_email.trim(),
+          password: values.delegue_password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/pro/login`,
+            data: {
+              full_name: values.delegue_nom,
+              phone: values.delegue_telephone.replace(/\s/g, ""),
+            },
           },
-        },
-      });
+        });
 
       if (signUpError) {
         // Si l'utilisateur existe déjà, on tente un signIn.
@@ -283,8 +298,7 @@ export default function ProInscription() {
       const isRlsError = /row[- ]level security|violates.*policy/i.test(
         rawMessage,
       );
-      const isComptesProError =
-        /comptes_pro/i.test(rawMessage) || isRlsError;
+      const isComptesProError = /comptes_pro/i.test(rawMessage) || isRlsError;
       const message = isComptesProError
         ? "Création du compte Pro impossible. Votre compte connexion est créé : notre équipe finalisera votre inscription Pro sous 24-48 h."
         : translateAuthError(err);
@@ -303,10 +317,12 @@ export default function ProInscription() {
           <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
             Drive Pro
           </span>
-          <h1 className="text-2xl font-bold mt-1">Créer un compte professionnel</h1>
+          <h1 className="text-2xl font-bold mt-1">
+            Créer un compte professionnel
+          </h1>
           <p className="text-sm text-white/70 mt-1">
-            Restaurants, boulangeries, traiteurs, collectivités. Validation
-            sous 24-48 h.
+            Restaurants, boulangeries, traiteurs, collectivités. Validation sous
+            24-48 h.
           </p>
         </div>
       </header>
@@ -391,7 +407,9 @@ export default function ProInscription() {
                       name="tva_intracom"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>TVA intracommunautaire (optionnel)</FormLabel>
+                          <FormLabel>
+                            TVA intracommunautaire (optionnel)
+                          </FormLabel>
                           <FormControl>
                             <Input placeholder="FR12345678901" {...field} />
                           </FormControl>
@@ -422,7 +440,9 @@ export default function ProInscription() {
                       name="adresse_livraison"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Adresse de livraison (si différente)</FormLabel>
+                          <FormLabel>
+                            Adresse de livraison (si différente)
+                          </FormLabel>
                           <FormControl>
                             <Textarea
                               rows={2}
@@ -528,7 +548,9 @@ export default function ProInscription() {
                       name="conditions_paiement"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Conditions de paiement souhaitées</FormLabel>
+                          <FormLabel>
+                            Conditions de paiement souhaitées
+                          </FormLabel>
                           <FormControl>
                             <RadioGroup
                               value={field.value}
@@ -576,9 +598,15 @@ export default function ProInscription() {
                       Récapitulatif
                     </h2>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <SummaryRow label="Raison sociale" value={values.raison_sociale} />
+                      <SummaryRow
+                        label="Raison sociale"
+                        value={values.raison_sociale}
+                      />
                       <SummaryRow label="SIRET" value={values.siret} />
-                      <SummaryRow label="Forme" value={values.forme_juridique} />
+                      <SummaryRow
+                        label="Forme"
+                        value={values.forme_juridique}
+                      />
                       <SummaryRow
                         label="TVA intracom"
                         value={values.tva_intracom || "—"}
@@ -594,10 +622,7 @@ export default function ProInscription() {
                         wide
                       />
                       <SummaryRow label="Délégué" value={values.delegue_nom} />
-                      <SummaryRow
-                        label="Email"
-                        value={values.delegue_email}
-                      />
+                      <SummaryRow label="Email" value={values.delegue_email} />
                       <SummaryRow
                         label="Téléphone"
                         value={values.delegue_telephone}
@@ -629,10 +654,16 @@ export default function ProInscription() {
                             </FormControl>
                             <div className="text-sm text-slate-700">
                               J'accepte les{" "}
-                              <a href="#" className="underline font-medium">
+                              <a
+                                href="/cgv"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline font-medium"
+                              >
                                 conditions générales de vente Drive Pro
                               </a>{" "}
-                              et certifie l'exactitude des informations fournies.
+                              et certifie l'exactitude des informations
+                              fournies.
                             </div>
                           </div>
                           <FormMessage />

@@ -114,6 +114,22 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Preload du woff2 latin (sous-ensemble U+0000-00FF : couvre tout le
+         français) pour démarrer le fetch de la police en parallèle du CSS
+         render-blocking au lieu de l'attendre. crossorigin obligatoire :
+         gstatic sert les fonts en CORS, et un preload sans crossorigin ne
+         serait pas réutilisé (double download).
+         ⚠️ L'URL embarque la version Google Fonts (ici v12) + un hash. Si
+         Google bump la version, ce preload pointera dans le vide (warning
+         console "preloaded but not used") → resynchroniser l'URL depuis
+         la sortie de l'API css2 le cas échéant. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="https://fonts.gstatic.com/s/plusjakartasans/v12/LDIoaomQNQcsA88c7O9yZ4KMCoOg4Ko20yygg_vb.woff2"
+      crossorigin
+    />
     <!-- Plus Jakarta Sans = corps + displays. Brand Salamarket : un seul
          typeface, déclinaisons via poids (800 pour les titres) et
          tracking (tight ~ -0.03em sur les gros titres). Une famille

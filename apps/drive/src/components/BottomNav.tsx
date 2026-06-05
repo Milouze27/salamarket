@@ -74,7 +74,11 @@ export const BottomNav = () => {
     <nav
       aria-label="Navigation principale"
       className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-border md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      // Fallback PWA : sur les appareils sans encoche (Android, desktop
+      // tactile) env(safe-area-inset-bottom) vaut 0 → on garantit une
+      // marge tactile minimale de 16px sous la dernière rangée d'icônes.
+      // Sur iPhone à encoche, env(...) (~34px) prime via max().
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
     >
       <ul className="grid grid-cols-4">
         {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => {

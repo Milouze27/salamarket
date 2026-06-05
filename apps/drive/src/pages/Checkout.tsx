@@ -19,14 +19,14 @@ import {
 } from "@salamarket/shared";
 import { Scale } from "lucide-react";
 import { DriveStripePayment } from "@/components/DriveStripePayment";
+import { MIN_ORDER_CENTS } from "@/lib/constants";
 
-const MIN_ORDER_CENTS = 1500;
 const PARIS_TZ = "Europe/Paris";
 const NOTES_MAX = 200;
 
 const formatEUR = (cents: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
-    cents / 100
+    cents / 100,
   );
 
 interface SlotInfo {
@@ -117,7 +117,7 @@ export default function Checkout() {
   useEffect(() => {
     if (searchParams.get("cancelled") === "1") {
       toast.info(
-        "Paiement annulé. Vous pouvez réessayer ou choisir un autre mode de paiement."
+        "Paiement annulé. Vous pouvez réessayer ou choisir un autre mode de paiement.",
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -235,6 +235,16 @@ export default function Checkout() {
         // Stripe : redirection externe immédiate, on quitte React.
         // Pas de clearCart ici — OrderConfirmation s'en charge au mount
         // quand Stripe redirige vers /commande/confirmee/ après paiement.
+        //
+        // Garde-fou : si la redirection n'est pas partie au bout de 3 s
+        // (popup bloquée, URL invalide, navigateur récalcitrant), on
+        // rend la main à l'utilisateur avec une erreur explicite. Le
+        // timeout est naturellement avorté par le unload de la page si
+        // la redirection aboutit (le contexte JS est détruit).
+        setTimeout(() => {
+          toast.error("Redirection paiement impossible, réessaie.");
+          setLoading(false);
+        }, 3000);
         window.location.href = data.checkout_url;
         return;
       }
@@ -308,7 +318,10 @@ export default function Checkout() {
                         {item.product.name}
                         <span className="text-muted-foreground">
                           {" "}
-                          · {formatKg((item.quantiteKg ?? 0) * item.quantity)} estimés
+                          · {formatKg(
+                            (item.quantiteKg ?? 0) * item.quantity,
+                          )}{" "}
+                          estimés
                         </span>
                       </>
                     ) : (
@@ -340,7 +353,9 @@ export default function Checkout() {
                 aria-hidden
               />
               <span>
-                <span className="font-bold">Montant autorisé : {preAuthLabel}</span>{" "}
+                <span className="font-bold">
+                  Montant autorisé : {preAuthLabel}
+                </span>{" "}
                 (estimation × 1,20). Vous serez débité du poids réel pesé en
                 magasin.{" "}
                 <a
@@ -389,7 +404,9 @@ export default function Checkout() {
               estimatedCents={totals.totalCents}
               returnUrl={`${window.location.origin}/commande/confirmee/${commandeIdForElements}`}
               onError={(msg) =>
-                toast.error(msg || "Erreur lors de l'initialisation du paiement")
+                toast.error(
+                  msg || "Erreur lors de l'initialisation du paiement",
+                )
               }
             />
           ) : (

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,7 +14,10 @@ import { getRedirectFromSearch } from "@/lib/redirect";
  * session. Best-effort strict : un échec de journalisation ne doit JAMAIS
  * empêcher la création du compte (on log en console et on continue).
  */
-async function logSignupConsent(email: string, marketing: boolean): Promise<void> {
+async function logSignupConsent(
+  email: string,
+  marketing: boolean,
+): Promise<void> {
   try {
     await supabase.from("consent_log").insert({
       email,
@@ -22,7 +25,9 @@ async function logSignupConsent(email: string, marketing: boolean): Promise<void
       consent_privacy: true,
       consent_marketing: marketing,
       user_agent:
-        typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+        typeof navigator !== "undefined"
+          ? navigator.userAgent.slice(0, 500)
+          : null,
     });
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -59,6 +64,19 @@ export default function Signup() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // a11y : refs sur chaque champ pour redonner le focus au 1er champ en
+  // erreur après une soumission. L'ordre du tableau suit l'ordre visuel du
+  // formulaire (top → bottom), ce qui détermine quel champ reçoit le focus.
+  const fieldRefs: Record<string, React.RefObject<HTMLInputElement>> = {
+    fullName: useRef<HTMLInputElement>(null),
+    phone: useRef<HTMLInputElement>(null),
+    email: useRef<HTMLInputElement>(null),
+    password: useRef<HTMLInputElement>(null),
+    confirm: useRef<HTMLInputElement>(null),
+  };
+  const FIELD_ORDER = ["fullName", "phone", "email", "password", "confirm"];
+  const serverErrorRef = useRef<HTMLDivElement>(null);
+
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
     if (fullName.trim().length < 2) e.fullName = "Min. 2 caractères";
@@ -66,7 +84,8 @@ export default function Signup() {
       e.phone = "Numéro invalide (ex : 0612345678 ou +212612345678)";
     if (!EMAIL_RE.test(email.trim())) e.email = "Email invalide";
     if (password.length < 8) e.password = "Min. 8 caractères";
-    if (confirm !== password) e.confirm = "Les mots de passe ne correspondent pas";
+    if (confirm !== password)
+      e.confirm = "Les mots de passe ne correspondent pas";
     return e;
   }, [fullName, phone, email, password, confirm]);
 
@@ -78,8 +97,20 @@ export default function Signup() {
     // vol on ignore les clics suivants, sinon 10 clics rapides créent 9
     // erreurs 500 + un compte fantôme à moitié provisionné.
     if (loading) return;
-    setTouched({ fullName: true, phone: true, email: true, password: true, confirm: true });
-    if (!valid) return;
+    setTouched({
+      fullName: true,
+      phone: true,
+      email: true,
+      password: true,
+      confirm: true,
+    });
+    if (!valid) {
+      // a11y : focus le 1er champ en erreur (ordre visuel) pour guider la
+      // correction au clavier / lecteur d'écran.
+      const firstInvalid = FIELD_ORDER.find((k) => errors[k]);
+      if (firstInvalid) fieldRefs[firstInvalid].current?.focus();
+      return;
+    }
     setServerError(null);
     setLoading(true);
     try {
@@ -95,6 +126,9 @@ export default function Signup() {
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setServerError(translateAuthError(err));
+      // a11y : l'erreur serveur n'est rattachée à aucun champ → on focus la
+      // bannière (tabIndex={-1}) pour la porter au lecteur d'écran.
+      serverErrorRef.current?.focus();
     } finally {
       setLoading(false);
     }
@@ -107,10 +141,22 @@ export default function Signup() {
         : "border-border focus:border-primary"
     }`;
 
+  const hasError = (key: string) => Boolean(touched[key] && errors[key]);
+
   const fieldError = (key: string) =>
-    touched[key] && errors[key] ? (
-      <p className="text-xs text-red-600 mt-1">{errors[key]}</p>
+    hasError(key) ? (
+      <p id={`${key}-error`} className="text-xs text-red-600 mt-1">
+        {errors[key]}
+      </p>
     ) : null;
+
+  // a11y : props communes reliant chaque input à son span d'erreur quand il
+  // est en faute (aria-describedby + aria-invalid).
+  const a11yProps = (key: string) => ({
+    ref: fieldRefs[key],
+    "aria-invalid": hasError(key) ? true : undefined,
+    "aria-describedby": hasError(key) ? `${key}-error` : undefined,
+  });
 
   return (
     // BUG-017 — alignement Signup/Login : bg sapin pleine page, card
@@ -124,13 +170,17 @@ export default function Signup() {
           noValidate
         >
           <div className="flex flex-col">
-            <label htmlFor="fullName" className="text-sm font-medium text-text mb-1">
+            <label
+              htmlFor="fullName"
+              className="text-sm font-medium text-text mb-1"
+            >
               Nom complet
             </label>
             <input
               id="fullName"
               type="text"
               autoComplete="name"
+              {...a11yProps("fullName")}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, fullName: true }))}
@@ -140,7 +190,10 @@ export default function Signup() {
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="phone" className="text-sm font-medium text-text mb-1">
+            <label
+              htmlFor="phone"
+              className="text-sm font-medium text-text mb-1"
+            >
               Téléphone
             </label>
             <input
@@ -149,6 +202,7 @@ export default function Signup() {
               inputMode="tel"
               autoComplete="tel"
               placeholder="0612345678 ou +212612345678"
+              {...a11yProps("phone")}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
@@ -158,7 +212,10 @@ export default function Signup() {
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="email" className="text-sm font-medium text-text mb-1">
+            <label
+              htmlFor="email"
+              className="text-sm font-medium text-text mb-1"
+            >
               Email
             </label>
             <input
@@ -168,6 +225,7 @@ export default function Signup() {
               autoComplete="email"
               autoCapitalize="none"
               spellCheck={false}
+              {...a11yProps("email")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
@@ -177,13 +235,17 @@ export default function Signup() {
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="password" className="text-sm font-medium text-text mb-1">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-text mb-1"
+            >
               Mot de passe
             </label>
             <input
               id="password"
               type="password"
               autoComplete="new-password"
+              {...a11yProps("password")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, password: true }))}
@@ -193,13 +255,17 @@ export default function Signup() {
           </div>
 
           <div className="flex flex-col">
-            <label htmlFor="confirm" className="text-sm font-medium text-text mb-1">
+            <label
+              htmlFor="confirm"
+              className="text-sm font-medium text-text mb-1"
+            >
               Confirmation du mot de passe
             </label>
             <input
               id="confirm"
               type="password"
               autoComplete="new-password"
+              {...a11yProps("confirm")}
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
@@ -208,11 +274,19 @@ export default function Signup() {
             {fieldError("confirm")}
           </div>
 
-          {serverError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {serverError}
-            </p>
-          )}
+          <div
+            ref={serverErrorRef}
+            role="alert"
+            aria-live="polite"
+            tabIndex={-1}
+            className="focus:outline-none"
+          >
+            {serverError && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {serverError}
+              </p>
+            )}
+          </div>
 
           {/* CGV + Politique de confidentialité — checkbox bloquante.
               Obligation légale (LCEN + RGPD : consentement éclairé). */}
@@ -236,8 +310,8 @@ export default function Signup() {
                 className="underline underline-offset-2 text-sapin font-medium hover:text-sapin-deep"
               >
                 Conditions générales de vente
-              </Link>
-              {" "}et la{" "}
+              </Link>{" "}
+              et la{" "}
               <Link
                 to="/confidentialite"
                 target="_blank"
@@ -265,8 +339,8 @@ export default function Signup() {
               className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-sapin/40 accent-sapin cursor-pointer focus:outline-none focus:ring-2 focus:ring-sapin/30"
             />
             <span className="leading-snug text-[13px] text-ink/75">
-              J'accepte de recevoir les offres et nouveautés Salamarket par email
-              (facultatif, résiliable à tout moment).
+              J'accepte de recevoir les offres et nouveautés Salamarket par
+              email (facultatif, résiliable à tout moment).
             </span>
           </label>
 
@@ -279,8 +353,8 @@ export default function Signup() {
           </button>
 
           <p className="text-xs text-muted text-center px-2">
-            En créant votre compte, vous acceptez d'être contacté pour le suivi de vos
-            commandes au retrait.
+            En créant votre compte, vous acceptez d'être contacté pour le suivi
+            de vos commandes au retrait.
           </p>
         </form>
       </main>

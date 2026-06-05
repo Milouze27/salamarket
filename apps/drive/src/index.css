@@ -21,8 +21,8 @@ All colors MUST be HSL.
        affichera du sapin, plus le bleu marine du thème de base.
        Les composants custom continuent d'utiliser les hex BRAND
        directement. */
-    --background: 47 47% 96%;            /* #FAF7EE crème */
-    --foreground: 150 16% 8%;            /* #0F1A14 quasi-noir tinté sapin */
+    --background: 47 47% 96%; /* #FAF7EE crème */
+    --foreground: 150 16% 8%; /* #0F1A14 quasi-noir tinté sapin */
 
     --card: 0 0% 100%;
     --card-foreground: 150 16% 8%;
@@ -30,24 +30,24 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 150 16% 8%;
 
-    --primary: 152 62% 14%;              /* #0E3B2E sapin */
-    --primary-foreground: 47 47% 96%;    /* crème sur sapin */
+    --primary: 152 62% 14%; /* #0E3B2E sapin */
+    --primary-foreground: 47 47% 96%; /* crème sur sapin */
 
-    --secondary: 47 38% 94%;             /* crème légèrement plus foncée */
+    --secondary: 47 38% 94%; /* crème légèrement plus foncée */
     --secondary-foreground: 152 62% 14%;
 
     --muted: 47 38% 94%;
-    --muted-foreground: 220 9% 46%;      /* gris neutre #6B7280 */
+    --muted-foreground: 220 9% 46%; /* gris neutre #6B7280 */
 
-    --accent: 45 70% 47%;                /* #C9A227 or */
+    --accent: 45 70% 47%; /* #C9A227 or */
     --accent-foreground: 152 62% 14%;
 
-    --destructive: 3 76% 57%;            /* #E5483D */
+    --destructive: 3 76% 57%; /* #E5483D */
     --destructive-foreground: 47 47% 96%;
 
-    --border: 47 24% 88%;                /* #E8E4D8 */
+    --border: 47 24% 88%; /* #E8E4D8 */
     --input: 47 24% 88%;
-    --ring: 152 62% 14%;                 /* sapin pour les focus rings */
+    --ring: 152 62% 14%; /* sapin pour les focus rings */
 
     --radius: 0.5rem;
 
@@ -122,9 +122,14 @@ All colors MUST be HSL.
      sélection de texte iOS au long-press. Donne le feel d'une app
      native (pas un site web), et évite que le press-and-hold sur une
      card Kanban déclenche la sélection plutôt que le drag DnD. */
-  html, body {
+  html,
+  body {
     @apply text-text;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Plus Jakarta Sans",
+      system-ui,
+      -apple-system,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
@@ -237,22 +242,46 @@ All colors MUST be HSL.
   }
 
   /* Status badges — canonical palette, == Stock (DSN-02) */
-  .badge-success { background: var(--status-success-bg); color: var(--status-success-text); }
-  .badge-warning { background: var(--status-warning-bg); color: var(--status-warning-text); }
-  .badge-danger  { background: var(--status-danger-bg);  color: var(--status-danger-text); }
-  .badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-text); }
-  .badge-gold    { background: #F4E9C4; color: var(--or-text); }
+  .badge-success {
+    background: var(--status-success-bg);
+    color: var(--status-success-text);
+  }
+  .badge-warning {
+    background: var(--status-warning-bg);
+    color: var(--status-warning-text);
+  }
+  .badge-danger {
+    background: var(--status-danger-bg);
+    color: var(--status-danger-text);
+  }
+  .badge-neutral {
+    background: var(--status-neutral-bg);
+    color: var(--status-neutral-text);
+  }
+  .badge-gold {
+    background: #f4e9c4;
+    color: var(--or-text);
+  }
 
   /* Card primitive — == Stock */
   .card {
     background: #fff;
-    border: 1px solid var(--border-light, #E8E4D8);
+    border: 1px solid var(--border-light, #e8e4d8);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
   }
 }
 
 @layer utilities {
+  /* Gradient sapin de marque — dupliqué à la main (from-[#0E3B2E]
+     to-[#082A20]) dans 15+ composants (StickyCartCTA, Header, Cart,
+     Checkout…). Cette utility centralise le dégradé horizontal pour les
+     CTAs ; les fonds décoratifs verticaux/diagonaux gardent leurs
+     directions propres. */
+  .btn-sapin-gradient {
+    @apply bg-gradient-to-r from-[#0E3B2E] to-[#082A20];
+  }
+
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
@@ -276,13 +305,20 @@ All colors MUST be HSL.
      La nav bottom ne doit JAMAIS cacher du contenu utile : ces helpers
      remplacent les magic numbers pb-[150px]/pb-20/pb-24/9rem dispersés. */
   .pb-nav-stack {
-    padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--nav-height) + var(--safe-bottom) + var(--nav-breathing)
+    );
   }
   .pb-cta-stack {
-    padding-bottom: calc(var(--nav-height) + var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--nav-height) + var(--cta-height) + var(--safe-bottom) +
+        var(--nav-breathing)
+    );
   }
   .pb-cta-only {
-    padding-bottom: calc(var(--cta-height) + var(--safe-bottom) + var(--nav-breathing));
+    padding-bottom: calc(
+      var(--cta-height) + var(--safe-bottom) + var(--nav-breathing)
+    );
   }
   .pb-safe-bottom {
     padding-bottom: var(--safe-bottom);
@@ -300,18 +336,40 @@ All colors MUST be HSL.
   }
 
   /* Shared elevation / radius / text tokens (== Stock, DSN-08/09) */
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-card-hover { box-shadow: var(--shadow-card-hover); }
-  .shadow-card-lg { box-shadow: var(--shadow-card-lg); }
-  .rounded-token-sm { border-radius: var(--radius-sm); }
-  .rounded-token-md { border-radius: var(--radius-md); }
-  .rounded-token-lg { border-radius: var(--radius-lg); }
-  .rounded-token-xl { border-radius: var(--radius-xl); }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .shadow-card-lg {
+    box-shadow: var(--shadow-card-lg);
+  }
+  .rounded-token-sm {
+    border-radius: var(--radius-sm);
+  }
+  .rounded-token-md {
+    border-radius: var(--radius-md);
+  }
+  .rounded-token-lg {
+    border-radius: var(--radius-lg);
+  }
+  .rounded-token-xl {
+    border-radius: var(--radius-xl);
+  }
   /* AA-safe gold text + semantic text helpers (DSN-02/07) */
-  .text-gold-ink { color: var(--or-text); }
-  .text-ink { color: var(--text-primary); }
-  .text-ink-2 { color: var(--text-secondary); }
-  .text-ink-3 { color: var(--text-tertiary); }
+  .text-gold-ink {
+    color: var(--or-text);
+  }
+  .text-ink {
+    color: var(--text-primary);
+  }
+  .text-ink-2 {
+    color: var(--text-secondary);
+  }
+  .text-ink-3 {
+    color: var(--text-tertiary);
+  }
 
   /* Skip link — WCAG 2.4.1 Bypass Blocks (bug-skip-link-landmarks) */
   .skip-link {
@@ -348,14 +406,21 @@ All colors MUST be HSL.
    trait or autour gagne et perd 15% d'opacité. C'est le "live" indicator
    de la marque, jamais agressif. Respecte prefers-reduced-motion. */
 @keyframes halal-pulse {
-  0%, 100% { opacity: 0.85; }
-  50%      { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .halal-seal-ring {
   animation: halal-pulse 4.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .halal-seal-ring { animation: none; }
+  .halal-seal-ring {
+    animation: none;
+  }
 }
 
 /* iOS rubber-band fix (bug-ios-overscroll-rubberband) — empêche le

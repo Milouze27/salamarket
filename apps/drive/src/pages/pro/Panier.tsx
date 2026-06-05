@@ -62,7 +62,8 @@ const computeLignes = (items: ProCartItem[]): LigneCalculee[] =>
         remise_palier_2_pct: item.remise_palier_2_pct,
       },
     );
-    const totalHt = Math.round(prixHtUnit * item.quantite_conditionnements * 100) / 100;
+    const totalHt =
+      Math.round(prixHtUnit * item.quantite_conditionnements * 100) / 100;
     const totalTtc = ttcFromHt(totalHt, item.product_tva_taux);
     return { item, remisePct, prixHtUnit, totalHt, totalTtc };
   });
@@ -143,7 +144,9 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
             <div className="font-semibold text-slate-900 text-sm">
               {formatEur(totalHt)} HT
             </div>
-            <div className="text-xs text-slate-500">{formatEur(totalTtc)} TTC</div>
+            <div className="text-xs text-slate-500">
+              {formatEur(totalTtc)} TTC
+            </div>
           </div>
         </div>
       </div>
@@ -178,6 +181,19 @@ function PanierInner() {
   );
   const totals = useMemo(() => computeCartTotal(cartLines), [cartLines]);
 
+  // Contrôle de crédit (encours). Le compte Pro a un encours_max (plafond)
+  // et un encours_actuel (somme des commandes non soldées, maintenu par
+  // trigger DB). Une nouvelle commande ne doit pas faire dépasser le
+  // plafond : encours_actuel + total_ttc <= encours_max.
+  const encoursActuel = compte?.encours_actuel ?? 0;
+  const encoursMax = compte?.encours_max ?? 0;
+  const creditDisponible = Math.max(0, encoursMax - encoursActuel);
+  // Plafond à 0 = pas de crédit accordé (paiement comptant) : on ne
+  // bloque pas sur le crédit dans ce cas, c'est le mode de paiement qui
+  // gère. Le blocage ne s'applique que si un plafond > 0 est défini.
+  const creditActif = encoursMax > 0;
+  const creditDepasse = creditActif && totals.ttc + encoursActuel > encoursMax;
+
   // Décomposition TVA par taux pour le récap
   const tvaParTaux = useMemo(() => {
     const map = new Map<number, number>();
@@ -198,6 +214,12 @@ function PanierInner() {
       return;
     }
     if (items.length === 0) return;
+    if (creditDepasse) {
+      toast.error(
+        `Crédit dépassé · disponible : ${formatEur(creditDisponible)}`,
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       // 1. Crée la commande sans montants (on les UPDATE ensuite)
@@ -299,9 +321,7 @@ function PanierInner() {
                   key={t.taux}
                   className="flex justify-between text-sm text-slate-700"
                 >
-                  <span>
-                    TVA {t.taux.toString().replace(".", ",")}%
-                  </span>
+                  <span>TVA {t.taux.toString().replace(".", ",")}%</span>
                   <span>{formatEur(t.montant)}</span>
                 </div>
               ))}
@@ -311,6 +331,15 @@ function PanierInner() {
                 <span>{formatEur(totals.ttc)}</span>
               </div>
 
+              {creditActif && (
+                <div className="flex justify-between text-sm text-slate-700">
+                  <span>Crédit disponible</span>
+                  <span className="font-medium">
+                    {formatEur(creditDisponible)}
+                  </span>
+                </div>
+              )}
+
               {totals.ttc > 500 && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                   Commande &gt; 500 € TTC : validation manager requise après
@@ -318,10 +347,19 @@ function PanierInner() {
                 </p>
               )}
 
+              {creditDepasse && (
+                <p
+                  role="alert"
+                  className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2"
+                >
+                  Crédit dépassé · disponible : {formatEur(creditDisponible)}
+                </p>
+              )}
+
               <Button
                 type="button"
                 onClick={onValider}
-                disabled={submitting}
+                disabled={submitting || creditDepasse}
                 className="w-full bg-amber-500 text-slate-900 hover:bg-amber-400 h-11"
               >
                 {submitting ? "Envoi…" : "Valider la commande"}

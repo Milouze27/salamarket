@@ -148,7 +148,10 @@ export const CookieBanner = () => {
           <div className="md:hidden p-3">
             <div className="flex items-center gap-2.5">
               <Cookie className="h-4 w-4 text-[#C9A227] shrink-0" aria-hidden />
-              <p id="cookie-banner-desc" className="text-[12px] leading-[1.35] text-[#FAF7EE]/90 flex-1 min-w-0">
+              <p
+                id="cookie-banner-desc"
+                className="text-[12px] leading-[1.35] text-[#FAF7EE]/90 flex-1 min-w-0"
+              >
                 Cookies pour mesurer l'audience.{" "}
                 <button
                   type="button"
@@ -166,14 +169,14 @@ export const CookieBanner = () => {
                 <button
                   type="button"
                   onClick={refuseAll}
-                  className="h-9 px-3 rounded-lg text-[12px] font-semibold bg-transparent text-[#FAF7EE] ring-1 ring-[#FAF7EE]/30 hover:bg-[#FAF7EE]/10 active:scale-[0.96] transition"
+                  className="h-11 px-4 rounded-lg text-[13px] font-semibold bg-transparent text-[#FAF7EE] ring-1 ring-[#FAF7EE]/30 hover:bg-[#FAF7EE]/10 active:scale-[0.96] transition"
                 >
                   Refuser
                 </button>
                 <button
                   type="button"
                   onClick={acceptAll}
-                  className="h-9 px-3 rounded-lg text-[12px] font-bold bg-[#C9A227] text-sapin-deep hover:bg-[#DDB31C] active:scale-[0.96] transition"
+                  className="h-11 px-4 rounded-lg text-[13px] font-bold bg-[#C9A227] text-sapin-deep hover:bg-[#DDB31C] active:scale-[0.96] transition"
                 >
                   Accepter
                 </button>
@@ -184,15 +187,18 @@ export const CookieBanner = () => {
           {/* ─── DESKTOP (≥md) — layout original full ──────────────── */}
           <div className="hidden md:flex p-6 flex-row gap-4 items-center">
             <div className="flex items-start gap-3 flex-1 min-w-0">
-              <Cookie className="h-5 w-5 text-[#C9A227] shrink-0 mt-0.5" aria-hidden />
+              <Cookie
+                className="h-5 w-5 text-[#C9A227] shrink-0 mt-0.5"
+                aria-hidden
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold text-[#FAF7EE]">
                   Vos cookies, votre choix
                 </p>
                 <p className="text-[13px] leading-[1.55] text-[#FAF7EE]/75 mt-1">
-                  Nous utilisons des cookies nécessaires au bon fonctionnement du site.
-                  Avec votre accord, nous mesurons aussi l'audience pour améliorer le service.
-                  Détails dans notre{" "}
+                  Nous utilisons des cookies nécessaires au bon fonctionnement
+                  du site. Avec votre accord, nous mesurons aussi l'audience
+                  pour améliorer le service. Détails dans notre{" "}
                   <Link
                     to="/confidentialite"
                     className="underline underline-offset-2 text-[#C9A227] hover:text-[#DDB31C]"
@@ -270,8 +276,8 @@ export const CookieBanner = () => {
                     Cookies nécessaires
                   </p>
                   <p className="text-[13px] text-[#0F1A14]/65 mt-1 leading-[1.5]">
-                    Session, panier, sécurité. Indispensables au fonctionnement, pas de
-                    consentement requis.
+                    Session, panier, sécurité. Indispensables au fonctionnement,
+                    pas de consentement requis.
                   </p>
                 </div>
                 <span className="text-[11px] uppercase tracking-[0.18em] font-bold text-[#0E3B2E]/45 mt-1.5">
@@ -281,12 +287,15 @@ export const CookieBanner = () => {
 
               <article className="flex items-start justify-between gap-4 pt-4 border-t border-[#0E3B2E]/8">
                 <div className="flex-1">
-                  <label htmlFor="cookie-analytics" className="text-[14px] font-bold text-[#0E3B2E] cursor-pointer">
+                  <label
+                    htmlFor="cookie-analytics"
+                    className="text-[14px] font-bold text-[#0E3B2E] cursor-pointer"
+                  >
                     Mesure d'audience
                   </label>
                   <p className="text-[13px] text-[#0F1A14]/65 mt-1 leading-[1.5]">
-                    Statistiques anonymisées pour améliorer l'app (pages les plus lues,
-                    erreurs rencontrées).
+                    Statistiques anonymisées pour améliorer l'app (pages les
+                    plus lues, erreurs rencontrées).
                   </p>
                 </div>
                 <Toggle
@@ -299,12 +308,15 @@ export const CookieBanner = () => {
 
               <article className="flex items-start justify-between gap-4 pt-4 border-t border-[#0E3B2E]/8">
                 <div className="flex-1">
-                  <label htmlFor="cookie-marketing" className="text-[14px] font-bold text-[#0E3B2E] cursor-pointer">
+                  <label
+                    htmlFor="cookie-marketing"
+                    className="text-[14px] font-bold text-[#0E3B2E] cursor-pointer"
+                  >
                     Marketing
                   </label>
                   <p className="text-[13px] text-[#0F1A14]/65 mt-1 leading-[1.5]">
-                    Personnalisation de nos communications (newsletters, promotions
-                    ciblées). Désactivé par défaut.
+                    Personnalisation de nos communications (newsletters,
+                    promotions ciblées). Désactivé par défaut.
                   </p>
                 </div>
                 <Toggle
@@ -318,7 +330,9 @@ export const CookieBanner = () => {
 
             <footer
               className="px-6 pt-3 pb-5 border-t border-[#0E3B2E]/10 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end"
-              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
+              style={{
+                paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)",
+              }}
             >
               <button
                 type="button"

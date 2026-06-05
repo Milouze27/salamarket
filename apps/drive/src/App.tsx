@@ -33,44 +33,73 @@ const Slots = lazyWithRetry(() => import("./pages/Slots.tsx"));
 const DriveAuPoids = lazyWithRetry(() => import("./pages/DriveAuPoids.tsx"));
 const LotPublic = lazyWithRetry(() => import("./pages/LotPublic.tsx"));
 const Checkout = lazyWithRetry(() => import("./pages/Checkout.tsx"));
-const OrderConfirmation = lazyWithRetry(() => import("./pages/OrderConfirmation.tsx"));
+const OrderConfirmation = lazyWithRetry(
+  () => import("./pages/OrderConfirmation.tsx"),
+);
 const Account = lazyWithRetry(() => import("./pages/Account.tsx"));
 const Orders = lazyWithRetry(() => import("./pages/Orders.tsx"));
-const MotDePasseOublie = lazyWithRetry(() => import("./pages/MotDePasseOublie.tsx"));
+const MotDePasseOublie = lazyWithRetry(
+  () => import("./pages/MotDePasseOublie.tsx"),
+);
 const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword.tsx"));
 const Admin = lazyWithRetry(() => import("./pages/Admin.tsx"));
 const AdminSettings = lazyWithRetry(() => import("./pages/AdminSettings.tsx"));
-const EmployeeKanban = lazyWithRetry(() => import("./pages/EmployeeKanban.tsx"));
+const EmployeeKanban = lazyWithRetry(
+  () => import("./pages/EmployeeKanban.tsx"),
+);
 
 // Module Labo (recettes BOM + productions + marges) — admin + employee
 const LaboHome = lazyWithRetry(() => import("./pages/labo/LaboHome.tsx"));
 const LaboRecettes = lazyWithRetry(() => import("./pages/labo/Recettes.tsx"));
-const LaboRecetteDetail = lazyWithRetry(() => import("./pages/labo/RecetteDetail.tsx"));
-const LaboRecetteNouvelle = lazyWithRetry(() => import("./pages/labo/RecetteNouvelle.tsx"));
-const LaboProductions = lazyWithRetry(() => import("./pages/labo/Productions.tsx"));
-const LaboProductionDetail = lazyWithRetry(() => import("./pages/labo/ProductionDetail.tsx"));
-const LaboProductionNouvelle = lazyWithRetry(() => import("./pages/labo/ProductionNouvelle.tsx"));
+const LaboRecetteDetail = lazyWithRetry(
+  () => import("./pages/labo/RecetteDetail.tsx"),
+);
+const LaboRecetteNouvelle = lazyWithRetry(
+  () => import("./pages/labo/RecetteNouvelle.tsx"),
+);
+const LaboProductions = lazyWithRetry(
+  () => import("./pages/labo/Productions.tsx"),
+);
+const LaboProductionDetail = lazyWithRetry(
+  () => import("./pages/labo/ProductionDetail.tsx"),
+);
+const LaboProductionNouvelle = lazyWithRetry(
+  () => import("./pages/labo/ProductionNouvelle.tsx"),
+);
 const LaboMarges = lazyWithRetry(() => import("./pages/labo/Marges.tsx"));
 
 // Module Drive Pro — public (auth obligatoire au-delà de inscription/login)
-const ProInscription = lazyWithRetry(() => import("./pages/pro/Inscription.tsx"));
+const ProInscription = lazyWithRetry(
+  () => import("./pages/pro/Inscription.tsx"),
+);
 const ProLogin = lazyWithRetry(() => import("./pages/pro/Login.tsx"));
 const ProCatalogue = lazyWithRetry(() => import("./pages/pro/Catalogue.tsx"));
 const ProPanier = lazyWithRetry(() => import("./pages/pro/Panier.tsx"));
-const ProCommandeDetail = lazyWithRetry(() => import("./pages/pro/CommandeDetail.tsx"));
+const ProCommandes = lazyWithRetry(() => import("./pages/pro/Commandes.tsx"));
+const ProCommandeDetail = lazyWithRetry(
+  () => import("./pages/pro/CommandeDetail.tsx"),
+);
 const ProFactures = lazyWithRetry(() => import("./pages/pro/Factures.tsx"));
 const ProCompte = lazyWithRetry(() => import("./pages/pro/Compte.tsx"));
 
 // Module Drive Pro — admin (admin + manager)
-const AdminComptesPro = lazyWithRetry(() => import("./pages/admin/ComptesPro.tsx"));
-const AdminCommandesPro = lazyWithRetry(() => import("./pages/admin/CommandesPro.tsx"));
-const AdminFacturesPro = lazyWithRetry(() => import("./pages/admin/FacturesPro.tsx"));
+const AdminComptesPro = lazyWithRetry(
+  () => import("./pages/admin/ComptesPro.tsx"),
+);
+const AdminCommandesPro = lazyWithRetry(
+  () => import("./pages/admin/CommandesPro.tsx"),
+);
+const AdminFacturesPro = lazyWithRetry(
+  () => import("./pages/admin/FacturesPro.tsx"),
+);
 
 // Pages légales — chargées lazy, faible traffic, jamais sur le chemin chaud
 const LegalAbout = lazyWithRetry(() => import("./pages/legal/About.tsx"));
 const LegalMentions = lazyWithRetry(() => import("./pages/legal/Mentions.tsx"));
 const LegalCGV = lazyWithRetry(() => import("./pages/legal/CGV.tsx"));
-const LegalConfidentialite = lazyWithRetry(() => import("./pages/legal/Confidentialite.tsx"));
+const LegalConfidentialite = lazyWithRetry(
+  () => import("./pages/legal/Confidentialite.tsx"),
+);
 
 // React Query — defaults raisonnés. Sans staleTime, chaque mount refetch
 // → flicker visuel + bande passante gaspillée + jank au focus window.
@@ -113,7 +142,10 @@ const App = () => (
                     depuis l'empty state du panier B2C, anciens emails et
                     QR prints (avant le rebranding Drive). On garde la
                     redirect 301 logique côté client pour ne plus 404. */}
-                <Route path="/catalogue" element={<Navigate to="/" replace />} />
+                <Route
+                  path="/catalogue"
+                  element={<Navigate to="/" replace />}
+                />
                 <Route path="/produit/:id" element={<ProductDetail />} />
                 <Route path="/panier" element={<Cart />} />
                 <Route path="/creneaux" element={<Slots />} />
@@ -137,7 +169,10 @@ const App = () => (
                 />
                 <Route path="/connexion" element={<Login />} />
                 <Route path="/inscription" element={<Signup />} />
-                <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+                <Route
+                  path="/mot-de-passe-oublie"
+                  element={<MotDePasseOublie />}
+                />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route
                   path="/compte"
@@ -265,6 +300,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/pro/commandes"
+                  element={
+                    <ProtectedRoute>
+                      <ProCommandes />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/pro/commande/:id"
                   element={
                     <ProtectedRoute>
@@ -317,7 +360,10 @@ const App = () => (
                 <Route path="/a-propos" element={<LegalAbout />} />
                 <Route path="/mentions-legales" element={<LegalMentions />} />
                 <Route path="/cgv" element={<LegalCGV />} />
-                <Route path="/confidentialite" element={<LegalConfidentialite />} />
+                <Route
+                  path="/confidentialite"
+                  element={<LegalConfidentialite />}
+                />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

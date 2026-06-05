@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { HalalSeal } from "@/components/HalalSeal";
 import { BRAND } from "@/config/brand";
 import {
   formatSlotDayHuman,
@@ -76,9 +77,14 @@ const Slots = () => {
       <AppHeader showBack title="Choisir mon créneau" />
 
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-36 flex flex-col gap-3">
-        <p className="text-sm text-muted">
-          Retrait à {BRAND.store.name}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted">Retrait à {BRAND.store.name}</p>
+          {/* Signal de confiance discret avant paiement (CRO trust). */}
+          <HalalSeal
+            size="sm"
+            className="shrink-0 scale-[0.65] origin-right -my-3"
+          />
+        </div>
 
         {/* Tabs jours */}
         {loading ? (

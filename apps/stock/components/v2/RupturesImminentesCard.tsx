@@ -52,7 +52,8 @@ const TIER_RANK: Record<StockoutTier, number> = {
 
 const TIER_CHIP: Record<StockoutTier, string> = {
   out: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
-  blocker: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
+  blocker:
+    "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
   crit: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/25",
   warn: "bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning)]/25",
   ok: "bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/25",
@@ -67,7 +68,7 @@ const TIER_LABEL: Record<StockoutTier, string> = {
 };
 
 function formatDays(d: number | null): string {
-  if (d === null) return "—";
+  if (d === null) return "·";
   if (d < 1) return `${Math.round(d * 24)} h`;
   return `${d.toFixed(1)} j`;
 }
@@ -115,7 +116,10 @@ export function RupturesImminentesCard({
       if (cancelled) return;
       if (error) {
         // Vue absente (migration pas jouée) ou RLS → empty state silencieux.
-        console.warn("[RupturesImminentesCard] view query failed:", error.message);
+        console.warn(
+          "[RupturesImminentesCard] view query failed:",
+          error.message,
+        );
         setRows([]);
       } else {
         const sorted = ((data ?? []) as Row[]).sort((a, b) => {
@@ -146,7 +150,7 @@ export function RupturesImminentesCard({
           </span>
           <div>
             <p className="text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-[var(--accent-gold-dim)]">
-              03 — Forecast
+              03 · Forecast
             </p>
             <p className="text-[14.5px] font-extrabold text-text-primary leading-tight">
               Ruptures imminentes
@@ -184,9 +188,7 @@ export function RupturesImminentesCard({
               key={`${r.produit_id}-${r.depot_id}`}
               className="flex items-center gap-3 bg-[var(--danger-soft)] border border-[var(--danger)]/20 rounded-xl px-3 py-2"
             >
-              <span
-                className="inline-flex items-center justify-center w-2 h-2 rounded-full shrink-0 bg-[var(--danger)]"
-              />
+              <span className="inline-flex items-center justify-center w-2 h-2 rounded-full shrink-0 bg-[var(--danger)]" />
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-bold text-text-primary truncate">
                   {r.produit_nom}

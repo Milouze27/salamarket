@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 /**
  * Web splash screen displayed on the very first visit to "/".
- * - Fond dégradé vert sapin foncé (#0A2A20 → #0E3B2E vertical)
+ * - Fond dégradé vert sapin foncé (sapin foncé → sapin vertical)
  * - Logo Xlab "S" sapin/or au centre
  * - "Salam Market" blanc + "Stock" or
  * - Sous-texte "Gestion multi-dépôts" blanc 60%
@@ -12,14 +12,20 @@ import { motion } from "framer-motion";
  *
  * Pour la version PWA (mode standalone iPhone), iOS utilise les PNGs
  * apple-touch-startup-image — voir public/splash/ et app/layout.tsx.
+ *
+ * NB couleurs : ce splash est peint AVANT l'hydratation du thème (aucun
+ * data-theme posé), donc on ne peut PAS dépendre des var(--*) CSS dark.
+ * On utilise les HEX BRAND officiels = valeurs des tokens du :root jour
+ * dans globals.css (--primary-green #0E3B2E, --primary-green-dark #082A20,
+ * --primary-green-hover #14523F, --accent-gold #C9A227).
  */
 export function SplashScreen() {
   return (
     <div
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
       style={{
-        background:
-          "linear-gradient(180deg, #0A2A20 0%, #0E3B2E 100%)",
+        // #082A20 = var(--primary-green-dark), #0E3B2E = var(--primary-green)
+        background: "linear-gradient(180deg, #082A20 0%, #0E3B2E 100%)",
       }}
     >
       <motion.div
@@ -32,13 +38,15 @@ export function SplashScreen() {
         <div
           className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-lg"
           style={{
-            background:
-              "linear-gradient(135deg, #0E3B2E 0%, #14523F 100%)",
+            // #0E3B2E = var(--primary-green), #14523F = var(--primary-green-hover)
+            background: "linear-gradient(135deg, #0E3B2E 0%, #14523F 100%)",
+            // rgba(201,162,39,…) = var(--accent-gold) #C9A227 à 35%
             border: "1.5px solid rgba(201, 162, 39, 0.35)",
           }}
         >
           <span
             className="text-4xl font-extrabold"
+            // #C9A227 = var(--accent-gold)
             style={{ color: "#C9A227", letterSpacing: "-0.05em" }}
           >
             S
@@ -64,7 +72,7 @@ export function SplashScreen() {
           </p>
           <p
             style={{
-              color: "#C9A227",
+              color: "#C9A227", // = var(--accent-gold)
               fontFamily: "var(--font-jakarta), system-ui, sans-serif",
               fontSize: 32,
               fontWeight: 800,

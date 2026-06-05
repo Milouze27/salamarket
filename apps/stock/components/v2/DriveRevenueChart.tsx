@@ -36,12 +36,16 @@ const PERIOD_LABEL: Record<Period, string> = {
   90: "90 jours",
 };
 
-/** Courbe drive : néon cyan/violet — distinct des couleurs Stock
- *  (sapin/or/danger) et néon Particulier/Pro du RevenueChart Stock. */
+/** Courbe drive : palette de marque sapin/or (anti hors-brand).
+ *  Recharts peint sur un <canvas> SVG qui ne résout pas les var(--*) CSS ;
+ *  on utilise donc les HEX BRAND officiels (= valeurs des tokens
+ *  --primary-green / --primary-green-dark / --accent-gold du :root jour
+ *  dans globals.css). Voir DriveRevenueChart : fill sapin, stroke sapin
+ *  foncé, accent or sur le point actif. */
 const COLOR = {
-  fill: "#7C5CFF", // electric violet
-  stroke: "#5538D8",
-  accent: "#3DDCFF", // neon cyan accent
+  fill: "#0E3B2E", // = var(--primary-green)
+  stroke: "#082A20", // = var(--primary-green-dark)
+  accent: "#C9A227", // = var(--accent-gold)
 };
 
 function formatEUR(n: number) {
@@ -76,11 +80,11 @@ export function DriveRevenueChart({
   const total = useMemo(() => sliced.reduce((s, d) => s + d.ca, 0), [sliced]);
   const previousTotal = useMemo(
     () => previousSliced.reduce((s, d) => s + d.ca, 0),
-    [previousSliced]
+    [previousSliced],
   );
   const totalCmds = useMemo(
     () => sliced.reduce((s, d) => s + d.commandes, 0),
-    [sliced]
+    [sliced],
   );
   const delta =
     previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : null;
@@ -238,15 +242,15 @@ export function DriveRevenueChart({
             <Area
               type="monotone"
               dataKey="ca"
-              stroke={COLOR.stroke}
+              stroke={COLOR.fill}
               strokeWidth={2.4}
               fill="url(#grad-drive)"
               isAnimationActive
               animationDuration={420}
               activeDot={{
                 r: 5,
-                fill: COLOR.fill,
-                stroke: COLOR.stroke,
+                fill: COLOR.accent,
+                stroke: COLOR.fill,
                 strokeWidth: 2,
               }}
             />

@@ -129,7 +129,13 @@ export function BayPicker({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="relative px-6 pt-6 pb-3 bg-gradient-to-br from-[#0E3B2E] to-[#082A20] text-white">
+            <div
+              className="relative px-6 pt-6 pb-3 text-white"
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--primary-green), var(--primary-green-dark))",
+              }}
+            >
               <button
                 type="button"
                 onClick={onClose}
@@ -138,7 +144,7 @@ export function BayPicker({
               >
                 <X className="w-4 h-4" />
               </button>
-              <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[#C9A227]">
+              <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-[var(--accent-gold)]">
                 Borne assignée
               </p>
               <p className="text-[13px] text-white/75 mt-1">
@@ -166,12 +172,12 @@ export function BayPicker({
               {!loading && bay && !error && (
                 <>
                   <MapPin
-                    className={`w-7 h-7 mb-3 ${isOverflow ? "text-danger" : "text-[#C9A227]"}`}
+                    className={`w-7 h-7 mb-3 ${isOverflow ? "text-danger" : "text-[var(--accent-gold)]"}`}
                     strokeWidth={2.2}
                   />
                   <p
                     className={`font-extrabold tabular tracking-tight leading-none ${
-                      isOverflow ? "text-danger" : "text-[#0E3B2E]"
+                      isOverflow ? "text-danger" : "text-[var(--primary-green)]"
                     }`}
                     style={{ fontSize: "clamp(72px, 18vw, 128px)" }}
                   >
@@ -192,7 +198,7 @@ export function BayPicker({
                 type="button"
                 disabled={!bay || loading || confirming}
                 onClick={handleConfirm}
-                className="w-full bg-[#0E3B2E] hover:bg-[#082A20] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl py-4 font-bold text-[15px] inline-flex items-center justify-center gap-2 transition-colors active:scale-[0.99]"
+                className="w-full bg-[var(--primary-green)] hover:bg-[var(--primary-green-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl py-4 font-bold text-[15px] inline-flex items-center justify-center gap-2 transition-colors active:scale-[0.99]"
               >
                 {confirming ? (
                   <>
@@ -202,7 +208,7 @@ export function BayPicker({
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    Confirmer — rangée en {bay ?? "…"}
+                    Confirmer · rangée en {bay ?? "…"}
                   </>
                 )}
               </button>

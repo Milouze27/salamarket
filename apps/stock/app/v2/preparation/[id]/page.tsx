@@ -13,6 +13,7 @@ import {
   Loader2,
   Lock,
   PackageMinus,
+  Pencil,
   Route,
   Scale,
   ScanBarcode,
@@ -953,11 +954,26 @@ function WeightLineRow({
           </span>
         )}
         {ligne.saved ? (
-          <span className="text-[12px] text-success inline-flex items-center gap-1 font-semibold">
-            <Lock className="w-3.5 h-3.5" aria-hidden />
-            <Check className="w-4 h-4" />
-            Pesée enregistrée
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-success inline-flex items-center gap-1 font-semibold">
+              <Lock className="w-3.5 h-3.5" aria-hidden />
+              <Check className="w-4 h-4" />
+              Pesée enregistrée
+            </span>
+            {/* Recours anti-blocage : même un écart DANS la tolérance peut
+                être erroné. "Corriger" rouvre l'édition de CETTE ligne
+                (saved→false ré-active input + bouton Enregistrer) sans vider
+                weighedKg, pour rectifier la valeur. Ne touche ni au calcul
+                ni à la capture (re-passe par saveWeightLigne au ré-enreg.). */}
+            <button
+              onClick={() => onChange({ saved: false })}
+              className="min-h-[44px] text-[12px] font-semibold text-text-secondary inline-flex items-center gap-1 px-2 rounded-lg hover:text-primary"
+              aria-label={`Corriger la pesée ${ligne.produit?.nom ?? ""}`}
+            >
+              <Pencil className="w-3.5 h-3.5" aria-hidden />
+              Corriger
+            </button>
+          </div>
         ) : (
           <button
             onClick={() => void onSave()}

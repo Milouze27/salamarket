@@ -8,7 +8,7 @@
   "display_override": ["standalone", "fullscreen"],
   "orientation": "any",
   "permissions": ["camera"],
-  "background_color": "#FAF7EE",
+  "background_color": "#0E3B2E",
   "theme_color": "#0E3B2E",
   "lang": "fr",
   "icons": [

@@ -55,15 +55,23 @@ export default function Account() {
    */
   const handleExport = async () => {
     if (!user) return;
+    // commandes_drive est rattachée au client par son email (client_email),
+    // pas par user_id : la table n'a pas de colonne user_id. On filtre donc
+    // sur l'email du compte, comme useUserOrders.
+    const exportEmail = user.email ?? profile?.email ?? null;
+    if (!exportEmail) {
+      setActionError("Aucune adresse email associée au compte.");
+      return;
+    }
     setActionError(null);
     setExporting(true);
     try {
       const { data: orders, error: ordersError } = await supabase
         .from("commandes_drive")
         .select(
-          "id, created_at, statut, payment_method, payment_status, total_cents, retrait_at, notes, commandes_drive_lignes(name, quantity, unit_price_cents, line_total_cents)",
+          "id, created_at, statut, mode_paiement, statut_paiement, total_ttc, retired_at, commandes_drive_lignes(produit_id, quantite, prix_unitaire, montant_estime_ttc)",
         )
-        .eq("user_id", user.id)
+        .eq("client_email", exportEmail)
         .order("created_at", { ascending: false });
       if (ordersError) throw ordersError;
 

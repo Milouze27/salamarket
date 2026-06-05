@@ -53,7 +53,8 @@ export const useProductions = (filters: ProductionsFilters = {}) =>
         .order("date_production", { ascending: false });
       if (filters.statut) q = q.eq("statut", filters.statut);
       if (filters.recetteId) q = q.eq("recette_id", filters.recetteId);
-      if (filters.employeId) q = q.eq("employe_responsable_id", filters.employeId);
+      if (filters.employeId)
+        q = q.eq("employe_responsable_id", filters.employeId);
       if (filters.dateFrom) q = q.gte("date_production", filters.dateFrom);
       if (filters.dateTo) q = q.lte("date_production", filters.dateTo);
       const { data, error } = await q;
@@ -69,7 +70,12 @@ export interface ProductionFull {
     produit: { id: string; name: string; unit: string } | null;
   })[];
   outputs: (ProductionOutput & {
-    produit: { id: string; name: string; unit: string; tva_taux: number } | null;
+    produit: {
+      id: string;
+      name: string;
+      unit: string;
+      tva_taux: number;
+    } | null;
   })[];
   couts_indirects: ProductionCoutIndirect[];
 }
@@ -124,8 +130,8 @@ export const useProduction = (productionId: string | undefined) =>
 
       return {
         production: prodRes.data as ProductionWithRecette,
-        inputs: (inputsRes.data ?? []) as InputWithProduct[],
-        outputs: (outputsRes.data ?? []) as OutputWithProduct[],
+        inputs: (inputsRes.data ?? []) as unknown as InputWithProduct[],
+        outputs: (outputsRes.data ?? []) as unknown as OutputWithProduct[],
         couts_indirects: coutsRes.data ?? [],
       };
     },
@@ -177,9 +183,7 @@ export const useAddProductionInput = (productionId: string) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: ProductionInputInsert) => {
-      const { error } = await supabase
-        .from("productions_inputs")
-        .insert(input);
+      const { error } = await supabase.from("productions_inputs").insert(input);
       if (error) throw error;
     },
     onSuccess: () =>

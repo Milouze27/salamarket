@@ -21,7 +21,12 @@ export type RecetteMainOeuvreInsert =
 export interface RecetteFull {
   recette: Recette;
   ingredients: (RecetteIngredient & {
-    produit: { id: string; name: string; price_cents: number; unit: string } | null;
+    produit: {
+      id: string;
+      name: string;
+      price_cents: number;
+      unit: string;
+    } | null;
   })[];
   etapes: RecetteEtape[];
   main_oeuvre: RecetteMainOeuvre[];
@@ -65,14 +70,18 @@ export const useRecette = (recetteId: string | undefined) =>
       if (mainOeuvreRes.error) throw mainOeuvreRes.error;
 
       type IngredientWithProduct = RecetteIngredient & {
-        produit:
-          | { id: string; name: string; price_cents: number; unit: string }
-          | null;
+        produit: {
+          id: string;
+          name: string;
+          price_cents: number;
+          unit: string;
+        } | null;
       };
 
       return {
         recette: recetteRes.data,
-        ingredients: (ingredientsRes.data ?? []) as IngredientWithProduct[],
+        ingredients: (ingredientsRes.data ??
+          []) as unknown as IngredientWithProduct[],
         etapes: etapesRes.data ?? [],
         main_oeuvre: mainOeuvreRes.data ?? [],
       };
@@ -118,7 +127,8 @@ export const useAddIngredient = (recetteId: string) => {
         .insert(input);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };
 
@@ -132,7 +142,8 @@ export const useRemoveIngredient = (recetteId: string) => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };
 
@@ -143,7 +154,8 @@ export const useAddEtape = (recetteId: string) => {
       const { error } = await supabase.from("recettes_etapes").insert(input);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };
 
@@ -157,7 +169,8 @@ export const useRemoveEtape = (recetteId: string) => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };
 
@@ -170,7 +183,8 @@ export const useAddMainOeuvre = (recetteId: string) => {
         .insert(input);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };
 
@@ -184,6 +198,7 @@ export const useRemoveMainOeuvre = (recetteId: string) => {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: recettesKeys.detail(recetteId) }),
   });
 };

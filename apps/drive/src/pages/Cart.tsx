@@ -1,26 +1,48 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  Check,
   Info,
   Minus,
   Plus,
   Scale,
   ShoppingBag,
   Store,
+  Tag,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { TrustBar } from "@/components/TrustBar";
 import { HalalSeal } from "@/components/HalalSeal";
 import { useCartStore } from "@/stores/cartStore";
+import { useAuth } from "@/providers/AuthProvider";
 import { formatPrice, unitLabel } from "@/lib/format";
 import { MIN_ORDER_CENTS } from "@/lib/constants";
+import { validatePromo, promoMessage, type PromoResult } from "@/lib/promo";
+import { supabase } from "@/integrations/supabase/client";
 import { computePrixEstime, formatKg, getBrackets } from "@salamarket/shared";
 import { cdnImage } from "@/lib/imageUrl";
 
+/**
+ * Hash stable (djb2) du contenu du panier — sert de clé d'idempotence
+ * pour l'upsert d'abandon. Indépendant de l'ordre n'est PAS requis :
+ * cartStore conserve un ordre stable, on sérialise donc tel quel.
+ */
+const cartHash = (input: string): string => {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) {
+    h = (h * 33) ^ input.charCodeAt(i);
+  }
+  // >>> 0 pour rester sur un entier non signé 32 bits.
+  return (h >>> 0).toString(36);
+};
+
 const Cart = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const items = useCartStore((s) => s.items);
   const increment = useCartStore((s) => s.increment);
   const decrement = useCartStore((s) => s.decrement);
@@ -28,6 +50,16 @@ const Cart = () => {
   const updateQuantiteKg = useCartStore((s) => s.updateQuantiteKg);
   const updateBracket = useCartStore((s) => s.updateBracket);
   const clear = useCartStore((s) => s.clear);
+
+  // ─────── Code promo (state local, dégrade proprement) ───────
+  const [promoInput, setPromoInput] = useState("");
+  const [promoApplying, setPromoApplying] = useState(false);
+  const [promo, setPromo] = useState<PromoResult | null>(null);
+  // Dernier message d'essai (succès/erreur), pour feedback discret.
+  const [promoMsg, setPromoMsg] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
 
   // Calcul du sous-total en cents — gère unit/weight/weight_bracket
   const subtotal = items.reduce((sum, i) => {
@@ -37,6 +69,14 @@ const Cart = () => {
     return sum + Math.round(eur * 100);
   }, 0);
 
+  // Remise effective : un code appliqué ne peut jamais dépasser le
+  // sous-total (sécurité affichage), et tombe si le panier passe en
+  // dessous du minimum qui le rendait valide.
+  const discountCents = promo?.valid
+    ? Math.min(promo.discount_cents, subtotal)
+    : 0;
+  const total = Math.max(0, subtotal - discountCents);
+
   // A-t-on au moins une ligne au poids ? Conditionne l'affichage du
   // bandeau "vous serez débité du poids réel".
   const hasWeightLine = items.some(
@@ -44,6 +84,111 @@ const Cart = () => {
   );
 
   const itemCount = items.reduce((n, i) => n + i.quantity, 0);
+
+  // Empreinte stable du panier — recalculée à chaque mutation. Sert à
+  // la fois de cart_hash (relance) et de garde anti-spam d'upsert.
+  const cartSignature = items
+    .map(
+      (i) =>
+        `${i.product.id}:${i.unitType}:${i.quantity}:${i.quantiteKg ?? ""}:${i.bracketIndex ?? ""}`,
+    )
+    .join("|");
+
+  const handleApplyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code || promoApplying) return;
+    setPromoApplying(true);
+    try {
+      const result = await validatePromo(code, subtotal);
+      if (result.valid) {
+        setPromo(result);
+        setPromoMsg({ text: promoMessage(result), ok: true });
+      } else {
+        setPromo(null);
+        // "unavailable" (RPC absente) → message non agressif "Code invalide".
+        setPromoMsg({ text: promoMessage(result), ok: false });
+      }
+    } finally {
+      setPromoApplying(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromo(null);
+    setPromoInput("");
+    setPromoMsg(null);
+  };
+
+  // Si le panier change après application d'un code, on revalide pour
+  // éviter d'afficher une remise devenue caduque (ex: sous le minimum).
+  useEffect(() => {
+    if (!promo?.valid) return;
+    let cancelled = false;
+    (async () => {
+      const result = await validatePromo(promo.code, subtotal);
+      if (cancelled) return;
+      if (result.valid) {
+        setPromo(result);
+      } else {
+        setPromo(null);
+        setPromoMsg({ text: promoMessage(result), ok: false });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // On revalide quand la signature panier change (pas à chaque render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartSignature]);
+
+  // ─────── Relance panier (tracking best-effort, dégrade en silence) ───────
+  // Upsert d'un événement d'abandon après ~3s d'inactivité OU au
+  // démontage. Si la table cart_abandonment_events n'existe pas, on
+  // ignore toute erreur (jamais de crash / toast).
+  const lastTrackedRef = useRef<string>("");
+  useEffect(() => {
+    if (!user || items.length === 0) return;
+    const signature = cartSignature;
+
+    const trackAbandonment = async () => {
+      if (signature === lastTrackedRef.current) return;
+      lastTrackedRef.current = signature;
+      try {
+        // ⚠️ Table `cart_abandonment_events` pas encore déployée → absente
+        // des types générés. On relâche le typage du client sur ce seul
+        // appel best-effort. Toute erreur (table absente, RLS, réseau) est
+        // avalée plus bas : jamais de crash ni de toast.
+        await (
+          supabase.from as unknown as (table: string) => {
+            upsert: (
+              values: Record<string, unknown>,
+              options: { onConflict: string },
+            ) => Promise<unknown>;
+          }
+        )("cart_abandonment_events").upsert(
+          {
+            user_id: user.id,
+            email: user.email ?? null,
+            cart_hash: cartHash(signature),
+            items_count: items.reduce((n, i) => n + i.quantity, 0),
+            total_cents: subtotal,
+            recovered: false,
+          },
+          { onConflict: "user_id,cart_hash" },
+        );
+      } catch {
+        // Table absente / RLS / réseau → ignore silencieusement.
+      }
+    };
+
+    const timer = window.setTimeout(trackAbandonment, 3000);
+    return () => {
+      window.clearTimeout(timer);
+      // Best-effort au démontage si le debounce n'a pas encore tiré.
+      void trackAbandonment();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, cartSignature, subtotal]);
 
   const handleClear = () => {
     if (window.confirm("Vider le panier ? Cette action est irréversible.")) {
@@ -53,6 +198,10 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
+    // NB : le succès réel de la commande survient plus tard (Checkout /
+    // OrderConfirmation), pas ici. On ne marque donc PAS recovered=true
+    // depuis le panier — le cron de relance s'en charge à la création
+    // effective de la commande.
     navigate("/creneaux");
   };
 
@@ -348,6 +497,20 @@ const Cart = () => {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
+                {discountCents > 0 && promo?.valid && (
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[#0E3B2E] inline-flex items-center gap-1.5 font-semibold">
+                      <Tag size={13} className="text-[#0E3B2E]" aria-hidden />
+                      Remise
+                      <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#C9A227]">
+                        {promo.code}
+                      </span>
+                    </span>
+                    <span className="text-[#0E3B2E] font-semibold tabular-nums">
+                      -{formatPrice(discountCents)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between">
                   <span className="text-[#6B7280] inline-flex items-center gap-1.5">
                     <Store size={13} className="text-[#C9A227]" aria-hidden />
@@ -361,7 +524,7 @@ const Cart = () => {
                   Total {hasWeightLine ? "estimé" : ""}
                 </span>
                 <span className="text-[28px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.025em]">
-                  {formatPrice(subtotal)}
+                  {formatPrice(total)}
                 </span>
               </div>
               {hasWeightLine && (
@@ -376,6 +539,94 @@ const Cart = () => {
                   </Link>
                 </p>
               )}
+              {/* Code promo — dégrade proprement si la RPC est absente :
+                  un essai affiche au pire "Code invalide", jamais d'erreur
+                  technique. Champ masqué une fois un code valide appliqué
+                  (remplacé par un récap retirable). */}
+              <div className="mt-5">
+                {promo?.valid ? (
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#0E3B2E]/20 bg-[#0E3B2E]/[0.04] px-4 py-3">
+                    <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#0E3B2E]">
+                      <Check size={16} className="text-[#0E3B2E]" aria-hidden />
+                      Code{" "}
+                      <span className="uppercase tracking-[0.06em]">
+                        {promo.code}
+                      </span>{" "}
+                      appliqué
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="inline-flex items-center justify-center min-h-11 min-w-11 -mr-2 rounded-full text-[#6B7280] active:scale-90 transition-transform"
+                      aria-label="Retirer le code promo"
+                    >
+                      <X size={18} strokeWidth={2.2} aria-hidden />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <label
+                      htmlFor="promo-code"
+                      className="block text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-2"
+                    >
+                      Code promo
+                    </label>
+                    <div className="flex items-stretch gap-2">
+                      <div className="relative flex-1">
+                        <Tag
+                          size={16}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+                          aria-hidden
+                        />
+                        <input
+                          id="promo-code"
+                          type="text"
+                          inputMode="text"
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                          spellCheck={false}
+                          value={promoInput}
+                          onChange={(e) => {
+                            setPromoInput(e.target.value);
+                            if (promoMsg) setPromoMsg(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              void handleApplyPromo();
+                            }
+                          }}
+                          placeholder="Votre code"
+                          className="w-full h-12 pl-9 pr-3 text-base text-[#0F1A14] bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-xl uppercase tracking-[0.04em] placeholder:normal-case placeholder:tracking-normal placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
+                          aria-describedby={
+                            promoMsg ? "promo-feedback" : undefined
+                          }
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleApplyPromo()}
+                        disabled={!promoInput.trim() || promoApplying}
+                        className="shrink-0 h-12 px-5 rounded-xl bg-[#0E3B2E] text-white text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {promoApplying ? "..." : "Appliquer"}
+                      </button>
+                    </div>
+                    {promoMsg && (
+                      <p
+                        id="promo-feedback"
+                        role="status"
+                        className={`mt-2 text-[12px] font-medium ${
+                          promoMsg.ok ? "text-[#0E3B2E]" : "text-destructive"
+                        }`}
+                      >
+                        {promoMsg.text}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-5">
                 <TrustBar />
               </div>

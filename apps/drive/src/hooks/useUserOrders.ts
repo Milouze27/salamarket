@@ -60,7 +60,9 @@ const fetchUserOrders = async (
 
   const mapped: UserOrder[] = (legacyOrders ?? []) as unknown as UserOrder[];
 
-  for (const cd of driveOrders ?? []) {
+  for (const cd of (driveOrders ?? []) as unknown as Array<
+    Record<string, unknown> & { id: string; created_at: string }
+  >) {
     // Skip if already present in legacy (synced orders appear in both)
     if (mapped.some((o) => o.id === cd.id)) continue;
 

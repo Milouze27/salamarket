@@ -4,6 +4,7 @@ import { AlertCircle, QrCode, SearchX } from "lucide-react";
 import { Header } from "@/components/Header";
 import { EditorialIntro } from "@/components/EditorialIntro";
 import { WeeklyPicks } from "@/components/WeeklyPicks";
+import { BundleCarousel } from "@/components/BundleCarousel";
 import { CategoryTabs } from "@/components/CategoryTabs";
 import { CourteDateBanner } from "@/components/CourteDateBanner";
 import { ProductCard } from "@/components/ProductCard";
@@ -21,16 +22,21 @@ const Index = () => {
   const category = searchParams.get("category") || "all";
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const { data: allProducts, isLoading, isError, error, refetch } = useProducts();
+  const {
+    data: allProducts,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useProducts();
 
   // Setter qui pousse dans l'URL. "all" = nettoie le param pour
   // basculer en mode vitrine (URL propre /).
   const setCategory = useCallback(
     (slug: string) => {
-      setSearchParams(
-        slug === "all" ? {} : { category: slug },
-        { replace: false },
-      );
+      setSearchParams(slug === "all" ? {} : { category: slug }, {
+        replace: false,
+      });
     },
     [setSearchParams],
   );
@@ -56,7 +62,10 @@ const Index = () => {
 
     const idle = (cb: () => void, timeout: number) => {
       const w = window as unknown as {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        requestIdleCallback?: (
+          cb: () => void,
+          opts?: { timeout: number },
+        ) => number;
       };
       if (typeof w.requestIdleCallback === "function") {
         w.requestIdleCallback(cb, { timeout });
@@ -127,6 +136,10 @@ const Index = () => {
       {showVitrine && allProducts && allProducts.length > 0 && (
         <WeeklyPicks products={allProducts} />
       )}
+      {/* Paniers-type par occasion. Le composant gere lui-meme son absence
+          de donnees (table occasion_bundles absente en prod / 0 ligne →
+          return null) : aucun risque de casser la home en mode vitrine. */}
+      {showVitrine && <BundleCarousel />}
 
       <CategoryTabs active={category} onChange={setCategory} />
 
@@ -142,7 +155,8 @@ const Index = () => {
               <h1 className="text-[26px] md:text-[36px] leading-[1.05] text-[#0E3B2E] font-extrabold tracking-[-0.03em]">
                 {debouncedSearch
                   ? `« ${debouncedSearch} »`
-                  : BRAND.categories.find((c) => c.slug === category)?.name ?? "Tout"}
+                  : (BRAND.categories.find((c) => c.slug === category)?.name ??
+                    "Tout")}
               </h1>
             </div>
             {products.length > 0 && (
@@ -160,7 +174,10 @@ const Index = () => {
             <span className="text-[26px] font-extrabold text-[#C9A227] tabular-nums leading-none tracking-[-0.04em]">
               04
             </span>
-            <span aria-hidden className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25 mb-2" />
+            <span
+              aria-hidden
+              className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25 mb-2"
+            />
             <span className="text-[10px] uppercase tracking-[0.32em] font-bold text-[#0E3B2E] mb-1.5">
               Catalogue
             </span>
@@ -235,7 +252,10 @@ const Index = () => {
             <span className="text-[26px] font-extrabold text-[#C9A227] tabular-nums leading-none tracking-[-0.04em]">
               05
             </span>
-            <span aria-hidden className="h-px flex-1 max-w-[80px] bg-[#FAF7EE]/25 mb-2" />
+            <span
+              aria-hidden
+              className="h-px flex-1 max-w-[80px] bg-[#FAF7EE]/25 mb-2"
+            />
             <span className="text-[10px] uppercase tracking-[0.32em] font-bold text-[#FAF7EE]">
               Salamarket
             </span>
@@ -287,13 +307,18 @@ const Index = () => {
             <div>
               {BRAND.store.hours.map((h, i) => (
                 <span key={h.days}>
-                  {i > 0 && <span aria-hidden className="px-2 text-[#FAF7EE]/35">·</span>}
+                  {i > 0 && (
+                    <span aria-hidden className="px-2 text-[#FAF7EE]/35">
+                      ·
+                    </span>
+                  )}
                   {h.days} {h.time}
                 </span>
               ))}
             </div>
             <div>
-              © {new Date().getFullYear()} {BRAND.name} · {formatStoreLocation(BRAND.store)}
+              © {new Date().getFullYear()} {BRAND.name} ·{" "}
+              {formatStoreLocation(BRAND.store)}
             </div>
           </div>
         </div>

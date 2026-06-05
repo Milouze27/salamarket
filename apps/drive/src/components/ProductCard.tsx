@@ -39,9 +39,7 @@ function startTransition(fn: () => void) {
     fn();
     return;
   }
-  // @ts-expect-error - startViewTransition not yet in TS lib.dom default
   if (typeof document !== "undefined" && document.startViewTransition) {
-    // @ts-expect-error - same
     document.startViewTransition(fn);
   } else {
     fn();

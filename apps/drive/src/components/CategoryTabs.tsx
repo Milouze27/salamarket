@@ -29,9 +29,7 @@ function withViewTransition(fn: () => void) {
     fn();
     return;
   }
-  // @ts-expect-error - startViewTransition is not yet in lib.dom for all TS versions
   if (typeof document !== "undefined" && document.startViewTransition) {
-    // @ts-expect-error - same
     document.startViewTransition(fn);
   } else {
     fn();
@@ -84,7 +82,10 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
           <span className="text-[26px] font-extrabold text-[#C9A227] tabular-nums leading-none tracking-[-0.04em]">
             03
           </span>
-          <span aria-hidden className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25 mb-2" />
+          <span
+            aria-hidden
+            className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25 mb-2"
+          />
           <span className="text-[10px] uppercase tracking-[0.32em] font-bold text-[#0E3B2E] mb-1.5">
             Nos rayons
           </span>

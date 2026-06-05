@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
+  Bell,
+  BellRing,
   Minus,
   Plus,
   QrCode,
@@ -18,8 +20,11 @@ import {
   Store,
   Truck,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useProduct } from "@/hooks/useProduct";
 import { useProducts } from "@/hooks/useProducts";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice, unitLabel } from "@/lib/format";
 import {
@@ -49,6 +54,7 @@ const ProductDetail = () => {
   const location = useLocation();
   const { data: product, isLoading, isError, error } = useProduct(id);
   const { data: allProducts } = useProducts();
+  const { user } = useAuth();
 
   const addItem = useCartStore((s) => s.addItem);
   const cartQty = useCartStore((s) => (id ? s.getQuantity(id) : 0));
@@ -65,6 +71,13 @@ const ProductDetail = () => {
   const [bracketIndex, setBracketIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
   const [heroFailed, setHeroFailed] = useState(false);
+  // "Préviens-moi au retour" (produit en rupture). `notifyEmail` n'est
+  // utilisé que pour les visiteurs non connectés (saisie manuelle) ; un
+  // utilisateur connecté part directement avec son user_id + email.
+  // `notifySubscribed` bascule l'UI en état "inscrit" après succès.
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifySubmitting, setNotifySubmitting] = useState(false);
+  const [notifySubscribed, setNotifySubscribed] = useState(false);
   // Annonce lecteur d'écran à l'ajout (le "Ajouté !" visuel n'est pas un
   // status role). key force la re-lecture sur ajouts répétés.
   const [announce, setAnnounce] = useState<{ key: number; msg: string } | null>(
@@ -86,6 +99,9 @@ const ProductDetail = () => {
     setQty(1);
     setBracketIndex(0);
     setJustAdded(false);
+    setNotifyEmail("");
+    setNotifySubmitting(false);
+    setNotifySubscribed(false);
     if (product) {
       setKg(1);
     }
@@ -112,13 +128,11 @@ const ProductDetail = () => {
       typeof window !== "undefined" &&
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // @ts-expect-error - startViewTransition not yet in TS lib.dom default
     if (
       !reduce &&
       typeof document !== "undefined" &&
       document.startViewTransition
     ) {
-      // @ts-expect-error - same
       document.startViewTransition(run);
     } else {
       run();
@@ -168,6 +182,55 @@ const ProductDetail = () => {
       setJustAdded(false);
       addedTimerRef.current = null;
     }, 2000);
+  };
+
+  // "Préviens-moi au retour" — best-effort. La table
+  // out_of_stock_notifications n'existe peut-être PAS encore en base : tout
+  // est enveloppé dans try/catch et on dégrade proprement (toast neutre,
+  // jamais de crash de la PDP). Connecté → {product_id, user_id, email} ;
+  // visiteur → {product_id, email} après validation d'un email saisi à la
+  // main (champ ≥16px côté markup).
+  const handleNotify = async () => {
+    if (!product || notifySubmitting) return;
+
+    const email = (user?.email ?? notifyEmail).trim();
+    // Validation légère côté visiteur : un email plausible suffit, la
+    // contrainte stricte reste côté base / edge plus tard.
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Entre une adresse email valide.");
+      return;
+    }
+
+    setNotifySubmitting(true);
+    try {
+      const payload = user
+        ? { product_id: product.id, user_id: user.id, email }
+        : { product_id: product.id, email };
+      // out_of_stock_notifications n'est pas (encore) dans les types
+      // auto-générés : cast local pour le .from(), l'absence éventuelle de
+      // la table reste gérée par le try/catch.
+      const { error: insertError } = await (
+        supabase as unknown as {
+          from: (table: string) => {
+            insert: (
+              values: Record<string, unknown>,
+            ) => Promise<{ error: unknown }>;
+          };
+        }
+      )
+        .from("out_of_stock_notifications")
+        .insert(payload);
+      if (insertError) throw insertError;
+      setNotifySubscribed(true);
+      setNotifyEmail("");
+      toast.success("On te préviendra dès le retour.");
+    } catch {
+      // Table absente, RLS, réseau… on ne casse jamais la PDP : message
+      // neutre et l'utilisateur peut retenter.
+      toast("Impossible pour le moment, réessaie plus tard.");
+    } finally {
+      setNotifySubmitting(false);
+    }
   };
 
   // Total CTA (estimé pour weight) — utilisé pour l'affichage du bouton
@@ -446,6 +509,73 @@ const ProductDetail = () => {
     </div>
   );
 
+  // Bloc "Préviens-moi au retour" — affiché uniquement en rupture
+  // (inStock=false). Connecté : un seul bouton (email déjà connu).
+  // Visiteur : champ email ≥16px (text-base) pour bloquer le zoom iOS, puis
+  // bouton. État "inscrit" remplace tout par une confirmation calme.
+  const NotifyBlock = () => {
+    if (product.inStock) return null;
+    if (notifySubscribed) {
+      return (
+        <section className="mt-5 rounded-3xl border border-[#0E3B2E]/15 bg-[#E8F5EE] p-4 flex items-start gap-3">
+          <div className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center">
+            <BellRing size={18} className="text-[#2D7A4F]" aria-hidden />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-[#0E3B2E]">
+              Tu es bien inscrit
+            </p>
+            <p className="text-xs text-[#0F1A14]/65 mt-0.5">
+              On te préviendra par email dès le retour en stock.
+            </p>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section className="mt-5 rounded-3xl border border-[#0E3B2E]/15 bg-white p-4">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 w-10 h-10 rounded-full bg-[#FAF7EE] flex items-center justify-center">
+            <Bell size={18} className="text-[#0E3B2E]" aria-hidden />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-[#0E3B2E]">
+              Préviens-moi au retour
+            </p>
+            <p className="text-xs text-[#0F1A14]/60 mt-0.5">
+              {user
+                ? "On t'envoie un email dès que ce produit revient en stock."
+                : "Laisse ton email, on te prévient dès que ce produit revient."}
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+          {!user && (
+            <input
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.value)}
+              placeholder="ton@email.fr"
+              aria-label="Adresse email pour être prévenu du retour en stock"
+              className="flex-1 min-w-0 h-12 px-4 text-base rounded-2xl bg-[#FAF7EE] border border-[#0E3B2E]/15 text-[#0E3B2E] placeholder:text-[#0F1A14]/40 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
+            />
+          )}
+          <button
+            type="button"
+            onClick={handleNotify}
+            disabled={notifySubmitting}
+            className="shrink-0 h-12 px-5 rounded-2xl bg-[#0E3B2E] text-white font-bold text-[14px] inline-flex items-center justify-center gap-2 active:scale-[0.99] transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Bell size={16} strokeWidth={2.4} aria-hidden />
+            {notifySubmitting ? "Envoi…" : "Préviens-moi"}
+          </button>
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="min-h-dvh bg-[#FAF7EE]">
       {/* Header overlay */}
@@ -645,6 +775,9 @@ const ProductDetail = () => {
               </p>
             </div>
           </section>
+
+          {/* "Préviens-moi au retour" — visible uniquement si rupture. */}
+          <NotifyBlock />
 
           {/* Passeport halal — boucherie/charcuterie uniquement. En évidence
               sur la PDP : HalalBadgeLink (variant detail) résout le lot RÉEL le

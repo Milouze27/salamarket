@@ -15,7 +15,11 @@ const VAPID_PUBLIC_KEY: string =
 
 export const isPushSupported = (): boolean => {
   if (typeof window === "undefined") return false;
-  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
 };
 
 export const isStandalonePWA = (): boolean => {
@@ -88,9 +92,12 @@ export const subscribePush = async (): Promise<{
   if (!VAPID_PUBLIC_KEY) return { ok: false, reason: "no-vapid-key" };
 
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return { ok: false, reason: "permission-denied" };
+  if (permission !== "granted")
+    return { ok: false, reason: "permission-denied" };
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { ok: false, reason: "no-user" };
 
   const registration = await getReadyRegistration();
@@ -102,7 +109,9 @@ export const subscribePush = async (): Promise<{
       existing ??
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(
+          VAPID_PUBLIC_KEY,
+        ) as BufferSource,
       }));
   } catch (err) {
     console.error("[push] subscribe failed:", err);
@@ -113,11 +122,16 @@ export const subscribePush = async (): Promise<{
 
   // Cast nécessaire : push_subscriptions n'est pas (encore) dans les
   // types auto-générés. Lovable régénère après exécution de la migration.
-  const { error } = await (supabase as unknown as {
-    from: (table: string) => {
-      upsert: (values: Record<string, unknown>, opts?: { onConflict?: string }) => Promise<{ error: unknown }>;
-    };
-  })
+  const { error } = await (
+    supabase as unknown as {
+      from: (table: string) => {
+        upsert: (
+          values: Record<string, unknown>,
+          opts?: { onConflict?: string },
+        ) => Promise<{ error: unknown }>;
+      };
+    }
+  )
     .from("push_subscriptions")
     .upsert(
       {
@@ -148,11 +162,13 @@ export const unsubscribePush = async (): Promise<{ ok: boolean }> => {
     console.error("[push] unsubscribe failed:", err);
   }
 
-  await (supabase as unknown as {
-    from: (table: string) => {
-      delete: () => { eq: (col: string, value: string) => Promise<unknown> };
-    };
-  })
+  await (
+    supabase as unknown as {
+      from: (table: string) => {
+        delete: () => { eq: (col: string, value: string) => Promise<unknown> };
+      };
+    }
+  )
     .from("push_subscriptions")
     .delete()
     .eq("endpoint", subscription.endpoint);

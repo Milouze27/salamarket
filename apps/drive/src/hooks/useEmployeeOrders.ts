@@ -69,7 +69,7 @@ export const useEmployeeOrders = ({ onNewOrder }: Options = {}) => {
         setLoading(false);
         return;
       }
-      setOrders((data ?? []) as EmployeeOrder[]);
+      setOrders((data ?? []) as unknown as EmployeeOrder[]);
       setLoading(false);
     })();
     return () => {
@@ -103,13 +103,12 @@ export const useEmployeeOrders = ({ onNewOrder }: Options = {}) => {
           if (!newRow) return;
 
           // pending → confirmed : ajout (équivalent INSERT côté Kanban)
-          if (
-            oldRow?.status === "pending" &&
-            newRow.status === "confirmed"
-          ) {
+          if (oldRow?.status === "pending" && newRow.status === "confirmed") {
             setOrders((prev) => {
               if (prev.some((o) => o.id === newRow.id)) {
-                return prev.map((o) => (o.id === newRow.id ? { ...o, ...newRow } : o));
+                return prev.map((o) =>
+                  o.id === newRow.id ? { ...o, ...newRow } : o,
+                );
               }
               return [newRow, ...prev];
             });

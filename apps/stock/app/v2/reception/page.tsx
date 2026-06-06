@@ -88,6 +88,12 @@ export default function V2ReceptionPage() {
   const [numeroBl, setNumeroBl] = useState("");
   const [photoCarton, setPhotoCarton] = useState<string | null>(null);
   const [photoOpen, setPhotoOpen] = useState(false);
+  // Contrôle IA de la photo d'une réception libre (livraison surprise) :
+  // on impose que la photo montre bien une livraison de produits.
+  const [photoIa, setPhotoIa] = useState<{
+    status: "idle" | "checking" | "ok" | "rejected" | "unavailable";
+    label: string;
+  }>({ status: "idle", label: "" });
 
   const [receptionId, setReceptionId] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -273,6 +279,54 @@ export default function V2ReceptionPage() {
     ]);
   }
 
+  /**
+   * Contrôle IA de la photo d'une réception libre : la photo doit montrer
+   * une vraie livraison de produits d'épicerie. hors_sujet ⇒ rejet (reprendre).
+   * Si l'IA est indisponible, on n'empêche pas l'exploitation (dégradation
+   * gracieuse) mais la photo reste obligatoire.
+   */
+  async function validatePhotoIa(dataUrl: string) {
+    setPhotoIa({ status: "checking", label: "Vérification de la photo…" });
+    try {
+      const r = await fetch("/api/vision-product-recognition", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ photo_data_url: dataUrl }),
+      });
+      if (!r.ok) {
+        setPhotoIa({
+          status: "unavailable",
+          label:
+            "Contrôle IA indisponible — photo acceptée, vérifiez visuellement.",
+        });
+        return;
+      }
+      const j = (await r.json()) as RecognitionResult;
+      if (j.hors_sujet) {
+        setPhotoIa({
+          status: "rejected",
+          label:
+            (j.description_courte && j.description_courte.trim()) ||
+            "Cette photo ne montre pas une livraison de produits. Reprenez la photo du carton/palette.",
+        });
+      } else {
+        setPhotoIa({
+          status: "ok",
+          label:
+            j.produit_reconnu && j.nom_suggere
+              ? `Livraison confirmée (ex. ${j.nom_suggere}).`
+              : "Livraison de produits confirmée par l'IA.",
+        });
+      }
+    } catch {
+      setPhotoIa({
+        status: "unavailable",
+        label:
+          "Contrôle IA injoignable — photo acceptée, vérifiez visuellement.",
+      });
+    }
+  }
+
   async function startReception() {
     if (!depot || !employe) {
       toast.error("Dépôt et employé requis");
@@ -280,6 +334,16 @@ export default function V2ReceptionPage() {
     }
     if (!photoCarton) {
       toast.error("Photo du carton/palette obligatoire");
+      return;
+    }
+    if (photoIa.status === "checking") {
+      toast.error("Vérification IA de la photo en cours…");
+      return;
+    }
+    if (photoIa.status === "rejected") {
+      toast.error(
+        "Photo refusée par l'IA — reprenez une photo de la livraison.",
+      );
       return;
     }
     try {
@@ -671,17 +735,52 @@ export default function V2ReceptionPage() {
               >
                 <Camera className="w-6 h-6" />
                 <span className="text-sm font-bold">Prendre la photo</span>
-                <span className="text-xs text-text-secondary">Obligatoire</span>
+                <span className="text-xs text-text-secondary">
+                  Obligatoire · validée par l&apos;IA
+                </span>
               </button>
+            )}
+
+            {/* Statut du contrôle IA de la photo (réception libre) */}
+            {photoCarton && photoIa.status !== "idle" && (
+              <div
+                role="status"
+                className={`mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold ${
+                  photoIa.status === "ok"
+                    ? "bg-success-soft text-success"
+                    : photoIa.status === "rejected"
+                      ? "bg-danger/10 text-danger"
+                      : photoIa.status === "checking"
+                        ? "bg-cream text-text-secondary"
+                        : "bg-warning-soft text-warning"
+                }`}
+              >
+                {photoIa.status === "checking" ? (
+                  <Loader2 className="w-4 h-4 shrink-0 animate-spin mt-px" />
+                ) : photoIa.status === "ok" ? (
+                  <Check className="w-4 h-4 shrink-0 mt-px" />
+                ) : (
+                  <Sparkles className="w-4 h-4 shrink-0 mt-px" />
+                )}
+                <span>{photoIa.label}</span>
+              </div>
             )}
           </div>
 
           <button
             onClick={startReception}
-            disabled={!photoCarton}
+            disabled={
+              !photoCarton ||
+              photoIa.status === "checking" ||
+              photoIa.status === "rejected"
+            }
             className="btn-primary w-full disabled:opacity-50"
           >
-            Démarrer la réception
+            {photoIa.status === "checking"
+              ? "Vérification IA…"
+              : photoIa.status === "rejected"
+                ? "Reprenez la photo"
+                : "Démarrer la réception"}
           </button>
         </section>
       )}
@@ -812,7 +911,10 @@ export default function V2ReceptionPage() {
       <PhotoCapture
         open={photoOpen}
         onClose={() => setPhotoOpen(false)}
-        onCapture={(d) => setPhotoCarton(d)}
+        onCapture={(d) => {
+          setPhotoCarton(d);
+          void validatePhotoIa(d);
+        }}
       />
 
       <ProductRecognitionModal

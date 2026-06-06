@@ -31,6 +31,8 @@ export interface CartItem {
   quantiteKg?: number;
   /** Index du bracket choisi pour unit_type='weight_bracket'. */
   bracketIndex?: number;
+  /** Prix unitaire remisé DLC (cents), capturé à l'ajout. Voir CartLineLike. */
+  dlcUnitPriceCents?: number;
 }
 
 const MAX_QTY = 99;
@@ -71,7 +73,12 @@ interface CartState {
    *  ajoute une nouvelle ligne weight/weight_bracket. */
   addItem: (
     product: Product,
-    options?: { quantiteKg?: number; bracketIndex?: number },
+    options?: {
+      quantiteKg?: number;
+      bracketIndex?: number;
+      /** Prix unitaire remisé DLC (cents) capturé à l'ajout — lignes 'unit'. */
+      dlcUnitPriceCents?: number;
+    },
   ) => void;
   /** Supprime par lineId (canonique). */
   removeLine: (lineId: string) => void;
@@ -116,7 +123,14 @@ export const useCartStore = create<CartState>()(
               return {
                 items: state.items.map((i) =>
                   i.lineId === existing.lineId
-                    ? { ...i, quantity: Math.min(MAX_QTY, i.quantity + 1) }
+                    ? {
+                        ...i,
+                        quantity: Math.min(MAX_QTY, i.quantity + 1),
+                        // Rafraîchit la remise DLC capturée si une nouvelle est
+                        // fournie (sinon conserve celle de la 1re mise au panier).
+                        dlcUnitPriceCents:
+                          options?.dlcUnitPriceCents ?? i.dlcUnitPriceCents,
+                      }
                     : i,
                 ),
               };
@@ -129,6 +143,7 @@ export const useCartStore = create<CartState>()(
                   product,
                   quantity: 1,
                   unitType: "unit",
+                  dlcUnitPriceCents: options?.dlcUnitPriceCents,
                 },
               ],
             };

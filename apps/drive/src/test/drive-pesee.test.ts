@@ -93,7 +93,9 @@ describe("computePrixEstime", () => {
   });
 
   it("unitType absent : fallback comportement 'unit'", () => {
-    const p = makeUnit({ unitType: undefined as unknown as Product["unitType"] });
+    const p = makeUnit({
+      unitType: undefined as unknown as Product["unitType"],
+    });
     expect(computePrixEstime(p, 2)).toBeCloseTo(11.98, 2);
   });
 });
@@ -126,7 +128,9 @@ describe("getBrackets", () => {
 
 describe("formatPriceWithUnit", () => {
   it("unit : '5,99 €'", () => {
-    expect(formatPriceWithUnit(makeUnit({ priceCents: 599 }))).toMatch(/5,99.€/);
+    expect(formatPriceWithUnit(makeUnit({ priceCents: 599 }))).toMatch(
+      /5,99.€/,
+    );
   });
 
   it("weight : '18,00 €/kg'", () => {
@@ -249,6 +253,37 @@ describe("computeCartTotalsCents", () => {
     expect(r.otherCents).toBe(1797);
     expect(r.autoriseCents).toBe(1797);
     expect(r.hasWeightLine).toBe(false);
+  });
+
+  it("remise DLC : dlcUnitPriceCents remplace le plein tarif sur les lignes unit", () => {
+    // Régression bug 2026-06-06 : la remise DLC était affichée mais le total
+    // facturait le plein tarif (le client surpayait).
+    const yaourt = makeUnit({ id: "p-dlc", priceCents: 599 });
+    const r = computeCartTotalsCents([
+      {
+        product: yaourt,
+        quantity: 2,
+        unitType: "unit",
+        dlcUnitPriceCents: 399,
+      },
+    ]);
+    expect(r.totalCents).toBe(798); // 2 × 3,99 € (remisé), PAS 2 × 5,99 €
+    expect(r.otherCents).toBe(798);
+  });
+
+  it("remise DLC : ignorée sur les lignes weight (prix au kg)", () => {
+    const merguez = makeWeight({ pricePerKg: 18 });
+    const r = computeCartTotalsCents([
+      {
+        product: merguez,
+        quantity: 1,
+        unitType: "weight",
+        quantiteKg: 1,
+        // même si une remise traîne, le calcul weight reste au €/kg
+        dlcUnitPriceCents: 100,
+      },
+    ]);
+    expect(r.totalCents).toBe(1800);
   });
 
   it("panier 100% weight_bracket : autorise == total (pas de marge)", () => {

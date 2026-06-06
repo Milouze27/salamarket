@@ -206,6 +206,14 @@ export interface CartLineLike {
   unitType: ProductUnitType;
   quantiteKg?: number;
   bracketIndex?: number;
+  /**
+   * Prix unitaire REMISÉ DLC en centimes, capturé au moment de l'ajout au
+   * panier (anti-gaspi). Présent uniquement pour les lignes 'unit' affichées
+   * avec une remise DLC. S'il est défini, il remplace product.priceCents dans
+   * le calcul du total — sinon le client paierait le plein tarif malgré la
+   * remise affichée.
+   */
+  dlcUnitPriceCents?: number;
 }
 
 export interface CartTotalsCents {
@@ -244,8 +252,16 @@ export function computeCartTotalsCents(
       unitType === "weight"
         ? (item.quantiteKg ?? 0) * item.quantity
         : item.quantity;
-    const eur = computePrixEstime(item.product, qtyArg, item.bracketIndex ?? 0);
-    const cents = Math.round(eur * 100);
+    // Remise DLC (lignes 'unit' uniquement) : le prix remisé capturé à l'ajout
+    // remplace le prix plein, sinon le client paie le plein tarif malgré la
+    // remise affichée (bug revenue/confiance).
+    const cents =
+      unitType === "unit" && item.dlcUnitPriceCents != null
+        ? Math.round(item.dlcUnitPriceCents) * item.quantity
+        : Math.round(
+            computePrixEstime(item.product, qtyArg, item.bracketIndex ?? 0) *
+              100,
+          );
 
     if (unitType === "weight") {
       weightCents += cents;

@@ -95,7 +95,12 @@ export const ProductCard = ({ product }: Props) => {
       imageUrl: product.imageUrl,
       name: product.name,
     });
-    addItem(product);
+    // Propage le prix remisé DLC au panier (sinon le client paie le plein
+    // tarif malgré la remise affichée sur la carte).
+    addItem(product, {
+      dlcUnitPriceCents:
+        showDlcPrice && dlcDiscount ? dlcDiscount.discountedCents : undefined,
+    });
     setAnnounce({ key: Date.now(), msg: `${product.name} ajouté au panier` });
   };
 

@@ -163,8 +163,12 @@ const ProductDetail = () => {
     } else if (unitType === "weight_bracket") {
       addItem(product, { bracketIndex });
     } else {
-      // unit — on duplique l'add pour respecter qty (fusion gérée par store)
-      for (let i = 0; i < qty; i += 1) addItem(product);
+      // unit — on duplique l'add pour respecter qty (fusion gérée par store).
+      // Propage le prix remisé DLC (sinon plein tarif au checkout malgré la
+      // remise affichée).
+      const dlcUnitPriceCents =
+        showDlcPrice && dlcDiscount ? dlcDiscount.discountedCents : undefined;
+      for (let i = 0; i < qty; i += 1) addItem(product, { dlcUnitPriceCents });
     }
     // Annonce a11y contextualisée selon le type d'unité.
     const addedMsg =

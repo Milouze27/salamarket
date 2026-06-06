@@ -63,6 +63,11 @@ const Cart = () => {
 
   // Calcul du sous-total en cents — gère unit/weight/weight_bracket
   const subtotal = items.reduce((sum, i) => {
+    // Remise DLC (lignes 'unit') : on facture le prix remisé affiché au client,
+    // sinon il paierait le plein tarif malgré la remise (bug revenue/confiance).
+    if (i.unitType === "unit" && i.dlcUnitPriceCents != null) {
+      return sum + Math.round(i.dlcUnitPriceCents) * i.quantity;
+    }
     const qty =
       i.unitType === "weight" ? (i.quantiteKg ?? 0) * i.quantity : i.quantity;
     const eur = computePrixEstime(i.product, qty, i.bracketIndex ?? 0);
@@ -300,7 +305,12 @@ const Cart = () => {
                     : item.quantity,
                   item.bracketIndex ?? 0,
                 );
-                const lineCents = Math.round(lineEur * 100);
+                // Remise DLC (lignes 'unit') : affiche le prix remisé pour que
+                // la ligne soit cohérente avec le sous-total facturé.
+                const lineCents =
+                  item.unitType === "unit" && item.dlcUnitPriceCents != null
+                    ? Math.round(item.dlcUnitPriceCents) * item.quantity
+                    : Math.round(lineEur * 100);
 
                 return (
                   <li

@@ -762,7 +762,10 @@ function WeightLineRow({
   const reelTtcLive =
     ut === "weight"
       ? reelKg != null && ppk > 0
-        ? ppk * reelKg
+        ? // Arrondi au centime : l'écart affiché (pct/action) doit refléter le
+          // montant RÉELLEMENT capturé (capture-payment arrondit aussi au centime),
+          // sinon le seuil de validation client peut diverger à la marge.
+          Math.round(ppk * reelKg * 100) / 100
         : null
       : ut === "weight_bracket"
         ? ligne.prix_unitaire

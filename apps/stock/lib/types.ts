@@ -1,12 +1,6 @@
-export type UserRole = "directeur" | "manager" | "employe";
-
-export interface User {
-  id: string;
-  name: string;
-  initials: string;
-  role: UserRole;
-  email: string;
-}
+// NB : les rôles staff vivent dans lib/types/db.ts (EmployeRole) et les profils
+// Clerk dans le Drive (Role). L'ancien UserRole/User (orphelin, jamais importé)
+// a été supprimé — cf F review 2026-06-06.
 
 export type Category =
   | "Épicerie"

@@ -65,7 +65,11 @@ const Cart = () => {
   const subtotal = items.reduce((sum, i) => {
     // Remise DLC (lignes 'unit') : on facture le prix remisé affiché au client,
     // sinon il paierait le plein tarif malgré la remise (bug revenue/confiance).
-    if (i.unitType === "unit" && i.dlcUnitPriceCents != null) {
+    if (
+      i.unitType === "unit" &&
+      i.dlcUnitPriceCents != null &&
+      Number.isFinite(i.dlcUnitPriceCents)
+    ) {
       return sum + Math.round(i.dlcUnitPriceCents) * i.quantity;
     }
     const qty =
@@ -308,7 +312,9 @@ const Cart = () => {
                 // Remise DLC (lignes 'unit') : affiche le prix remisé pour que
                 // la ligne soit cohérente avec le sous-total facturé.
                 const lineCents =
-                  item.unitType === "unit" && item.dlcUnitPriceCents != null
+                  item.unitType === "unit" &&
+                  item.dlcUnitPriceCents != null &&
+                  Number.isFinite(item.dlcUnitPriceCents)
                     ? Math.round(item.dlcUnitPriceCents) * item.quantity
                     : Math.round(lineEur * 100);
 

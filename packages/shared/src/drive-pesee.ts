@@ -256,7 +256,9 @@ export function computeCartTotalsCents(
     // remplace le prix plein, sinon le client paie le plein tarif malgré la
     // remise affichée (bug revenue/confiance).
     const cents =
-      unitType === "unit" && item.dlcUnitPriceCents != null
+      unitType === "unit" &&
+      item.dlcUnitPriceCents != null &&
+      Number.isFinite(item.dlcUnitPriceCents)
         ? Math.round(item.dlcUnitPriceCents) * item.quantity
         : Math.round(
             computePrixEstime(item.product, qtyArg, item.bracketIndex ?? 0) *

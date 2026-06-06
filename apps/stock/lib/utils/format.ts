@@ -16,7 +16,10 @@ export function formatNumber(value: number, digits = 0): string {
   }).format(value);
 }
 
-export function formatDate(value: string | Date, pattern = "dd MMM yyyy"): string {
+export function formatDate(
+  value: string | Date,
+  pattern = "dd MMM yyyy",
+): string {
   const date = typeof value === "string" ? parseISO(value) : value;
   return format(date, pattern, { locale: fr });
 }
@@ -40,9 +43,4 @@ export function generateInternalEAN(): string {
 export function randomPickN<T>(arr: T[], n: number): T[] {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, n);
-}
-
-export function ecartPct(commande: number, recue: number): number {
-  if (commande === 0) return 0;
-  return ((recue - commande) / commande) * 100;
 }

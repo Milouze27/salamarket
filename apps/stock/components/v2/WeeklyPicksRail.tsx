@@ -79,7 +79,7 @@ export function WeeklyPicksRail() {
     <section className="mt-8" aria-label="Produits actifs cette semaine">
       <div className="px-5 flex items-end justify-between gap-3 mb-3">
         <div>
-          <EditorialEyebrow num="04" label="Cette semaine" />
+          <EditorialEyebrow num="03" label="Cette semaine" />
           <p className="text-[12.5px] text-text-secondary mt-1.5 max-w-[34ch]">
             Produits les plus actifs du dépôt&nbsp;
             <span className="font-bold text-text-primary">{depot.nom}</span>.
@@ -138,7 +138,9 @@ export function WeeklyPicksRail() {
                       {p.nom}
                     </p>
                     <p className="mt-1 text-[10.5px] text-text-tertiary uppercase tracking-wider font-bold">
-                      <span className="tabular text-text-secondary">{p.quantite}</span>{" "}
+                      <span className="tabular text-text-secondary">
+                        {p.quantite}
+                      </span>{" "}
                       <span className="text-text-tertiary">unités</span>
                     </p>
                   </Link>

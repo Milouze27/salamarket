@@ -19,6 +19,7 @@ import {
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
@@ -26,7 +27,10 @@ import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
 import { CounterPreview } from "@/components/v2/CounterPreview";
 import { DlcBanner } from "@/components/v2/DlcBanner";
-import { RevenueChart, type RevenueDataPoint } from "@/components/v2/RevenueChart";
+import {
+  RevenueChart,
+  type RevenueDataPoint,
+} from "@/components/v2/RevenueChart";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
 import { EmailRecapCard } from "@/components/v2/EmailRecapCard";
@@ -82,8 +86,12 @@ export default function V2AdminDashboardPage() {
   const [stats, setStats] = useState<DepotStats[]>([]);
   const [recentReceptions, setRecentReceptions] = useState<Reception[]>([]);
   const [recentSorties, setRecentSorties] = useState<SortieStock[]>([]);
-  const [recentTransferts, setRecentTransferts] = useState<TransfertInterDepot[]>([]);
-  const [recentInventaires, setRecentInventaires] = useState<InventaireTournant[]>([]);
+  const [recentTransferts, setRecentTransferts] = useState<
+    TransfertInterDepot[]
+  >([]);
+  const [recentInventaires, setRecentInventaires] = useState<
+    InventaireTournant[]
+  >([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [revenue, setRevenue] = useState<RevenueDataPoint[]>([]);
   const [view, setView] = useState<"stock" | "drive">("stock");
@@ -95,77 +103,93 @@ export default function V2AdminDashboardPage() {
   }, []);
 
   async function load() {
-    const ds = await listDepots();
-    setDepots(ds);
-    const today = new Date().toISOString().slice(0, 10);
-    const allEmployes = await listEmployes();
-    setEmployes(allEmployes);
-    // CA par jour Particulier / Pro (90j max, le chart limite à 7/30/90)
-    void listRevenueByDay({ days: 90 })
-      .then(setRevenue)
-      .catch(() => setRevenue([]));
+    try {
+      const ds = await listDepots();
+      setDepots(ds);
+      const today = new Date().toISOString().slice(0, 10);
+      const allEmployes = await listEmployes();
+      setEmployes(allEmployes);
+      // CA par jour Particulier / Pro (90j max, le chart limite à 7/30/90)
+      void listRevenueByDay({ days: 90 })
+        .then(setRevenue)
+        .catch(() => setRevenue([]));
 
-    const computed: DepotStats[] = await Promise.all(
-      ds.map(async (d) => {
-        const stock = await listProduitsInDepot(d.id);
-        const receptions = await listReceptions({ depotId: d.id, limit: 100 });
-        const sorties = await listSorties({ depotId: d.id, limit: 100 });
-        const inventaires = await listInventairesDuJour({ depotId: d.id });
-        const isToday = (iso: string) => iso.slice(0, 10) === today;
-        return {
-          depot: d,
-          productCount: stock.length,
-          totalUnits: stock.reduce((s, p) => s + p.quantite, 0),
-          totalValue: stock.reduce(
-            (s, p) => s + p.quantite * (p.prix_vente ?? 0),
-            0
-          ),
-          receptionsToday: receptions.filter((r) => isToday(r.created_at)).length,
-          sortiesToday: sorties.filter((r) => isToday(r.created_at)).length,
-          ecartsCount: inventaires.filter(
-            (i) => i.quantite_comptee !== null && i.ecart !== 0
-          ).length,
-        };
-      })
-    );
-    setStats(computed);
+      const computed: DepotStats[] = await Promise.all(
+        ds.map(async (d) => {
+          const stock = await listProduitsInDepot(d.id);
+          const receptions = await listReceptions({
+            depotId: d.id,
+            limit: 100,
+          });
+          const sorties = await listSorties({ depotId: d.id, limit: 100 });
+          const inventaires = await listInventairesDuJour({ depotId: d.id });
+          const isToday = (iso: string) => iso.slice(0, 10) === today;
+          return {
+            depot: d,
+            productCount: stock.length,
+            totalUnits: stock.reduce((s, p) => s + p.quantite, 0),
+            totalValue: stock.reduce(
+              (s, p) => s + p.quantite * (p.prix_vente ?? 0),
+              0,
+            ),
+            receptionsToday: receptions.filter((r) => isToday(r.created_at))
+              .length,
+            sortiesToday: sorties.filter((r) => isToday(r.created_at)).length,
+            ecartsCount: inventaires.filter(
+              (i) => i.quantite_comptee !== null && i.ecart !== 0,
+            ).length,
+          };
+        }),
+      );
+      setStats(computed);
 
-    const allReceptions: Reception[] = [];
-    const allSorties: SortieStock[] = [];
-    const allTransferts = await listTransferts({ limit: 30 });
-    for (const d of ds) {
-      allReceptions.push(...(await listReceptions({ depotId: d.id, limit: 10 })));
-      allSorties.push(...(await listSorties({ depotId: d.id, limit: 10 })));
+      const allReceptions: Reception[] = [];
+      const allSorties: SortieStock[] = [];
+      const allTransferts = await listTransferts({ limit: 30 });
+      for (const d of ds) {
+        allReceptions.push(
+          ...(await listReceptions({ depotId: d.id, limit: 10 })),
+        );
+        allSorties.push(...(await listSorties({ depotId: d.id, limit: 10 })));
+      }
+      setRecentReceptions(
+        allReceptions
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .slice(0, 8),
+      );
+      setRecentSorties(
+        allSorties
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+          .slice(0, 8),
+      );
+      setRecentTransferts(allTransferts.slice(0, 5));
+
+      // Inventaires aggregated
+      const allInv: InventaireTournant[] = [];
+      for (const d of ds) {
+        allInv.push(...(await listInventairesDuJour({ depotId: d.id })));
+      }
+      setRecentInventaires(allInv.slice(0, 10));
+    } catch (e) {
+      // Sans ce garde, une erreur Supabase laissait le dashboard vide/figé.
+      console.error("[admin] chargement dashboard échoué:", e);
+      toast.error("Erreur de chargement du tableau de bord · réessaie");
+    } finally {
+      setLoading(false);
     }
-    setRecentReceptions(
-      allReceptions.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 8)
-    );
-    setRecentSorties(
-      allSorties.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 8)
-    );
-    setRecentTransferts(allTransferts.slice(0, 5));
-
-    // Inventaires aggregated
-    const allInv: InventaireTournant[] = [];
-    for (const d of ds) {
-      allInv.push(...(await listInventairesDuJour({ depotId: d.id })));
-    }
-    setRecentInventaires(allInv.slice(0, 10));
-
-    setLoading(false);
   }
 
   const flaggedSorties = useMemo(
     () =>
       recentSorties.filter(
-        (s) => s.ia_coherence_score !== null && s.ia_coherence_score < 0.6
+        (s) => s.ia_coherence_score !== null && s.ia_coherence_score < 0.6,
       ),
-    [recentSorties]
+    [recentSorties],
   );
 
   const emptyReceptions = useMemo(
     () => recentReceptions.filter((r) => r.reception_vide === true),
-    [recentReceptions]
+    [recentReceptions],
   );
 
   return (
@@ -210,9 +234,7 @@ export default function V2AdminDashboardPage() {
                 aria-selected={active}
                 onClick={() => setView(v)}
                 className={`px-5 min-h-[44px] md:min-h-0 md:py-1.5 py-2 rounded-full text-[13px] md:text-[12.5px] font-bold transition-colors min-w-[96px] ${
-                  active
-                    ? "bg-primary text-text-ondark"
-                    : "text-text-secondary"
+                  active ? "bg-primary text-text-ondark" : "text-text-secondary"
                 }`}
               >
                 {v === "stock" ? "Vue Stock" : "Vue Drive"}
@@ -254,7 +276,11 @@ export default function V2AdminDashboardPage() {
         /* ───────── VUE STOCK ───────── */
         <>
           {/* ═══ PLAN 02 — OPÉRER : raccourcis terrain ═══ */}
-          <EditorialEyebrow num="02" label="Opérer" className="px-4 sm:px-5 mt-7" />
+          <EditorialEyebrow
+            num="02"
+            label="Opérer"
+            className="px-4 sm:px-5 mt-7"
+          />
 
           {/* DLC alerts bandeau */}
           <div className="px-4 sm:px-5 mt-3">
@@ -290,7 +316,11 @@ export default function V2AdminDashboardPage() {
           </section>
 
           {/* ═══ PLAN 03 — PILOTER : activité, dépôts, alertes ═══ */}
-          <EditorialEyebrow num="03" label="Piloter" className="px-4 sm:px-5 mt-8" />
+          <EditorialEyebrow
+            num="03"
+            label="Piloter"
+            className="px-4 sm:px-5 mt-8"
+          />
 
           {/* ┌─ ACTIVITÉ — CA temps réel ─┐ */}
           <p className="px-4 sm:px-5 mt-3 section-eyebrow flex items-center gap-1.5">
@@ -303,7 +333,11 @@ export default function V2AdminDashboardPage() {
             />
           </p>
           <section className="px-4 sm:px-5 mt-2">
-            <RevenueChart data={revenue} initialSeries="global" initialPeriod={30} />
+            <RevenueChart
+              data={revenue}
+              initialSeries="global"
+              initialPeriod={30}
+            />
           </section>
 
           {/* ┌─ DÉPÔTS — état multi-dépôts ─┐ */}
@@ -344,64 +378,64 @@ export default function V2AdminDashboardPage() {
                     }}
                   />
                   <div className="p-4">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                        isEntrepot
-                          ? "bg-primary-dark text-gold-bright"
-                          : s.depot.nom === "Particulier"
-                            ? "bg-gold-soft text-gold-bright"
-                            : "bg-primary text-text-ondark"
-                      }`}
-                    >
-                      <Building2 className="w-4 h-4" strokeWidth={2.2} />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-bold text-text-primary leading-tight">
-                        {s.depot.nom}
-                      </p>
-                      <p className="text-[10.5px] text-text-tertiary uppercase tracking-wide mt-0.5 leading-tight">
-                        {isEntrepot
-                          ? "Entrepôt back-office, pas de drive"
-                          : "Point de vente"}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                          isEntrepot
+                            ? "bg-primary-dark text-gold-bright"
+                            : s.depot.nom === "Particulier"
+                              ? "bg-gold-soft text-gold-bright"
+                              : "bg-primary text-text-ondark"
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4" strokeWidth={2.2} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-bold text-text-primary leading-tight">
+                          {s.depot.nom}
+                        </p>
+                        <p className="text-[10.5px] text-text-tertiary uppercase tracking-wide mt-0.5 leading-tight">
+                          {isEntrepot
+                            ? "Entrepôt back-office, pas de drive"
+                            : "Point de vente"}
+                        </p>
+                      </div>
+                      {isEntrepot && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-primary-dark text-gold-bright rounded-full px-2 py-0.5">
+                          Back-office
+                        </span>
+                      )}
+                      {s.ecartsCount > 0 && !isEntrepot && (
+                        <span className="badge badge-warning text-[10px]">
+                          <AlertTriangle className="w-3 h-3" />
+                          {s.ecartsCount} écart{s.ecartsCount > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
-                    {isEntrepot && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-primary-dark text-gold-bright rounded-full px-2 py-0.5">
-                        Back-office
-                      </span>
-                    )}
-                    {s.ecartsCount > 0 && !isEntrepot && (
-                      <span className="badge badge-warning text-[10px]">
-                        <AlertTriangle className="w-3 h-3" />
-                        {s.ecartsCount} écart{s.ecartsCount > 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 mt-4 text-left">
-                    <Stat
-                      label="Produits"
-                      value={s.productCount}
-                      spark={[12, 14, 13, 15, 18, 17, 21, 22]}
-                    />
-                    <Stat
-                      label="Unités"
-                      value={s.totalUnits}
-                      spark={[180, 196, 184, 220, 232, 245, 238, 256]}
-                    />
-                    <Stat
-                      label="Valeur"
-                      value={`${Math.round(s.totalValue).toLocaleString("fr-FR")} €`}
-                      gold
-                      spark={[3200, 3450, 3380, 3620, 3890, 3760, 4120, 4280]}
-                    />
-                    <Stat
-                      label="Mouvts"
-                      value={`${s.receptionsToday}↓ ${s.sortiesToday}↑`}
-                      hint="24h"
-                      spark={[4, 6, 3, 7, 9, 5, 8, 11]}
-                    />
-                  </div>
+                    <div className="grid grid-cols-4 gap-2 mt-4 text-left">
+                      <Stat
+                        label="Produits"
+                        value={s.productCount}
+                        spark={[12, 14, 13, 15, 18, 17, 21, 22]}
+                      />
+                      <Stat
+                        label="Unités"
+                        value={s.totalUnits}
+                        spark={[180, 196, 184, 220, 232, 245, 238, 256]}
+                      />
+                      <Stat
+                        label="Valeur"
+                        value={`${Math.round(s.totalValue).toLocaleString("fr-FR")} €`}
+                        gold
+                        spark={[3200, 3450, 3380, 3620, 3890, 3760, 4120, 4280]}
+                      />
+                      <Stat
+                        label="Mouvts"
+                        value={`${s.receptionsToday}↓ ${s.sortiesToday}↑`}
+                        hint="24h"
+                        spark={[4, 6, 3, 7, 9, 5, 8, 11]}
+                      />
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -411,7 +445,9 @@ export default function V2AdminDashboardPage() {
                 onClick={() => setShowAllDepots(true)}
                 className="w-full bg-card-bg border border-rule rounded-2xl py-3 text-sm font-bold text-primary inline-flex items-center justify-center gap-1.5 shadow-card active:scale-[0.99] transition-transform"
               >
-                Voir les {stats.length - 3} autre{stats.length - 3 > 1 ? "s" : ""} dépôt{stats.length - 3 > 1 ? "s" : ""}
+                Voir les {stats.length - 3} autre
+                {stats.length - 3 > 1 ? "s" : ""} dépôt
+                {stats.length - 3 > 1 ? "s" : ""}
               </button>
             )}
             {showAllDepots && stats.length > 3 && (
@@ -443,10 +479,12 @@ export default function V2AdminDashboardPage() {
                       <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-warning">
-                          BL vide · {r.fournisseur ?? "Fournisseur ?"} → {d?.nom ?? "?"}
+                          BL vide · {r.fournisseur ?? "Fournisseur ?"} →{" "}
+                          {d?.nom ?? "?"}
                         </p>
                         <p className="text-[11px] text-text-secondary line-clamp-1">
-                          Validé par {e?.prenom ?? "?"} {e?.nom ?? ""} sans aucun scan — vérifier la livraison.
+                          Validé par {e?.prenom ?? "?"} {e?.nom ?? ""} sans
+                          aucun scan — vérifier la livraison.
                         </p>
                       </div>
                     </div>
@@ -484,8 +522,8 @@ export default function V2AdminDashboardPage() {
                     <AlertTriangle className="w-4 h-4 text-danger shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-danger">
-                        Score {Math.round((s.ia_coherence_score ?? 0) * 100)}%
-                        · {s.type}
+                        Score {Math.round((s.ia_coherence_score ?? 0) * 100)}% ·{" "}
+                        {s.type}
                       </p>
                       <p className="text-[11px] text-text-secondary line-clamp-1">
                         {s.ia_coherence_notes}
@@ -501,7 +539,8 @@ export default function V2AdminDashboardPage() {
                   >
                     +{flaggedSorties.length - 4} autre
                     {flaggedSorties.length - 4 > 1 ? "s" : ""} alerte
-                    {flaggedSorties.length - 4 > 1 ? "s" : ""} — Tout consulter →
+                    {flaggedSorties.length - 4 > 1 ? "s" : ""} — Tout consulter
+                    →
                   </a>
                 )}
               </div>
@@ -557,8 +596,8 @@ export default function V2AdminDashboardPage() {
                         Aucun mouvement sur les dernières 24h
                       </p>
                       <p className="text-xs text-text-secondary mt-1">
-                        Réceptions, sorties et transferts apparaîtront ici
-                        dès qu&apos;ils seront validés.
+                        Réceptions, sorties et transferts apparaîtront ici dès
+                        qu&apos;ils seront validés.
                       </p>
                     </div>
                   ) : (
@@ -620,7 +659,9 @@ export default function V2AdminDashboardPage() {
               <div className="bg-card-bg border border-rule rounded-2xl divide-y divide-rule overflow-hidden shadow-card">
                 {recentInventaires.slice(0, 4).map((inv) => {
                   const d = depots.find((x) => x.id === inv.depot_id);
-                  const e = employes.find((x) => x.id === inv.employe_assigne_id);
+                  const e = employes.find(
+                    (x) => x.id === inv.employe_assigne_id,
+                  );
                   return (
                     <a
                       key={inv.id}
@@ -665,8 +706,8 @@ export default function V2AdminDashboardPage() {
                   >
                     +{recentInventaires.length - 4} autre
                     {recentInventaires.length - 4 > 1 ? "s" : ""} inventaire
-                    {recentInventaires.length - 4 > 1 ? "s" : ""} —
-                    Tout consulter →
+                    {recentInventaires.length - 4 > 1 ? "s" : ""} — Tout
+                    consulter →
                   </a>
                 )}
               </div>
@@ -674,7 +715,11 @@ export default function V2AdminDashboardPage() {
           )}
 
           {/* ═══ PLAN 04 — ADMINISTRER : notifs, emails, accès édition ═══ */}
-          <EditorialEyebrow num="04" label="Administrer" className="px-4 sm:px-5 mt-9" />
+          <EditorialEyebrow
+            num="04"
+            label="Administrer"
+            className="px-4 sm:px-5 mt-9"
+          />
           <p className="px-4 sm:px-5 mt-3 section-eyebrow">
             <Bell className="w-3 h-3" />
             Communication & notifs
@@ -779,15 +824,9 @@ function Stat({
             data={spark}
             width={64}
             height={16}
-            color={
-              gold
-                ? "var(--accent-gold-bright)"
-                : "var(--primary-green)"
-            }
+            color={gold ? "var(--accent-gold-bright)" : "var(--primary-green)"}
             fillColor={
-              gold
-                ? "var(--accent-gold-soft)"
-                : "var(--primary-green-soft)"
+              gold ? "var(--accent-gold-soft)" : "var(--primary-green-soft)"
             }
           />
         </div>
@@ -834,14 +873,19 @@ function ActivityRow({
       row.item.ia_coherence_score !== null && row.item.ia_coherence_score < 0.6;
     return (
       <div className="flex items-center gap-3 px-3 py-2.5">
-        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-          lowScore ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"
-        }`}>
+        <span
+          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            lowScore
+              ? "bg-danger-soft text-danger"
+              : "bg-warning-soft text-warning"
+          }`}
+        >
           <ArrowUpRight className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-text-primary">
-            Sortie {SORTIE_LABEL[row.item.type] ?? row.item.type} × {row.item.quantite} · {d?.nom}
+            Sortie {SORTIE_LABEL[row.item.type] ?? row.item.type} ×{" "}
+            {row.item.quantite} · {d?.nom}
           </p>
           <p className="text-[10px] text-text-tertiary">
             {e?.prenom} {e?.nom} · {timeAgo(row.date)}

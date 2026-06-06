@@ -288,10 +288,13 @@ export default function V2ReceptionPage() {
   async function validatePhotoIa(dataUrl: string) {
     setPhotoIa({ status: "checking", label: "Vérification de la photo…" });
     try {
+      // Timeout 15 s : le spinner ne doit jamais tourner indéfiniment si l'IA
+      // ne répond pas (réseau lent, fonction froide). On dégrade gracieusement.
       const r = await fetch("/api/vision-product-recognition", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ photo_data_url: dataUrl }),
+        signal: AbortSignal.timeout(15000),
       });
       if (!r.ok) {
         setPhotoIa({
@@ -420,8 +423,14 @@ export default function V2ReceptionPage() {
       return;
     }
     const t = setTimeout(async () => {
-      const r = await searchProduits(searchQuery);
-      setSearchResults(r);
+      try {
+        const r = await searchProduits(searchQuery);
+        setSearchResults(r);
+      } catch (err) {
+        console.error("[reception] recherche échouée:", err);
+        toast.error("Recherche indisponible · vérifie la connexion");
+        setSearchResults([]);
+      }
     }, 200);
     return () => clearTimeout(t);
   }, [searchQuery, learnMode]);

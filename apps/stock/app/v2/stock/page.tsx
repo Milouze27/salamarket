@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -48,14 +49,19 @@ export default function V2StockPage() {
 
   async function reload() {
     if (!depot) return;
-    const [stock, win, deps] = await Promise.all([
-      listProduitsInDepot(depot.id),
-      listStockEditWindows(),
-      listDepots(),
-    ]);
-    setItems(stock);
-    setWindows(win);
-    setAllDepots(deps);
+    try {
+      const [stock, win, deps] = await Promise.all([
+        listProduitsInDepot(depot.id),
+        listStockEditWindows(),
+        listDepots(),
+      ]);
+      setItems(stock);
+      setWindows(win);
+      setAllDepots(deps);
+    } catch (e) {
+      console.error("[stock] chargement échoué:", e);
+      toast.error("Erreur de chargement du stock · vérifie la connexion");
+    }
   }
 
   // Charge les stocks de tous les dépôts UNIQUEMENT quand on bascule sur
@@ -66,7 +72,11 @@ export default function V2StockPage() {
     (async () => {
       const map = new Map<string, ProduitInDepot[]>();
       for (const d of allDepots) {
-        const s = await listProduitsInDepot(d.id);
+        // Tolérant par dépôt : un échec n'efface pas les autres.
+        const s = await listProduitsInDepot(d.id).catch((e) => {
+          console.error(`[stock] dépôt ${d.nom} échoué:`, e);
+          return [] as ProduitInDepot[];
+        });
         if (cancelled) return;
         map.set(d.id, s);
       }
@@ -149,7 +159,7 @@ export default function V2StockPage() {
         (p) =>
           p.nom.toLowerCase().includes(q) ||
           (p.marque?.toLowerCase().includes(q) ?? false) ||
-          (p.ean?.includes(q) ?? false),
+          (p.ean?.toLowerCase().includes(q) ?? false),
       );
     }
     return l;
@@ -164,7 +174,7 @@ export default function V2StockPage() {
         (p) =>
           p.nom.toLowerCase().includes(q) ||
           (p.marque?.toLowerCase().includes(q) ?? false) ||
-          (p.ean?.includes(q) ?? false),
+          (p.ean?.toLowerCase().includes(q) ?? false),
       );
     }
     return l;

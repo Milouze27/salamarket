@@ -106,25 +106,36 @@ export default function V2SortiePage() {
   const [adminIds, setAdminIds] = useState<string[]>([]);
 
   useEffect(() => {
-    void listEmployes().then((emps) => {
-      const admins = emps.filter(
-        (e) =>
-          e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
-      );
-      setAdminIds(admins.map((e) => e.id));
-    });
+    void listEmployes()
+      .then((emps) => {
+        const admins = emps.filter(
+          (e) =>
+            e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
+        );
+        setAdminIds(admins.map((e) => e.id));
+      })
+      .catch((err) => {
+        // Sans cette liste, les alertes push n'atteignent pas Otmane/Ahmed :
+        // on loggue pour le diagnostic plutôt que d'échouer en silence.
+        console.error("[sortie] chargement admins échoué:", err);
+      });
   }, []);
 
   const handleScanRef = useRef<((code: string) => void) | undefined>(undefined);
   const handleScan = async (code: string) => {
     setScannerOpen(false);
-    const p = await findProduitByEan(code);
-    if (p) {
-      setProduit(p);
-      toast.success(p.nom);
-    } else {
-      toast.warning("Code inconnu · recherche par nom");
-      setShowSearch(true);
+    try {
+      const p = await findProduitByEan(code);
+      if (p) {
+        setProduit(p);
+        toast.success(p.nom);
+      } else {
+        toast.warning("Code inconnu · recherche par nom");
+        setShowSearch(true);
+      }
+    } catch (err) {
+      console.error("[sortie] scan échoué:", err);
+      toast.error("Erreur de scan · vérifie la connexion");
     }
   };
   handleScanRef.current = handleScan;
@@ -135,8 +146,14 @@ export default function V2SortiePage() {
       return;
     }
     const t = setTimeout(async () => {
-      const r = await searchProduits(searchQuery);
-      setSearchResults(r);
+      try {
+        const r = await searchProduits(searchQuery);
+        setSearchResults(r);
+      } catch (err) {
+        console.error("[sortie] recherche échouée:", err);
+        toast.error("Recherche indisponible · vérifie la connexion");
+        setSearchResults([]);
+      }
     }, 200);
     return () => clearTimeout(t);
   }, [searchQuery, showSearch]);
@@ -528,8 +545,8 @@ export default function V2SortiePage() {
             <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <p>
               À la validation, Claude vision analyse la photo et compare avec ta
-              déclaration. Score &lt; 0,60 → Otmane est notifié pour révision
-              manuelle.
+              déclaration. Score &lt; 0,70 (ou IA indisponible) → Otmane est
+              notifié pour révision manuelle.
             </p>
           </div>
         </section>

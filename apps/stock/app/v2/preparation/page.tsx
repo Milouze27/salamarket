@@ -158,26 +158,33 @@ export default function V2PreparationKanbanPage() {
       }
     }
 
-    const cmds = await listCommandesDrive();
-    const enriched = await Promise.all(
-      cmds.map(async (c) => ({
-        ...c,
-        lignes: await listLignesPourCommandeAvecUnitType(c.id),
-      })),
-    );
-    // Filtres :
-    //  - statut != 'annule' (commande annulée par client ou admin)
-    //  - statut_paiement != 'echec' (paiement Stripe a échoué — la
-    //    commande existe en DB mais ne doit pas apparaître au préparateur)
-    //  - les commandes legacy avec statut_paiement = null restent
-    //    visibles (paiement en magasin, Checkout hosted classique,
-    //    pas de Drive au poids)
-    setCommandes(
-      enriched.filter(
-        (c) => c.statut !== "annule" && c.statut_paiement !== "echec",
-      ),
-    );
-    setLoading(false);
+    try {
+      const cmds = await listCommandesDrive();
+      const enriched = await Promise.all(
+        cmds.map(async (c) => ({
+          ...c,
+          lignes: await listLignesPourCommandeAvecUnitType(c.id),
+        })),
+      );
+      // Filtres :
+      //  - statut != 'annule' (commande annulée par client ou admin)
+      //  - statut_paiement != 'echec' (paiement Stripe a échoué — la
+      //    commande existe en DB mais ne doit pas apparaître au préparateur)
+      //  - les commandes legacy avec statut_paiement = null restent
+      //    visibles (paiement en magasin, Checkout hosted classique,
+      //    pas de Drive au poids)
+      setCommandes(
+        enriched.filter(
+          (c) => c.statut !== "annule" && c.statut_paiement !== "echec",
+        ),
+      );
+    } catch (e) {
+      // Sans ce garde, une erreur Supabase laissait le kanban vide en silence.
+      console.error("[preparation] chargement échoué:", e);
+      toast.error("Erreur de chargement des commandes · vérifie la connexion");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

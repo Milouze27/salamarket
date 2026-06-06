@@ -107,10 +107,16 @@ export default function V2TransfertPage() {
       return;
     }
     const t = setTimeout(async () => {
-      const sourceStock = await listProduitsInDepot(source.id);
-      const all = await searchProduits(searchQuery);
-      const allIds = new Set(all.map((p) => p.id));
-      setSearchResults(sourceStock.filter((p) => allIds.has(p.id)));
+      try {
+        const sourceStock = await listProduitsInDepot(source.id);
+        const all = await searchProduits(searchQuery);
+        const allIds = new Set(all.map((p) => p.id));
+        setSearchResults(sourceStock.filter((p) => allIds.has(p.id)));
+      } catch (err) {
+        console.error("[transfert] recherche échouée:", err);
+        toast.error("Recherche indisponible · vérifie la connexion");
+        setSearchResults([]);
+      }
     }, 200);
     return () => clearTimeout(t);
   }, [searchQuery, showSearch, source]);
@@ -382,7 +388,10 @@ export default function V2TransfertPage() {
                 if (v === "") setQuantite("");
                 else {
                   const n = parseInt(v, 10);
-                  setQuantite(Number.isNaN(n) ? "" : n);
+                  // Clamp [1, 9999] : pas de quantité négative ni absurde.
+                  setQuantite(
+                    Number.isNaN(n) ? "" : Math.max(1, Math.min(n, 9999)),
+                  );
                 }
               }}
               placeholder={

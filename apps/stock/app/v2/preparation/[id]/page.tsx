@@ -247,11 +247,18 @@ export default function V2PreparationDetailPage() {
     // FK prepare_par_employe_id → employes(id), on passe par
     // getEmployeUuid() qui fallback sur Ahmed Nasri.
     const employeUuid = getEmployeUuid(employe.id);
-    await updateLignePreparation(ligne.id, {
-      statut_preparation: "prepare",
-      prepare_par_employe_id: employeUuid,
-      prepare_at: new Date().toISOString(),
-    });
+    try {
+      await updateLignePreparation(ligne.id, {
+        statut_preparation: "prepare",
+        prepare_par_employe_id: employeUuid,
+        prepare_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      // Ne pas afficher un faux succès : l'écriture DB a échoué.
+      console.error("[prep] enregistrement ligne échoué:", e);
+      toast.error("Échec de l'enregistrement · réessaie");
+      return;
+    }
     setLignes((prev) =>
       prev.map((l) =>
         l.id === ligne.id
@@ -278,11 +285,17 @@ export default function V2PreparationDetailPage() {
   async function markMissing(ligneId: string, photoUrl: string) {
     if (!employe) return;
     const employeUuid = getEmployeUuid(employe.id);
-    await updateLignePreparation(ligneId, {
-      statut_preparation: "manquant",
-      prepare_par_employe_id: employeUuid,
-      prepare_at: new Date().toISOString(),
-    });
+    try {
+      await updateLignePreparation(ligneId, {
+        statut_preparation: "manquant",
+        prepare_par_employe_id: employeUuid,
+        prepare_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("[prep] marquage manquant échoué:", e);
+      toast.error("Échec de l'enregistrement · réessaie");
+      return;
+    }
     setLignes((prev) =>
       prev.map((l) =>
         l.id === ligneId
@@ -420,7 +433,14 @@ export default function V2PreparationDetailPage() {
       toast.error(`${remaining.length} ligne(s) encore en attente`);
       return;
     }
-    await setCommandeStatut(commande.id, "pret");
+    try {
+      await setCommandeStatut(commande.id, "pret");
+    } catch (e) {
+      // Échec DB : ne pas notifier/emailer un "prêt" qui n'a pas eu lieu.
+      console.error("[prep] passage en prêt échoué:", e);
+      toast.error("Échec du passage en prêt · réessaie");
+      return;
+    }
     // HOTFIX vague 7 : server action injecte x-internal-secret.
     try {
       const { sendInternalNotify } = await import("@/lib/actions/notify");

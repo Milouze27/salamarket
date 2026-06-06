@@ -1266,7 +1266,13 @@ export async function updateLignePreparation(
 ): Promise<void> {
   const sb = supabase();
   if (sb) {
-    await sb.from("commandes_drive_lignes").update(patch).eq("id", ligneId);
+    const { error } = await sb
+      .from("commandes_drive_lignes")
+      .update(patch)
+      .eq("id", ligneId);
+    // Propager l'erreur : sans ça, un échec DB laissait l'UI afficher un
+    // succès sans persistance (perte de données silencieuse).
+    if (error) throw error;
     return;
   }
   const row = SEED_COMMANDE_LIGNES.find((l) => l.id === ligneId);
@@ -1279,7 +1285,11 @@ export async function setCommandeStatut(
 ): Promise<void> {
   const sb = supabase();
   if (sb) {
-    await sb.from("commandes_drive").update({ statut }).eq("id", commandeId);
+    const { error } = await sb
+      .from("commandes_drive")
+      .update({ statut })
+      .eq("id", commandeId);
+    if (error) throw error;
     return;
   }
   const row = SEED_COMMANDES.find((c) => c.id === commandeId);

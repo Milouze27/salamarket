@@ -180,6 +180,10 @@ export function DriveDashboardSection() {
       setRevenue(rev);
       setLastUpdate(new Date());
       setNowMs(Date.now());
+    } catch (e) {
+      // Sans ce catch, une erreur Supabase produisait une unhandled rejection
+      // et la section restait figée. On loggue et on retombe sur un état sûr.
+      console.error("[drive-dashboard] refetch échoué:", e);
     } finally {
       setLoading(false);
     }

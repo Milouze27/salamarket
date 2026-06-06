@@ -270,10 +270,16 @@ export default function V2InventairePage() {
                       <input
                         type="number"
                         min={0}
+                        step={1}
                         inputMode="numeric"
+                        pattern="[0-9]*"
                         value={counts[r.id] ?? ""}
                         onChange={(e) =>
-                          setCounts((c) => ({ ...c, [r.id]: e.target.value }))
+                          setCounts((c) => ({
+                            ...c,
+                            // Comptage en unités entières : pas de décimale.
+                            [r.id]: e.target.value.replace(/[^0-9]/g, ""),
+                          }))
                         }
                         className="w-20 mt-0.5 text-center bg-cream border border-rule rounded-xl py-2.5 min-h-[44px] text-lg font-bold"
                       />

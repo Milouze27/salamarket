@@ -215,7 +215,7 @@ export default function AlertesPage() {
       return;
     }
     // 1. Sorties suspectes (score IA < 0.7)
-    const { data: dsorties } = await sb
+    const { data: dsorties, error: sortiesErr } = await sb
       .from("sorties_stock")
       .select(
         `id, type, motif_libre, quantite, photo_url, ia_coherence_score, ia_coherence_notes, created_at,
@@ -226,10 +226,17 @@ export default function AlertesPage() {
       .lt("ia_coherence_score", 0.7)
       .order("created_at", { ascending: false })
       .limit(50);
+    if (sortiesErr) {
+      console.error(
+        "[alertes] chargement sorties suspectes échoué:",
+        sortiesErr,
+      );
+      toast.error("Impossible de charger les sorties suspectes");
+    }
     setSorties((dsorties ?? []) as unknown as SortieSuspecte[]);
 
     // 2. Surplus
-    const { data: dsurplus } = await sb
+    const { data: dsurplus, error: surplusErr } = await sb
       .from("alertes_surplus")
       .select(
         `id, code_barre_scanne, quantite_surplus, signale_le, statut, notes,
@@ -238,6 +245,9 @@ export default function AlertesPage() {
       )
       .order("signale_le", { ascending: false })
       .limit(20);
+    if (surplusErr) {
+      console.error("[alertes] chargement surplus échoué:", surplusErr);
+    }
     setSurplus((dsurplus ?? []) as unknown as AlerteSurplus[]);
 
     // 3. Démarque — heuristique simple : produits avec écart négatif suspect

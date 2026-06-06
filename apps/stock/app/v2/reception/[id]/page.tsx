@@ -94,7 +94,7 @@ export default function BdlReceptionPage() {
          bons_de_livraison_lignes (
            id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue, statut,
            produits (id, nom, ean, categorie)
-         )`
+         )`,
       )
       .eq("id", bdlId)
       .single();
@@ -130,15 +130,16 @@ export default function BdlReceptionPage() {
         .from("employes_public")
         .select("id, role, prenom")
         .eq("is_active", true);
-      const ids = ((data ?? []) as Array<{
-        id: string;
-        role: string;
-        prenom: string | null;
-      }>)
+      const ids = (
+        (data ?? []) as Array<{
+          id: string;
+          role: string;
+          prenom: string | null;
+        }>
+      )
         .filter(
           (e) =>
-            e.role === "admin" ||
-            ["Otmane", "Ahmed"].includes(e.prenom ?? "")
+            e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
         )
         .map((e) => e.id);
       setAdminIds(ids);
@@ -174,11 +175,11 @@ export default function BdlReceptionPage() {
     if (!bdl) return { scanned: 0, total: 0, pct: 0 };
     const total = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + l.quantite_attendue,
-      0
+      0,
     );
     const scanned = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + Math.min(l.quantite_recue, l.quantite_attendue),
-      0
+      0,
     );
     return { scanned, total, pct: total > 0 ? (scanned / total) * 100 : 0 };
   }, [bdl]);
@@ -186,7 +187,7 @@ export default function BdlReceptionPage() {
   const allRecu = useMemo(() => {
     if (!bdl) return false;
     return bdl.bons_de_livraison_lignes.every(
-      (l) => l.statut === "recu" || l.statut === "manquant"
+      (l) => l.statut === "recu" || l.statut === "manquant",
     );
   }, [bdl]);
 
@@ -217,13 +218,13 @@ export default function BdlReceptionPage() {
     if (carton) {
       // Trouve la ligne BDL qui matche ce produit
       const matched = cur.bons_de_livraison_lignes.find(
-        (l) => l.produit_id === carton.produit_id
+        (l) => l.produit_id === carton.produit_id,
       );
       if (matched) {
         const newQte = matched.quantite_recue + carton.quantite_par_carton;
         const newStat: BdlLigne["statut"] =
           newQte >= matched.quantite_attendue ? "recu" : "attendu";
-        await sb
+        const { error } = await sb
           .from("bons_de_livraison_lignes")
           .update({
             quantite_recue: newQte,
@@ -232,9 +233,15 @@ export default function BdlReceptionPage() {
             scanne_par: employe?.id ?? null,
           })
           .eq("id", matched.id);
+        if (error) {
+          // Sans ce check, un échec DB affichait un faux succès et un reload
+          // révélait la perte (la quantité du carton n'était pas persistée).
+          toast.error(error.message);
+          return;
+        }
         toast.success(
           `Carton ${matched.produits?.nom ?? "produit"} · +${carton.quantite_par_carton} (${newQte}/${matched.quantite_attendue})`,
-          { duration: 1800 }
+          { duration: 1800 },
         );
         void fetchBdl();
         return;
@@ -259,7 +266,7 @@ export default function BdlReceptionPage() {
 
     // Match contre une ligne du BDL ?
     const matched = cur.bons_de_livraison_lignes.find(
-      (l) => l.code_barre_attendu === code || l.produits?.ean === code
+      (l) => l.code_barre_attendu === code || l.produits?.ean === code,
     );
 
     if (matched) {
@@ -281,7 +288,7 @@ export default function BdlReceptionPage() {
       }
       toast.success(
         `${matched.produits?.nom ?? "Produit"} · +1 (${nouvelleQte}/${matched.quantite_attendue})`,
-        { duration: 1600 }
+        { duration: 1600 },
       );
       void fetchBdl();
       return;
@@ -381,12 +388,15 @@ export default function BdlReceptionPage() {
           body: `${nom} (EAN ${createModal.code}) par ${employe?.prenom ?? "employé"}. Prix ${prix.toFixed(2)}€ à valider.`,
           url: "/v2/stock",
           tag: `prod-${produitId}`,
-        })
+        }),
       );
 
-      toast.success(`Fiche créée : ${nom} · ${qty} unité${qty > 1 ? "s" : ""} reçue${qty > 1 ? "s" : ""} · admin notifié`, {
-        duration: 2400,
-      });
+      toast.success(
+        `Fiche créée : ${nom} · ${qty} unité${qty > 1 ? "s" : ""} reçue${qty > 1 ? "s" : ""} · admin notifié`,
+        {
+          duration: 2400,
+        },
+      );
       setCreateModal(null);
       void fetchBdl();
     } catch (e) {
@@ -416,7 +426,7 @@ export default function BdlReceptionPage() {
     if (!p) {
       toast.warning(
         `EAN ${code} inconnu — utilise la recherche par nom ci-dessous.`,
-        { duration: 3500 }
+        { duration: 3500 },
       );
       return;
     }
@@ -439,7 +449,7 @@ export default function BdlReceptionPage() {
     }
     const cur = bdlRef.current;
     const matched = cur?.bons_de_livraison_lignes.find(
-      (l) => l.produit_id === produitId
+      (l) => l.produit_id === produitId,
     );
     if (matched) {
       const newQte = matched.quantite_recue + learnCartonModal.qty;
@@ -468,7 +478,7 @@ export default function BdlReceptionPage() {
     }
     toast.success(
       `Carton appris : ${produitNom} × ${learnCartonModal.qty} (codes liés)`,
-      { duration: 3000 }
+      { duration: 3000 },
     );
     setLearnCartonModal(null);
     setCartonSearchQuery("");
@@ -496,17 +506,20 @@ export default function BdlReceptionPage() {
     }
     // Notif interne legacy
     // HOTFIX vague 7 : server action injecte x-internal-secret.
-    void import("@/lib/actions/notify").then((m) =>
-      m.sendInternalNotify({
-        kind: "surplus_reception",
-        payload: {
-          bdl: bdl.numero_bdl,
-          produit: surplusModal.produitNom,
-          quantite: surplusQty,
-          signale_par: `${employe?.prenom ?? ""} ${employe?.nom ?? ""}`.trim(),
-        },
-      })
-    ).catch(() => {});
+    void import("@/lib/actions/notify")
+      .then((m) =>
+        m.sendInternalNotify({
+          kind: "surplus_reception",
+          payload: {
+            bdl: bdl.numero_bdl,
+            produit: surplusModal.produitNom,
+            quantite: surplusQty,
+            signale_par:
+              `${employe?.prenom ?? ""} ${employe?.nom ?? ""}`.trim(),
+          },
+        }),
+      )
+      .catch(() => {});
     // Push iPhone Otmane + Ahmed
     void import("@/lib/notifications").then((m) =>
       m.pushToAdmins({
@@ -514,7 +527,7 @@ export default function BdlReceptionPage() {
         body: `${surplusModal.produitNom} × ${surplusQty} non commandé sur ${bdl.numero_bdl}`,
         url: "/v2/admin/alertes-surplus",
         tag: `surplus-${bdl.id}-${surplusModal.code}`,
-      })
+      }),
     );
     toast.success("Surplus signalé (push iPhone admin envoyée)", {
       duration: 2400,
@@ -544,7 +557,7 @@ export default function BdlReceptionPage() {
     toast.success(
       photoSlot === 3
         ? "Photo du BDL papier enregistrée"
-        : `Photo palette ${photoSlot} enregistrée`
+        : `Photo palette ${photoSlot} enregistrée`,
     );
     setPhotoOpen(false);
     setPhotoSlot(null);
@@ -575,20 +588,21 @@ export default function BdlReceptionPage() {
     if (!bdl) return;
     // Photos palette OBLIGATOIRES — preuve livraison + protection litige
     if (!bdl.photo_palette_url_1 || !bdl.photo_palette_url_2) {
-      const missing = !bdl.photo_palette_url_1 && !bdl.photo_palette_url_2
-        ? "Les 2 photos palette"
-        : !bdl.photo_palette_url_1
-          ? "La photo palette n°1"
-          : "La photo palette n°2";
+      const missing =
+        !bdl.photo_palette_url_1 && !bdl.photo_palette_url_2
+          ? "Les 2 photos palette"
+          : !bdl.photo_palette_url_1
+            ? "La photo palette n°1"
+            : "La photo palette n°2";
       toast.error(
         `${missing} obligatoire${missing.startsWith("Les") ? "s" : ""} avant validation. Voir section "Photos palette" en haut.`,
-        { duration: 6000 }
+        { duration: 6000 },
       );
       return;
     }
     if (!allRecu) {
       const ok = window.confirm(
-        "Certaines lignes ne sont ni reçues ni marquées manquantes. Valider quand même ?"
+        "Certaines lignes ne sont ni reçues ni marquées manquantes. Valider quand même ?",
       );
       if (!ok) return;
     }
@@ -639,19 +653,21 @@ export default function BdlReceptionPage() {
         .eq("id", bdl.id);
       // 3. Notif legacy
       // HOTFIX vague 7 : server action injecte x-internal-secret.
-      void import("@/lib/actions/notify").then((m) =>
-        m.sendInternalNotify({
-          kind: "bdl_receptionne",
-          payload: {
-            bdl: bdl.numero_bdl,
-            fournisseur: bdl.fournisseurs?.nom,
-            depot: bdl.depots?.nom,
-            scanned: progression.scanned,
-            total: progression.total,
-            employe: `${employe?.prenom} ${employe?.nom}`,
-          },
-        })
-      ).catch(() => {});
+      void import("@/lib/actions/notify")
+        .then((m) =>
+          m.sendInternalNotify({
+            kind: "bdl_receptionne",
+            payload: {
+              bdl: bdl.numero_bdl,
+              fournisseur: bdl.fournisseurs?.nom,
+              depot: bdl.depots?.nom,
+              scanned: progression.scanned,
+              total: progression.total,
+              employe: `${employe?.prenom} ${employe?.nom}`,
+            },
+          }),
+        )
+        .catch(() => {});
       // 4. Push iPhone admin — réception complète, stock mis à jour
       void import("@/lib/notifications").then((m) =>
         m.pushToAdmins({
@@ -659,7 +675,7 @@ export default function BdlReceptionPage() {
           body: `${bdl.numero_bdl} · ${bdl.depots?.nom ?? "?"} · ${progression.scanned}/${progression.total} unités · par ${employe?.prenom ?? "employé"}`,
           url: "/v2/reception",
           tag: `bdl-done-${bdl.id}`,
-        })
+        }),
       );
       toast.success("Réception validée. Admin notifié.");
       router.replace("/v2/reception");

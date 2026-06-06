@@ -81,8 +81,10 @@ export default function V2TransfertPage() {
   }, [currentDepot, employe?.depot_principal_id, isAdmin]);
 
   function allowedSources(dest: Depot | null): Depot[] {
+    // Admin : aucune restriction — toutes les sources sont sélectionnables,
+    // même avant d'avoir choisi la destination (on exclut juste la dest).
+    if (isAdmin) return depots.filter((d) => !dest || d.id !== dest.id);
     if (!dest) return [];
-    if (isAdmin) return depots.filter((d) => d.id !== dest.id);
     const allowedNames = ALLOWED_SOURCES_FOR_DEST[dest.nom] ?? [];
     return depots.filter((d) => allowedNames.includes(d.nom));
   }
@@ -208,6 +210,12 @@ export default function V2TransfertPage() {
         <h1 className="h1-display mt-3">
           Bouger du <span className="gold">stock</span>.
         </h1>
+        {isAdmin && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gold-soft text-primary-dark px-3 py-1.5 text-[11px] font-bold">
+            <Building2 className="w-3.5 h-3.5 text-gold" />
+            Mode admin · transfert libre entre tous les dépôts
+          </div>
+        )}
       </header>
 
       {/* SOURCE → DESTINATION (destination lockée au dépôt de l'employé

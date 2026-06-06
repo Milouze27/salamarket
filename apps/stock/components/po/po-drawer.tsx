@@ -117,20 +117,35 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
             {/* Header */}
             <div className="px-5 pb-4">
               <div className="flex items-baseline justify-between gap-3 mb-2">
-                <p className="label-caps" style={{ color: "var(--text-secondary)" }}>
+                <p
+                  className="label-caps"
+                  style={{ color: "var(--text-secondary)" }}
+                >
                   {po.numero_po}
                 </p>
-                <span className="badge badge-neutral">{STATUT_LABELS[po.statut]}</span>
+                <span className="badge badge-neutral">
+                  {STATUT_LABELS[po.statut]}
+                </span>
               </div>
               <h2 className="h2" style={{ color: "var(--text-primary)" }}>
                 {po.fournisseurs?.nom ?? "Fournisseur"}
               </h2>
               <p className="body-sm mt-1">
-                Livraison vers <strong style={{ color: "var(--text-primary)" }}>{po.depots?.nom ?? "—"}</strong>
+                Livraison vers{" "}
+                <strong style={{ color: "var(--text-primary)" }}>
+                  {po.depots?.nom ?? "—"}
+                </strong>
                 {po.date_livraison_prevue && (
-                  <> · prévue le <strong style={{ color: "var(--text-primary)" }}>
-                    {new Date(po.date_livraison_prevue).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                  </strong></>
+                  <>
+                    {" "}
+                    · prévue le{" "}
+                    <strong style={{ color: "var(--text-primary)" }}>
+                      {new Date(po.date_livraison_prevue).toLocaleDateString(
+                        "fr-FR",
+                        { day: "numeric", month: "short" },
+                      )}
+                    </strong>
+                  </>
                 )}
               </p>
               <div className="mt-3">
@@ -155,11 +170,15 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
                 }}
               >
                 <p className="font-semibold text-[14px] leading-snug">
-                  Envoi bloqué — certificat halal {alerte === "expiree" ? "expiré" : "manquant"}.
+                  Envoi bloqué — certificat halal{" "}
+                  {alerte === "expiree" ? "expiré" : "manquant"}.
                 </p>
-                <p className="text-[13px] leading-snug mt-1" style={{ color: "#A02921" }}>
-                  Tu peux ouvrir la fiche fournisseur pour mettre à jour le PDF de certif,
-                  ou basculer ces produits sur un fournisseur backup.
+                <p
+                  className="text-[13px] leading-snug mt-1"
+                  style={{ color: "#A02921" }}
+                >
+                  Tu peux ouvrir la fiche fournisseur pour mettre à jour le PDF
+                  de certif, ou basculer ces produits sur un fournisseur backup.
                 </p>
               </div>
             )}
@@ -171,10 +190,16 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
                   className="px-4 py-3 flex items-center justify-between"
                   style={{ borderBottom: "1px solid var(--border-light)" }}
                 >
-                  <p className="label-caps" style={{ color: "var(--text-secondary)" }}>
+                  <p
+                    className="label-caps"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
                     {lignes.length} ligne{lignes.length > 1 ? "s" : ""}
                   </p>
-                  <p className="font-semibold tabular" style={{ color: "var(--text-primary)" }}>
+                  <p
+                    className="font-semibold tabular"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     Total HT : {eur(po.total_ht ?? 0)}
                   </p>
                 </div>
@@ -186,21 +211,33 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
                       style={{ borderBottom: "1px solid var(--border-light)" }}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                        <p
+                          className="text-[14px] font-semibold truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
                           {l.reference_fourn ?? l.produit_id.slice(0, 8)}
                         </p>
-                        <p className="text-[12px]" style={{ color: "var(--text-secondary)" }}>
+                        <p
+                          className="text-[12px]"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
                           {l.quantite_commandee} × {eur(l.prix_achat_ht ?? 0)}
                         </p>
                       </div>
-                      <p className="text-[14px] font-bold tabular" style={{ color: "var(--text-primary)" }}>
-                        {eur((l.prix_achat_ht ?? 0) * (l.quantite_commandee ?? 0))}
+                      <p
+                        className="text-[14px] font-bold tabular"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {eur(
+                          (l.prix_achat_ht ?? 0) * (l.quantite_commandee ?? 0),
+                        )}
                       </p>
                     </li>
                   ))}
                   {lignes.length === 0 && (
                     <li className="px-4 py-6 text-center body-sm">
-                      Aucune ligne — édite le brouillon pour ajouter des produits.
+                      Aucune ligne — édite le brouillon pour ajouter des
+                      produits.
                     </li>
                   )}
                 </ul>
@@ -208,6 +245,7 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
 
               <Link
                 href={`/v2/po/${po.id}`}
+                onClick={onClose}
                 className="mt-3 mb-4 w-full inline-flex items-center justify-between px-4 py-3 rounded-2xl"
                 style={{
                   background: "var(--bg-card)",
@@ -217,7 +255,9 @@ export function PoDrawer({ po, onClose, onSend, sending }: Props) {
               >
                 <span className="flex items-center gap-2">
                   <FileText size={16} color="var(--primary-green)" />
-                  <span className="font-semibold text-[14px]">Éditer les lignes</span>
+                  <span className="font-semibold text-[14px]">
+                    Éditer les lignes
+                  </span>
                 </span>
                 <ArrowRight size={16} color="var(--text-secondary)" />
               </Link>

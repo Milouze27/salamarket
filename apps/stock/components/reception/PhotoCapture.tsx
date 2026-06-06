@@ -16,15 +16,40 @@ interface PhotoCaptureProps {
   onCapture: (dataUrl: string) => void;
 }
 
+/** Messages lisibles selon l'erreur getUserMedia (mêmes cas que BarcodeScanner). */
+function humanError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("permission") || m.includes("notallowed")) {
+    return "Caméra refusée. Réglages iPhone → Salam Stock → Caméra → Autoriser. En attendant, utilise « Galerie / photo » ci-dessous.";
+  }
+  if (m.includes("notreadable") || m.includes("trackstart")) {
+    return "Caméra utilisée par une autre app. Ferme-la, ou utilise « Galerie / photo ».";
+  }
+  if (m.includes("notfound")) {
+    return "Caméra introuvable sur cet appareil.";
+  }
+  if (
+    m.includes("undefined is not an object") ||
+    m.includes("getusermedia") ||
+    m.includes("mediadevices")
+  ) {
+    return "La caméra en direct n'est pas accessible ici. Utilise « Galerie / photo » ci-dessous.";
+  }
+  return "Caméra inaccessible. Utilise « Galerie / photo » ci-dessous.";
+}
+
 export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  /** true tant que la caméra live n'est pas prête (ou indisponible). */
+  const [camReady, setCamReady] = useState(false);
 
   function handleFilePick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -40,6 +65,17 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
     async function start() {
       setError(null);
       setPreview(null);
+      setCamReady(false);
+      // Garde : certains contextes (iOS PWA, WebView, http non-sécurisé)
+      // n'exposent pas getUserMedia → on bascule directement sur le filet.
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !== "function"
+      ) {
+        setError(humanError("mediadevices"));
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
@@ -54,9 +90,10 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
         }
+        setCamReady(true);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Caméra inaccessible";
-        setError(msg);
+        setError(humanError(msg));
       }
     }
 
@@ -97,7 +134,7 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
       <div className="safe-top flex items-center justify-between px-5 pb-4 text-white">
         <div className="flex items-center gap-2">
           <Camera className="w-5 h-5 text-gold" />
-          <span className="font-semibold">Photo du carton</span>
+          <span className="font-semibold">Photo</span>
         </div>
         <button
           onClick={onClose}
@@ -127,23 +164,15 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
             className="w-full h-full object-contain"
           />
         )}
-        {error && (
+        {error && !preview && (
           <div className="px-6 text-center text-white">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-danger/20 flex items-center justify-center mb-3">
               <AlertTriangle className="w-7 h-7 text-danger" />
             </div>
             <p className="font-semibold text-lg">Caméra inaccessible</p>
-            <p className="text-sm text-white/70 mt-2">{error}</p>
-            <p className="text-xs text-white/50 mt-3">
-              Autorise l&apos;accès à la caméra ou choisis une photo dans la
-              galerie.
+            <p className="text-sm text-white/80 mt-2 whitespace-pre-line">
+              {error}
             </p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-5 inline-flex items-center gap-2 bg-gold-bright text-primary-dark rounded-full px-4 py-2.5 font-bold text-sm"
-            >
-              <ImageUp className="w-4 h-4" /> Choisir une photo
-            </button>
           </div>
         )}
         <input
@@ -155,32 +184,45 @@ export function PhotoCapture({ open, onClose, onCapture }: PhotoCaptureProps) {
         />
       </div>
 
-      <div className="px-5 pb-8 pt-5 flex items-center justify-center gap-6">
-        {preview ? (
-          <>
+      <div className="px-5 pb-8 pt-5 flex flex-col items-center gap-4">
+        <div className="flex items-center justify-center gap-6">
+          {preview ? (
+            <>
+              <button
+                onClick={() => setPreview(null)}
+                className="w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center"
+                aria-label="Reprendre"
+              >
+                <RefreshCw className="w-6 h-6" />
+              </button>
+              <button
+                onClick={confirm}
+                className="w-20 h-20 rounded-full bg-gold-bright text-primary-dark flex items-center justify-center shadow-card-lg"
+                aria-label="Valider la photo"
+              >
+                <Check className="w-9 h-9" strokeWidth={3} />
+              </button>
+              <div className="w-14" />
+            </>
+          ) : (
             <button
-              onClick={() => setPreview(null)}
-              className="w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center"
-              aria-label="Reprendre"
-            >
-              <RefreshCw className="w-6 h-6" />
-            </button>
-            <button
-              onClick={confirm}
-              className="w-20 h-20 rounded-full bg-gold-bright text-primary-dark flex items-center justify-center shadow-card-lg"
-              aria-label="Valider la photo"
-            >
-              <Check className="w-9 h-9" strokeWidth={3} />
-            </button>
-            <div className="w-14" />
-          </>
-        ) : (
+              disabled={!!error || !camReady}
+              onClick={takeSnapshot}
+              className="w-20 h-20 rounded-full bg-white border-4 border-white/30 disabled:opacity-40"
+              aria-label="Prendre la photo"
+            />
+          )}
+        </div>
+
+        {/* Filet de secours TOUJOURS disponible (caméra qui pend, refusée, ou
+            simple préférence galerie) — jamais bloqué, contrairement à avant. */}
+        {!preview && (
           <button
-            disabled={!!error}
-            onClick={takeSnapshot}
-            className="w-20 h-20 rounded-full bg-white border-4 border-white/30 disabled:opacity-40"
-            aria-label="Prendre la photo"
-          />
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 bg-gold-bright text-primary-dark rounded-full px-5 py-2.5 font-bold text-sm active:scale-95"
+          >
+            <ImageUp className="w-4 h-4" /> Galerie / photo
+          </button>
         )}
       </div>
     </div>

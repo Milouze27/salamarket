@@ -38,7 +38,7 @@ interface BarcodeScannerProps {
 
 interface BarcodeDetectorLike {
   detect(
-    source: HTMLVideoElement | ImageBitmap | HTMLCanvasElement
+    source: HTMLVideoElement | ImageBitmap | HTMLCanvasElement,
   ): Promise<Array<{ rawValue: string }>>;
 }
 interface BarcodeDetectorCtor {
@@ -66,11 +66,7 @@ const FORMATS = [
   "itf",
 ];
 
-export function BarcodeScanner({
-  open,
-  onClose,
-  onScan,
-}: BarcodeScannerProps) {
+export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
@@ -78,13 +74,13 @@ export function BarcodeScanner({
   const onScanRef = useRef(onScan);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [phase, setPhase] = useState<"starting" | "ready" | "snapping" | "error">(
-    "starting"
-  );
+  const [phase, setPhase] = useState<
+    "starting" | "ready" | "snapping" | "error"
+  >("starting");
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(2.5);
   const [zoomCaps, setZoomCaps] = useState<{ min: number; max: number } | null>(
-    null
+    null,
   );
   const [torchOn, setTorchOn] = useState(false);
   const [hasTorch, setHasTorch] = useState(false);
@@ -137,6 +133,20 @@ export function BarcodeScanner({
     setPhase("starting");
     setError(null);
     stoppedRef.current = false;
+    // Garde : certains contextes (iOS PWA ancien, WebView, http non-sécurisé)
+    // n'exposent pas getUserMedia. On bascule alors sur le filet « Photo via
+    // Caméra iOS native » (input capture) qui, lui, fonctionne toujours.
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      setError(
+        "La caméra en direct n'est pas disponible ici. Utilise « Photo via Caméra iOS native » en bas, ou la saisie manuelle.",
+      );
+      setPhase("error");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -197,7 +207,9 @@ export function BarcodeScanner({
   }
 
   /** Capture une frame haute-rés du <video> et tente le décode. */
-  async function decodeFromVideo(video: HTMLVideoElement): Promise<string | null> {
+  async function decodeFromVideo(
+    video: HTMLVideoElement,
+  ): Promise<string | null> {
     const w = video.videoWidth;
     const h = video.videoHeight;
     if (!w || !h) return null;
@@ -227,7 +239,7 @@ export function BarcodeScanner({
     // 2. Fallback ZXing sur canvas → blob → image url
     try {
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.92)
+        canvas.toBlob(resolve, "image/jpeg", 0.92),
       );
       if (!blob) return null;
       const url = URL.createObjectURL(blob);
@@ -358,7 +370,7 @@ export function BarcodeScanner({
         fireScan(code);
       } else {
         setError(
-          "Aucun code détecté sur la photo. Reprends en cadrant le code-barre droit, le plus près possible."
+          "Aucun code détecté sur la photo. Reprends en cadrant le code-barre droit, le plus près possible.",
         );
         setPhase("error");
       }
@@ -535,16 +547,28 @@ export function BarcodeScanner({
             <p className="text-sm text-white/80 mt-2 whitespace-pre-line">
               {error}
             </p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                void startCamera();
-              }}
-              className="mt-4 bg-white/15 text-white font-semibold rounded-full px-5 py-2 inline-flex items-center gap-2 text-sm"
-            >
-              <Camera className="w-4 h-4" />
-              Réessayer
-            </button>
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="bg-gold-bright text-primary-dark font-bold rounded-full px-6 py-3 inline-flex items-center gap-2 text-sm shadow-card-lg"
+              >
+                <ImagePlus className="w-5 h-5" />
+                Photo via Caméra iOS native
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void startCamera();
+                }}
+                className="bg-white/15 text-white font-semibold rounded-full px-5 py-2 inline-flex items-center gap-2 text-sm"
+              >
+                <Camera className="w-4 h-4" />
+                Réessayer la caméra
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -614,16 +638,27 @@ export function BarcodeScanner({
 function humanError(raw: string): string {
   const m = raw.toLowerCase();
   if (m.includes("permission") || m.includes("notallowed")) {
-    return "Caméra refusée. Réglages iPhone → Salam Stock → Caméra → Autoriser, puis recharge.";
+    return "Caméra refusée. Réglages iPhone → Salam Stock → Caméra → Autoriser, puis recharge. En attendant, utilise « Photo via Caméra iOS native » ci-dessous.";
   }
   if (m.includes("notreadable") || m.includes("trackstart")) {
-    return "Caméra utilisée par une autre app.";
+    return "Caméra utilisée par une autre app. Ferme l'app Caméra/FaceTime puis réessaie, ou utilise « Photo via Caméra iOS native ».";
   }
-  if (m.includes("notfound")) {
+  if (m.includes("notfound") || m.includes("devicesnotfound")) {
     return "Caméra introuvable. Vérifie l'app Caméra iOS d'abord.";
   }
   if (m.includes("overconstrained")) {
-    return "La caméra ne supporte pas le mode demandé.";
+    return "La caméra ne supporte pas le mode demandé. Utilise « Photo via Caméra iOS native » ci-dessous.";
   }
-  return "Caméra indisponible : " + raw;
+  if (
+    m.includes("undefined is not an object") ||
+    m.includes("getusermedia") ||
+    m.includes("mediadevices")
+  ) {
+    return "La caméra en direct n'est pas accessible depuis ce contexte. Utilise « Photo via Caméra iOS native » en bas.";
+  }
+  return (
+    "Caméra indisponible : " +
+    raw +
+    ". Utilise « Photo via Caméra iOS native » ci-dessous."
+  );
 }

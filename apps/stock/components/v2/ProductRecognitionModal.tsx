@@ -64,6 +64,7 @@ export function ProductRecognitionModal({
   const [photo, setPhoto] = useState<string | null>(null);
   const [result, setResult] = useState<RecognitionResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [cameraUnavailable, setCameraUnavailable] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -71,9 +72,18 @@ export function ProductRecognitionModal({
     setPhoto(null);
     setResult(null);
     setErrorMsg("");
+    setCameraUnavailable(false);
 
     let cancelled = false;
     (async () => {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices ||
+        typeof navigator.mediaDevices.getUserMedia !== "function"
+      ) {
+        setCameraUnavailable(true);
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
@@ -89,7 +99,8 @@ export function ProductRecognitionModal({
           await videoRef.current.play().catch(() => {});
         }
       } catch {
-        // user denied or no camera — gallery picker still works
+        // caméra refusée ou indisponible — le sélecteur de photo reste utilisable
+        setCameraUnavailable(true);
       }
     })();
 
@@ -227,6 +238,18 @@ export function ProductRecognitionModal({
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-[280px] h-[180px] border-2 border-gold/80 rounded-2xl" />
               </div>
+              {cameraUnavailable && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
+                  <AlertCircle className="w-8 h-8 text-warning" />
+                  <p className="text-white text-sm font-bold">
+                    Caméra en direct indisponible
+                  </p>
+                  <p className="text-white/70 text-xs">
+                    Touche l&apos;icône appareil photo en bas pour prendre la
+                    photo avec la caméra iOS native ou la galerie.
+                  </p>
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"

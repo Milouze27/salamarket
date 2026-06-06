@@ -395,6 +395,56 @@ export type Database = {
           },
         ]
       }
+      cart_abandonment_events: {
+        Row: {
+          cart_hash: string
+          created_at: string
+          email: string | null
+          emailed_h1: boolean
+          emailed_h24: boolean
+          id: string
+          items_count: number
+          recovered: boolean
+          total_cents: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cart_hash: string
+          created_at?: string
+          email?: string | null
+          emailed_h1?: boolean
+          emailed_h24?: boolean
+          id?: string
+          items_count?: number
+          recovered?: boolean
+          total_cents?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cart_hash?: string
+          created_at?: string
+          email?: string | null
+          emailed_h1?: boolean
+          emailed_h24?: boolean
+          id?: string
+          items_count?: number
+          recovered?: boolean
+          total_cents?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_abandonment_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cockpit_targets: {
         Row: {
           created_at: string
@@ -1324,6 +1374,42 @@ export type Database = {
           },
         ]
       }
+      occasion_bundles: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          occasion: string
+          product_ids: string[]
+          sort: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          occasion: string
+          product_ids?: string[]
+          sort?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          occasion?: string
+          product_ids?: string[]
+          sort?: number
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -1385,6 +1471,41 @@ export type Database = {
             columns: ["pickup_slot_id"]
             isOneToOne: false
             referencedRelation: "pickup_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      out_of_stock_notifications: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notified_at: string | null
+          product_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notified_at?: string | null
+          product_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "out_of_stock_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2180,6 +2301,51 @@ export type Database = {
           phone?: string
           role?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          current_uses: number
+          discount_type: string
+          id: string
+          max_uses: number | null
+          min_order_cents: number
+          target_audience: string
+          valid_from: string
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          current_uses?: number
+          discount_type: string
+          id?: string
+          max_uses?: number | null
+          min_order_cents?: number
+          target_audience?: string
+          valid_from?: string
+          valid_until?: string | null
+          value: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          current_uses?: number
+          discount_type?: string
+          id?: string
+          max_uses?: number | null
+          min_order_cents?: number
+          target_audience?: string
+          valid_from?: string
+          valid_until?: string | null
+          value?: number
         }
         Relationships: []
       }
@@ -3888,6 +4054,10 @@ export type Database = {
         Returns: number
       }
       unaccent: { Args: { "": string }; Returns: string }
+      validate_promo_code: {
+        Args: { p_code: string; p_total_cents: number }
+        Returns: Json
+      }
       verify_pin: { Args: { p_pin: string }; Returns: string }
     }
     Enums: {

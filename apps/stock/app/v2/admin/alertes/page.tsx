@@ -253,6 +253,7 @@ export default function AlertesPage() {
       .limit(20);
     if (surplusErr) {
       console.error("[alertes] chargement surplus échoué:", surplusErr);
+      toast.error("Impossible de charger les surplus");
     }
     setSurplus((dsurplus ?? []) as unknown as AlerteSurplus[]);
 

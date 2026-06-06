@@ -42,15 +42,21 @@ export function checkRateLimit(
   const bucket = buckets.get(key);
 
   if (!bucket || now - bucket.windowStart > windowMs) {
+    // Borne mémoire : sur une instance Fluid Compute réutilisée, la map
+    // grossirait sans fin (1 entrée par IP×clé). Au-delà d'un seuil, on
+    // purge les fenêtres expirées avant d'insérer.
+    if (buckets.size > 5000) {
+      for (const [k, b] of buckets) {
+        if (now - b.windowStart > windowMs) buckets.delete(k);
+      }
+    }
     buckets.set(key, { count: 1, windowStart: now });
     return { allowed: true, remaining: maxRequests - 1, retryAfter: 0 };
   }
 
   bucket.count++;
   if (bucket.count > maxRequests) {
-    const retryAfter = Math.ceil(
-      (bucket.windowStart + windowMs - now) / 1000,
-    );
+    const retryAfter = Math.ceil((bucket.windowStart + windowMs - now) / 1000);
     return { allowed: false, remaining: 0, retryAfter };
   }
 

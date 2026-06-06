@@ -37,10 +37,9 @@ export interface MarkLineWeighedInput {
 
 const UUID_RE_LOCAL = /^[0-9a-f-]{36}$/i;
 
-export async function markLineWeighed(input: MarkLineWeighedInput): Promise<
-  | { ok: true }
-  | { ok: false; error: string }
-> {
+export async function markLineWeighed(
+  input: MarkLineWeighedInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const sb = supabaseServer();
   const userId =
     input.user_id && UUID_RE_LOCAL.test(input.user_id) ? input.user_id : null;
@@ -151,7 +150,10 @@ export async function finalizePreparation(
     if (errEcart) {
       // On n'arrête pas le workflow pour une erreur d'audit : la capture
       // Stripe doit aboutir, le client attend. On log et on continue.
-      console.error("[finalizePreparation] insert drive_ecarts_poids", errEcart);
+      console.error(
+        "[finalizePreparation] insert drive_ecarts_poids",
+        errEcart,
+      );
     } else {
       ecartsCount = ecartsRows.length;
     }
@@ -258,14 +260,29 @@ export async function finalizePreparation(
 }
 
 // ─── Email template "commande prête" ──────────────────────────────────
+/** Échappe les caractères HTML — empêche l'injection via client_nom (donnée
+ *  fournie par le client lors de la commande drive). */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function buildCommandePreteEmail(commande: {
   id: string;
   numero_commande?: string | null;
   client_nom?: string | null;
   client_email?: string | null;
 }): string {
-  const ref = commande.numero_commande || commande.id.slice(0, 8).toUpperCase();
-  const greeting = commande.client_nom ? ` ${commande.client_nom}` : "";
+  const ref = escapeHtml(
+    commande.numero_commande || commande.id.slice(0, 8).toUpperCase(),
+  );
+  const greeting = commande.client_nom
+    ? ` ${escapeHtml(commande.client_nom)}`
+    : "";
   return `<div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
   <div style="background: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%); padding: 24px; text-align: center; border-radius: 12px 12px 0 0;">
     <h1 style="color: #C9A227; font-size: 20px; margin: 0;">Salamarket Drive</h1>

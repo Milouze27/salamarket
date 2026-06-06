@@ -189,6 +189,9 @@ export default function V2SortiePage() {
             produit_nom: produit.nom,
             quantite,
           }),
+          // Timeout 15 s : un appel IA qui pend ne doit pas bloquer la
+          // validation de la sortie (le catch fail-closed prend le relais).
+          signal: AbortSignal.timeout(15000),
         });
         if (r.ok) {
           const j = (await r.json()) as {

@@ -213,13 +213,27 @@ export function formatRelativeToCreneau(creneauIso: string): string {
   return m === 0 ? `Dans ${h}h` : `Dans ${h}h${String(m).padStart(2, "0")}`;
 }
 
+/** Échappe le HTML — empêche l'injection via client_nom (donnée client). */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function buildCommandePreteEmail(commande: {
   id: string;
   numero_commande?: string | null;
   client_nom?: string | null;
 }): string {
-  const ref = commande.numero_commande || commande.id.slice(0, 8).toUpperCase();
-  const greeting = commande.client_nom ? ` ${commande.client_nom}` : "";
+  const ref = escapeHtml(
+    commande.numero_commande || commande.id.slice(0, 8).toUpperCase(),
+  );
+  const greeting = commande.client_nom
+    ? ` ${escapeHtml(commande.client_nom)}`
+    : "";
   return `<div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
   <div style="background: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%); padding: 24px; text-align: center; border-radius: 12px 12px 0 0;">
     <h1 style="color: #C9A227; font-size: 20px; margin: 0;">Salamarket Drive</h1>

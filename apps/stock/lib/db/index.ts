@@ -389,26 +389,31 @@ export async function validateReception(
         .eq("depot_id", depotId)
         .maybeSingle();
       if (existing) {
-        await sb
+        const { error: upErr } = await sb
           .from("stock_par_depot")
           .update({
             quantite: (existing as { quantite: number }).quantite + qty,
             updated_at: new Date().toISOString(),
           })
           .eq("id", (existing as { id: string }).id);
+        // Propager : sinon la réception serait marquée "validee" sans que le
+        // stock ait réellement bougé (écart silencieux).
+        if (upErr) throw upErr;
       } else {
-        await sb.from("stock_par_depot").insert({
+        const { error: insErr } = await sb.from("stock_par_depot").insert({
           produit_id: produitId,
           depot_id: depotId,
           quantite: qty,
           is_visible: true,
         });
+        if (insErr) throw insErr;
       }
     }
-    await sb
+    const { error: recErr } = await sb
       .from("receptions")
       .update({ statut: "validee" as ReceptionStatus, reception_vide: vide })
       .eq("id", receptionId);
+    if (recErr) throw recErr;
     return;
   }
   // Local fallback: bump SEED_STOCK in-memory.

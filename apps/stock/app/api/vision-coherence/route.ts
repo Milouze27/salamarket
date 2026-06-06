@@ -18,6 +18,7 @@ import {
   extractJson,
   parseImageDataUrl,
 } from "@/lib/ai/vision";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface CoherenceRequest {
   photo_data_url: string;
@@ -50,6 +51,17 @@ function failClosed(notes: string): CoherenceResult {
 }
 
 export async function POST(req: Request) {
+  // Rate-limit : route client-facing qui appelle l'API Claude (coûteuse) —
+  // 20 req/min/IP suffit largement pour une saisie de casse manuelle et bloque
+  // l'abus (burn quota / DoS).
+  const rl = checkRateLimit(getClientIp(req), "vision-coherence", 20, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let body: CoherenceRequest;
   try {
     body = (await req.json()) as CoherenceRequest;

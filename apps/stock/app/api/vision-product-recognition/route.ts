@@ -15,6 +15,7 @@ import {
   extractJson,
   parseImageDataUrl,
 } from "@/lib/ai/vision";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 interface RecognitionBody {
   photo_data_url: string;
@@ -45,6 +46,15 @@ const CATEGORIES = [
 ] as const;
 
 export async function POST(req: Request) {
+  // Rate-limit : route client-facing appelant l'API Claude (coûteuse).
+  const rl = checkRateLimit(getClientIp(req), "vision-recognition", 20, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let body: RecognitionBody;
   try {
     body = (await req.json()) as RecognitionBody;

@@ -38,7 +38,9 @@ export async function GET(req: Request) {
 
     const rows = summary.lignes.map((l) => {
       const d = new Date(l.created_at);
-      const dateStr = d.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
+      const dateStr = d.toLocaleDateString("fr-FR", {
+        timeZone: "Europe/Paris",
+      });
       const heureStr = d
         .toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris" })
         .slice(0, 5);
@@ -59,7 +61,9 @@ export async function GET(req: Request) {
         formatFr(l.total_ligne_tva),
         l.mode_paiement,
         l.reference_paiement ?? "",
-      ].map(escapeCsv).join(";");
+      ]
+        .map(escapeCsv)
+        .join(";");
     });
 
     const csv = "﻿" + [header.join(";"), ...rows].join("\r\n");
@@ -74,7 +78,7 @@ export async function GET(req: Request) {
     console.error("[daily-z-csv] failed:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -84,8 +88,13 @@ function formatFr(n: number): string {
 }
 
 function escapeCsv(s: string): string {
-  if (s.includes(";") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
+  // Anti CSV/formula-injection : une cellule commençant par = + - @ (ou
+  // tab/CR) est interprétée comme une formule par Excel/Sheets. On la neutralise
+  // en la préfixant d'une apostrophe avant tout quoting.
+  let v = s;
+  if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+  if (v.includes(";") || v.includes('"') || v.includes("\n")) {
+    return `"${v.replace(/"/g, '""')}"`;
   }
-  return s;
+  return v;
 }

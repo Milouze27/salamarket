@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,17 @@ interface SubscribeBody {
  *  table est stricte (anon ne peut pas INSERT directement). On utilise
  *  SUPABASE_SERVICE_ROLE_KEY pour bypass. */
 export async function POST(req: Request) {
+  // Anti-abus : limite l'enregistrement massif de subscriptions depuis une IP.
+  // (Le durcissement complet — auth de l'employe_id — nécessite un système de
+  // session, cf. backlog sécurité.)
+  const rl = checkRateLimit(getClientIp(req), "push-subscribe", 30, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   let body: SubscribeBody;
   try {
     body = (await req.json()) as SubscribeBody;
@@ -26,7 +38,7 @@ export async function POST(req: Request) {
   if (!body.endpoint || !body.p256dh || !body.auth) {
     return NextResponse.json(
       { error: "Missing endpoint / p256dh / auth" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -44,7 +56,7 @@ export async function POST(req: Request) {
       enabled: true,
       last_used_at: new Date().toISOString(),
     },
-    { onConflict: "endpoint" }
+    { onConflict: "endpoint" },
   );
 
   if (error) {
@@ -68,7 +80,7 @@ export async function DELETE(req: Request) {
   else
     return NextResponse.json(
       { error: "employe_id ou endpoint requis" },
-      { status: 400 }
+      { status: 400 },
     );
   const { error } = await q;
   if (error)

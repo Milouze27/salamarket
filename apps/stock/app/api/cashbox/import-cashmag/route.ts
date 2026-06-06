@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { parseCashmagCsv, type CashmagRow } from "@/lib/cashbox/cashmag-parse";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,23 +45,44 @@ function numToPg(n: number | null | undefined): string {
 }
 
 export async function POST(req: Request) {
+  // Anti-abus : import lourd (écritures DB en masse). 5 imports/h/IP suffit pour
+  // un usage admin légitime et bloque l'injection bulk.
+  const rl = checkRateLimit(getClientIp(req), "import-cashmag", 5, 3_600_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   const sb = supabase();
   if (!sb) {
-    return NextResponse.json({ error: "Supabase non configuré" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Supabase non configuré" },
+      { status: 500 },
+    );
   }
   let body: { csv?: string; importedBy?: string };
-  try { body = await req.json(); } catch {
+  try {
+    body = await req.json();
+  } catch {
     return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
   }
   if (!body.csv || typeof body.csv !== "string") {
     return NextResponse.json({ error: "csv manquant" }, { status: 400 });
   }
+  // Cap taille : ~10 Mo de CSV, au-delà on refuse (anti-OOM / anti-DoS).
+  if (body.csv.length > 10_000_000) {
+    return NextResponse.json({ error: "csv trop volumineux" }, { status: 413 });
+  }
 
   const result = parseCashmagCsv(body.csv);
   if (result.rows.length === 0) {
     return NextResponse.json({
-      ok: false, meta: result.meta,
-      errors: result.errors.slice(0, 50), inserted: 0,
+      ok: false,
+      meta: result.meta,
+      errors: result.errors.slice(0, 50),
+      inserted: 0,
     });
   }
 
@@ -85,12 +107,18 @@ export async function POST(req: Request) {
   const dbErrors: string[] = [];
   for (let i = 0; i < deduped.length; i += 200) {
     const chunk = deduped.slice(i, i + 200).map((r) => ({
-      date_vente: r.date_vente, heure_vente: r.heure_vente,
-      numero_ticket: r.numero_ticket, code_barre: r.code_barre,
-      designation: r.designation, quantite: r.quantite,
-      prix_ttc: r.prix_ttc, prix_ht: r.prix_ht,
-      tva_taux: r.tva_taux, mode_paiement: r.mode_paiement,
-      raw_line: r.raw_line, raw_hash: r.raw_hash,
+      date_vente: r.date_vente,
+      heure_vente: r.heure_vente,
+      numero_ticket: r.numero_ticket,
+      code_barre: r.code_barre,
+      designation: r.designation,
+      quantite: r.quantite,
+      prix_ttc: r.prix_ttc,
+      prix_ht: r.prix_ht,
+      tva_taux: r.tva_taux,
+      mode_paiement: r.mode_paiement,
+      raw_line: r.raw_line,
+      raw_hash: r.raw_hash,
       imported_by: body.importedBy ?? "manual",
     }));
     const { error, count } = await sb
@@ -98,7 +126,8 @@ export async function POST(req: Request) {
       .upsert(chunk, {
         // Réimport du même fichier → conflit sur raw_hash → ligne ignorée.
         onConflict: "raw_hash",
-        count: "exact", ignoreDuplicates: true,
+        count: "exact",
+        ignoreDuplicates: true,
       });
     if (error) dbErrors.push(error.message);
     else inserted += count ?? 0;
@@ -107,10 +136,13 @@ export async function POST(req: Request) {
   const duplicatesSkipped = deduped.length - inserted;
 
   return NextResponse.json({
-    ok: dbErrors.length === 0, inserted,
+    ok: dbErrors.length === 0,
+    inserted,
     parsed: result.rows.length,
     // Lignes ignorées car déjà en base (réimport) ou doublons internes.
     duplicates_skipped: duplicatesSkipped + skippedInFile,
-    parseErrors: result.errors.slice(0, 50), dbErrors, meta: result.meta,
+    parseErrors: result.errors.slice(0, 50),
+    dbErrors,
+    meta: result.meta,
   });
 }

@@ -83,6 +83,28 @@ export function UpdatePrompt() {
       >
         Recharger
       </button>
+      <button
+        type="button"
+        onClick={() => setVisible(false)}
+        aria-label="Plus tard"
+        style={{
+          flexShrink: 0,
+          appearance: "none",
+          border: "none",
+          cursor: "pointer",
+          width: "36px",
+          minHeight: "36px",
+          borderRadius: "9999px",
+          background: "transparent",
+          color: "var(--text-secondary, #b9c4bd)",
+          fontFamily: "inherit",
+          fontSize: "18px",
+          lineHeight: 1,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        ✕
+      </button>
     </div>
   );
 }

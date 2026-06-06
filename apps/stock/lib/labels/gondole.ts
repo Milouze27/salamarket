@@ -28,7 +28,7 @@ const H = 70; // mm
 // Couleurs (RGB) cohérentes MYTHOS — corps clair (impression rayon).
 const SAPIN: [number, number, number] = [14, 59, 46];
 const SAPIN_PRIMARY: [number, number, number] = [27, 106, 74];
-const OR: [number, number, number] = [200, 162, 39];
+const OR: [number, number, number] = [201, 162, 39]; // #c9a227 (cf brand.ts / DESIGN.md)
 const INK: [number, number, number] = [20, 28, 24];
 const INK_SOFT: [number, number, number] = [90, 100, 95];
 const DANGER: [number, number, number] = [168, 35, 26];
@@ -124,8 +124,13 @@ function drawHead(doc: jsPDF, input: GondoleInput): number {
   doc.setFontSize(15);
   setText(doc, INK);
   const nameLines = doc.splitTextToSize(input.produitNom, W - 30);
-  doc.text(nameLines.slice(0, 2), 6, 14);
-  let y = 14 + nameLines.slice(0, 2).length * 5.4;
+  // Ellipsis si le nom dépasse 2 lignes (sinon coupe brutale, illisible rayon).
+  const shown = nameLines.slice(0, 2);
+  if (nameLines.length > 2 && shown.length === 2) {
+    shown[1] = shown[1].replace(/\s*\S*$/, "") + "…";
+  }
+  doc.text(shown, 6, 14);
+  let y = 14 + shown.length * 5.4;
 
   if (input.marque) {
     doc.setFont("helvetica", "normal");

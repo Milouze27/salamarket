@@ -195,7 +195,7 @@ export default function V2LotDetailPage() {
     }
     const productNom = lot?.produits?.nom ?? "—";
     win.document
-      .write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette lot ${lotId}</title>
+      .write(`<!doctype html><html><head><meta charset="utf-8"><title>Étiquette lot ${escapeHtml(lotId)}</title>
 <style>
   @page { size: 62mm 80mm; margin: 0; }
   body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0F1A14; padding: 6mm; box-sizing: border-box; }

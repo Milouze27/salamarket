@@ -57,21 +57,35 @@ export const PALETTE = {
   /** Sapin plein du bandeau en-tête. */
   sapin: { hex: "#0E3B2E", rgb: [14, 59, 46] as [number, number, number] },
   /** Sapin clair pour titres de section dans le corps. */
-  sapinLight: { hex: "#1B6A4A", rgb: [27, 106, 74] as [number, number, number] },
-  /** Or signature (logo, filets premium). */
-  gold: { hex: "#E8C24A", rgb: [232, 194, 74] as [number, number, number] },
-  /** Or vif pour accents lumineux. */
-  goldBright: { hex: "#F2D469", rgb: [242, 212, 105] as [number, number, number] },
+  sapinLight: {
+    hex: "#1B6A4A",
+    rgb: [27, 106, 74] as [number, number, number],
+  },
+  /** Or signature (logo, filets premium). Or canonique #c9a227 (cf DESIGN.md /
+   *  globals.css --accent-gold) : le #E8C24A précédent était l'or DARK-mode,
+   *  délavé/peu lisible sur le papier blanc des PDFs. */
+  gold: { hex: "#C9A227", rgb: [201, 162, 39] as [number, number, number] },
+  /** Or vif pour accents lumineux (--accent-gold-bright). */
+  goldBright: {
+    hex: "#DDB31C",
+    rgb: [221, 179, 28] as [number, number, number],
+  },
   /** Crème : fonds de bandeaux / en-têtes de tableaux. */
   cream: { hex: "#F5F0E1", rgb: [245, 240, 225] as [number, number, number] },
   /** Crème pâle : zébrage de lignes alternées. */
-  creamSoft: { hex: "#FAF7EE", rgb: [250, 247, 238] as [number, number, number] },
+  creamSoft: {
+    hex: "#FAF7EE",
+    rgb: [250, 247, 238] as [number, number, number],
+  },
   /** Texte principal du corps (presque noir, plus doux que #000). */
   ink: { hex: "#1A1A1A", rgb: [26, 26, 26] as [number, number, number] },
   /** Texte secondaire / méta / footer. */
   muted: { hex: "#787878", rgb: [120, 120, 120] as [number, number, number] },
   /** Filets fins. */
-  hairline: { hex: "#D1CCB8", rgb: [209, 204, 184] as [number, number, number] },
+  hairline: {
+    hex: "#D1CCB8",
+    rgb: [209, 204, 184] as [number, number, number],
+  },
   /** Blanc (texte sur bandeau sapin). */
   white: { hex: "#FFFFFF", rgb: [255, 255, 255] as [number, number, number] },
   /** Status — succès. */
@@ -81,9 +95,15 @@ export const PALETTE = {
   /** Status — warning. */
   warning: { hex: "#D97706", rgb: [217, 119, 6] as [number, number, number] },
   /** Fond ambre doux (encadrés warning). */
-  warningSoft: { hex: "#FEF3E2", rgb: [254, 243, 226] as [number, number, number] },
+  warningSoft: {
+    hex: "#FEF3E2",
+    rgb: [254, 243, 226] as [number, number, number],
+  },
   /** Fond vert doux (encadrés OK). */
-  successSoft: { hex: "#E8F5EE", rgb: [232, 245, 238] as [number, number, number] },
+  successSoft: {
+    hex: "#E8F5EE",
+    rgb: [232, 245, 238] as [number, number, number],
+  },
 } as const;
 
 // ─── Police ─────────────────────────────────────────────────────────────
@@ -118,7 +138,10 @@ export function registerBrandFonts(doc: jsPDF): void {
     d.addFont("PlusJakartaSans-Bold.ttf", FONT.family, "bold");
     fontsRegistered.add(doc);
   } catch (e) {
-    console.warn("[pdf/brand] embed Plus Jakarta échoué, fallback Helvetica:", e);
+    console.warn(
+      "[pdf/brand] embed Plus Jakarta échoué, fallback Helvetica:",
+      e,
+    );
     fontFallback.add(doc);
   }
 }
@@ -128,7 +151,10 @@ export function registerBrandFonts(doc: jsPDF): void {
  * style demandé. À utiliser PARTOUT à la place de `doc.setFont` pour rester
  * robuste : `setBrandFont(doc, "bold")`.
  */
-export function setBrandFont(doc: jsPDF, style: "normal" | "bold" = "normal"): void {
+export function setBrandFont(
+  doc: jsPDF,
+  style: "normal" | "bold" = "normal",
+): void {
   const family = fontFallback.has(doc) ? FONT.fallback : FONT.family;
   doc.setFont(family, style);
 }
@@ -141,7 +167,7 @@ export function setBrandFont(doc: jsPDF, style: "normal" | "bold" = "normal"): v
  */
 export function createBrandDoc(
   jsPDFCtor: new (...args: any[]) => jsPDF,
-  opts: { orientation?: "portrait" | "landscape" } = {}
+  opts: { orientation?: "portrait" | "landscape" } = {},
 ): jsPDF {
   const doc = new jsPDFCtor({
     unit: "mm",
@@ -197,7 +223,9 @@ export function formatDateFr(input: string | Date | null | undefined): string {
 /**
  * Date longue FR : `"11 mai 2026"`. Pour les en-têtes de doc.
  */
-export function formatDateLongFr(input: string | Date | null | undefined): string {
+export function formatDateLongFr(
+  input: string | Date | null | undefined,
+): string {
   const d = toDate(input);
   if (!d) return "—";
   return d.toLocaleDateString("fr-FR", {
@@ -212,7 +240,9 @@ export function formatDateLongFr(input: string | Date | null | undefined): strin
  * Date + heure FR (timezone Paris) : `"11/05/2026 14:32"`. Pour les
  * horodatages d'émission / signature.
  */
-export function formatDateTimeFr(input: string | Date | null | undefined): string {
+export function formatDateTimeFr(
+  input: string | Date | null | undefined,
+): string {
   const d = toDate(input);
   if (!d) return "—";
   return d.toLocaleString("fr-FR", {
@@ -251,7 +281,7 @@ export function hairline(
   x1: number,
   y: number,
   x2: number,
-  rgb: [number, number, number] = PALETTE.hairline.rgb
+  rgb: [number, number, number] = PALETTE.hairline.rgb,
 ): void {
   doc.setLineWidth(0.2);
   doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
@@ -259,7 +289,10 @@ export function hairline(
 }
 
 /** Pose une couleur de texte depuis un tuple RGB. */
-export function setInk(doc: jsPDF, rgb: [number, number, number] = PALETTE.ink.rgb): void {
+export function setInk(
+  doc: jsPDF,
+  rgb: [number, number, number] = PALETTE.ink.rgb,
+): void {
   doc.setTextColor(rgb[0], rgb[1], rgb[2]);
 }
 
@@ -268,7 +301,12 @@ export function setInk(doc: jsPDF, rgb: [number, number, number] = PALETTE.ink.r
  * Centré sur (cx, cy), rayon r. Utilisé dans le header ; exporté pour le
  * certificat halal qui peut vouloir un sceau plus grand.
  */
-export function drawLogoMark(doc: jsPDF, cx: number, cy: number, r: number): void {
+export function drawLogoMark(
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  r: number,
+): void {
   // Disque sapin très foncé
   doc.setFillColor(8, 25, 18);
   doc.circle(cx, cy, r, "F");
@@ -355,7 +393,8 @@ export function drawHeader(doc: jsPDF, opts: HeaderOptions): number {
     metaY += 5;
   }
   const metaLine =
-    opts.meta ?? (opts.noEmisLe ? undefined : `Émis le ${formatDateTimeFr(new Date())}`);
+    opts.meta ??
+    (opts.noEmisLe ? undefined : `Émis le ${formatDateTimeFr(new Date())}`);
   if (metaLine) {
     setBrandFont(doc, "normal");
     doc.setFontSize(7.5);
@@ -377,7 +416,7 @@ export function drawSectionTitle(
   x: number,
   y: number,
   label: string,
-  opts: { rule?: boolean; width?: number; size?: number } = {}
+  opts: { rule?: boolean; width?: number; size?: number } = {},
 ): number {
   setBrandFont(doc, "bold");
   doc.setFontSize(opts.size ?? 11);
@@ -455,7 +494,7 @@ export function drawFooter(doc: jsPDF, opts: FooterOptions = {}): void {
  */
 export function drawFooterAllPages(
   doc: jsPDF,
-  opts: Omit<FooterOptions, "page" | "total"> = {}
+  opts: Omit<FooterOptions, "page" | "total"> = {},
 ): void {
   const total = (doc as any).getNumberOfPages() as number;
   for (let p = 1; p <= total; p++) {

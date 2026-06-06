@@ -97,6 +97,10 @@ export async function buildLabelsPdf(
       pdf.setFontSize(8);
       const title = pdf.splitTextToSize(item.produitNom, LABEL_W_MM - 22);
       const titleLines = title.slice(0, 2);
+      // Ellipsis si le nom dépasse 2 lignes (sinon coupe brutale sur l'étiquette).
+      if (title.length > 2 && titleLines.length === 2) {
+        titleLines[1] = titleLines[1].replace(/\s*\S*$/, "") + "…";
+      }
       pdf.text(titleLines, 3, 4.5);
 
       let leftY = 4.5 + titleLines.length * 3.1;

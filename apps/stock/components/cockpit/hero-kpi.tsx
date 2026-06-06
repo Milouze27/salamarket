@@ -68,13 +68,17 @@ export function HeroKpi({
           "var(--shadow-elevated), inset 0 1px 0 var(--border-premium)",
       }}
     >
-      {/* Halo radial or — chaleur sapin */}
+      {/* Halo radial or — chaleur sapin.
+          NB : le héro est TOUJOURS sur dégradé sombre (var(--hero-gradient) reste
+          sapin même en mode jour). On utilise donc un or TRANSLUCIDE fixe, et non
+          var(--accent-gold-soft) qui devient un crème opaque (#f4e9c4) en mode
+          jour → produisait un wash pâle disgracieux sur le héro sombre. */}
       <span
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at 100% 0%, var(--accent-gold-soft) 0%, transparent 55%)",
+            "radial-gradient(circle at 100% 0%, rgba(232,194,74,0.16) 0%, transparent 55%)",
         }}
       />
       {/* Trame or subtile bas-gauche pour anti-flat */}
@@ -83,7 +87,7 @@ export function HeroKpi({
         className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle, var(--accent-gold-soft) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(232,194,74,0.14) 0%, transparent 70%)",
         }}
       />
 
@@ -112,9 +116,7 @@ export function HeroKpi({
           <p className="text-[14px] font-semibold text-white/75 tracking-tight">
             {salutation},
           </p>
-          <h1
-            className="text-[32px] sm:text-[36px] font-bold leading-none tracking-tight text-white"
-          >
+          <h1 className="text-[32px] sm:text-[36px] font-bold leading-none tracking-tight text-white">
             {prenom}
             <span className="text-[var(--accent-gold-bright)]">.</span>
           </h1>
@@ -162,22 +164,30 @@ export function HeroKpi({
             >
               <TrendIcon className="w-3.5 h-3.5" strokeWidth={2.6} />
               {formatPct(deltaN1Pct)}
-              <span className="font-semibold opacity-75 text-[11px]">vs N-1</span>
+              <span className="font-semibold opacity-75 text-[11px]">
+                vs N-1
+              </span>
             </span>
           )}
           {pctTarget !== null && (
             <span
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular text-[var(--accent-gold-bright)] border border-[var(--border-premium)]"
-              style={{ background: "var(--accent-gold-soft)" }}
+              // Or translucide fixe (héro toujours sombre) — var(--accent-gold-soft)
+              // virerait crème opaque + texte or peu contrasté en mode jour.
+              style={{ background: "rgba(232,194,74,0.14)" }}
               aria-label={`Atteinte du target : ${pctTarget.toFixed(0)} pourcent`}
             >
-              <span className="opacity-75 font-semibold text-[11px]">Target</span>
+              <span className="opacity-75 font-semibold text-[11px]">
+                Target
+              </span>
               {pctTarget.toFixed(0)}%
             </span>
           )}
           {nbTickets !== null && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular bg-white/10 text-white/85">
-              <span className="opacity-75 font-semibold text-[11px]">Tickets</span>
+              <span className="opacity-75 font-semibold text-[11px]">
+                Tickets
+              </span>
               {nbTickets}
             </span>
           )}

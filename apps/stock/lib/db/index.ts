@@ -509,13 +509,24 @@ export async function createSortie(input: {
     const sortieId = (data as SortieStock).id;
     const isCasse =
       input.type !== "demarque_inconnue" && input.type !== "autre";
-    await adjustStock(
-      input.produit_id,
-      input.depot_id,
-      -input.quantite,
-      isCasse ? "casse" : "sortie",
-      { lotId, referenceId: sortieId, actorId: input.employe_id },
-    );
+    try {
+      await adjustStock(
+        input.produit_id,
+        input.depot_id,
+        -input.quantite,
+        isCasse ? "casse" : "sortie",
+        { lotId, referenceId: sortieId, actorId: input.employe_id },
+      );
+    } catch (stockErr) {
+      // Compensation : le décrément stock a échoué → on annule la sortie déjà
+      // insérée pour ne pas laisser une ligne orpheline (sortie sans impact stock).
+      console.error(
+        `[createSortie] adjust_stock a échoué pour sortie ${sortieId}, rollback de la sortie :`,
+        stockErr,
+      );
+      await sb.from("sorties_stock").delete().eq("id", sortieId);
+      throw new Error("Stock non décrémenté — sortie annulée. Réessaie.");
+    }
     return data as SortieStock;
   }
   localSorties.push(row);

@@ -29,7 +29,9 @@ export function StockEditModal({
   employeId,
   duringInventaire,
 }: Props) {
-  const [qty, setQty] = useState<number>(quantiteActuelle);
+  // number | "" : autorise le champ VIDE pendant la saisie (sinon impossible
+  // d'effacer pour retaper une valeur). Validé au save.
+  const [qty, setQty] = useState<number | "">(quantiteActuelle);
   const [raison, setRaison] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,7 +44,7 @@ export function StockEditModal({
 
   async function save() {
     if (!produit) return;
-    if (qty < 0) {
+    if (qty === "" || qty < 0) {
       toast.error("Quantité invalide");
       return;
     }
@@ -60,12 +62,14 @@ export function StockEditModal({
         produit_id: produit.id,
         depot_id: depotId,
         quantite_apres: qty,
-        raison: raison.trim() || (duringInventaire ? "Inventaire complet" : "Sans raison"),
+        raison:
+          raison.trim() ||
+          (duringInventaire ? "Inventaire complet" : "Sans raison"),
         employe_id: employeId,
         during_inventaire: duringInventaire,
       });
       toast.success(
-        `Stock ${produit.nom} : ${quantiteActuelle} → ${qty} (${depotNom})`
+        `Stock ${produit.nom} : ${quantiteActuelle} → ${qty} (${depotNom})`,
       );
       onSaved?.();
       onClose();
@@ -77,7 +81,8 @@ export function StockEditModal({
   }
 
   if (!produit) return null;
-  const delta = qty - quantiteActuelle;
+  // qty peut être "" (champ vidé en cours de saisie) → 0 de delta affiché.
+  const delta = (qty === "" ? quantiteActuelle : qty) - quantiteActuelle;
 
   return (
     <AnimatePresence>
@@ -103,7 +108,9 @@ export function StockEditModal({
             </div>
             <div className="px-5 pb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="label-caps text-text-tertiary">Modifier le stock</p>
+                <p className="label-caps text-text-tertiary">
+                  Modifier le stock
+                </p>
                 <p className="text-base font-bold text-text-primary mt-1 truncate">
                   {produit.nom}
                 </p>
@@ -131,7 +138,9 @@ export function StockEditModal({
                 </p>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setQty((q) => Math.max(0, q - 1))}
+                    onClick={() =>
+                      setQty((q) => Math.max(0, (Number(q) || 0) - 1))
+                    }
                     className="w-12 h-12 rounded-2xl bg-cream border border-rule flex items-center justify-center"
                   >
                     <Minus className="w-5 h-5" />
@@ -141,11 +150,17 @@ export function StockEditModal({
                     inputMode="numeric"
                     min={0}
                     value={qty}
-                    onChange={(e) => setQty(Math.max(0, Number(e.target.value) || 0))}
+                    onChange={(e) =>
+                      setQty(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0, parseInt(e.target.value, 10) || 0),
+                      )
+                    }
                     className="flex-1 input-field text-center text-2xl font-extrabold tabular"
                   />
                   <button
-                    onClick={() => setQty((q) => q + 1)}
+                    onClick={() => setQty((q) => (Number(q) || 0) + 1)}
                     className="w-12 h-12 rounded-2xl bg-cream border border-rule flex items-center justify-center"
                   >
                     <Plus className="w-5 h-5" />
@@ -182,7 +197,7 @@ export function StockEditModal({
 
               <button
                 onClick={() => void save()}
-                disabled={submitting || (delta === 0)}
+                disabled={submitting || delta === 0}
                 className="w-full bg-primary text-white rounded-2xl py-3.5 inline-flex items-center justify-center gap-2 font-bold disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />

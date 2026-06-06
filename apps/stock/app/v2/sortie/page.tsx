@@ -97,7 +97,9 @@ export default function V2SortiePage() {
 
   const [type, setType] = useState<SortieType | null>(null);
   const [motifLibre, setMotifLibre] = useState("");
-  const [quantite, setQuantite] = useState<number>(1);
+  // String pour permettre le champ VIDE pendant la saisie (sinon impossible
+  // d'effacer le "1" par défaut pour taper une autre quantité). Validé au submit.
+  const [quantite, setQuantite] = useState<string>("1");
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -159,11 +161,16 @@ export default function V2SortiePage() {
   }, [searchQuery, showSearch]);
 
   async function submit() {
-    if (!produit || !type || !depot || !employe || !photo) {
+    if (!produit || !type || !photo) {
       toast.error("Remplissez tout : produit, type, photo");
       return;
     }
-    if (quantite <= 0) {
+    if (!depot || !employe) {
+      toast.error("Session perdue (dépôt/employé) — reconnecte-toi.");
+      return;
+    }
+    const qte = parseInt(quantite, 10);
+    if (!Number.isFinite(qte) || qte <= 0) {
       toast.error("Quantité invalide");
       return;
     }
@@ -187,7 +194,7 @@ export default function V2SortiePage() {
             photo_data_url: photo,
             type,
             produit_nom: produit.nom,
-            quantite,
+            quantite: qte,
           }),
           // Timeout 15 s : un appel IA qui pend ne doit pas bloquer la
           // validation de la sortie (le catch fail-closed prend le relais).
@@ -221,7 +228,7 @@ export default function V2SortiePage() {
         produit_id: produit.id,
         type,
         motif_libre: type === "autre" ? motifLibre : undefined,
-        quantite,
+        quantite: qte,
         photo_url: photo,
         ia_coherence_score: iaScore,
         ia_coherence_notes: iaNotes,
@@ -242,7 +249,7 @@ export default function V2SortiePage() {
                 depot: depot.nom,
                 employe: `${employe.prenom} ${employe.nom}`,
                 produit: produit.nom,
-                quantite,
+                quantite: qte,
                 type,
                 ia_score: iaScore,
                 ia_notes: iaNotes,
@@ -298,10 +305,12 @@ export default function V2SortiePage() {
   }
 
   const canSubmit =
+    depot &&
+    employe &&
     produit &&
     type &&
     photo &&
-    quantite > 0 &&
+    parseInt(quantite, 10) > 0 &&
     (type !== "autre" || motifLibre.trim().length > 0);
 
   return (
@@ -502,7 +511,7 @@ export default function V2SortiePage() {
               type="number"
               min={1}
               value={quantite}
-              onChange={(e) => setQuantite(parseInt(e.target.value || "1", 10))}
+              onChange={(e) => setQuantite(e.target.value)}
               inputMode="numeric"
               pattern="[0-9]*"
               className="input-field text-2xl font-bold text-center min-h-[56px]"

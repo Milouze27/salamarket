@@ -39,7 +39,9 @@ type WebhookResult =
   | { ok: false; reason: string; transient: boolean };
 
 /** Détecte si l'erreur Postgres/PostgREST = "table absente" (env legacy). */
-function isMissingTable(err: { code?: string; message?: string } | null): boolean {
+function isMissingTable(
+  err: { code?: string; message?: string } | null,
+): boolean {
   if (!err) return false;
   if (err.code === "PGRST205" || err.code === "42P01") return true;
   const msg = (err.message || "").toLowerCase();
@@ -47,32 +49,46 @@ function isMissingTable(err: { code?: string; message?: string } | null): boolea
 }
 
 /**
- * Idempotence sur event.id : Stripe livre AU MOINS une fois (retries), donc
- * un même event peut arriver plusieurs fois. On enregistre chaque event.id
- * traité dans audit_log et on refuse de ré-appliquer les effets de bord.
+ * Idempotence ATOMIQUE sur event.id (Stripe livre « au moins une fois »).
+ * On REVENDIQUE l'event par un INSERT dans stripe_webhook_events (clé primaire
+ * = event_id) AVANT tout effet de bord. Le premier gagne ; tout doublon échoue
+ * en 23505. C'est atomique au niveau DB → fini la course check-then-act de
+ * l'ancien dédup sur audit_log.
  *
  * Retour :
- *   - "yes"   : déjà traité → ACK 200 sans rejouer.
- *   - "no"    : jamais vu (ou table audit_log absente) → on traite.
- *   - "error" : impossible de vérifier (panne transitoire) → 500 pour retry,
- *               on préfère un retry à un double-traitement.
+ *   - "claimed"   : revendication obtenue → on traite (et on RELÂCHE si échec transitoire).
+ *   - "duplicate" : déjà revendiqué/traité → ACK 200 sans rejouer.
+ *   - "no-lock"   : table absente (migration 20260606000001 pas encore appliquée)
+ *                   → fallback, on traite SANS verrou (comportement historique).
+ *   - "error"     : panne DB transitoire → 500 pour que Stripe retry.
  */
-async function alreadyProcessed(eventId: string): Promise<"yes" | "no" | "error"> {
+async function claimWebhookEvent(
+  eventId: string,
+  type: string,
+): Promise<"claimed" | "duplicate" | "no-lock" | "error"> {
   try {
-    const { data, error } = await supabaseServer()
-      .from("audit_log")
-      .select("id")
-      .eq("action", "stripe.webhook.processed")
-      .eq("record_id", eventId)
-      .limit(1);
-    if (error) {
-      if (isMissingTable(error)) return "no"; // pas de table → on traite une fois
-      return "error";
-    }
-    return data && data.length > 0 ? "yes" : "no";
+    const { error } = await supabaseServer()
+      .from("stripe_webhook_events")
+      .insert({ event_id: eventId, type });
+    if (!error) return "claimed";
+    if (error.code === "23505") return "duplicate"; // PK déjà présente
+    if (isMissingTable(error)) return "no-lock"; // migration pas appliquée
+    return "error"; // transitoire → retry plutôt que double-traitement
   } catch {
-    // Client serveur indispo (env manquant) — on traite plutôt que bloquer.
-    return "no";
+    // Client serveur indispo (env manquant) — on traite plutôt que bloquer le paiement.
+    return "no-lock";
+  }
+}
+
+/** Relâche la revendication (échec transitoire) pour autoriser le retry Stripe. */
+async function releaseWebhookClaim(eventId: string): Promise<void> {
+  try {
+    await supabaseServer()
+      .from("stripe_webhook_events")
+      .delete()
+      .eq("event_id", eventId);
+  } catch {
+    /* best-effort */
   }
 }
 
@@ -140,10 +156,7 @@ export async function POST(req: Request) {
   const whSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig) {
-    return NextResponse.json(
-      { error: "missing_signature" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "missing_signature" }, { status: 400 });
   }
   if (!whSecret) {
     return NextResponse.json(
@@ -167,15 +180,19 @@ export async function POST(req: Request) {
     );
   }
 
-  // Idempotence : si on a déjà traité cet event.id, on ACK sans rejouer.
-  const seen = await alreadyProcessed(event.id);
-  if (seen === "error") {
-    // Impossible de vérifier le dédup (panne transitoire) → 500 pour retry.
-    return NextResponse.json({ error: "dedup_unavailable" }, { status: 500 });
-  }
-  if (seen === "yes") {
+  // Idempotence ATOMIQUE : on REVENDIQUE l'event (INSERT PK) AVANT tout effet
+  // de bord. Doublon concurrent → un seul gagne, l'autre est rejeté ici.
+  const claim = await claimWebhookEvent(event.id, event.type);
+  if (claim === "duplicate") {
     return NextResponse.json({ received: true, duplicate: true });
   }
+  if (claim === "error") {
+    // Impossible de revendiquer (panne DB transitoire) → 500 pour retry Stripe.
+    return NextResponse.json({ error: "claim_unavailable" }, { status: 500 });
+  }
+  // claimed = revendication tenue ; false en fallback "no-lock" (migration pas
+  // appliquée → on traite sans verrou, comme avant).
+  const claimed = claim === "claimed";
 
   let result: WebhookResult = { ok: true, updated: false };
   try {
@@ -208,8 +225,13 @@ export async function POST(req: Request) {
     await auditLog({
       action: "stripe.webhook.error",
       recordId: event.id,
-      details: { type: event.type, error: e instanceof Error ? e.message : "unknown" },
+      details: {
+        type: event.type,
+        error: e instanceof Error ? e.message : "unknown",
+      },
     });
+    // Relâche la revendication → le retry Stripe pourra rejouer cet event.
+    if (claimed) await releaseWebhookClaim(event.id);
     return NextResponse.json({ error: "handler_exception" }, { status: 500 });
   }
 
@@ -220,6 +242,8 @@ export async function POST(req: Request) {
       recordId: event.id,
       details: { type: event.type, reason: result.reason },
     });
+    // Relâche la revendication → le retry Stripe pourra rejouer cet event.
+    if (claimed) await releaseWebhookClaim(event.id);
     return NextResponse.json(
       { error: "transient_error", reason: result.reason },
       { status: 500 },

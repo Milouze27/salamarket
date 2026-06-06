@@ -364,11 +364,12 @@ export async function validateReception(
     if (e1) throw new Error(e1.message);
     const { data: rec, error: e2 } = await sb
       .from("receptions")
-      .select("depot_id")
+      .select("depot_id, employe_id")
       .eq("id", receptionId)
       .single();
     if (e2) throw e2;
     const depotId = (rec as { depot_id: string }).depot_id;
+    const actorId = (rec as { employe_id?: string | null }).employe_id ?? null;
 
     const totals = new Map<string, number>();
     for (const l of (lignes ?? []) as Array<{
@@ -381,33 +382,14 @@ export async function validateReception(
       );
     }
     for (const [produitId, qty] of totals) {
-      // upsert stock row
-      const { data: existing } = await sb
-        .from("stock_par_depot")
-        .select("id, quantite")
-        .eq("produit_id", produitId)
-        .eq("depot_id", depotId)
-        .maybeSingle();
-      if (existing) {
-        const { error: upErr } = await sb
-          .from("stock_par_depot")
-          .update({
-            quantite: (existing as { quantite: number }).quantite + qty,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", (existing as { id: string }).id);
-        // Propager : sinon la réception serait marquée "validee" sans que le
-        // stock ait réellement bougé (écart silencieux).
-        if (upErr) throw upErr;
-      } else {
-        const { error: insErr } = await sb.from("stock_par_depot").insert({
-          produit_id: produitId,
-          depot_id: depotId,
-          quantite: qty,
-          is_visible: true,
-        });
-        if (insErr) throw insErr;
-      }
+      // Mouvement de stock ATOMIQUE via le RPC adjust_stock (verrou ligne +
+      // upsert + ledger immuable), au lieu d'un read-then-write : deux
+      // réceptions concurrentes ne peuvent plus se perdre des unités, et la
+      // réception est désormais tracée dans stock_movements (traçabilité halal).
+      await adjustStock(produitId, depotId, qty, "reception", {
+        referenceId: receptionId,
+        actorId,
+      });
     }
     const { error: recErr } = await sb
       .from("receptions")

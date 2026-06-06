@@ -15,7 +15,13 @@
  * pas voler le clavier au scanner.
  */
 
-import { Thermometer, AlertTriangle, CheckCircle2, Minus, Plus } from "lucide-react";
+import {
+  Thermometer,
+  AlertTriangle,
+  CheckCircle2,
+  Minus,
+  Plus,
+} from "lucide-react";
 import { useMemo } from "react";
 
 interface TemperatureInputProps {
@@ -126,6 +132,7 @@ export function TemperatureInput({
             type="number"
             step="0.1"
             inputMode="decimal"
+            aria-label="Température en degrés Celsius"
             disabled={locked}
             value={value ?? ""}
             onChange={(e) => {

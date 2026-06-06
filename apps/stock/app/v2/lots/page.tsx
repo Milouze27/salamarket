@@ -67,13 +67,24 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function certifState(validUntil: string | null): "ok" | "expire_soon" | "expired" | "unknown" {
+function certifState(
+  validUntil: string | null,
+): "ok" | "expire_soon" | "expired" | "unknown" {
   if (!validUntil) return "unknown";
-  const target = new Date(validUntil).getTime();
-  if (Number.isNaN(target)) return "unknown";
-  const now = Date.now();
-  const days = Math.floor((target - now) / (1000 * 60 * 60 * 24));
-  if (days < 0) return "expired";
+  // Comparaison date-à-date en Europe/Paris (le certif est valide jusqu'à la
+  // fin du jour `valid_until`), pas une soustraction de timestamps qui dérive
+  // de quelques heures selon le fuseau du navigateur.
+  const validDay = validUntil.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(validDay)) return "unknown";
+  const todayParis = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/Paris",
+  });
+  if (validDay < todayParis) return "expired";
+  const days = Math.round(
+    (new Date(validDay + "T00:00:00Z").getTime() -
+      new Date(todayParis + "T00:00:00Z").getTime()) /
+      86_400_000,
+  );
   if (days < 30) return "expire_soon";
   return "ok";
 }
@@ -102,7 +113,7 @@ export default function V2LotsListPage() {
           date_abattage, date_reception, dlc, quantite_recue, unite, created_at,
           produits ( id, nom, marque ),
           fournisseurs ( id, nom )
-        `
+        `,
         )
         .order("created_at", { ascending: false })
         .limit(50);
@@ -140,7 +151,10 @@ export default function V2LotsListPage() {
           <h1 className="h1-display mt-2">
             <em className="gold">Lots</em> reçus
           </h1>
-          <p className="body-md mt-2" style={{ color: "var(--text-secondary)" }}>
+          <p
+            className="body-md mt-2"
+            style={{ color: "var(--text-secondary)" }}
+          >
             Les 50 derniers lots enregistrés. Chaque lot a un QR code public
             scannable par le client en magasin.
           </p>
@@ -170,7 +184,11 @@ export default function V2LotsListPage() {
               description="Chaque livraison réceptionnée crée un lot tracé avec QR public. Commence par une réception."
               compact
               action={
-                <Link href="/v2/reception" className="btn-primary" style={{ minHeight: 44 }}>
+                <Link
+                  href="/v2/reception"
+                  className="btn-primary"
+                  style={{ minHeight: 44 }}
+                >
                   <ArrowRight size={16} /> Réceptionner une livraison
                 </Link>
               }

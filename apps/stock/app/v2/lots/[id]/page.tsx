@@ -149,7 +149,14 @@ export default function V2LotDetailPage() {
 
   const certifValid = useMemo(() => {
     if (!lot?.certifier_valid_until) return null;
-    return new Date(lot.certifier_valid_until) >= new Date();
+    // Comparaison date-à-date en Europe/Paris : le certif halal est valide
+    // jusqu'à la FIN du jour `valid_until`. Comparer un timestamp à `new Date()`
+    // le faisait expirer ~2 h trop tôt (minuit UTC) le jour de validité.
+    const validUntil = lot.certifier_valid_until.slice(0, 10);
+    const todayParis = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Europe/Paris",
+    });
+    return validUntil >= todayParis;
   }, [lot]);
 
   function copyUrl() {

@@ -164,9 +164,12 @@ export default function V2PreparationDetailPage() {
       Awaited<ReturnType<typeof listProduitsInDepot>>
     >();
     const depotIds = Array.from(new Set(ls.map((l) => l.depot_id)));
-    for (const dId of depotIds) {
-      allByDepot.set(dId, await listProduitsInDepot(dId));
-    }
+    // Parallèle (plus de cascade N+1 séquentielle) : les dépôts sont chargés
+    // en une vague au lieu d'un aller-retour réseau l'un après l'autre.
+    const stocks = await Promise.all(
+      depotIds.map((dId) => listProduitsInDepot(dId)),
+    );
+    depotIds.forEach((dId, i) => allByDepot.set(dId, stocks[i]));
     const enriched: EnrichedLigne[] = ls.map((l) => {
       const stock = allByDepot.get(l.depot_id) ?? [];
       const p = stock.find((x) => x.id === l.produit_id);

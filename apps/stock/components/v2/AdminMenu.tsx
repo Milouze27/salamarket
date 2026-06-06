@@ -2,324 +2,41 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Activity,
-  AlertTriangle,
-  ArrowDownToLine,
-  ArrowUpRight,
-  BarChart3,
-  Boxes,
-  Building2,
-  ClipboardCheck,
-  ClipboardList,
-  Clock,
-  Compass,
-  Fingerprint,
-  FileSpreadsheet,
-  FlaskConical,
-  Gauge,
-  Home,
-  LayoutDashboard,
-  LineChart,
-  LogOut,
-  Menu,
-  MonitorPlay,
-  Moon,
-  PackageSearch,
-  Receipt,
-  Repeat2,
-  Rows3,
-  Rows4,
-  ScanLine,
-  Settings,
-  ShoppingBag,
-  Sparkles,
-  Sun,
-  Tag,
-  TrendingDown,
-  Truck,
-  X,
-} from "lucide-react";
+import { LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
-import { filterItemsForRole } from "@/lib/nav-roles";
 
 interface AdminMenuProps {
-  /** Le rôle de l'employé. Les entrées admin ne s'affichent que pour "admin". */
+  /** Le rôle de l'employé (affiché en sous-titre). */
   role: string | undefined;
-  /** Déconnexion — migrée du header (ARCH-11) dans le répertoire unique. */
+  /** Déconnexion — migrée du header (ARCH-11). */
   onLogout?: () => void;
 }
 
-interface MenuEntry {
-  href: string;
-  label: string;
-  desc: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
-  accent?: "danger" | "gold" | "primary";
-}
-
-interface MenuGroup {
-  heading: string;
-  entries: MenuEntry[];
-}
-
 /**
- * ARCH-02 / L99 — répertoire groupé par plan mental, intitulés / ordre / hrefs
- * STRICTEMENT alignés sur le Plus-sheet (V2Shell) et la palette ⌘K
- * (CommandPalette). Modèle mental unifié sur les 3 surfaces :
- *   OPÉRER      — gestes terrain (sortie, réception, transfert, étiq, stock, prépa)
- *   PILOTER     — décider / surveiller (accueil, cockpit, forecast, DLC, comptoir)
- *   ADMINISTRER — back-office (admin hub, fournisseurs, PO, lots, inventaire,
- *                 alertes, activité, fiscal, rapports, import, assistant IA)
+ * AdminMenu — sheet « Compte & réglages ».
  *
- * Le drawer montre le PÉRIMÈTRE ACCESSIBLE DU RÔLE : on applique le MÊME
- * `filterItemsForRole` (source unique `@/lib/nav-roles`) qu'ailleurs, au lieu
- * de masquer les groupes en bloc pour les non-admins. Un manager voit donc son
- * pilotage, un préparateur ses tâches, un caisse/réception leur périmètre.
- * Les groupes vides après filtre sont masqués. « Compte & réglages » reste
- * visible pour tous (déconnexion + toggles y vivent).
+ * AUDIT NAV (L99, 2026-06-06) : ce drawer dupliquait intégralement le
+ * Plus-sheet (mêmes groupes Opérer/Piloter/Administrer, mêmes hrefs) et la
+ * grille d'accueil. La navigation passe désormais UNIQUEMENT par la bottom-bar
+ * + le Plus-sheet (V2Shell) + ⌘K. Ce composant ne garde que ce qui lui était
+ * propre : le thème jour/nuit, la densité d'affichage et la déconnexion.
  */
-const ADMIN_GROUPS: MenuGroup[] = [
-  {
-    heading: "Opérer",
-    entries: [
-      {
-        href: "/v2/sortie",
-        label: "Sortie de stock",
-        desc: "Casse, périmé, défaut",
-        icon: ArrowUpRight,
-      },
-      {
-        href: "/v2/reception",
-        label: "Réception",
-        desc: "Scan + photo + valid BDL",
-        icon: ArrowDownToLine,
-      },
-      {
-        href: "/v2/transfert",
-        label: "Transfert inter-dépôt",
-        desc: "Bouger du stock",
-        icon: Repeat2,
-      },
-      {
-        href: "/v2/etiquettes",
-        label: "Étiquettes EAN-13",
-        desc: "Imprimer codes-barres",
-        icon: Tag,
-      },
-      {
-        href: "/v2/stock",
-        label: "Stock du dépôt",
-        desc: "Catalogue produits",
-        icon: PackageSearch,
-      },
-      {
-        href: "/v2/stock/sans-ean",
-        label: "Produits sans EAN",
-        desc: "À étiqueter en interne",
-        icon: ScanLine,
-      },
-      {
-        href: "/v2/preparation",
-        label: "Préparation drive",
-        desc: "Commandes à préparer",
-        icon: ShoppingBag,
-      },
-    ],
-  },
-  {
-    heading: "Piloter",
-    entries: [
-      {
-        href: "/v2",
-        label: "Accueil",
-        desc: "Vue d'ensemble",
-        icon: Home,
-      },
-      {
-        href: "/v2/cockpit",
-        label: "Cockpit",
-        desc: "Vue 30 sec : ventes, alertes, staff",
-        icon: Gauge,
-        accent: "primary",
-      },
-      {
-        href: "/v2/forecast",
-        label: "Prévisions ruptures",
-        desc: "Stockouts prévus (hijri-aware)",
-        icon: LineChart,
-      },
-      {
-        href: "/v2/admin/alertes-dlc",
-        label: "Alertes DLC",
-        desc: "Lots courte date + remises auto",
-        icon: Compass,
-        accent: "danger",
-      },
-      {
-        href: "/v2/admin/casse-anomalies",
-        label: "Anomalies casse",
-        desc: "Surveillance casse & démarque",
-        icon: TrendingDown,
-        accent: "danger",
-      },
-      {
-        href: "/v2/counter",
-        label: "Écran comptoir",
-        desc: "TV/iPad - commandes prêtes",
-        icon: MonitorPlay,
-      },
-    ],
-  },
-  {
-    heading: "Administrer",
-    entries: [
-      {
-        href: "/v2/admin",
-        label: "Dashboard admin",
-        desc: "Vue 3 dépôts + alertes IA",
-        icon: LayoutDashboard,
-        accent: "primary",
-      },
-      {
-        href: "/v2/fournisseurs",
-        label: "Fournisseurs",
-        desc: "Fiches + certif halal",
-        icon: Truck,
-      },
-      {
-        href: "/v2/po",
-        label: "Commandes fournisseurs",
-        desc: "PO auto-générés + suivi",
-        icon: ClipboardList,
-      },
-      {
-        href: "/v2/admin/comptes-pro",
-        label: "Comptes pro",
-        desc: "Clients B2B + conditions",
-        icon: Building2,
-        accent: "primary",
-      },
-      {
-        href: "/v2/admin/commandes-pro",
-        label: "Commandes pro",
-        desc: "Commandes B2B à traiter",
-        icon: ClipboardCheck,
-      },
-      {
-        href: "/v2/admin/factures-pro",
-        label: "Factures pro",
-        desc: "Facturation B2B + encours",
-        icon: Receipt,
-        accent: "gold",
-      },
-      {
-        href: "/v2/lots",
-        label: "Lots & DLC",
-        desc: "Traçabilité lots halal",
-        icon: Boxes,
-      },
-      {
-        href: "/v2/labo",
-        label: "Recettes & marges",
-        desc: "Recettes, coûts, marges",
-        icon: FlaskConical,
-      },
-      {
-        href: "/v2/inventaire",
-        label: "Inventaire tournant",
-        desc: "5-10 produits du jour",
-        icon: ClipboardList,
-      },
-      {
-        href: "/v2/inventaire/historique",
-        label: "Historique inventaires",
-        desc: "Comptages passés + écarts",
-        icon: Clock,
-      },
-      {
-        href: "/v2/admin/pointage",
-        label: "Pointage staff",
-        desc: "Présences et heures staff",
-        icon: Fingerprint,
-      },
-      {
-        href: "/v2/admin/recap-fiscal",
-        label: "Récap fiscal du jour",
-        desc: "TVA, ventes, ticket Z",
-        icon: FileSpreadsheet,
-        accent: "gold",
-      },
-      {
-        href: "/v2/admin/rapport-mensuel",
-        label: "Rapport mensuel",
-        desc: "Synthèse du mois",
-        icon: BarChart3,
-      },
-      {
-        href: "/v2/admin/activite",
-        label: "Journal d'activité",
-        desc: "Flux des mouvements staff",
-        icon: Activity,
-      },
-      {
-        href: "/v2/admin/alertes",
-        label: "Centre d'alertes",
-        desc: "Toutes les alertes stock + IA",
-        icon: AlertTriangle,
-        accent: "danger",
-      },
-      {
-        href: "/v2/admin/alertes-surplus",
-        label: "Alertes surplus",
-        desc: "Surstock à écouler",
-        icon: Boxes,
-      },
-      {
-        href: "/v2/admin/bons-reception",
-        label: "Bons de réception",
-        desc: "Archives BDL validés",
-        icon: ArrowDownToLine,
-      },
-      {
-        href: "/v2/admin/import-cashmag",
-        label: "Import Cashmag",
-        desc: "Sync caisse / ventes",
-        icon: FileSpreadsheet,
-      },
-      {
-        href: "/v2/admin/assistant-ia",
-        label: "Assistant IA",
-        desc: "Copilote analyse stock",
-        icon: Sparkles,
-        accent: "gold",
-      },
-    ],
-  },
-];
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Administrateur",
+  manager: "Manager",
+  preparation: "Préparation",
+  reception: "Réception",
+  caisse: "Caisse",
+};
 
 export function AdminMenu({ role, onLogout }: AdminMenuProps) {
   const [open, setOpen] = useState(false);
-  const isAdmin = role === "admin";
   const { resolved, toggle: toggleTheme } = useTheme();
   const { density, toggle: toggleDensity } = useDensity();
   const isNight = resolved === "nuit";
   const isCompact = density === "compact";
-
-  // P0 nav/rôles — le drawer montre le PÉRIMÈTRE ACCESSIBLE du rôle, pas un
-  // masquage en bloc admin-only. On applique le MÊME `filterItemsForRole`
-  // (source unique `@/lib/nav-roles`) qu'au Plus-sheet et à ⌘K, puis on retire
-  // les groupes devenus vides. Un manager voit son pilotage, un préparateur ses
-  // tâches, etc. — au lieu de ne voir que « Compte & réglages ».
-  const groups = ADMIN_GROUPS.map((group) => ({
-    ...group,
-    entries: filterItemsForRole(role, group.entries),
-  })).filter((group) => group.entries.length > 0);
-  const hasNavGroups = groups.length > 0;
 
   // Ferme avec Escape
   useEffect(() => {
@@ -331,16 +48,13 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // Le drawer est portalé sur <body> pour échapper au stacking-context
-  // du parent relative de V2Shell. Sans ça, sur certains rendus iOS le
-  // drawer se rendait derrière le contenu malgré z-[80].
-  // DARK-08 — backdrop verre teinté (glass-overlay), drawer sur surface-3.
+  // Portalé sur <body> pour échapper au stacking-context du parent relative.
   const drawer = (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            key="admin-backdrop"
+            key="account-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -354,15 +68,15 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
             }}
           />
           <motion.aside
-            key="admin-drawer"
+            key="account-drawer"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
             role="dialog"
             aria-modal="true"
-            aria-label="Menu — répertoire complet"
-            className="fixed inset-y-0 right-0 z-[201] w-[88%] max-w-[380px] flex flex-col"
+            aria-label="Compte et réglages"
+            className="fixed inset-y-0 right-0 z-[201] w-[86%] max-w-[340px] flex flex-col"
             style={{
               background: "var(--surface-3)",
               borderLeft: "1px solid var(--border-card)",
@@ -389,14 +103,10 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
                     className="text-[10px] font-bold uppercase tracking-[0.14em]"
                     style={{ color: "var(--accent-gold-dim)" }}
                   >
-                    Répertoire
+                    Compte
                   </p>
                   <p className="text-sm font-bold text-text-primary leading-tight">
-                    {isAdmin
-                      ? "Outils complets"
-                      : hasNavGroups
-                        ? "Outils & réglages"
-                        : "Compte & réglages"}
+                    {role ? (ROLE_LABEL[role] ?? role) : "Réglages"}
                   </p>
                 </div>
               </div>
@@ -410,195 +120,123 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
               </button>
             </div>
 
-            {/* LISTE — périmètre du rôle (filterItemsForRole), groupes vides masqués */}
+            {/* RÉGLAGES */}
             <nav className="flex-1 overflow-y-auto px-3 py-3">
-              {groups.map((group) => (
-                <div key={group.heading} className="mb-1.5">
-                  <p
-                    className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                    style={{ color: "var(--accent-gold-dim)" }}
-                  >
-                    {group.heading}
-                  </p>
-                  {group.entries.map((e) => {
-                    const Icon = e.icon;
-                    return (
-                      <Link
-                        key={e.href}
-                        href={e.href}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                      >
-                        <span
-                          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                          style={
-                            e.accent === "danger"
-                              ? {
-                                  background: "var(--danger-soft)",
-                                  color: "var(--danger)",
-                                }
-                              : e.accent === "gold"
-                                ? {
-                                    background: "var(--accent-gold-soft)",
-                                    color: "var(--accent-gold-bright)",
-                                  }
-                                : {
-                                    background: "var(--surface-1)",
-                                    color: "var(--primary-green)",
-                                  }
-                          }
-                        >
-                          <Icon className="w-5 h-5" strokeWidth={2.1} />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-text-primary truncate">
-                            {e.label}
-                          </p>
-                          <p className="text-[11px] text-text-secondary truncate">
-                            {e.desc}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
-
-              {/* COMPTE & RÉGLAGES — toggles migrés du header (ARCH-11) */}
-              <div className="mb-1.5">
-                <p
-                  className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                  style={{ color: "var(--accent-gold-dim)" }}
-                >
-                  Compte &amp; réglages
-                </p>
-
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  aria-pressed={isNight}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                >
-                  <span
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: "var(--surface-1)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {isNight ? (
-                      <Moon className="w-5 h-5" strokeWidth={2.1} />
-                    ) : (
-                      <Sun className="w-5 h-5" strokeWidth={2.1} />
-                    )}
-                  </span>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-bold text-text-primary truncate">
-                      Mode atelier
-                    </p>
-                    <p className="text-[11px] text-text-secondary truncate">
-                      {isNight ? "Nuit (sombre)" : "Jour (cream)"}
-                    </p>
-                  </div>
-                  <span
-                    className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                    style={{
-                      background: "var(--surface-1)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {isNight ? "Passer jour" : "Passer nuit"}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={toggleDensity}
-                  aria-pressed={isCompact}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                >
-                  <span
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: "var(--surface-1)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {isCompact ? (
-                      <Rows4 className="w-5 h-5" strokeWidth={2.1} />
-                    ) : (
-                      <Rows3 className="w-5 h-5" strokeWidth={2.1} />
-                    )}
-                  </span>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-bold text-text-primary truncate">
-                      Densité
-                    </p>
-                    <p className="text-[11px] text-text-secondary truncate">
-                      {isCompact ? "Compact" : "Confort"}
-                    </p>
-                  </div>
-                  <span
-                    className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                    style={{
-                      background: "var(--surface-1)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    {isCompact ? "Confort" : "Compact"}
-                  </span>
-                </button>
-
-                {onLogout && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      onLogout();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
-                  >
-                    <span
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                      style={{
-                        background: "var(--danger-soft)",
-                        color: "var(--danger)",
-                      }}
-                    >
-                      <LogOut className="w-5 h-5" strokeWidth={2.1} />
-                    </span>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p
-                        className="text-sm font-bold truncate"
-                        style={{ color: "var(--danger)" }}
-                      >
-                        Déconnexion
-                      </p>
-                      <p className="text-[11px] text-text-secondary truncate">
-                        Verrouiller la session
-                      </p>
-                    </div>
-                  </button>
-                )}
-              </div>
-            </nav>
-
-            {hasNavGroups && (
-              <div
-                className="px-5 pb-[calc(var(--safe-bottom)+12px)] pt-3"
-                style={{ borderTop: "1px solid var(--border-hairline)" }}
+              <p
+                className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--accent-gold-dim)" }}
               >
-                <p className="text-[10.5px] text-text-tertiary inline-flex items-center gap-1.5">
-                  <Sparkles
-                    className="w-3 h-3"
-                    style={{ color: "var(--accent-gold-bright)" }}
-                  />
-                  {isAdmin
-                    ? "Outils admin visibles uniquement pour les admins"
-                    : "Menu adapté à votre rôle"}
-                </p>
-              </div>
-            )}
+                Réglages
+              </p>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-pressed={isNight}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+              >
+                <span
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: "var(--surface-1)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {isNight ? (
+                    <Moon className="w-5 h-5" strokeWidth={2.1} />
+                  ) : (
+                    <Sun className="w-5 h-5" strokeWidth={2.1} />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-bold text-text-primary truncate">
+                    Mode atelier
+                  </p>
+                  <p className="text-[11px] text-text-secondary truncate">
+                    {isNight ? "Nuit (sombre)" : "Jour (cream)"}
+                  </p>
+                </div>
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                  style={{
+                    background: "var(--surface-1)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {isNight ? "Passer jour" : "Passer nuit"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleDensity}
+                aria-pressed={isCompact}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+              >
+                <span
+                  className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background: "var(--surface-1)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {isCompact ? (
+                    <Rows4 className="w-5 h-5" strokeWidth={2.1} />
+                  ) : (
+                    <Rows3 className="w-5 h-5" strokeWidth={2.1} />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-bold text-text-primary truncate">
+                    Densité
+                  </p>
+                  <p className="text-[11px] text-text-secondary truncate">
+                    {isCompact ? "Compact" : "Confort"}
+                  </p>
+                </div>
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                  style={{
+                    background: "var(--surface-1)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  {isCompact ? "Confort" : "Compact"}
+                </span>
+              </button>
+
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-2xl transition-colors active:opacity-80"
+                >
+                  <span
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: "var(--danger-soft)",
+                      color: "var(--danger)",
+                    }}
+                  >
+                    <LogOut className="w-5 h-5" strokeWidth={2.1} />
+                  </span>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p
+                      className="text-sm font-bold truncate"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      Déconnexion
+                    </p>
+                    <p className="text-[11px] text-text-secondary truncate">
+                      Verrouiller la session
+                    </p>
+                  </div>
+                </button>
+              )}
+            </nav>
           </motion.aside>
         </>
       )}
@@ -610,12 +248,12 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
       <button
         onClick={() => setOpen(true)}
         className="w-9 h-9 rounded-full bg-primary text-white border border-primary flex items-center justify-center active:scale-95 transition-transform"
-        aria-label={isAdmin ? "Menu admin" : "Menu"}
+        aria-label="Compte et réglages"
         aria-haspopup="dialog"
         aria-expanded={open}
-        title={isAdmin ? "Menu admin" : "Menu"}
+        title="Compte & réglages"
       >
-        <Menu className="w-4 h-4" />
+        <Settings className="w-4 h-4" />
       </button>
       {typeof document !== "undefined" && createPortal(drawer, document.body)}
     </>

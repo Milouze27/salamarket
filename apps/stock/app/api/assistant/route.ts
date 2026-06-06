@@ -148,13 +148,18 @@ const TOOLS = [
 async function runTool(name: string, input: any): Promise<unknown> {
   const sb = supabase();
   if (!sb) return { error: "Supabase indisponible" };
+  // Borne les entrées texte (anti-DoS / requêtes ilike pathologiques) : un
+  // terme de recherche au-delà de 120 caractères est tronqué.
+  if (input && typeof input.produit_search === "string") {
+    input.produit_search = input.produit_search.slice(0, 120);
+  }
   try {
     if (name === "query_ventes_periode") {
       const { date_start, date_end, produit_search } = input;
       const { data: cmds } = await sb
         .from("commandes_drive")
         .select(
-          "id, total_ttc, commandes_drive_lignes(produit_id, quantite, prix_unitaire, produits(nom))"
+          "id, total_ttc, commandes_drive_lignes(produit_id, quantite, prix_unitaire, produits(nom))",
         )
         .gte("created_at", date_start)
         .lt("created_at", date_end)
@@ -176,22 +181,27 @@ async function runTool(name: string, input: any): Promise<unknown> {
             commandes_drive_lignes: r.commandes_drive_lignes.filter((l) =>
               l.produits?.nom
                 ?.toLowerCase()
-                .includes(produit_search.toLowerCase())
+                .includes(produit_search.toLowerCase()),
             ),
           }))
           .filter((r) => r.commandes_drive_lignes.length > 0);
         const totalQty = filtered.reduce(
-          (s, r) => s + r.commandes_drive_lignes.reduce((q, l) => q + Number(l.quantite), 0),
-          0
+          (s, r) =>
+            s +
+            r.commandes_drive_lignes.reduce(
+              (q, l) => q + Number(l.quantite),
+              0,
+            ),
+          0,
         );
         const totalCa = filtered.reduce(
           (s, r) =>
             s +
             r.commandes_drive_lignes.reduce(
               (q, l) => q + Number(l.quantite) * Number(l.prix_unitaire),
-              0
+              0,
             ),
-          0
+          0,
         );
         return {
           nb_commandes: filtered.length,
@@ -216,7 +226,7 @@ async function runTool(name: string, input: any): Promise<unknown> {
         const { data: prods } = await sb
           .from("produits")
           .select(
-            "id, nom, ean, categorie, stock_par_depot(quantite, prix_vente, depots(nom))"
+            "id, nom, ean, categorie, stock_par_depot(quantite, prix_vente, depots(nom))",
           )
           .ilike("nom", `%${produit_search}%`)
           .limit(5);
@@ -238,7 +248,7 @@ async function runTool(name: string, input: any): Promise<unknown> {
         const { data } = await sb
           .from("sorties_stock")
           .select(
-            "id, type, quantite, ia_coherence_score, ia_coherence_notes, created_at, produits(nom), employes(prenom, nom)"
+            "id, type, quantite, ia_coherence_score, ia_coherence_notes, created_at, produits(nom), employes(prenom, nom)",
           )
           .lt("ia_coherence_score", 0.7)
           .order("created_at", { ascending: false })
@@ -249,7 +259,7 @@ async function runTool(name: string, input: any): Promise<unknown> {
         const { data } = await sb
           .from("alertes_surplus")
           .select(
-            "id, code_barre_scanne, quantite_surplus, signale_le, produits(nom), bons_de_livraison(numero_bdl, fournisseurs(nom))"
+            "id, code_barre_scanne, quantite_surplus, signale_le, produits(nom), bons_de_livraison(numero_bdl, fournisseurs(nom))",
           )
           .eq("statut", "en_attente")
           .order("signale_le", { ascending: false });
@@ -260,13 +270,12 @@ async function runTool(name: string, input: any): Promise<unknown> {
 
     if (name === "query_top_produits") {
       const { periode, limit = 5 } = input;
-      const days =
-        periode === "7j" ? 7 : periode === "30j" ? 30 : 90;
+      const days = periode === "7j" ? 7 : periode === "30j" ? 30 : 90;
       const since = new Date(Date.now() - days * 86_400_000).toISOString();
       const { data: cmds } = await sb
         .from("commandes_drive")
         .select(
-          "commandes_drive_lignes(produit_id, quantite, prix_unitaire, produits(nom))"
+          "commandes_drive_lignes(produit_id, quantite, prix_unitaire, produits(nom))",
         )
         .gte("created_at", since)
         .neq("statut", "annule");
@@ -330,7 +339,8 @@ async function runTool(name: string, input: any): Promise<unknown> {
       return Array.from(agg.values())
         .map((r) => ({
           employe: r.nom,
-          score_moyen: r.count > 0 ? Math.round((r.total / r.count) * 100) / 100 : 0,
+          score_moyen:
+            r.count > 0 ? Math.round((r.total / r.count) * 100) / 100 : 0,
           nb_sorties: r.count,
         }))
         .sort((a, b) => a.score_moyen - b.score_moyen);
@@ -349,13 +359,19 @@ async function runTool(name: string, input: any): Promise<unknown> {
         .in("type", ["autre", "vol_identifie"]);
       let valeur = 0;
       let unites = 0;
+      // Supabase peut renvoyer l'embed to-one `produits` soit en objet soit en
+      // tableau selon la détection de relation : on normalise pour ne pas
+      // retomber silencieusement sur le prix de secours.
+      type SpdRow = { prix_vente: number | null };
+      type ProdEmbed = { stock_par_depot?: SpdRow[] } | null;
       for (const s of (sorties ?? []) as unknown as Array<{
         quantite: number;
         type: string;
-        produits: { stock_par_depot: Array<{ prix_vente: number | null }> } | null;
+        produits: ProdEmbed | ProdEmbed[];
       }>) {
         unites += Number(s.quantite);
-        const prix = s.produits?.stock_par_depot?.[0]?.prix_vente ?? 3;
+        const prod = Array.isArray(s.produits) ? s.produits[0] : s.produits;
+        const prix = prod?.stock_par_depot?.[0]?.prix_vente ?? 3;
         valeur += Number(s.quantite) * Number(prix);
       }
       return {
@@ -383,7 +399,7 @@ export async function POST(req: NextRequest) {
     console.error("[assistant] INTERNAL_API_SECRET missing — refuse de servir");
     return NextResponse.json(
       { error: "assistant_misconfigured" },
-      { status: 503 }
+      { status: 503 },
     );
   }
   const provided = req.headers.get("x-internal-secret");
@@ -408,7 +424,7 @@ export async function POST(req: NextRequest) {
           "X-RateLimit-Remaining": "0",
           "X-RateLimit-Limit": String(RL_MAX_PER_HOUR),
         },
-      }
+      },
     );
   }
 
@@ -429,7 +445,7 @@ export async function POST(req: NextRequest) {
           message: i.message,
         })),
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
   const body: { messages: ChatMsg[] } = parsed.data;
@@ -438,7 +454,7 @@ export async function POST(req: NextRequest) {
   const firstUserMsg =
     body.messages.find((m) => m.role === "user")?.content?.slice(0, 80) ?? "";
   console.log(
-    `[assistant] AUDIT ip=${ip} msgs=${body.messages.length} remaining=${rl.remaining} q="${firstUserMsg.replace(/\n/g, " ")}"`
+    `[assistant] AUDIT ip=${ip} msgs=${body.messages.length} remaining=${rl.remaining} q="${firstUserMsg.replace(/\n/g, " ")}"`,
   );
 
   const key = process.env.ANTHROPIC_API_KEY;
@@ -480,7 +496,7 @@ export async function POST(req: NextRequest) {
       console.error("[assistant] anthropic error", r.status, errText);
       return NextResponse.json(
         { error: "anthropic_failure", status: r.status, detail: errText },
-        { status: 502 }
+        { status: 502 },
       );
     }
     const resp = (await r.json()) as {

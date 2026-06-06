@@ -1116,6 +1116,7 @@ export default function V2PreparationKanbanPage() {
                 )}
                 <Link
                   href={`/v2/preparation/${actionFor.id}`}
+                  onClick={() => setActionFor(null)}
                   className="w-full border text-text-primary rounded-[18px] py-3 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
                   style={{
                     background: "var(--surface-2)",

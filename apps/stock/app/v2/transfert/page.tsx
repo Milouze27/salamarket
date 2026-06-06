@@ -44,6 +44,7 @@ export default function V2TransfertPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProduitInDepot[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [quantite, setQuantite] = useState<number | "">("");
   const [photo, setPhoto] = useState<string | null>(null);
@@ -104,8 +105,10 @@ export default function V2TransfertPage() {
   useEffect(() => {
     if (!showSearch || !source || !searchQuery.trim()) {
       setSearchResults([]);
+      setSearchLoading(false);
       return;
     }
+    setSearchLoading(true);
     const t = setTimeout(async () => {
       try {
         const sourceStock = await listProduitsInDepot(source.id);
@@ -116,6 +119,8 @@ export default function V2TransfertPage() {
         console.error("[transfert] recherche échouée:", err);
         toast.error("Recherche indisponible · vérifie la connexion");
         setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
       }
     }, 200);
     return () => clearTimeout(t);
@@ -331,6 +336,11 @@ export default function V2TransfertPage() {
                     />
                   </div>
                   <div className="space-y-1 max-h-64 overflow-y-auto">
+                    {searchLoading && (
+                      <p className="text-xs text-text-tertiary text-center py-4">
+                        Recherche…
+                      </p>
+                    )}
                     {searchResults.map((p) => (
                       <button
                         key={p.id}
@@ -355,11 +365,13 @@ export default function V2TransfertPage() {
                         </div>
                       </button>
                     ))}
-                    {searchQuery.length >= 2 && searchResults.length === 0 && (
-                      <p className="text-xs text-text-tertiary text-center py-4">
-                        Aucun produit dans {source.nom}
-                      </p>
-                    )}
+                    {!searchLoading &&
+                      searchQuery.length >= 2 &&
+                      searchResults.length === 0 && (
+                        <p className="text-xs text-text-tertiary text-center py-4">
+                          Aucun produit dans {source.nom}
+                        </p>
+                      )}
                   </div>
                 </>
               )}

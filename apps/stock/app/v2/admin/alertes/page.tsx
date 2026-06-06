@@ -157,10 +157,16 @@ export default function AlertesPage() {
       return;
     }
     const note = `[⚠ Clarification demandée par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;
-    await sb
+    const { error: noteErr } = await sb
       .from("sorties_stock")
       .update({ ia_coherence_notes: note.slice(0, 500) })
       .eq("id", d.id);
+    if (noteErr) {
+      // Ne pas notifier une clarification qui n'a pas été enregistrée.
+      console.error("[alertes] enregistrement clarification échoué:", noteErr);
+      toast.error("Impossible d'enregistrer la clarification · réessaie");
+      return;
+    }
     // Push notif iPhone vers l'employé
     // HOTFIX vague 7 : passer par server action (x-internal-secret).
     void import("@/lib/actions/push-send")

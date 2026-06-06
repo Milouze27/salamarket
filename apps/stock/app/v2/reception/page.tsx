@@ -1002,9 +1002,18 @@ export default function V2ReceptionPage() {
                 </h3>
                 <input
                   type="number"
+                  min={1}
+                  step={1}
                   value={cartonQty || ""}
                   onChange={(e) =>
-                    setCartonQty(parseInt(e.target.value || "0", 10))
+                    // Jamais de NaN dans le state (sinon le bouton se fige) ;
+                    // clamp entier positif.
+                    setCartonQty(
+                      Math.max(
+                        0,
+                        Math.min(parseInt(e.target.value, 10) || 0, 9999),
+                      ),
+                    )
                   }
                   inputMode="numeric"
                   placeholder="ex : 12"

@@ -62,7 +62,7 @@ export function GlossaryTerm({ term, def }: { term: string; def: string }) {
         <span
           id={popId}
           role="tooltip"
-          className="absolute left-0 top-full mt-1.5 z-50 w-max max-w-[240px] rounded-xl px-3 py-2 text-[12px] font-medium leading-snug normal-case tracking-normal"
+          className="absolute left-0 top-full mt-1.5 z-50 w-max max-w-[min(240px,calc(100vw-1.5rem))] rounded-xl px-3 py-2 text-[12px] font-medium leading-snug normal-case tracking-normal"
           style={{
             background: "var(--surface-3)",
             color: "var(--text-secondary)",

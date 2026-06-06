@@ -205,11 +205,15 @@ export default function BdlReceptionPage() {
     // 0. CARTON CONNU ? Lookup la table codes_barres_cartons.
     //    Si trouvé → on récupère le produit lié + multiplier, puis on
     //    re-route comme si on avait scanné l'EAN unitaire N fois.
-    const { data: cartonRow } = await sb
+    const { data: cartonRow, error: cartonErr } = await sb
       .from("codes_barres_cartons")
       .select("ean_carton, produit_id, quantite_par_carton")
       .eq("ean_carton", code)
       .maybeSingle();
+    // Une erreur DB ici (≠ not-found) ré-routerait à tort le scan vers le
+    // chemin "EAN unitaire" : on la trace pour le diagnostic.
+    if (cartonErr)
+      console.error("[reception] lookup carton échoué:", cartonErr);
     const carton = cartonRow as {
       ean_carton: string;
       produit_id: string;

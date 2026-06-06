@@ -20,7 +20,23 @@ export interface RecognitionResult {
   description_courte: string;
   quantite_carton_estimee: number;
   confiance: number;
-  mock?: boolean;
+  /** true si la photo n'est pas un produit d'épicerie identifiable. */
+  hors_sujet?: boolean;
+}
+
+/** Messages d'erreur lisibles par code renvoyé par l'API vision. */
+function humanRecognitionError(code: string): string {
+  switch (code) {
+    case "ia_unavailable":
+      return "Reconnaissance IA indisponible (clé non configurée). Saisis le produit manuellement.";
+    case "anthropic_failure":
+    case "network":
+      return "Le service IA n'a pas répondu. Réessaie ou saisis manuellement.";
+    case "invalid_image_format":
+      return "Format d'image non reconnu. Reprends la photo.";
+    default:
+      return "L'analyse a échoué. Réessaie ou saisis manuellement.";
+  }
 }
 
 interface Props {
@@ -126,7 +142,7 @@ export function ProductRecognitionModal({
       });
       if (!r.ok) {
         const j = (await r.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error ?? `HTTP ${r.status}`);
+        throw new Error(humanRecognitionError(j.error ?? `http_${r.status}`));
       }
       const j = (await r.json()) as RecognitionResult;
       setResult(j);
@@ -173,6 +189,7 @@ export function ProductRecognitionModal({
 
   const confidencePct = Math.round((result?.confiance ?? 0) * 100);
   const goodConfidence = (result?.confiance ?? 0) >= 0.6;
+  const horsSujet = result?.hors_sujet === true;
 
   return (
     <AnimatePresence>
@@ -266,7 +283,14 @@ export function ProductRecognitionModal({
                   />
                 )}
                 <div className="flex items-center gap-2 mb-3">
-                  {result.produit_reconnu ? (
+                  {horsSujet ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-danger" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-danger">
+                        Photo hors-sujet — pas un produit
+                      </span>
+                    </>
+                  ) : result.produit_reconnu ? (
                     <>
                       <Sparkles className="w-4 h-4 text-gold" />
                       <span className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -321,12 +345,6 @@ export function ProductRecognitionModal({
                     {result.description_courte}
                   </p>
                 )}
-                {result.mock && (
-                  <p className="text-[10px] text-text-tertiary mt-3">
-                    (Mode mock — ANTHROPIC_API_KEY non configurée)
-                  </p>
-                )}
-
                 <div className="grid grid-cols-2 gap-2 mt-5">
                   <button
                     onClick={retry}
@@ -337,7 +355,8 @@ export function ProductRecognitionModal({
                   </button>
                   <button
                     onClick={accept}
-                    className="bg-primary text-white rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-bold"
+                    disabled={horsSujet}
+                    className="bg-primary text-white rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Check className="w-4 h-4" />
                     Utiliser ces infos

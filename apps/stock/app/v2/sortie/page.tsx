@@ -156,9 +156,12 @@ export default function V2SortiePage() {
     }
     setSubmitting(true);
     try {
-      // Call vision coherence
+      // Contrôle IA de cohérence — fail-closed : tout échec (HTTP ou réseau)
+      // force un score 0 + ia_unavailable ⇒ l'alerte admin se déclenche, une
+      // casse ne passe jamais en silence.
       let iaScore: number | null = null;
       let iaNotes: string | null = null;
+      let iaUnavailable = false;
       try {
         const r = await fetch("/api/vision-coherence", {
           method: "POST",
@@ -174,12 +177,22 @@ export default function V2SortiePage() {
           const j = (await r.json()) as {
             coherence_score: number;
             notes: string;
+            ia_unavailable?: boolean;
           };
           iaScore = j.coherence_score;
           iaNotes = j.notes;
+          iaUnavailable = j.ia_unavailable === true;
+        } else {
+          iaScore = 0;
+          iaNotes = `Contrôle IA indisponible (erreur ${r.status}).`;
+          iaUnavailable = true;
         }
       } catch (err) {
         console.warn("vision call failed", err);
+        iaScore = 0;
+        iaNotes =
+          "Contrôle IA injoignable (réseau) — vérification humaine requise.";
+        iaUnavailable = true;
       }
 
       const sortie = await createSortie({
@@ -194,8 +207,10 @@ export default function V2SortiePage() {
         ia_coherence_notes: iaNotes,
       });
 
-      // Notify Otmane + Ahmed if low score
-      if (iaScore !== null && iaScore < 0.6) {
+      // Notify Otmane + Ahmed : score sous le seuil de revue admin (0.7) OU
+      // IA indisponible (fail-closed). Le seuil 0.7 est aligné sur le filtre
+      // de /v2/admin/alertes pour ne laisser aucune zone grise non notifiée.
+      if (iaScore !== null && (iaScore < 0.7 || iaUnavailable)) {
         // 1. /api/notify (canal interne historique)
         // HOTFIX vague 7 : passer par server action qui injecte le secret.
         void import("@/lib/actions/notify")
@@ -211,6 +226,7 @@ export default function V2SortiePage() {
                 type,
                 ia_score: iaScore,
                 ia_notes: iaNotes,
+                ia_unavailable: iaUnavailable,
               },
             }),
           )
@@ -219,16 +235,19 @@ export default function V2SortiePage() {
         // 2. Web Push lock-screen iPhone vers Otmane + Ahmed
         if (adminIds.length > 0) {
           const scorePct = Math.round(iaScore * 100);
+          const title = iaUnavailable
+            ? `⚠️ Sortie · contrôle IA indisponible`
+            : `🚨 Sortie suspecte · IA ${scorePct}%`;
           void import("@/lib/actions/push-send")
             .then((m) =>
               m.sendPush({
-                title: `🚨 Sortie suspecte · IA ${scorePct}%`,
+                title,
                 body: `${produit.nom} × ${quantite} (${type}) · ${depot.nom}${
                   iaNotes ? ` · ${iaNotes.slice(0, 80)}` : ""
                 }`,
                 url: `/v2/admin/alertes`,
                 tag: `sortie-${sortie.id}`,
-                urgent: iaScore < 0.4,
+                urgent: !iaUnavailable && iaScore < 0.4,
                 employe_ids: adminIds,
                 alerte_id: sortie.id,
               }),
@@ -237,7 +256,9 @@ export default function V2SortiePage() {
         }
 
         toast.warning(
-          `Score IA ${(iaScore * 100).toFixed(0)}% · Otmane + Ahmed notifiés (push iPhone).`,
+          iaUnavailable
+            ? `Contrôle IA indisponible · Otmane + Ahmed notifiés pour vérification.`
+            : `Score IA ${(iaScore * 100).toFixed(0)}% · Otmane + Ahmed notifiés (push iPhone).`,
           { duration: 4500 },
         );
       } else if (iaScore !== null) {

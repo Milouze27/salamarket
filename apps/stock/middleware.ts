@@ -66,8 +66,24 @@ const ALLOWED_ORIGINS = new Set<string>([
   "http://localhost:8080", // Vite default
   "http://localhost:8081", // Vite fallback (port 8080 occupé)
   "http://localhost:5173", // Vite legacy default
-  "https://salamarket-drive.vercel.app", // prod (à confirmer/ajuster)
+  "https://salamarket-drive-mono.vercel.app", // prod actuelle (Drive)
+  "https://salamarket-drive.vercel.app", // legacy
+  "https://salamarket.vercel.app", // alias
 ]);
+
+/** Origines autorisées par MOTIF (déploiements preview Vercel du Drive, dont
+ *  l'URL contient un hash : salamarket-drive-mono-<hash>-abumeryems-projects…). */
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/salamarket-drive[a-z0-9-]*\.vercel\.app$/,
+  /^https:\/\/salamarket-drive-mono[a-z0-9-]*-abumeryems-projects\.vercel\.app$/,
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  return (
+    ALLOWED_ORIGINS.has(origin) ||
+    ALLOWED_ORIGIN_PATTERNS.some((re) => re.test(origin))
+  );
+}
 
 function corsHeadersFor(origin: string | null): Record<string, string> {
   // Si l'origine n'est pas dans la whitelist, on renvoie quand même
@@ -79,7 +95,7 @@ function corsHeadersFor(origin: string | null): Record<string, string> {
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
   }

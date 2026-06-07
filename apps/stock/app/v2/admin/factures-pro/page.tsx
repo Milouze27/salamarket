@@ -164,7 +164,7 @@ export default function FacturesProPage() {
   }
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav wide>
       <PageAccentStripe accent="or-sapin" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -180,7 +180,7 @@ export default function FacturesProPage() {
 
       {/* KPI impayé + retard */}
       {!loading && factures.length > 0 && (
-        <div className="px-5 mt-5 grid grid-cols-2 gap-2.5">
+        <div className="px-5 mt-5 grid grid-cols-2 gap-2.5 lg:max-w-[640px]">
           <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-3.5">
             <p className="label-caps text-text-tertiary">Reste à encaisser</p>
             <p className="text-[20px] font-extrabold text-text-primary tabular-nums mt-0.5">
@@ -255,7 +255,7 @@ export default function FacturesProPage() {
             />
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
             {visibles.map((c) => (
               <FactureCard
                 key={c.id}

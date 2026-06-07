@@ -86,6 +86,7 @@ export function RupturesImminentesCard({
   const depot = useV2((s) => s.currentDepot);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const hijriCtx = useMemo(() => resolveHijriContext(new Date()), []);
   const isHijriBoost = hijriCtx.phase !== "normal";
@@ -115,13 +116,20 @@ export function RupturesImminentesCard({
       const { data, error } = await q;
       if (cancelled) return;
       if (error) {
-        // Vue absente (migration pas jouée) ou RLS → empty state silencieux.
         console.warn(
           "[RupturesImminentesCard] view query failed:",
           error.message,
         );
         setRows([]);
+        // Vue absente (env sans migration) = dégradation gracieuse silencieuse.
+        // Toute AUTRE erreur (réseau/RLS) est surfacée pour ne pas masquer une panne.
+        const isMissing =
+          error.code === "42P01" ||
+          error.code === "PGRST205" ||
+          /does not exist|could not find/i.test(error.message);
+        setLoadError(isMissing ? null : error.message);
       } else {
+        setLoadError(null);
         const sorted = ((data ?? []) as Row[]).sort((a, b) => {
           const rankDiff = TIER_RANK[a.tier] - TIER_RANK[b.tier];
           if (rankDiff !== 0) return rankDiff;
@@ -170,6 +178,19 @@ export function RupturesImminentesCard({
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="skeleton h-14 rounded-xl" />
           ))}
+        </div>
+      ) : loadError ? (
+        <div
+          className="rounded-xl px-3 py-4 text-center border"
+          style={{
+            background: "var(--danger-soft)",
+            borderColor: "var(--danger-border)",
+          }}
+        >
+          <p className="text-[12.5px] font-bold text-[var(--danger)]">
+            Ruptures indisponibles
+          </p>
+          <p className="text-[11px] text-text-secondary mt-0.5">{loadError}</p>
         </div>
       ) : rows.length === 0 ? (
         <div className="bg-success-soft rounded-xl px-3 py-4 text-center">

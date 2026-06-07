@@ -60,7 +60,7 @@ export default function BdlReceptionPage() {
 
   // Surplus modal state — EAN connu du catalogue mais hors BDL
   const [surplusModal, setSurplusModal] = useState<SurplusState | null>(null);
-  const [surplusQty, setSurplusQty] = useState(1);
+  const [surplusQty, setSurplusQty] = useState<number | "">(1);
   const [adminIds, setAdminIds] = useState<string[]>([]);
 
   // Create-product modal state — EAN totalement inconnu (pas en catalogue)
@@ -68,7 +68,7 @@ export default function BdlReceptionPage() {
   const [newProdNom, setNewProdNom] = useState("");
   const [newProdCategorie, setNewProdCategorie] = useState("Épicerie");
   const [newProdPrix, setNewProdPrix] = useState("");
-  const [newProdQty, setNewProdQty] = useState(1);
+  const [newProdQty, setNewProdQty] = useState<number | "">(1);
   const [creatingProd, setCreatingProd] = useState(false);
 
   // Ref pour éviter stale closure dans le scanner
@@ -338,7 +338,7 @@ export default function BdlReceptionPage() {
       toast.error("Prix unitaire invalide");
       return;
     }
-    const qty = Math.max(1, Math.floor(newProdQty));
+    const qty = Math.max(1, Math.floor(Number(newProdQty) || 0));
     setCreatingProd(true);
     const sb = supabase();
     if (!sb) {
@@ -499,7 +499,7 @@ export default function BdlReceptionPage() {
       bdl_id: bdl.id,
       code_barre_scanne: surplusModal.code,
       produit_id: surplusModal.produitId,
-      quantite_surplus: surplusQty,
+      quantite_surplus: Number(surplusQty) || 1,
       signale_par: employe?.id ?? null,
       statut: "en_attente",
       notes: `Détecté au scan du BDL ${bdl.numero_bdl} — produit non commandé.`,
@@ -517,7 +517,7 @@ export default function BdlReceptionPage() {
           payload: {
             bdl: bdl.numero_bdl,
             produit: surplusModal.produitNom,
-            quantite: surplusQty,
+            quantite: Number(surplusQty) || 1,
             signale_par:
               `${employe?.prenom ?? ""} ${employe?.nom ?? ""}`.trim(),
           },

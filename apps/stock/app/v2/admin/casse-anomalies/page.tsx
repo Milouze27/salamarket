@@ -49,8 +49,11 @@ import { useV2 } from "@/lib/v2-store";
 import {
   computeAnomalies,
   getPicHoraire,
+  listCassesRecentes,
+  SORTIE_TYPE_LABEL,
   type CasseAnomalie,
   type CassePicHoraire,
+  type CasseRecenteItem,
   type NiveauAnomalie,
 } from "@/lib/db/casse";
 
@@ -110,6 +113,8 @@ export default function CasseAnomaliesPage() {
   const depot = useV2((s) => s.currentDepot);
   const [anomalies, setAnomalies] = useState<CasseAnomalie[]>([]);
   const [pic, setPic] = useState<CassePicHoraire[]>([]);
+  const [recentes, setRecentes] = useState<CasseRecenteItem[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [allDepots, setAllDepots] = useState(false);
@@ -119,12 +124,23 @@ export default function CasseAnomaliesPage() {
 
   const load = useCallback(async () => {
     const depotId = allDepots ? undefined : depot?.id;
-    const [a, p] = await Promise.all([
-      computeAnomalies(days, depotId),
-      getPicHoraire(depotId),
-    ]);
-    setAnomalies(a);
-    setPic(p);
+    try {
+      const [a, p, r] = await Promise.all([
+        computeAnomalies(days, depotId),
+        getPicHoraire(depotId),
+        listCassesRecentes(14, depotId),
+      ]);
+      setAnomalies(a);
+      setPic(p);
+      setRecentes(r);
+      setLoadError(null);
+    } catch (e) {
+      // On ne montre plus une liste vide muette : une panne DB se distingue
+      // d'un « rien déclaré ».
+      const msg = e instanceof Error ? e.message : "Chargement échoué";
+      console.error("[casse-anomalies] load échoué:", e);
+      setLoadError(msg);
+    }
   }, [allDepots, depot?.id]);
 
   useEffect(() => {
@@ -424,6 +440,65 @@ export default function CasseAnomaliesPage() {
               ))}
             </ul>
           </>
+        )}
+      </section>
+
+      {/* CASSES RÉCENTES — liste brute des déclarations (tous types). C'est ce
+          que le staff attend en venant ici (une casse fraîche n'est pas une
+          « anomalie » statistique). */}
+      <section className="px-4 sm:px-5 mt-2 pb-[max(3rem,env(safe-area-inset-bottom))] max-w-7xl mx-auto w-full">
+        <EditorialEyebrow num="04" label="Casses récentes" className="mt-3" />
+        <p className="text-[12.5px] text-text-secondary mt-1.5 mb-3 max-w-[46ch]">
+          Tes déclarations de casse / démarque des 14 derniers jours, la plus
+          récente en haut.
+        </p>
+        {loadError ? (
+          <div className="bg-[var(--status-danger-bg,#fdecec)] border border-[var(--status-danger-border,#f3c0c0)] rounded-2xl p-4 text-[13px] text-[var(--status-danger-text,#a8231a)]">
+            Liste indisponible : {loadError}
+          </div>
+        ) : loading ? (
+          <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-6 flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 text-primary animate-spin" />
+            <p className="text-sm text-text-secondary">Chargement…</p>
+          </div>
+        ) : recentes.length === 0 ? (
+          <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-5 text-[13px] text-text-secondary">
+            Aucune casse déclarée sur les 14 derniers jours.
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {recentes.map((c) => (
+              <li
+                key={c.id}
+                className="bg-[var(--surface-1)] border border-rule rounded-2xl px-4 py-3 flex items-center gap-3"
+              >
+                <span className="w-9 h-9 rounded-xl bg-cream flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-text-tertiary" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-bold text-text-primary leading-tight truncate">
+                    {c.produit_nom}
+                    <span className="text-text-tertiary font-semibold">
+                      {" "}
+                      × {c.quantite}
+                    </span>
+                  </p>
+                  <p className="text-[12px] text-text-secondary mt-0.5 truncate">
+                    {SORTIE_TYPE_LABEL[c.type] ?? c.type}
+                    {c.motif_libre ? ` · ${c.motif_libre}` : ""}
+                  </p>
+                </div>
+                <time className="text-[11.5px] text-text-tertiary tabular shrink-0">
+                  {new Date(c.created_at).toLocaleString("fr-FR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </V2Shell>

@@ -19,9 +19,9 @@ export function SurplusModal({
   onSubmit,
 }: {
   state: SurplusState | null;
-  qty: number;
+  qty: number | "";
   onClose: () => void;
-  onQtyChange: (next: number) => void;
+  onQtyChange: (next: number | "") => void;
   onSubmit: () => void;
 }) {
   return (
@@ -68,7 +68,9 @@ export function SurplusModal({
               </label>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onQtyChange(Math.max(1, qty - 1))}
+                  onClick={() =>
+                    onQtyChange(Math.max(1, (Number(qty) || 0) - 1))
+                  }
                   className="w-12 h-12 rounded-2xl bg-cream font-bold text-xl text-text-primary"
                 >
                   −
@@ -77,13 +79,17 @@ export function SurplusModal({
                   type="number"
                   value={qty}
                   onChange={(e) =>
-                    onQtyChange(Math.max(1, parseInt(e.target.value || "1", 10)))
+                    onQtyChange(
+                      e.target.value === ""
+                        ? ""
+                        : Math.max(1, parseInt(e.target.value, 10) || 1),
+                    )
                   }
                   inputMode="numeric"
                   className="flex-1 input-field text-center text-2xl font-extrabold"
                 />
                 <button
-                  onClick={() => onQtyChange(qty + 1)}
+                  onClick={() => onQtyChange((Number(qty) || 0) + 1)}
                   className="w-12 h-12 rounded-2xl bg-cream font-bold text-xl text-text-primary"
                 >
                   +

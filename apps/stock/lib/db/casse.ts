@@ -395,3 +395,84 @@ function round2(n: number): number {
 function round3(n: number): number {
   return Math.round((n + Number.EPSILON) * 1000) / 1000;
 }
+
+// ── 4) Casses RÉCENTES (liste brute, tous types) ─────────────────────────────
+// computeAnomalies = z-score statistique (anomalies). Ici on liste simplement
+// CE QUE LE STAFF A DÉCLARÉ, tous types y compris démarque/autre — c'est ce
+// qu'on attend en allant sur « casses » (une casse fraîche n'est pas une
+// « anomalie », d'où la liste à 0 perçue auparavant).
+
+/** Tous les types de sortie = pertes (casse + démarque + autre). */
+const TOUS_TYPES_PERTE = [
+  "casse_manipulation",
+  "casse_client",
+  "perime_dlc",
+  "perime_ddm",
+  "defaut_fournisseur",
+  "demarque_inconnue",
+  "autre",
+];
+
+export interface CasseRecenteItem {
+  id: string;
+  produit_nom: string;
+  type: string;
+  quantite: number;
+  motif_libre: string | null;
+  created_at: string;
+}
+
+/** Liste des déclarations de casse/démarque récentes, la plus récente d'abord.
+ *  Erreur DB → throw (l'UI distingue « rien déclaré » d'une panne). */
+export async function listCassesRecentes(
+  jours = 14,
+  depotId?: string,
+  limit = 60,
+): Promise<CasseRecenteItem[]> {
+  const sb = supabase();
+  if (!sb) return [];
+  const since = new Date(
+    Date.now() - jours * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  let q = sb
+    .from("sorties_stock")
+    .select("id, type, quantite, motif_libre, created_at, produits(nom)")
+    .in("type", TOUS_TYPES_PERTE)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (depotId) q = q.eq("depot_id", depotId);
+  const { data, error } = await q;
+  if (error) {
+    console.warn("[casse] listCassesRecentes failed:", error.message);
+    throw new Error(`Casses récentes indisponibles : ${error.message}`);
+  }
+  return (
+    (data ?? []) as unknown as Array<{
+      id: string;
+      type: string;
+      quantite: number;
+      motif_libre: string | null;
+      created_at: string;
+      produits?: { nom?: string } | null;
+    }>
+  ).map((r) => ({
+    id: r.id,
+    produit_nom: r.produits?.nom ?? "Produit",
+    type: r.type,
+    quantite: Number(r.quantite) || 0,
+    motif_libre: r.motif_libre,
+    created_at: r.created_at,
+  }));
+}
+
+/** Libellés FR courts des types de sortie (affichage liste). */
+export const SORTIE_TYPE_LABEL: Record<string, string> = {
+  casse_manipulation: "Casse manipulation",
+  casse_client: "Casse client",
+  perime_dlc: "Périmé (DLC)",
+  perime_ddm: "Périmé (DDM)",
+  defaut_fournisseur: "Défaut fournisseur",
+  demarque_inconnue: "Démarque inconnue",
+  autre: "Autre",
+};

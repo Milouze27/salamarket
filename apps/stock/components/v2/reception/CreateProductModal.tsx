@@ -36,14 +36,14 @@ export function CreateProductModal({
   nom: string;
   categorie: string;
   prix: string;
-  qty: number;
+  qty: number | "";
   creating: boolean;
   onClose: () => void;
   onSwitchToCarton: () => void;
   onNomChange: (value: string) => void;
   onCategorieChange: (value: string) => void;
   onPrixChange: (value: string) => void;
-  onQtyChange: (next: number) => void;
+  onQtyChange: (next: number | "") => void;
   onSubmit: () => void;
 }) {
   return (
@@ -143,7 +143,7 @@ export function CreateProductModal({
                           block: "center",
                           behavior: "smooth",
                         }),
-                      340
+                      340,
                     );
                   }}
                   placeholder="ex : Bricks tunisiens x10"
@@ -192,7 +192,9 @@ export function CreateProductModal({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => onQtyChange(Math.max(1, qty - 1))}
+                      onClick={() =>
+                        onQtyChange(Math.max(1, (Number(qty) || 0) - 1))
+                      }
                       className="w-10 h-12 rounded-2xl bg-cream font-bold text-lg text-text-primary"
                     >
                       −
@@ -201,14 +203,18 @@ export function CreateProductModal({
                       type="number"
                       value={qty}
                       onChange={(e) =>
-                        onQtyChange(Math.max(1, parseInt(e.target.value || "1", 10)))
+                        onQtyChange(
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(1, parseInt(e.target.value, 10) || 1),
+                        )
                       }
                       inputMode="numeric"
                       className="flex-1 input-field text-center text-lg font-extrabold tabular"
                     />
                     <button
                       type="button"
-                      onClick={() => onQtyChange(qty + 1)}
+                      onClick={() => onQtyChange((Number(qty) || 0) + 1)}
                       className="w-10 h-12 rounded-2xl bg-cream font-bold text-lg text-text-primary"
                     >
                       +

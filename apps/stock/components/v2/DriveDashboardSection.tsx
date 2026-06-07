@@ -134,6 +134,7 @@ export function DriveDashboardSection() {
   const [commandes, setCommandes] = useState<CommandeAggreg[]>([]);
   const [revenue, setRevenue] = useState<DriveRevenueDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refetchError, setRefetchError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<
     "connecting" | "live" | "offline"
   >("connecting");
@@ -152,6 +153,7 @@ export function DriveDashboardSection() {
    */
   const refetch = useCallback(async () => {
     try {
+      setRefetchError(null);
       const [aPreparer, enPrep, pret, retire, annule] = await Promise.all([
         listCommandesDrive("a_preparer"),
         listCommandesDrive("en_preparation"),
@@ -182,8 +184,10 @@ export function DriveDashboardSection() {
       setNowMs(Date.now());
     } catch (e) {
       // Sans ce catch, une erreur Supabase produisait une unhandled rejection
-      // et la section restait figée. On loggue et on retombe sur un état sûr.
+      // et la section restait figée. On loggue ET on surface l'erreur à l'UI
+      // (plus de panne silencieuse : l'admin voit que les chiffres sont périmés).
       console.error("[drive-dashboard] refetch échoué:", e);
+      setRefetchError(e instanceof Error ? e.message : "Chargement échoué");
     } finally {
       setLoading(false);
     }
@@ -438,21 +442,50 @@ export function DriveDashboardSection() {
   }
 
   if (commandes.length === 0) {
+    // Liste vide = soit aucune commande, soit une PANNE de chargement. On
+    // distingue les deux (plus de faux « 0 » qui masque une erreur Supabase).
     return (
       <section className="px-5 mt-5">
-        <div
-          className="border border-rule rounded-[20px] p-5 text-center"
-          style={{ background: "var(--surface-1)" }}
-        >
-          <ShoppingBag className="w-8 h-8 text-text-tertiary mx-auto mb-3" />
-          <p className="text-sm font-bold text-text-primary">
-            Pas encore de commande drive
-          </p>
-          <p className="text-xs text-text-secondary mt-1.5 max-w-[280px] mx-auto">
-            Les commandes passées sur Salamarket Drive apparaîtront ici
-            automatiquement.
-          </p>
-        </div>
+        {refetchError ? (
+          <div
+            className="rounded-[20px] p-5 text-center border"
+            style={{
+              background: "var(--danger-soft)",
+              borderColor: "var(--danger-border)",
+            }}
+          >
+            <p className="text-sm font-bold text-[var(--danger)]">
+              Tableau de bord indisponible
+            </p>
+            <p className="text-xs text-text-secondary mt-1.5 max-w-[300px] mx-auto">
+              Impossible de charger les commandes ({refetchError}). Les chiffres
+              peuvent être périmés.
+            </p>
+            <button
+              onClick={() => {
+                setLoading(true);
+                void refetch();
+              }}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary text-white px-4 py-2 text-[13px] font-bold active:scale-95 transition-transform"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : (
+          <div
+            className="border border-rule rounded-[20px] p-5 text-center"
+            style={{ background: "var(--surface-1)" }}
+          >
+            <ShoppingBag className="w-8 h-8 text-text-tertiary mx-auto mb-3" />
+            <p className="text-sm font-bold text-text-primary">
+              Pas encore de commande drive
+            </p>
+            <p className="text-xs text-text-secondary mt-1.5 max-w-[280px] mx-auto">
+              Les commandes passées sur Salamarket Drive apparaîtront ici
+              automatiquement.
+            </p>
+          </div>
+        )}
       </section>
     );
   }

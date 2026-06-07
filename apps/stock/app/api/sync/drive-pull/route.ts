@@ -43,6 +43,8 @@ function mapStatut(driveStatus: string): string | null {
 }
 
 interface DriveOrderItem {
+  /** = products.id (vue) = produits.id : match EXACT, prioritaire sur le nom. */
+  product_id?: string;
   name?: string;
   quantity?: number;
   unit_price_cents?: number;
@@ -86,7 +88,7 @@ async function runSync() {
         error: "drive_credentials_missing",
         hint: "Définir DRIVE_SUPABASE_ANON_KEY en env Vercel.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -95,7 +97,7 @@ async function runSync() {
   if (!stockUrl || !stockKey) {
     return NextResponse.json(
       { error: "stock_credentials_missing" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -113,7 +115,7 @@ async function runSync() {
   const { data: orders, error: errOrders } = await drive
     .from("orders")
     .select(
-      "id, user_id, status, customer_phone, customer_email, pickup_slot_id, total_cents, payment_method, items, created_at"
+      "id, user_id, status, customer_phone, customer_email, pickup_slot_id, total_cents, payment_method, items, created_at",
     )
     .gte("created_at", since)
     .in("status", ["paid", "preparing", "ready", "completed"])
@@ -122,17 +124,22 @@ async function runSync() {
   if (errOrders) {
     return NextResponse.json(
       { error: "drive_fetch_failed", detail: errOrders.message },
-      { status: 502 }
+      { status: 502 },
     );
   }
 
   const rows = (orders ?? []) as unknown as DriveOrder[];
   if (rows.length === 0) {
-    return NextResponse.json({ synced: 0, message: "Aucune order Drive récente" });
+    return NextResponse.json({
+      synced: 0,
+      message: "Aucune order Drive récente",
+    });
   }
 
   // 1b. Fetch les profils correspondants pour récupérer full_name
-  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean) as string[]));
+  const userIds = Array.from(
+    new Set(rows.map((r) => r.user_id).filter(Boolean) as string[]),
+  );
   const profileMap = new Map<string, string>();
   if (userIds.length > 0) {
     const { data: profs } = await drive
@@ -145,7 +152,9 @@ async function runSync() {
   }
 
   // 1c. Fetch les slots pour récupérer slot_start (créneau de retrait)
-  const slotIds = Array.from(new Set(rows.map((r) => r.pickup_slot_id).filter(Boolean) as string[]));
+  const slotIds = Array.from(
+    new Set(rows.map((r) => r.pickup_slot_id).filter(Boolean) as string[]),
+  );
   const slotMap = new Map<string, string>();
   if (slotIds.length > 0) {
     const { data: slots } = await drive
@@ -167,7 +176,7 @@ async function runSync() {
   if (!depotId) {
     return NextResponse.json(
       { error: "depot_particulier_introuvable" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -220,13 +229,18 @@ async function runSync() {
         creneau_retrait: creneauRetrait,
         statut,
         total_ttc: (o.total_cents ?? 0) / 100,
-        mode_paiement: o.payment_method === "in_store" ? "en_magasin" : "stripe",
+        mode_paiement:
+          o.payment_method === "in_store" ? "en_magasin" : "stripe",
         created_at: o.created_at,
       },
-      { onConflict: "id" }
+      { onConflict: "id" },
     );
     if (errHeader) {
-      console.error("[drive-pull] upsert header failed", o.id, errHeader.message);
+      console.error(
+        "[drive-pull] upsert header failed",
+        o.id,
+        errHeader.message,
+      );
       continue;
     }
 
@@ -242,25 +256,38 @@ async function runSync() {
       for (const item of o.items) {
         if (!item?.name || !item.quantity) continue;
 
-        // Match par nom Stock
+        // 1) Match EXACT par product_id : orders.items.product_id = products.id
+        //    (vue) = produits.id. Fiable, contrairement au nom (accents,
+        //    homonymes, casse). C'est la clé de la synchro centralisée.
         let produitId: string | null = null;
-        const { data: prodMatch } = await stock
-          .from("produits")
-          .select("id")
-          .ilike("nom", item.name)
-          .limit(1)
-          .maybeSingle();
-        if (prodMatch) {
-          produitId = (prodMatch as { id: string }).id;
-        } else {
-          // Fallback prefix
-          const { data: prefixMatch } = await stock
+        if (item.product_id) {
+          const { data: byId } = await stock
             .from("produits")
             .select("id")
-            .ilike("nom", `${item.name}%`)
+            .eq("id", item.product_id)
+            .maybeSingle();
+          if (byId) produitId = (byId as { id: string }).id;
+        }
+        // 2) Fallback NOM (anciennes commandes sans product_id, ou produit hors
+        //    catalogue Stock). Exact puis préfixe.
+        if (!produitId) {
+          const { data: prodMatch } = await stock
+            .from("produits")
+            .select("id")
+            .ilike("nom", item.name)
             .limit(1)
             .maybeSingle();
-          if (prefixMatch) produitId = (prefixMatch as { id: string }).id;
+          if (prodMatch) {
+            produitId = (prodMatch as { id: string }).id;
+          } else {
+            const { data: prefixMatch } = await stock
+              .from("produits")
+              .select("id")
+              .ilike("nom", `${item.name}%`)
+              .limit(1)
+              .maybeSingle();
+            if (prefixMatch) produitId = (prefixMatch as { id: string }).id;
+          }
         }
         if (!produitId) produitId = placeholderId;
         if (!produitId) continue;

@@ -574,7 +574,7 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher — palette de commandes (Cmd+K)"
-                className="hidden sm:inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
+                className="hidden [@media(pointer:fine)]:inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
               >
                 <Search className="w-3.5 h-3.5 opacity-80" strokeWidth={2.2} />
                 <span className="opacity-80">Rechercher</span>
@@ -588,7 +588,7 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher (Cmd+K)"
-                className="sm:hidden w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
+                className="[@media(pointer:fine)]:hidden w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
               >
                 <Search className="w-4 h-4" strokeWidth={2.2} />
               </button>

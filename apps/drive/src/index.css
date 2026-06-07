@@ -438,7 +438,12 @@ All colors MUST be HSL.
    pour préserver le no-flash splash ; on contient juste l'overscroll. */
 html {
   overscroll-behavior-y: none;
+  overflow-x: hidden;
 }
 body {
   overscroll-behavior-y: contain;
+  /* Filet anti-ascenseur horizontal (texte large/élément qui dépasse le viewport).
+     Les rails à scroll volontaire gardent leur propre overflow-x-auto. */
+  overflow-x: hidden;
+  max-width: 100%;
 }

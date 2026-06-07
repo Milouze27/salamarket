@@ -710,7 +710,7 @@ export function CommandPalette() {
               placeholder="Que voulez-vous faire ? casse, étiquette, forecast, produit…"
               className="flex-1 bg-transparent outline-none text-[15px] text-text-primary placeholder:text-text-tertiary font-medium"
             />
-            <kbd className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-text-tertiary bg-cream border border-rule rounded-md px-1.5 py-0.5 tracking-wider">
+            <kbd className="hidden [@media(pointer:fine)]:inline-flex items-center gap-1 text-[10px] font-bold text-text-tertiary bg-cream border border-rule rounded-md px-1.5 py-0.5 tracking-wider">
               ESC
             </kbd>
           </div>
@@ -909,7 +909,7 @@ export function CommandPalette() {
             )}
           </Command.List>
 
-          <div className="border-t border-rule px-4 py-2 flex items-center justify-between text-[10.5px] text-text-tertiary bg-cream/60">
+          <div className="border-t border-rule px-4 py-2 hidden [@media(pointer:fine)]:flex items-center justify-between text-[10.5px] text-text-tertiary bg-cream/60">
             <span className="inline-flex items-center gap-2">
               <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5">
                 ↑↓

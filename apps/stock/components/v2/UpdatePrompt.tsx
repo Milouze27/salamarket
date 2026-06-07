@@ -21,7 +21,16 @@ export function UpdatePrompt() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const onUpdate = () => setVisible(true);
+    const onUpdate = () => {
+      // Si l'utilisateur a déjà fermé la bannière dans cette session, on ne le
+      // re-harcèle pas (la nouvelle version s'activera au prochain reload naturel).
+      try {
+        if (sessionStorage.getItem("sw-update-dismissed") === "1") return;
+      } catch {
+        /* private mode */
+      }
+      setVisible(true);
+    };
     window.addEventListener("sw-update-available", onUpdate);
     return () => window.removeEventListener("sw-update-available", onUpdate);
   }, []);
@@ -31,6 +40,15 @@ export function UpdatePrompt() {
   const reload = () => {
     // Délègue à SWRegister : SKIP_WAITING + reload sur controllerchange.
     window.dispatchEvent(new CustomEvent("sw-activate-update"));
+  };
+
+  const dismiss = () => {
+    try {
+      sessionStorage.setItem("sw-update-dismissed", "1");
+    } catch {
+      /* private mode */
+    }
+    setVisible(false);
   };
 
   return (
@@ -85,7 +103,7 @@ export function UpdatePrompt() {
       </button>
       <button
         type="button"
-        onClick={() => setVisible(false)}
+        onClick={dismiss}
         aria-label="Plus tard"
         style={{
           flexShrink: 0,

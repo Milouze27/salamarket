@@ -16,7 +16,7 @@ All colors MUST be HSL.
        CSS-side ici pour défense en profondeur. */
     color-scheme: light;
     /* Tokens de layout PWA — clearance des barres fixes (nav + CTA sticky) +
-       safe-area iOS. Étaient RÉFÉRENCÉS par les helpers .pb-cta-*/.pb-nav-*
+       safe-area iOS. Référencés par les helpers de padding pb-cta / pb-nav
        mais jamais définis → calc() invalide → contenu masqué derrière les CTA.
        Définis ici une bonne fois. */
     --nav-height: 64px;

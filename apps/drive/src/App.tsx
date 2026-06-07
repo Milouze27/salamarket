@@ -42,11 +42,6 @@ const MotDePasseOublie = lazyWithRetry(
   () => import("./pages/MotDePasseOublie.tsx"),
 );
 const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword.tsx"));
-const Admin = lazyWithRetry(() => import("./pages/Admin.tsx"));
-const AdminSettings = lazyWithRetry(() => import("./pages/AdminSettings.tsx"));
-const EmployeeKanban = lazyWithRetry(
-  () => import("./pages/EmployeeKanban.tsx"),
-);
 
 // Module Labo (recettes BOM + productions + marges) — admin + employee
 const LaboHome = lazyWithRetry(() => import("./pages/labo/LaboHome.tsx"));
@@ -190,30 +185,15 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/admin"
-                  element={
-                    <RoleProtectedRoute requiredRole="admin">
-                      <Admin />
-                    </RoleProtectedRoute>
-                  }
-                />
+                {/* Dashboards admin & employé RETIRÉS du Drive (client) : ils
+                    vivent désormais UNIQUEMENT dans l'app staff Salam Stock.
+                    Les anciennes routes redirigent vers l'accueil client. */}
+                <Route path="/admin" element={<Navigate to="/" replace />} />
                 <Route
                   path="/admin/reglages"
-                  element={
-                    <RoleProtectedRoute requiredRole="admin">
-                      <AdminSettings />
-                    </RoleProtectedRoute>
-                  }
+                  element={<Navigate to="/" replace />}
                 />
-                <Route
-                  path="/employe"
-                  element={
-                    <RoleProtectedRoute requiredRoles={["admin", "employee"]}>
-                      <EmployeeKanban />
-                    </RoleProtectedRoute>
-                  }
-                />
+                <Route path="/employe" element={<Navigate to="/" replace />} />
                 {/* ───────────── Module Labo ───────────── */}
                 <Route
                   path="/v2/labo"

@@ -150,43 +150,9 @@ export const HeaderUserMenu = () => {
           Mes commandes
         </DropdownMenuItem>
 
-        {/* Section staff — visible si admin OU employee */}
-        {isStaff && (
-          <>
-            <DropdownMenuSeparator className="bg-border my-1" />
-            <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted">
-              Espace pro
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigate("/employe")}
-              className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
-            >
-              <ClipboardList className="h-4 w-4 text-[#0E3B2E]" aria-hidden />
-              Préparation commandes
-            </DropdownMenuItem>
-            {isAdmin && (
-              <>
-                <DropdownMenuItem
-                  onClick={() => navigate("/admin")}
-                  className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
-                >
-                  <LayoutDashboard
-                    className="h-4 w-4 text-[#0E3B2E]"
-                    aria-hidden
-                  />
-                  Tableau de bord
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate("/admin/reglages")}
-                  className="cursor-pointer rounded-xl px-3 py-2.5 min-h-[44px] md:min-h-0 md:py-2 text-sm font-medium hover:bg-[#FAF7EE] focus:bg-[#FAF7EE] gap-2.5"
-                >
-                  <Settings className="h-4 w-4 text-[#0E3B2E]" aria-hidden />
-                  Réglages admin
-                </DropdownMenuItem>
-              </>
-            )}
-          </>
-        )}
+        {/* Section staff (Préparation / Tableau de bord / Réglages admin)
+            RETIRÉE du Drive client : ces fonctions vivent uniquement dans
+            l'app staff Salam Stock. */}
 
         <DropdownMenuSeparator className="bg-border my-1" />
         <DropdownMenuItem

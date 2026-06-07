@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CheckCheck, MessageCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -38,9 +38,14 @@ function fmtEur(n: number) {
 
 export function WhatsAppRecapCard() {
   const [data, setData] = useState<RecapData | null>(null);
+  const mounted = useRef(true);
 
   useEffect(() => {
+    mounted.current = true;
     void load();
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   async function load() {
@@ -75,7 +80,10 @@ export function WhatsAppRecapCard() {
       .select("quantite_surplus")
       .eq("statut", "en_attente");
     const surpRows = (surp ?? []) as Array<{ quantite_surplus: number }>;
-    const surpQty = surpRows.reduce((s, r) => s + Number(r.quantite_surplus), 0);
+    const surpQty = surpRows.reduce(
+      (s, r) => s + Number(r.quantite_surplus),
+      0,
+    );
 
     // Sorties suspectes
     const { data: alert } = await sb
@@ -103,7 +111,7 @@ export function WhatsAppRecapCard() {
         if (!l.produits?.nom) continue;
         topAgg.set(
           l.produits.nom,
-          (topAgg.get(l.produits.nom) ?? 0) + Number(l.quantite)
+          (topAgg.get(l.produits.nom) ?? 0) + Number(l.quantite),
         );
       }
     }
@@ -119,6 +127,7 @@ export function WhatsAppRecapCard() {
     // Estimation magasin = mock cohérent (Cashmag pas encore importé jour J)
     const magCa = Math.round(driveCa * (8 + Math.random() * 4));
 
+    if (!mounted.current) return; // évite un setState après démontage
     setData({
       ca_jour: driveCa + magCa,
       ca_jour_pct: 12,
@@ -163,7 +172,10 @@ export function WhatsAppRecapCard() {
           }}
         >
           <p className="text-[12.5px] text-[#075E54] font-bold mb-1">
-            Salam Stock <span className="text-[10px] text-[#128C7E] font-normal ml-1">+33 6 12 34 56 78</span>
+            Salam Stock{" "}
+            <span className="text-[10px] text-[#128C7E] font-normal ml-1">
+              +33 6 12 34 56 78
+            </span>
           </p>
           <p className="text-[13.5px] text-[#1F2C34] leading-[1.5] whitespace-pre-line">
             {`Salam Otmane 👋
@@ -198,9 +210,11 @@ Pose-moi une question :
       </div>
 
       <p className="text-[11px] text-text-tertiary text-center mt-3 leading-relaxed">
-        Envoyé tous les soirs à <b>19h00</b> à Otmane et Ahmed via WhatsApp Business.
+        Envoyé tous les soirs à <b>19h00</b> à Otmane et Ahmed via WhatsApp
+        Business.
         <br />
-        Configuration et activation pendant les <b>Travaux de Mise en Service</b>.
+        Configuration et activation pendant les{" "}
+        <b>Travaux de Mise en Service</b>.
       </p>
     </div>
   );

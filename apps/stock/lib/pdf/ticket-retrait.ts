@@ -89,7 +89,18 @@ export async function buildTicketRetraitPdf(
     setBrandFont(doc, "normal");
     doc.text(label, M, y);
     setBrandFont(doc, "bold");
-    doc.text(value, W - M, y, { align: "right" });
+    // Largeur dispo à droite du label (évite que le label et une valeur longue
+    // — ex. n° commande UUID — se chevauchent sur 80 mm).
+    const labelW = doc.getTextWidth(label);
+    const avail = INNER - labelW - 3;
+    let shown = value;
+    if (doc.getTextWidth(shown) > avail) {
+      while (shown.length > 4 && doc.getTextWidth(shown + "…") > avail) {
+        shown = shown.slice(0, -1);
+      }
+      shown += "…";
+    }
+    doc.text(shown, W - M, y, { align: "right" });
     y += 4;
   };
   metaLine("Commande", data.numeroCommande);

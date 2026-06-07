@@ -518,9 +518,12 @@ export function V2Shell({
   // on étend à une largeur tablette confortable (820px) ≥md, harmonisée avec
   // la bottom-nav et le Plus-sheet pour rester cohérent et centré.
   // min-h-[100dvh] : évite le saut de hauteur dû à la barre d'adresse iOS.
+  // wide = pages admin/pilotage : sur desktop on utilise la vraie largeur
+  // d'écran (1120/1280px) au lieu de gaspiller en colonne étroite. La bottom-nav
+  // reste un îlot centré confortable (820px), elle ne s'étire pas à 1280.
   const containerClass = wide
-    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] min-h-[100dvh] relative bg-cream"
-    : "mx-auto w-full max-w-[460px] min-h-[100dvh] relative bg-cream";
+    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] lg:max-w-[1120px] xl:max-w-[1280px] min-h-[100dvh] relative bg-cream"
+    : "mx-auto w-full max-w-[460px] lg:max-w-[760px] min-h-[100dvh] relative bg-cream";
 
   return (
     // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms

@@ -209,7 +209,7 @@ export default function CasseAnomaliesPage() {
   const dataActive = graphe === "categorie" ? dataCategorie : dataHoraire;
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav wide>
       <PageAccentStripe accent="bordeaux" />
 
       <header className="px-4 sm:px-5 pt-7">

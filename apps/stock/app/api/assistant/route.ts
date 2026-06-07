@@ -51,7 +51,7 @@ const TOOLS = [
   {
     name: "query_ventes_periode",
     description:
-      "Récupère les ventes du Drive sur une période (commandes_drive). Renvoie nombre de commandes, CA total TTC, panier moyen, top produit. Si produit_search est fourni, filtre sur ce produit (matching sur nom).",
+      "Récupère les ventes sur une période. Sans produit_search : ventes du Drive (commandes_drive) — nb commandes, CA TTC, panier moyen. AVEC produit_search : ventes du produit sur LES DEUX CANAUX — `drive` (commandes Drive) ET `magasin_cashmag` (ventes en magasin importées de Cashmag), plus `total_quantite_vendue` et `total_ca_ttc`. Un produit peut avoir 0 vente Drive mais des ventes magasin (ex. boissons). Toujours citer le TOTAL et préciser la répartition Drive/magasin.",
     input_schema: {
       type: "object",
       properties: {
@@ -207,11 +207,38 @@ async function runTool(name: string, input: any): Promise<unknown> {
             ),
           0,
         );
+        // Ventes MAGASIN (Cashmag) du même produit sur la période. Sans ça,
+        // l'assistant ne voyait QUE le Drive → « combien de Coca » renvoyait 0
+        // car le Coca se vend surtout en magasin, pas sur le Drive.
+        let magasinQty = 0;
+        let magasinCa = 0;
+        const { data: cashmag } = await sb
+          .from("ventes_cashmag_import")
+          .select("quantite, prix_ttc")
+          .ilike("designation", `%${produit_search}%`)
+          .gte("date_vente", date_start)
+          .lt("date_vente", date_end);
+        for (const v of (cashmag ?? []) as Array<{
+          quantite: number | null;
+          prix_ttc: number | null;
+        }>) {
+          magasinQty += Number(v.quantite ?? 0);
+          magasinCa += Number(v.prix_ttc ?? 0);
+        }
         return {
-          nb_commandes: filtered.length,
-          ca_ttc: Math.round(totalCa * 100) / 100,
-          quantite_vendue: totalQty,
           produit_recherche: produit_search,
+          drive: {
+            nb_commandes: filtered.length,
+            quantite_vendue: totalQty,
+            ca_ttc: Math.round(totalCa * 100) / 100,
+          },
+          magasin_cashmag: {
+            quantite_vendue: Math.round(magasinQty * 1000) / 1000,
+            ca_ttc: Math.round(magasinCa * 100) / 100,
+          },
+          total_quantite_vendue:
+            Math.round((totalQty + magasinQty) * 1000) / 1000,
+          total_ca_ttc: Math.round((totalCa + magasinCa) * 100) / 100,
         };
       }
       const caTotal = rows.reduce((s, r) => s + Number(r.total_ttc), 0);

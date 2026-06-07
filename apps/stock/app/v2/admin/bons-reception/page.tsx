@@ -139,7 +139,7 @@ export default function BonsReceptionAdminPage() {
   }, [filtered]);
 
   return (
-    <V2Shell>
+    <V2Shell wide>
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -215,7 +215,7 @@ export default function BonsReceptionAdminPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
             {filtered.map((r, idx) => {
               const totalLignes = r.bons_de_livraison_lignes.length;
               const totalAttendu = r.bons_de_livraison_lignes.reduce(

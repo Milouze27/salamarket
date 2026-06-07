@@ -103,7 +103,7 @@ export default function ComptesProPage() {
   }
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav wide>
       <PageAccentStripe accent="or-sapin" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -161,7 +161,7 @@ export default function ComptesProPage() {
             />
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
             {visibles.map((c) => (
               <CompteCard key={c.id} compte={c} onClick={() => setDetail(c)} />
             ))}

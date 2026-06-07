@@ -222,6 +222,70 @@ export async function finalizePreparation(
     };
   }
 
+  // 3b. DÉCRÉMENT DU STOCK (vente Drive). Sans ça, le stock n'était JAMAIS
+  //     réduit par les ventes Drive (seules réception/casse l'étaient) →
+  //     survente + inventaire faux. On décrémente via la RPC atomique
+  //     adjust_stock (verrou + ledger immuable stock_movements).
+  //     - Idempotent : reference_id unique par ligne (drive:{cmd}:{ligne}),
+  //       on saute les lignes déjà mouvementées (anti double-décrément au retry).
+  //     - Quantité prélevée : le POIDS PESÉ (produits au poids) sinon la
+  //       quantité unitaire. NB : suppose que le stock d'un produit au poids
+  //       est tenu dans la même unité que la pesée (kg) — à confirmer si un
+  //       produit au poids est en réalité stocké en pièces.
+  //     - Non bloquant : le paiement est déjà capturé, on ne fait pas échouer
+  //       la finalisation pour une erreur de décrément (on log pour correction).
+  try {
+    const { data: lignesStock } = await sb
+      .from("commandes_drive_lignes")
+      .select("id, produit_id, depot_id, quantite, quantite_reelle_pesee")
+      .eq("commande_id", input.commande_id);
+    const rows = (lignesStock ?? []) as Array<{
+      id: string;
+      produit_id: string | null;
+      depot_id: string | null;
+      quantite: number | null;
+      quantite_reelle_pesee: number | null;
+    }>;
+    if (rows.length > 0) {
+      const refs = rows.map((r) => `drive:${input.commande_id}:${r.id}`);
+      const { data: dejaFait } = await sb
+        .from("stock_movements")
+        .select("reference_id")
+        .in("reference_id", refs);
+      const doneSet = new Set(
+        ((dejaFait ?? []) as Array<{ reference_id: string | null }>).map(
+          (m) => m.reference_id,
+        ),
+      );
+      for (const r of rows) {
+        const ref = `drive:${input.commande_id}:${r.id}`;
+        if (doneSet.has(ref) || !r.produit_id || !r.depot_id) continue;
+        const qty =
+          r.quantite_reelle_pesee && r.quantite_reelle_pesee > 0
+            ? r.quantite_reelle_pesee
+            : (r.quantite ?? 0);
+        if (!qty || qty <= 0) continue;
+        const { error: errAdj } = await sb.rpc("adjust_stock", {
+          p_produit_id: r.produit_id,
+          p_depot_id: r.depot_id,
+          p_delta: -Math.abs(qty),
+          p_type: "sortie",
+          p_lot_id: null,
+          p_reference_id: ref,
+          p_actor_id: userId,
+        });
+        if (errAdj) {
+          console.error(
+            `[finalizePreparation] décrément stock ligne ${r.id} échoué:`,
+            errAdj.message,
+          );
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[finalizePreparation] décrément stock global échoué:", e);
+  }
+
   // 4. Send "commande prête" email to client — fire-and-forget
   try {
     const { data: commande } = await sb

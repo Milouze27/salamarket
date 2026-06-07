@@ -32,10 +32,9 @@ import {
   type RevenueDataPoint,
 } from "@/components/v2/RevenueChart";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
+import { PilotageStrip } from "@/components/v2/PilotageStrip";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
-import { EmailRecapCard } from "@/components/v2/EmailRecapCard";
 import { StockEditWindowCard } from "@/components/v2/StockEditWindowCard";
-import { WhatsAppRecapCard } from "@/components/v2/WhatsAppRecapCard";
 import { Sparkline } from "@/components/v2/Sparkline";
 import { useV2 } from "@/lib/v2-store";
 import {
@@ -243,6 +242,12 @@ export default function V2AdminDashboardPage() {
           })}
         </div>
       </header>
+
+      {/* Pilotage du jour — coup d'œil consolidé (CA Drive+magasin, commandes
+          Drive en cours, ruptures, valeur stock). Brique partagée cockpit/admin. */}
+      <div className="px-4 sm:px-5 mt-5">
+        <PilotageStrip allDepots />
+      </div>
 
       {loading ? (
         <section className="px-4 sm:px-5 mt-5 space-y-3">
@@ -724,18 +729,12 @@ export default function V2AdminDashboardPage() {
             <Bell className="w-3 h-3" />
             Communication & notifs
           </p>
-          <section className="px-4 sm:px-5 mt-2 grid grid-cols-1 gap-3">
+          <section className="px-4 sm:px-5 mt-2 grid grid-cols-1 gap-3 mb-[max(2rem,env(safe-area-inset-bottom))]">
             <PushNotifCard employeId={employe?.id ?? null} />
-            <EmailRecapCard defaultTo="ceo@hamy.studio" />
             <StockEditWindowCard
               employeId={employe?.id ?? null}
               employeRole={employe?.role}
             />
-          </section>
-
-          {/* Recap WhatsApp 19h — mockup pour la démo */}
-          <section className="px-4 sm:px-5 mt-3 mb-[max(2rem,env(safe-area-inset-bottom))]">
-            <WhatsAppRecapCard />
           </section>
         </>
       )}

@@ -387,7 +387,7 @@ export default function AlertesPage() {
 
       {/* Tabs — pas de sticky pour éviter de passer derrière le shell header */}
       <nav className="px-5 mt-5 pt-2 pb-3" role="tablist">
-        <div className="flex gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide">
+        <div className="flex gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]">
           <TabBtn active={tab === "sorties"} onClick={() => setTab("sorties")}>
             <PackageX className="w-3.5 h-3.5" />
             Sorties&nbsp;

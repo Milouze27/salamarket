@@ -193,7 +193,7 @@ export default function V2AdminDashboardPage() {
   );
 
   return (
-    <V2Shell>
+    <V2Shell wide>
       <PageAccentStripe accent="or-sapin" />
       <header className="px-4 sm:px-5 pt-7">
         <BackButton />

@@ -30,10 +30,10 @@ const BUILD_VERSION = (() => {
   }
 })();
 
-// Bump v2 → v3 : ajout de /offline.html au précache (page de repli
-// brandée autonome). Le changement de préfixe purge les anciens caches
-// offline à l'activate, garantissant que /offline.html est bien présent.
-const CACHE_VERSION = `v3-${BUILD_VERSION}`;
+// Bump v3 → v4 : purge propre forcée (diagnostic « boutons qui ne répondent
+// pas » → suspicion de shell/chunks périmés en cache sur iOS). Le changement
+// de préfixe supprime TOUS les anciens caches à l'activate.
+const CACHE_VERSION = `v4-${BUILD_VERSION}`;
 const STATIC_CACHE = `salam-stock-static-${CACHE_VERSION}`;
 const OFFLINE_CACHE = `salam-stock-offline-${CACHE_VERSION}`;
 const SHELL_CACHE = `salam-stock-shell-${CACHE_VERSION}`;

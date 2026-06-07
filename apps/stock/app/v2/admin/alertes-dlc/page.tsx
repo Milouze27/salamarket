@@ -80,8 +80,8 @@ const NIVEAU_STYLE: Record<
   },
   surveillance: {
     bg: "bg-[#FBF4D4]",
-    text: "text-[#8B6F0E]",
-    border: "border-[#C9A227]/40",
+    text: "text-[color:var(--or-text)]",
+    border: "border-[color:var(--accent-gold)]/40",
     chipBg: "bg-[#C9A227] text-[#3A2D08]",
   },
   ok: {
@@ -456,7 +456,7 @@ function KpiCard({
   const palette: Record<typeof variant, string> = {
     danger: "border-[#E5483D]/30 text-[#A8231A]",
     warn: "border-[#D97706]/30 text-[#92400E]",
-    gold: "border-[#C9A227]/40 text-[#8B6F0E]",
+    gold: "border-[color:var(--accent-gold)]/40 text-[color:var(--or-text)]",
     neutral: "border-rule text-text-primary",
   };
   return (

@@ -29,7 +29,7 @@ export function LotBadge({
       href={`/v2/lots/${encodeURIComponent(lotId)}`}
       onClick={(e) => e.stopPropagation()}
       aria-label={`Voir le lot ${lotId}`}
-      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[color:var(--accent-gold-soft)] text-[#8B6F0E] text-[11px] font-extrabold tracking-tight active:opacity-80 transition-opacity ${className}`}
+      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[color:var(--accent-gold-soft)] text-[color:var(--or-text)] text-[11px] font-extrabold tracking-tight active:opacity-80 transition-opacity ${className}`}
     >
       <ShieldCheck className="w-3.5 h-3.5" strokeWidth={2.4} />
       {certifier && (

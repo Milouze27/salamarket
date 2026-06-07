@@ -273,7 +273,7 @@ export default function Checkout() {
     : `Payer ${totalLabel} en ligne`;
 
   return (
-    <div className="min-h-dvh bg-background pb-24">
+    <div className="min-h-dvh bg-background pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       {/* Header sticky — respecte safe-area-inset-top (Dynamic Island) */}
       <header
         className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background px-4 sm:px-6 pb-3"

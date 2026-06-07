@@ -57,7 +57,7 @@ const PARIS_TZ = "Europe/Paris";
 
 const formatEUR = (cents: number) =>
   new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
-    (cents ?? 0) / 100
+    (cents ?? 0) / 100,
   );
 
 interface OrderItem {
@@ -196,7 +196,7 @@ const OrderConfirmation = () => {
               order_id: orderId,
               session_id: sessionId ?? null,
             }),
-          }
+          },
         );
 
         const data = await res.json();
@@ -345,7 +345,10 @@ const OrderConfirmation = () => {
   return (
     <div
       className="min-h-dvh bg-cream"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       <div className="max-w-xl mx-auto px-5 md:px-8 space-y-7">
         {/* En-tête claque — pagination "01 / Commande reçue" + sceau
@@ -355,7 +358,10 @@ const OrderConfirmation = () => {
             <span className="text-[26px] md:text-[30px] font-extrabold text-[#C9A227] tabular-nums leading-none tracking-[-0.04em]">
               01
             </span>
-            <span aria-hidden className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25" />
+            <span
+              aria-hidden
+              className="h-px flex-1 max-w-[80px] bg-[#0E3B2E]/25"
+            />
             <span className="text-[10px] uppercase tracking-[0.32em] font-bold text-[#0E3B2E]">
               Commande reçue
             </span>
@@ -437,7 +443,9 @@ const OrderConfirmation = () => {
           </ul>
           <div className="mt-5 pt-5 border-t border-[#0E3B2E]/15 flex items-baseline justify-between">
             <span className="text-[13px] uppercase tracking-[0.18em] font-bold text-[#0E3B2E]">
-              {order.payment_status === "authorized" ? "Total estimé" : "Total réglé"}
+              {order.payment_status === "authorized"
+                ? "Total estimé"
+                : "Total réglé"}
             </span>
             <span className="text-[28px] md:text-[32px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.025em]">
               {formatEUR(order.total_cents)}
@@ -579,8 +587,8 @@ const OrderConfirmation = () => {
             Une question ?
           </p>
           <p className="text-[14px] text-[#0F1A14]/80 leading-relaxed max-w-[48ch]">
-            L'équipe Salamarket est joignable au magasin pendant les
-            horaires d'ouverture, ou via votre espace commandes.
+            L'équipe Salamarket est joignable au magasin pendant les horaires
+            d'ouverture, ou via votre espace commandes.
           </p>
         </section>
 

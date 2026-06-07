@@ -76,7 +76,7 @@ const Slots = () => {
     <div className="min-h-dvh bg-bg text-text flex flex-col">
       <AppHeader showBack title="Choisir mon créneau" />
 
-      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-36 flex flex-col gap-3">
+      <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 pt-4 pb-[calc(9rem+env(safe-area-inset-bottom,0px))] flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-muted">Retrait à {BRAND.store.name}</p>
           {/* Signal de confiance discret avant paiement (CRO trust). */}

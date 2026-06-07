@@ -100,7 +100,7 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
     .select(
       "id, numero_commande, client_nom, client_email, total_ttc, " +
         "mode_paiement, statut, created_at, " +
-        "commandes_drive_lignes(produit_id, quantite, prix_unitaire)"
+        "commandes_drive_lignes(produit_id, quantite, prix_unitaire)",
     )
     .gte("created_at", startParis)
     .lte("created_at", endParis)
@@ -147,7 +147,11 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
 
   // Récupère le détail des produits pour avoir catégorie + ean + nom
   const produitIds = Array.from(
-    new Set(commandes.flatMap((c) => c.commandes_drive_lignes.map((l) => l.produit_id)))
+    new Set(
+      commandes.flatMap((c) =>
+        c.commandes_drive_lignes.map((l) => l.produit_id),
+      ),
+    ),
   );
   const { data: produits } = await sb
     .from("produits")
@@ -168,12 +172,16 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
   }
 
   const lignes: DailyZLigne[] = [];
-  const tvaParTaux: Record<string, { base_ht: number; tva: number; ttc: number }> = {};
+  const tvaParTaux: Record<
+    string,
+    { base_ht: number; tva: number; ttc: number }
+  > = {};
   const modes: Record<string, number> = {};
   let caTtc = 0;
 
   for (const c of commandes) {
-    modes[c.mode_paiement] = (modes[c.mode_paiement] ?? 0) + Number(c.total_ttc);
+    modes[c.mode_paiement] =
+      (modes[c.mode_paiement] ?? 0) + Number(c.total_ttc);
     caTtc += Number(c.total_ttc);
 
     for (const l of c.commandes_drive_lignes) {
@@ -182,13 +190,18 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
       const prixUnit = Number(l.prix_unitaire);
       const totalLigne = prixUnit * qty;
       const rate = tvaRateForCategory(p?.categorie);
-      const { ht, tva } = decomposeTTC(totalLigne, rate);
+      const { tva } = decomposeTTC(totalLigne, rate);
+      // Arrondi commercial NF525 : on arrondit la TVA au centime, puis HT = TTC −
+      // TVA pour que HT + TVA = TTC exactement (pas de centime fantôme accumulé).
+      const ttcR = Math.round(totalLigne * 100) / 100;
+      const tvaR = Math.round(tva * 100) / 100;
+      const htR = Math.round((ttcR - tvaR) * 100) / 100;
 
       const key = rate.toFixed(1);
       if (!tvaParTaux[key]) tvaParTaux[key] = { base_ht: 0, tva: 0, ttc: 0 };
-      tvaParTaux[key].base_ht += ht;
-      tvaParTaux[key].tva += tva;
-      tvaParTaux[key].ttc += totalLigne;
+      tvaParTaux[key].base_ht += htR;
+      tvaParTaux[key].tva += tvaR;
+      tvaParTaux[key].ttc += ttcR;
 
       lignes.push({
         numero_commande: c.numero_commande,
@@ -200,9 +213,9 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
         produit_ean: p?.ean ?? null,
         quantite: qty,
         prix_unitaire_ttc: prixUnit,
-        total_ligne_ttc: totalLigne,
-        total_ligne_ht: ht,
-        total_ligne_tva: tva,
+        total_ligne_ttc: ttcR,
+        total_ligne_ht: htR,
+        total_ligne_tva: tvaR,
         tva_taux: rate,
         mode_paiement: c.mode_paiement,
         created_at: c.created_at,

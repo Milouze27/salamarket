@@ -34,7 +34,14 @@ const KEYWORDS: Record<string, string[]> = {
   heure: ["heure", "time"],
   ticket: ["ticket", "ref", "n°", "numero"],
   codebarre: ["code barre", "code-barre", "codebarre", "ean", "gencod"],
-  designation: ["designation", "désignation", "produit", "libelle", "libellé", "nom"],
+  designation: [
+    "designation",
+    "désignation",
+    "produit",
+    "libelle",
+    "libellé",
+    "nom",
+  ],
   quantite: ["quantite", "quantité", "qte", "qté", "nombre"],
   prixttc: ["prix ttc", "ttc", "montant ttc", "total ttc"],
   prixht: ["prix ht", "ht", "montant ht"],
@@ -49,7 +56,7 @@ function detectSeparator(firstLine: string): string {
     "\t": (firstLine.match(/\t/g) || []).length,
   };
   const sep = (Object.keys(counts) as Array<keyof typeof counts>).reduce(
-    (a, b) => (counts[a] >= counts[b] ? a : b)
+    (a, b) => (counts[a] >= counts[b] ? a : b),
   );
   return sep || ";";
 }
@@ -107,8 +114,15 @@ function splitCsvLine(line: string, sep: string): string[] {
       i++;
       continue;
     }
-    if (c === '"') { inQuote = !inQuote; continue; }
-    if (c === sep && !inQuote) { out.push(current); current = ""; continue; }
+    if (c === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
+    if (c === sep && !inQuote) {
+      out.push(current);
+      current = "";
+      continue;
+    }
     current += c;
   }
   out.push(current);
@@ -121,8 +135,17 @@ export function parseCashmagCsv(raw: string): CashmagParseResult {
   const errors: CashmagParseResult["errors"] = [];
 
   if (lines.length === 0) {
-    return { rows: [], errors: [{ line: 0, raw: "", reason: "Fichier vide" }],
-      meta: { separator: ";", headers: [], columnIndex: {}, rowsCount: 0, rowsSkipped: 0 } };
+    return {
+      rows: [],
+      errors: [{ line: 0, raw: "", reason: "Fichier vide" }],
+      meta: {
+        separator: ";",
+        headers: [],
+        columnIndex: {},
+        rowsCount: 0,
+        rowsSkipped: 0,
+      },
+    };
   }
 
   const separator = detectSeparator(lines[0]);
@@ -134,9 +157,20 @@ export function parseCashmagCsv(raw: string): CashmagParseResult {
   if (missing.length > 0) {
     return {
       rows: [],
-      errors: [{ line: 1, raw: lines[0],
-        reason: `Colonnes manquantes : ${missing.join(", ")}. Headers : ${headers.join(" / ")}` }],
-      meta: { separator, headers, columnIndex, rowsCount: 0, rowsSkipped: lines.length - 1 },
+      errors: [
+        {
+          line: 1,
+          raw: lines[0],
+          reason: `Colonnes manquantes : ${missing.join(", ")}. Headers : ${headers.join(" / ")}`,
+        },
+      ],
+      meta: {
+        separator,
+        headers,
+        columnIndex,
+        rowsCount: 0,
+        rowsSkipped: lines.length - 1,
+      },
     };
   }
 
@@ -152,7 +186,30 @@ export function parseCashmagCsv(raw: string): CashmagParseResult {
       const designation = get("designation");
       const ttc = parseNumberFr(get("prixttc"));
       if (!date || !ticket || !designation || ttc === null) {
-        errors.push({ line: i + 1, raw, reason: "Champs obligatoires manquants" });
+        errors.push({
+          line: i + 1,
+          raw,
+          reason: "Champs obligatoires manquants",
+        });
+        continue;
+      }
+      // Validation montants : un prix négatif ou une quantité ≤ 0 = erreur de CSV.
+      // On les REJETTE (surfacé dans l'UI) plutôt que de fausser silencieusement le CA.
+      if (ttc < 0) {
+        errors.push({
+          line: i + 1,
+          raw,
+          reason: "Prix TTC négatif — ligne ignorée (vérifier le CSV)",
+        });
+        continue;
+      }
+      const quantite = parseNumberFr(get("quantite")) ?? 1;
+      if (quantite <= 0) {
+        errors.push({
+          line: i + 1,
+          raw,
+          reason: "Quantité ≤ 0 — ligne ignorée",
+        });
         continue;
       }
       rows.push({
@@ -161,7 +218,7 @@ export function parseCashmagCsv(raw: string): CashmagParseResult {
         numero_ticket: ticket.toString(),
         code_barre: get("codebarre")?.toString() ?? null,
         designation,
-        quantite: parseNumberFr(get("quantite")) ?? 1,
+        quantite,
         prix_ttc: ttc,
         prix_ht: parseNumberFr(get("prixht")),
         tva_taux: parseNumberFr(get("tvataux")),
@@ -169,10 +226,23 @@ export function parseCashmagCsv(raw: string): CashmagParseResult {
         raw_line: raw,
       });
     } catch (e) {
-      errors.push({ line: i + 1, raw, reason: e instanceof Error ? e.message : "Erreur" });
+      errors.push({
+        line: i + 1,
+        raw,
+        reason: e instanceof Error ? e.message : "Erreur",
+      });
     }
   }
 
-  return { rows, errors,
-    meta: { separator, headers, columnIndex, rowsCount: rows.length, rowsSkipped: errors.length } };
+  return {
+    rows,
+    errors,
+    meta: {
+      separator,
+      headers,
+      columnIndex,
+      rowsCount: rows.length,
+      rowsSkipped: errors.length,
+    },
+  };
 }

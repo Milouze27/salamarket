@@ -32,18 +32,24 @@ export function AssistantFab({ role, hideOnNoNav = false }: Props) {
         boxShadow: "var(--glow-cta)",
       }}
     >
-      {/* Halo or qui respire (pulse subtil, pas un ping agressif). */}
+      {/* Halo doux DERRIÈRE le bouton (ne pulse plus l'opacité du centre :
+          l'icône dorée disparaissait dans le halo doré au pic du pulse). */}
       <span
         aria-hidden
-        className="absolute -inset-1.5 rounded-full pointer-events-none motion-safe:animate-pulse"
+        className="absolute -inset-2 rounded-full pointer-events-none motion-safe:animate-pulse"
         style={{
           background:
-            "radial-gradient(circle, var(--accent-gold-soft) 0%, transparent 70%)",
+            "radial-gradient(circle, var(--accent-gold-soft) 0%, transparent 65%)",
+          opacity: 0.5,
+          zIndex: -1,
         }}
       />
+      {/* Icône BLANCHE : contraste maximal sur le vert, jamais avalée par le
+          halo doré (correctif visibilité). Léger drop-shadow pour le relief. */}
       <Sparkles
-        className="w-6 h-6 text-[var(--accent-gold-bright)] relative"
+        className="w-6 h-6 text-white relative"
         strokeWidth={2.4}
+        style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))" }}
       />
     </Link>
   );

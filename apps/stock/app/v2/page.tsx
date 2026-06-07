@@ -15,6 +15,7 @@ import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
 import { WeeklyPicksRail } from "@/components/v2/WeeklyPicksRail";
 import { OnboardingOverlay } from "@/components/v2/OnboardingOverlay";
+import { PilotageStrip } from "@/components/v2/PilotageStrip";
 
 /** Hero action — promoted card sapin plein en tête du hub. */
 const HERO_ACTION = {
@@ -107,11 +108,29 @@ export default function V2HomePage() {
         <p className="body-md text-text-secondary mt-3 max-w-[36ch]">{intro}</p>
       </header>
 
+      {/* PILOTAGE — coup d'œil du gérant dès l'ouverture (CA Drive+magasin,
+          commandes en cours, ruptures, stock). Admin/manager uniquement ;
+          le staff terrain garde un accueil centré sur les gestes. */}
+      {(role === "admin" || role === "manager") && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 0.61, 0.36, 1] }}
+          className="px-5 mt-6"
+        >
+          <PilotageStrip allDepots />
+        </motion.div>
+      )}
+
       {/* HERO ACTION — sapin plein, promotion de l'action principale */}
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
+        transition={{
+          duration: 0.28,
+          delay: 0.05,
+          ease: [0.22, 0.61, 0.36, 1],
+        }}
         className="px-5 mt-6"
       >
         <HeroActionCard

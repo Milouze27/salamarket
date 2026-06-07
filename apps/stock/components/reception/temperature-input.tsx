@@ -145,7 +145,7 @@ export function TemperatureInput({
               onChange(Number.isNaN(n) ? null : n);
             }}
             placeholder="—"
-            className={`w-full h-14 rounded-2xl bg-white border-2 ${palette.ring} text-center text-[28px] font-extrabold tabular ${palette.text} outline-none focus:ring-4 focus:ring-primary/15 disabled:opacity-60`}
+            className={`w-full h-14 rounded-2xl bg-white border-2 ${palette.ring} text-center text-[28px] font-extrabold tabular ${palette.text} outline-none focus:ring-4 focus:ring-[color:var(--primary-ring)] disabled:opacity-60`}
           />
           <span
             className={`absolute right-3 top-1/2 -translate-y-1/2 text-[14px] font-bold ${palette.text} pointer-events-none`}

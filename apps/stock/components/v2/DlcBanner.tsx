@@ -178,7 +178,7 @@ export function DlcBanner() {
   return (
     <Link
       href="/v2/admin/alertes-dlc"
-      className="flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border card-tappable outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+      className="flex items-center gap-3 mx-4 mt-3 px-3.5 py-3 min-h-[48px] rounded-2xl border card-tappable outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
       style={{
         background: `var(${p.surfaceVar})`,
         borderColor: statusColor,

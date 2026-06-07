@@ -663,7 +663,7 @@ export function V2Shell({
                         href={it.href}
                         aria-label={it.fullLabel ?? it.label}
                         aria-current={active ? "page" : undefined}
-                        className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
                       >
                         {active && (
                           <span
@@ -713,7 +713,7 @@ export function V2Shell({
                     }
                     aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
-                    className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
                   >
                     {sheetOpen && (
                       <span

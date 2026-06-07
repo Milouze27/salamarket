@@ -34,6 +34,8 @@
   --danger-border: rgba(229, 72, 61, 0.25);
   --warning-border: rgba(217, 119, 6, 0.25);
   --success-border: rgba(45, 122, 79, 0.25);
+  /* Anneau de focus sapin translucide (ring-primary/30 cassé : opacité sur var hex). */
+  --primary-ring: rgba(14, 59, 46, 0.3);
   --border-light: #e8e4d8;
   --border-medium: #d1ccb8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -957,6 +959,7 @@ body.theme-nuit {
   --danger-border: rgba(255, 112, 98, 0.32);
   --warning-border: rgba(242, 180, 60, 0.32);
   --success-border: rgba(79, 208, 138, 0.32);
+  --primary-ring: rgba(27, 106, 74, 0.4);
   --status-success: #4fd08a;
   --status-success-bg: rgba(79, 208, 138, 0.14);
   --status-success-text: #4fd08a;

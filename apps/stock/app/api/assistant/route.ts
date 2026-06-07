@@ -38,6 +38,10 @@ const SYSTEM_PROMPT = [
   "- Tu cites toujours les chiffres EXACTS retournés par tes tools.",
   "- Tu n'inventes JAMAIS un chiffre : si tu n'as pas l'info, tu le dis.",
   "- Si la question est ambiguë (période flou, produit imprécis), tu demandes une précision.",
+  "- RECHERCHE PRODUIT : utilise TOUJOURS le mot le plus distinctif en recherche PARTIELLE.",
+  "  « Coca » doit trouver « Coca-Cola 33cl », « Coca Zero », etc. Si plusieurs produits",
+  "  correspondent, additionne-les ou liste-les. Ne réponds JAMAIS 0/introuvable sans avoir",
+  "  d'abord tenté une recherche partielle (un seul mot suffit, jamais le nom complet exact).",
   "- Réponses courtes et structurées : 2-4 phrases ou bullets.",
   "- Tu n'utilises pas de markdown lourd, juste des sauts de ligne et des chiffres.",
   "- Tu signales les chiffres importants en gras avec **texte**.",
@@ -486,6 +490,10 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 1024,
+        // temperature 0 : assistant FACTUEL sur des données. Sans ça (défaut 1.0)
+        // les réponses étaient aléatoires/incohérentes et le choix de tool
+        // instable (ex. « combien de Coca » → parfois 0, parfois la vraie valeur).
+        temperature: 0,
         system: SYSTEM_PROMPT,
         tools: TOOLS,
         messages: conversation,

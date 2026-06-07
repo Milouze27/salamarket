@@ -358,30 +358,33 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.casseAnomalies,
     ITEMS.counter,
   ];
-  // Back-office complet, aligné sur le groupe ADMINISTRER de ⌘K. Le filtrage
-  // par rôle se charge de masquer ce qui dépasse le périmètre (un `reception`
-  // ne gardera ici que lots + inventaire + historique + bons de réception).
-  const administrer = [
-    ITEMS.admin,
+  // Back-office éclaté en sous-groupes scannables (au lieu d'un seul « Administrer »
+  // de ~19 entrées). Le filtrage par rôle masque ce qui dépasse le périmètre.
+  const surveillance = [
     ITEMS.alertes,
     ITEMS.alertesSurplus,
     ITEMS.activite,
-    ITEMS.comptesPro,
-    ITEMS.commandesPro,
-    ITEMS.facturesPro,
+    ITEMS.pointage,
+  ];
+  const ventesPro = [ITEMS.commandesPro, ITEMS.facturesPro, ITEMS.comptesPro];
+  const achats = [
     ITEMS.fournisseurs,
     ITEMS.po,
     ITEMS.bonsReception,
     ITEMS.lots,
-    ITEMS.labo,
-    ITEMS.inventaire,
-    ITEMS.inventaireHisto,
-    ITEMS.pointage,
+  ];
+  const fiscal = [
     ITEMS.recapFiscal,
     ITEMS.rapportMensuel,
     ITEMS.importCashmag,
     ITEMS.importStock,
+  ];
+  const reglages = [
+    ITEMS.admin,
     ITEMS.assistantIa,
+    ITEMS.inventaire,
+    ITEMS.inventaireHisto,
+    ITEMS.labo,
   ];
 
   // 1) périmètre par rôle (cohérent ⌘K) puis 2) dédup avec la bottom-bar.
@@ -391,7 +394,11 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   return [
     { heading: "Opérer", items: prepare(operer) },
     { heading: "Piloter", items: prepare(piloter) },
-    { heading: "Administrer", items: prepare(administrer) },
+    { heading: "Surveillance & alertes", items: prepare(surveillance) },
+    { heading: "Ventes & Pro", items: prepare(ventesPro) },
+    { heading: "Achats & fournisseurs", items: prepare(achats) },
+    { heading: "Fiscal & rapports", items: prepare(fiscal) },
+    { heading: "Réglages", items: prepare(reglages) },
   ].filter((g) => g.items.length > 0);
 }
 
@@ -415,6 +422,18 @@ export function V2Shell({
   const logout = useV2((s) => s.logoutEmploye);
   const [mode, setMode] = useState<"supabase" | "local">("local");
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Sous-groupes du Plus-sheet repliés par défaut, sauf le terrain + pilotage.
+  // L'utilisateur déplie le back-office au besoin (anti « bordel »).
+  const [openGroups, setOpenGroups] = useState<Set<string>>(
+    () => new Set(["Opérer", "Piloter"]),
+  );
+  const toggleGroup = (heading: string) =>
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(heading)) next.delete(heading);
+      else next.add(heading);
+      return next;
+    });
   // ARCH-12 — badge alertes DLC sur le bouton "Menu" (admin/manager +
   // préparation : eux agissent sur la démarque ou pickent les lots courts).
   // Résilient : 0 en démo locale ou si la vue est indisponible.
@@ -844,64 +863,84 @@ export function V2Shell({
                   </div>
                   {/* ARCH-02 — 3 plans mentaux, headings en eyebrow or-dim. */}
                   <div className="overflow-y-auto px-3 pb-[calc(var(--safe-bottom)+16px)]">
-                    {sheetGroups.map((group) => (
-                      <div key={group.heading} className="mb-1.5 last:mb-0">
-                        <p
-                          className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
-                          style={{ color: "var(--accent-gold-dim)" }}
-                        >
-                          {group.heading}
-                        </p>
-                        {group.items.map((it) => {
-                          const Icon = it.icon;
-                          const active = it.exact
-                            ? pathname === it.href
-                            : pathname.startsWith(it.href);
-                          return (
-                            <Link
-                              key={it.href}
-                              href={it.href}
-                              onClick={() => setSheetOpen(false)}
-                              aria-current={active ? "page" : undefined}
-                              className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors"
-                              style={
-                                active
-                                  ? { background: "var(--surface-2)" }
-                                  : undefined
-                              }
+                    {sheetGroups.map((group) => {
+                      const isOpen = openGroups.has(group.heading);
+                      return (
+                        <div key={group.heading} className="mb-1.5 last:mb-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(group.heading)}
+                            aria-expanded={isOpen}
+                            className="w-full flex items-center justify-between gap-2 px-3 pt-3 pb-1.5"
+                          >
+                            <span
+                              className="text-[10.5px] font-bold uppercase tracking-[0.12em] inline-flex items-center gap-2"
+                              style={{ color: "var(--accent-gold-dim)" }}
                             >
-                              <span
-                                className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                                style={
-                                  active
-                                    ? {
-                                        background: "var(--primary-green)",
-                                        color: "var(--text-primary)",
-                                      }
-                                    : {
-                                        background: "var(--surface-1)",
-                                        color: "var(--primary-green)",
-                                      }
-                                }
-                              >
-                                <Icon className="w-5 h-5" strokeWidth={2.1} />
+                              {group.heading}
+                              <span className="text-[10px] font-bold text-text-tertiary normal-case tracking-normal">
+                                {group.items.length}
                               </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-text-primary truncate">
-                                  {it.fullLabel ?? it.label}
-                                </p>
-                                {it.desc && (
-                                  <p className="text-[11px] text-text-tertiary truncate">
-                                    {it.desc}
-                                  </p>
-                                )}
-                              </div>
-                              <ChevronRight className="w-4 h-4 text-text-tertiary shrink-0" />
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    ))}
+                            </span>
+                            <ChevronRight
+                              className={`w-4 h-4 text-text-tertiary transition-transform ${isOpen ? "rotate-90" : ""}`}
+                            />
+                          </button>
+                          {isOpen &&
+                            group.items.map((it) => {
+                              const Icon = it.icon;
+                              const active = it.exact
+                                ? pathname === it.href
+                                : pathname.startsWith(it.href);
+                              return (
+                                <Link
+                                  key={it.href}
+                                  href={it.href}
+                                  onClick={() => setSheetOpen(false)}
+                                  aria-current={active ? "page" : undefined}
+                                  className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors"
+                                  style={
+                                    active
+                                      ? { background: "var(--surface-2)" }
+                                      : undefined
+                                  }
+                                >
+                                  <span
+                                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                                    style={
+                                      active
+                                        ? {
+                                            background: "var(--primary-green)",
+                                            color: "var(--text-primary)",
+                                          }
+                                        : {
+                                            background: "var(--surface-1)",
+                                            color: "var(--primary-green)",
+                                          }
+                                    }
+                                  >
+                                    <Icon
+                                      className="w-5 h-5"
+                                      strokeWidth={2.1}
+                                    />
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-text-primary truncate">
+                                      {it.fullLabel ?? it.label}
+                                    </p>
+                                    {it.desc && (
+                                      <p className="text-[11px] text-text-tertiary truncate">
+                                        {it.desc}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-text-tertiary shrink-0" />
+                                </Link>
+                              );
+                            })}
+                        </div>
+                      );
+                    })}
                   </div>
                 </motion.div>
               </>

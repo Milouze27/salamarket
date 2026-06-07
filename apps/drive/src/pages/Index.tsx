@@ -7,6 +7,7 @@ import { WeeklyPicks } from "@/components/WeeklyPicks";
 import { BundleCarousel } from "@/components/BundleCarousel";
 import { CategoryTabs } from "@/components/CategoryTabs";
 import { CourteDateBanner } from "@/components/CourteDateBanner";
+import { useDlcProductIds } from "@/components/HalalBadgeLink";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { useProducts } from "@/hooks/useProducts";
@@ -20,6 +21,10 @@ const Index = () => {
   // lit/écrit toujours via le query param. Évite la désync entre l'état
   // affiché et l'URL bookmarkable / partageable.
   const category = searchParams.get("category") || "all";
+  // Rayon anti-gaspi : ?courte_date=1 (depuis CourteDateBanner). On charge
+  // l'ensemble des produits en remise DLC seulement dans ce mode.
+  const courteDate = searchParams.get("courte_date") === "1";
+  const dlcIds = useDlcProductIds(courteDate);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const {
@@ -82,12 +87,14 @@ const Index = () => {
     if (!allProducts) return [];
     const term = normalizeSearch(debouncedSearch);
     return allProducts.filter((p) => {
+      // Rayon anti-gaspi : ne garde que les produits en remise DLC active.
+      if (courteDate && !(dlcIds?.has(p.id) ?? false)) return false;
       if (category !== "all" && p.category !== category) return false;
       if (!term) return true;
       const haystack = normalizeSearch(`${p.name} ${p.description ?? ""}`);
       return haystack.includes(term);
     });
-  }, [allProducts, category, debouncedSearch]);
+  }, [allProducts, category, debouncedSearch, courteDate, dlcIds]);
 
   const resetFilters = useCallback(() => {
     setCategory("all"); // nettoie l'URL
@@ -97,7 +104,7 @@ const Index = () => {
   // Affiche EditorialIntro + WeeklyPicks uniquement en mode "all" sans
   // recherche : mode "vitrine". Dès qu'on filtre/cherche, on entre en
   // mode catalogue pur, plus efficace.
-  const showVitrine = category === "all" && !debouncedSearch;
+  const showVitrine = category === "all" && !debouncedSearch && !courteDate;
 
   // Padding bas additif basé sur les hauteurs RÉELLES du stack fixe plutôt
   // qu'un magic number heuristique :
@@ -150,14 +157,28 @@ const Index = () => {
           <header className="mb-7 md:mb-10 flex items-end justify-between gap-4">
             <div>
               <p className="text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-2">
-                {debouncedSearch ? "Recherche" : "Rayon"}
+                {courteDate
+                  ? "Anti-gaspi"
+                  : debouncedSearch
+                    ? "Recherche"
+                    : "Rayon"}
               </p>
               <h1 className="text-[26px] md:text-[36px] leading-[1.05] text-[#0E3B2E] font-extrabold tracking-[-0.03em]">
-                {debouncedSearch
-                  ? `« ${debouncedSearch} »`
-                  : (BRAND.categories.find((c) => c.slug === category)?.name ??
-                    "Tout")}
+                {courteDate
+                  ? "Courte date, petits prix"
+                  : debouncedSearch
+                    ? `« ${debouncedSearch} »`
+                    : (BRAND.categories.find((c) => c.slug === category)
+                        ?.name ?? "Tout")}
               </h1>
+              {courteDate && (
+                <button
+                  onClick={resetFilters}
+                  className="mt-2 text-[12px] font-bold text-[#0E3B2E] underline underline-offset-2"
+                >
+                  ← Tout le catalogue
+                </button>
+              )}
             </div>
             {products.length > 0 && (
               <span className="text-[12px] text-[#0F1A14]/55 pb-1.5 tabular-nums">

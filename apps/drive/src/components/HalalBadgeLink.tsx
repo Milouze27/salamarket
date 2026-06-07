@@ -176,6 +176,60 @@ export function useDlcDiscount(
   return discount;
 }
 
+/**
+ * Ensemble des produit_id ayant une remise DLC active (anti-gaspi), pour filtrer
+ * le catalogue (rayon « courte date »). Une seule requête sur v_dlc_alerts, même
+ * règle d'éligibilité que useDlcDiscount (niveau ≠ ok/forcé, remise > 0).
+ * Retourne null tant que c'est en cours (≠ Set vide = chargé mais aucun produit).
+ */
+export function useDlcProductIds(enabled = true): Set<string> | null {
+  const [ids, setIds] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIds(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("v_dlc_alerts" as never)
+          .select("produit_id, niveau_alerte, remise_suggeree_pct");
+        if (cancelled) return;
+        if (error || !data) {
+          setIds(new Set());
+          return;
+        }
+        const rows = data as unknown as Array<{
+          produit_id: string | null;
+          niveau_alerte: string | null;
+          remise_suggeree_pct: number | null;
+        }>;
+        const set = new Set<string>();
+        for (const r of rows) {
+          if (
+            r.produit_id &&
+            r.niveau_alerte !== "ok" &&
+            r.niveau_alerte !== "forcé" &&
+            (r.remise_suggeree_pct ?? 0) > 0
+          ) {
+            set.add(r.produit_id);
+          }
+        }
+        setIds(set);
+      } catch {
+        if (!cancelled) setIds(new Set());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  return ids;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // UI — Passeport halal
 // ─────────────────────────────────────────────────────────────────────────────

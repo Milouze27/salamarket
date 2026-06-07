@@ -179,6 +179,27 @@ export function createBrandDoc(
   return doc;
 }
 
+/**
+ * Crée un document FORMAT TICKET (rouleau étroit, ex. 80 mm) avec les polices
+ * marque enregistrées. Pour le ticket de caisse / reçu de retrait magasin,
+ * imprimable sur une imprimante thermique 80 mm ou en PDF. La hauteur est
+ * volontairement large (le contenu réel est court ; l'aperçu coupe le blanc).
+ */
+export function createBrandReceipt(
+  jsPDFCtor: new (...args: any[]) => jsPDF,
+  widthMm = 80,
+  heightMm = 200,
+): jsPDF {
+  const doc = new jsPDFCtor({
+    unit: "mm",
+    format: [widthMm, heightMm],
+    orientation: "portrait",
+  });
+  registerBrandFonts(doc);
+  setBrandFont(doc, "normal");
+  return doc;
+}
+
 // ─── Formatters ─────────────────────────────────────────────────────────
 /**
  * Formate des CENTIMES en montant € français : `123456` → `"1 234,56 €"`.

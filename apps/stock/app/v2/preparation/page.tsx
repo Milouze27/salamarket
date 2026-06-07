@@ -16,6 +16,7 @@ import {
   ListChecks,
   Lock,
   PackageCheck,
+  Receipt,
   PackageOpen,
   PlayCircle,
   Scale,
@@ -1113,6 +1114,22 @@ export default function V2PreparationKanbanPage() {
                     <CheckCircle2 className="w-4 h-4" />
                     Marquer retirée par le client
                   </button>
+                )}
+                {(actionFor.statut === "pret" ||
+                  actionFor.statut === "retire") && (
+                  <a
+                    href={`/api/commandes-drive/${actionFor.id}/ticket`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full border text-text-primary rounded-[18px] py-3 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
+                    style={{
+                      background: "var(--surface-2)",
+                      borderColor: "var(--border-card)",
+                    }}
+                  >
+                    <Receipt className="w-4 h-4 text-primary" />
+                    Imprimer le ticket de retrait
+                  </a>
                 )}
                 <Link
                   href={`/v2/preparation/${actionFor.id}`}

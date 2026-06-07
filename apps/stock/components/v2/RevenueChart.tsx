@@ -94,11 +94,28 @@ export function RevenueChart({
     }, 0);
 
   const total = useMemo(() => sum(sliced, series), [sliced, series]);
-  const previousTotal = useMemo(() => sum(previousSliced, series), [previousSliced, series]);
-  const delta = previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : null;
+  const previousTotal = useMemo(
+    () => sum(previousSliced, series),
+    [previousSliced, series],
+  );
+  const delta =
+    previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : null;
 
-  const showParticulier = series === "global" || series === "particulier";
-  const showPro = series === "global" || series === "pro";
+  // Une série n'a-t-elle AUCUNE donnée sur la période ? Sinon on traçait une
+  // ligne plate à 0 (ex. « Pro » à 0 en vue Global) = illisible. On masque les
+  // séries vides en vue Global ; en vue dédiée on garde (l'empty state gère).
+  const particulierHasData = useMemo(
+    () => sliced.some((d) => (d.particulier ?? 0) > 0),
+    [sliced],
+  );
+  const proHasData = useMemo(
+    () => sliced.some((d) => (d.pro ?? 0) > 0),
+    [sliced],
+  );
+  const showParticulier =
+    series === "particulier" || (series === "global" && particulierHasData);
+  const showPro = series === "pro" || (series === "global" && proHasData);
+  const noData = !particulierHasData && !proHasData;
 
   return (
     <div className="bg-white border border-rule rounded-[20px] p-4 shadow-card">
@@ -141,9 +158,7 @@ export function RevenueChart({
                   key={p}
                   onClick={() => setPeriod(n)}
                   className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
-                    active
-                      ? "bg-primary text-white"
-                      : "text-text-secondary"
+                    active ? "bg-primary text-white" : "text-text-secondary"
                   }`}
                 >
                   {p}j
@@ -213,163 +228,209 @@ export function RevenueChart({
         onMouseLeave={() => setTooltipVisible(false)}
         onMouseEnter={() => setTooltipVisible(true)}
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={sliced}
-            margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="grad-particulier" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLOR.particulier} stopOpacity={0.55} />
-                <stop offset="100%" stopColor={COLOR.particulier} stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="grad-pro" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLOR.pro} stopOpacity={0.55} />
-                <stop offset="100%" stopColor={COLOR.pro} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              vertical={false}
-              stroke="var(--border-light)"
-              strokeDasharray="3 4"
-            />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(v: string) => formatDay(v)}
-              tick={{
-                fill: "var(--text-tertiary)",
-                fontSize: 10,
-                fontWeight: 600,
-              }}
-              tickLine={false}
-              axisLine={false}
-              interval="preserveStartEnd"
-              minTickGap={32}
-            />
-            <YAxis
-              hide
-              domain={["dataMin - 50", "dataMax + 50"]}
-            />
-            <Tooltip
-              active={tooltipVisible ? undefined : false}
-              /* Clamp horizontal ET vertical : la card recap ne peut plus
+        {noData ? (
+          <div className="h-full flex flex-col items-center justify-center text-center gap-1">
+            <p className="text-[13px] font-bold text-text-secondary">
+              Pas encore de vente sur cette période
+            </p>
+            <p className="text-[11.5px] text-text-tertiary">
+              Le graphique se remplira dès les premières commandes.
+            </p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={sliced}
+              margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
+            >
+              <defs>
+                <linearGradient
+                  id="grad-particulier"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={COLOR.particulier}
+                    stopOpacity={0.55}
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={COLOR.particulier}
+                    stopOpacity={0.02}
+                  />
+                </linearGradient>
+                <linearGradient id="grad-pro" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={COLOR.pro} stopOpacity={0.55} />
+                  <stop
+                    offset="100%"
+                    stopColor={COLOR.pro}
+                    stopOpacity={0.02}
+                  />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                vertical={false}
+                stroke="var(--border-light)"
+                strokeDasharray="3 4"
+              />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(v: string) => formatDay(v)}
+                tick={{
+                  fill: "var(--text-tertiary)",
+                  fontSize: 10,
+                  fontWeight: 600,
+                }}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+                minTickGap={32}
+              />
+              <YAxis hide domain={[0, "auto"]} />
+              <Tooltip
+                active={tooltipVisible ? undefined : false}
+                /* Clamp horizontal ET vertical : la card recap ne peut plus
                  sortir du chart. C'était le bug "tooltip dans le top-left
                  de l'écran" quand on tape près du bord gauche. */
-              allowEscapeViewBox={{ x: false, y: false }}
-              offset={14}
-              cursor={{
-                stroke: "var(--border-medium)",
-                strokeWidth: 1,
-                strokeDasharray: "3 3",
-              }}
-              wrapperStyle={{
-                outline: "none",
-                pointerEvents: "none",
-                zIndex: 50,
-                transition: "opacity 120ms ease-out",
-              }}
-              contentStyle={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border-light)",
-                borderRadius: 12,
-                boxShadow: "0 12px 32px rgba(14,59,46,0.18)",
-                padding: "10px 12px",
-                fontSize: 12,
-                maxWidth: 200,
-              }}
-              labelStyle={{
-                color: "var(--text-secondary)",
-                fontSize: 11,
-                fontWeight: 600,
-                marginBottom: 4,
-              }}
-              itemStyle={{
-                color: "var(--text-primary)",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "2px 0",
-              }}
-              labelFormatter={(v) =>
-                typeof v === "string" ? formatDay(v) : String(v)
-              }
-              formatter={(value, name) => [
-                formatEUR(Number(value)),
-                name === "particulier" ? "Particulier" : "Pro",
-              ]}
-            />
-            {showParticulier && (
-              <Area
-                type="monotone"
-                dataKey="particulier"
-                stroke={COLOR.particulierStroke}
-                strokeWidth={2.4}
-                fill="url(#grad-particulier)"
-                isAnimationActive
-                animationDuration={420}
-                /* Dot visible uniquement sur les jours avec activité — évite
+                allowEscapeViewBox={{ x: false, y: false }}
+                offset={14}
+                cursor={{
+                  stroke: "var(--border-medium)",
+                  strokeWidth: 1,
+                  strokeDasharray: "3 3",
+                }}
+                wrapperStyle={{
+                  outline: "none",
+                  pointerEvents: "none",
+                  zIndex: 50,
+                  transition: "opacity 120ms ease-out",
+                }}
+                contentStyle={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-light)",
+                  borderRadius: 12,
+                  boxShadow: "0 12px 32px rgba(14,59,46,0.18)",
+                  padding: "10px 12px",
+                  fontSize: 12,
+                  maxWidth: 200,
+                }}
+                labelStyle={{
+                  color: "var(--text-secondary)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  marginBottom: 4,
+                }}
+                itemStyle={{
+                  color: "var(--text-primary)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "2px 0",
+                }}
+                labelFormatter={(v) =>
+                  typeof v === "string" ? formatDay(v) : String(v)
+                }
+                formatter={(value, name) => [
+                  formatEUR(Number(value)),
+                  name === "particulier" ? "Particulier" : "Pro",
+                ]}
+              />
+              {showParticulier && (
+                <Area
+                  type="monotone"
+                  dataKey="particulier"
+                  stroke={COLOR.particulierStroke}
+                  strokeWidth={2.4}
+                  fill="url(#grad-particulier)"
+                  isAnimationActive
+                  animationDuration={420}
+                  /* Dot visible uniquement sur les jours avec activité — évite
                    les ronds inutiles sur 30j de zéros, mais rend visibles
                    les rares pics quand il n'y a que quelques commandes. */
-                dot={(props: { cx?: number; cy?: number; payload?: RevenueDataPoint }) => {
-                  const v = props.payload?.particulier ?? 0;
-                  if (v <= 0 || props.cx === undefined || props.cy === undefined) {
-                    return <g key={`dot-p-${props.cx ?? 0}-${props.cy ?? 0}`} />;
-                  }
-                  return (
-                    <circle
-                      key={`dot-p-${props.cx}-${props.cy}`}
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={3.5}
-                      fill={COLOR.particulier}
-                      stroke={COLOR.particulierStroke}
-                      strokeWidth={1.5}
-                    />
-                  );
-                }}
-                activeDot={{
-                  r: 5,
-                  fill: COLOR.particulier,
-                  stroke: COLOR.particulierStroke,
-                  strokeWidth: 2,
-                }}
-              />
-            )}
-            {showPro && (
-              <Area
-                type="monotone"
-                dataKey="pro"
-                stroke={COLOR.proStroke}
-                strokeWidth={2.4}
-                fill="url(#grad-pro)"
-                isAnimationActive
-                animationDuration={420}
-                dot={(props: { cx?: number; cy?: number; payload?: RevenueDataPoint }) => {
-                  const v = props.payload?.pro ?? 0;
-                  if (v <= 0 || props.cx === undefined || props.cy === undefined) {
-                    return <g key={`dot-pr-${props.cx ?? 0}-${props.cy ?? 0}`} />;
-                  }
-                  return (
-                    <circle
-                      key={`dot-pr-${props.cx}-${props.cy}`}
-                      cx={props.cx}
-                      cy={props.cy}
-                      r={3.5}
-                      fill={COLOR.pro}
-                      stroke={COLOR.proStroke}
-                      strokeWidth={1.5}
-                    />
-                  );
-                }}
-                activeDot={{
-                  r: 5,
-                  fill: COLOR.pro,
-                  stroke: COLOR.proStroke,
-                  strokeWidth: 2,
-                }}
-              />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+                  dot={(props: {
+                    cx?: number;
+                    cy?: number;
+                    payload?: RevenueDataPoint;
+                  }) => {
+                    const v = props.payload?.particulier ?? 0;
+                    if (
+                      v <= 0 ||
+                      props.cx === undefined ||
+                      props.cy === undefined
+                    ) {
+                      return (
+                        <g key={`dot-p-${props.cx ?? 0}-${props.cy ?? 0}`} />
+                      );
+                    }
+                    return (
+                      <circle
+                        key={`dot-p-${props.cx}-${props.cy}`}
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={3.5}
+                        fill={COLOR.particulier}
+                        stroke={COLOR.particulierStroke}
+                        strokeWidth={1.5}
+                      />
+                    );
+                  }}
+                  activeDot={{
+                    r: 5,
+                    fill: COLOR.particulier,
+                    stroke: COLOR.particulierStroke,
+                    strokeWidth: 2,
+                  }}
+                />
+              )}
+              {showPro && (
+                <Area
+                  type="monotone"
+                  dataKey="pro"
+                  stroke={COLOR.proStroke}
+                  strokeWidth={2.4}
+                  fill="url(#grad-pro)"
+                  isAnimationActive
+                  animationDuration={420}
+                  dot={(props: {
+                    cx?: number;
+                    cy?: number;
+                    payload?: RevenueDataPoint;
+                  }) => {
+                    const v = props.payload?.pro ?? 0;
+                    if (
+                      v <= 0 ||
+                      props.cx === undefined ||
+                      props.cy === undefined
+                    ) {
+                      return (
+                        <g key={`dot-pr-${props.cx ?? 0}-${props.cy ?? 0}`} />
+                      );
+                    }
+                    return (
+                      <circle
+                        key={`dot-pr-${props.cx}-${props.cy}`}
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={3.5}
+                        fill={COLOR.pro}
+                        stroke={COLOR.proStroke}
+                        strokeWidth={1.5}
+                      />
+                    );
+                  }}
+                  activeDot={{
+                    r: 5,
+                    fill: COLOR.pro,
+                    stroke: COLOR.proStroke,
+                    strokeWidth: 2,
+                  }}
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </motion.div>
     </div>
   );

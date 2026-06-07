@@ -282,12 +282,11 @@ body {
 html,
 body {
   overscroll-behavior-y: none;
-  /* Filet anti-ascenseur horizontal : un texte en MAJ avec letter-spacing large
-     (tracking) ou un élément trop large ne doit jamais créer un scroll horizontal
-     sur toute la page. Les scrollers VOULUS (rails) ont leur propre overflow-x-auto
-     et continuent de fonctionner à l'intérieur. */
-  overflow-x: hidden;
-  max-width: 100%;
+  /* Filet anti-ascenseur horizontal. IMPORTANT : `overflow-x: clip` et NON
+     `hidden` — `hidden` force `overflow-y` à `auto` et crée un conteneur de
+     scroll sur html, ce qui CASSAIT le scroll vertical sur desktop. `clip`
+     empêche le débordement horizontal sans toucher au scroll vertical. */
+  overflow-x: clip;
 }
 
 /* Filet anti-highlight tap iOS (en plus du sélecteur * global plus haut). */

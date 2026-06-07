@@ -920,10 +920,7 @@ export function CommandPalette() {
               </kbd>
               Ouvrir
             </span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className="font-bold bg-white border border-rule rounded px-1.5 py-0.5">
-                ⌘K
-              </kbd>
+            <span className="inline-flex items-center gap-1 font-bold">
               Salam Stock
             </span>
           </div>

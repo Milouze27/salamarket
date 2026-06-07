@@ -276,7 +276,7 @@ export default function CounterPage() {
 
       {/* Footer hint */}
       <footer className="absolute bottom-4 inset-x-0 text-center text-[var(--text-tertiary)] text-[11px] tracking-[0.18em] uppercase font-semibold pointer-events-none">
-        Mise à jour automatique · Plein écran ⌃⌘F
+        Mise à jour automatique
       </footer>
     </main>
   );
@@ -417,18 +417,23 @@ function BayCard({ row, isOldest }: { row: CounterRow; isOldest: boolean }) {
         boxShadow: "var(--shadow-elevated)",
       }}
     >
-      {/* Bay label — gigantesque, or-bright, rayonne comme un néon. */}
+      {/* Bay label — gigantesque pour un code court (A1, B2…), rayonne comme un
+          néon. Sans borne assignée (overflow), on N'affiche PAS le mot
+          « OVERFLOW » (8 lettres qui débordaient la carte) : un libellé « En
+          file » compact qui tient, le n° de commande reste l'identifiant. */}
       <p
         className="font-bold tabular tracking-tighter leading-none"
         style={{
-          fontSize: "clamp(64px, 8.4vw, 124px)",
+          fontSize: isOverflow
+            ? "clamp(28px, 3.4vw, 52px)"
+            : "clamp(64px, 8.4vw, 124px)",
           color: isOverflow ? "var(--danger)" : "var(--accent-gold-bright)",
           textShadow: isOverflow
             ? "0 0 24px rgba(255,112,98,0.30)"
             : "0 0 32px rgba(242,212,105,0.42), 0 0 64px rgba(242,212,105,0.18)",
         }}
       >
-        {row.bay_label ?? "OVERFLOW"}
+        {isOverflow ? "En file" : row.bay_label}
       </p>
 
       {/* Numero commande */}

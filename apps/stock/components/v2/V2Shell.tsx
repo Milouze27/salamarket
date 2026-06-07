@@ -581,9 +581,6 @@ export function V2Shell({
               >
                 <Search className="w-3.5 h-3.5 opacity-80" strokeWidth={2.2} />
                 <span className="opacity-80">Rechercher</span>
-                <kbd className="font-bold bg-white/20 rounded px-1 py-px tracking-wider">
-                  ⌘K
-                </kbd>
               </button>
               <button
                 type="button"

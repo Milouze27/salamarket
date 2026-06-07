@@ -34,6 +34,7 @@ import { AlertCard, AlertCardRow } from "@/components/cockpit/alert-card";
 import { RamadanCard } from "@/components/cockpit/ramadan-card";
 import { CompetitorCard } from "@/components/cockpit/competitor-card";
 import { MorningBriefCard } from "@/components/cockpit/morning-brief";
+import { PilotageStrip } from "@/components/v2/PilotageStrip";
 import type { CockpitSnapshot } from "@/app/api/cockpit/snapshot/route";
 import type { CockpitBriefing } from "@/app/api/cockpit/briefing/route";
 
@@ -241,6 +242,11 @@ export default function CockpitPage() {
             onAction={(href) => router.push(href)}
           />
         )}
+
+        {/* ZONE 1a — Pilotage du JOUR (temps réel) : CA encaissé Drive + magasin,
+            commandes Drive en cours, ruptures, valeur stock. Au-dessus du hero
+            (qui montre le bilan d'HIER vs cible) pour un « coup d'œil » immédiat. */}
+        <PilotageStrip allDepots />
 
         {/* ZONE 1 — Hero KPI (full width sur desktop pour rester impact-first) */}
         <HeroKpi

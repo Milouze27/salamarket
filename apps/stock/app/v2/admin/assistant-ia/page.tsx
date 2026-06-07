@@ -93,7 +93,7 @@ export default function AssistantIAPage() {
         nextMsgs.map((m) => ({
           role: m.role,
           content: m.content,
-        }))
+        })),
       );
       if (data.error) {
         throw new Error(data.error);
@@ -184,7 +184,7 @@ export default function AssistantIAPage() {
                     )}
                   </div>
                 </motion.div>
-              )
+              ),
             )}
 
             {sending && (
@@ -220,17 +220,19 @@ export default function AssistantIAPage() {
         )}
       </section>
 
-      {/* Input bar — fixed bottom */}
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe bg-cream/95 backdrop-blur-md border-t border-rule pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
+      {/* Composer — ancré en bas, CONTENU (largeur alignée sur la colonne de
+          chat). L'outer fixed est transparent : le bg/blur/bordure vit sur le
+          bloc centré, plus de bande floutée pleine largeur (fix desktop). */}
+      <div className="fixed bottom-0 inset-x-0 z-30 pointer-events-none">
+        <div className="mx-auto w-full max-w-[460px] lg:max-w-[760px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 pointer-events-auto">
           {messages.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-2 scrollbar-hide">
+            <div className="flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_8px,#000_calc(100%-20px),transparent)]">
               {SUGGESTIONS.slice(0, 3).map((s) => (
                 <button
                   key={s}
                   onClick={() => void send(s)}
                   disabled={sending}
-                  className="bg-white border border-rule rounded-full px-3 py-1.5 text-[11.5px] font-bold text-text-primary shrink-0 active:scale-95 transition-transform disabled:opacity-50"
+                  className="bg-[var(--surface-1)] border border-rule rounded-full px-3 py-1.5 text-[11.5px] font-bold text-text-primary shrink-0 active:scale-95 transition-transform disabled:opacity-50 shadow-card"
                 >
                   {s}
                 </button>
@@ -242,19 +244,19 @@ export default function AssistantIAPage() {
               e.preventDefault();
               void send(input);
             }}
-            className="flex gap-2"
+            className="flex items-center gap-2 rounded-[22px] bg-cream/92 backdrop-blur-md border border-rule shadow-card-lg p-2"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pose une question à l'IA…"
-              className="flex-1 input-field"
+              className="flex-1 bg-transparent border-0 outline-none px-3 text-[15px] text-text-primary placeholder:text-text-tertiary min-h-[44px]"
               disabled={sending}
             />
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="bg-primary text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-card disabled:opacity-40 active:scale-95 transition-transform"
+              className="shrink-0 bg-primary text-white w-11 h-11 rounded-2xl flex items-center justify-center shadow-card disabled:opacity-40 active:scale-95 transition-transform"
               aria-label="Envoyer"
             >
               <Send className="w-4 h-4" />
@@ -282,9 +284,7 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
           </p>
         </div>
       </div>
-      <p className="label-caps text-text-tertiary mt-5 mb-2">
-        Suggestions
-      </p>
+      <p className="label-caps text-text-tertiary mt-5 mb-2">Suggestions</p>
       <div className="space-y-2">
         {SUGGESTIONS.map((s) => (
           <button
@@ -293,9 +293,7 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
             className="w-full bg-cream border border-rule rounded-2xl p-3 text-left flex items-center gap-2.5 active:scale-[0.99] transition-transform"
           >
             <Sparkles className="w-4 h-4 text-gold shrink-0" />
-            <span className="text-[13px] font-bold text-text-primary">
-              {s}
-            </span>
+            <span className="text-[13px] font-bold text-text-primary">{s}</span>
           </button>
         ))}
       </div>

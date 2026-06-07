@@ -208,6 +208,13 @@ const ITEMS: Record<string, NavItem> = {
     icon: FileSpreadsheet,
     desc: "Sync caisse / ventes",
   },
+  importStock: {
+    label: "Import stock",
+    fullLabel: "Importer le catalogue",
+    href: "/v2/admin/import-stock",
+    icon: FileSpreadsheet,
+    desc: "CSV produits → stock",
+  },
   recapFiscal: {
     label: "Récap fiscal",
     fullLabel: "Récap fiscal du jour",
@@ -373,6 +380,7 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.recapFiscal,
     ITEMS.rapportMensuel,
     ITEMS.importCashmag,
+    ITEMS.importStock,
     ITEMS.assistantIa,
   ];
 

@@ -446,6 +446,15 @@ const ADMINISTRER: PaletteItem[] = [
     keywords: "import cashmag caisse ventes sync csv export pos integration",
   },
   {
+    id: "nav-import-stock",
+    label: "Import catalogue stock",
+    href: "/v2/admin/import-stock",
+    icon: FileSpreadsheet,
+    hint: "CSV produits → stock",
+    keywords:
+      "import stock catalogue produits ean csv onboarding initialiser prix",
+  },
+  {
     id: "nav-assistant",
     label: "Assistant IA",
     href: "/v2/admin/assistant-ia",

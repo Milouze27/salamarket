@@ -49,7 +49,7 @@ const KEYWORDS: Record<string, string[]> = {
   paiement: ["paiement", "mode", "mp", "type"],
 };
 
-function detectSeparator(firstLine: string): string {
+export function detectSeparator(firstLine: string): string {
   const counts = {
     ";": (firstLine.match(/;/g) || []).length,
     ",": (firstLine.match(/,/g) || []).length,
@@ -61,7 +61,7 @@ function detectSeparator(firstLine: string): string {
   return sep || ";";
 }
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 }
 
@@ -78,7 +78,7 @@ function detectColumns(headers: string[]): Record<string, number> {
   return idx;
 }
 
-function parseNumberFr(s: string | undefined): number | null {
+export function parseNumberFr(s: string | undefined): number | null {
   if (!s) return null;
   const cleaned = s.replace(/\s/g, "").replace(/€|EUR/gi, "").trim();
   const n = parseFloat(cleaned.replace(",", "."));
@@ -103,7 +103,7 @@ function parseHeureFr(s: string | undefined): string | null {
   return `${m[1].padStart(2, "0")}:${m[2].padStart(2, "0")}:${(m[3] ?? "00").padStart(2, "0")}`;
 }
 
-function splitCsvLine(line: string, sep: string): string[] {
+export function splitCsvLine(line: string, sep: string): string[] {
   const out: string[] = [];
   let current = "";
   let inQuote = false;

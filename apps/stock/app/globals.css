@@ -28,6 +28,12 @@
   --success-soft: #e8f5ee;
   --warning: #d97706;
   --warning-soft: #fef3e2;
+  /* Bordures translucides PRÉ-CALCULÉES : Tailwind border-[var(--danger)]/25 est
+     INVALIDE (opacité sur une var hex → rgb(#... / .25) cassé). On utilise ces
+     tokens à la place (border-[var(--danger-border)]). */
+  --danger-border: rgba(229, 72, 61, 0.25);
+  --warning-border: rgba(217, 119, 6, 0.25);
+  --success-border: rgba(45, 122, 79, 0.25);
   --border-light: #e8e4d8;
   --border-medium: #d1ccb8;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -948,6 +954,9 @@ body.theme-nuit {
   --success-soft: rgba(79, 208, 138, 0.14);
   --warning: #f2b43c;
   --warning-soft: rgba(242, 180, 60, 0.14);
+  --danger-border: rgba(255, 112, 98, 0.32);
+  --warning-border: rgba(242, 180, 60, 0.32);
+  --success-border: rgba(79, 208, 138, 0.32);
   --status-success: #4fd08a;
   --status-success-bg: rgba(79, 208, 138, 0.14);
   --status-success-text: #4fd08a;

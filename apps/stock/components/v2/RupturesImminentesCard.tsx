@@ -51,12 +51,12 @@ const TIER_RANK: Record<StockoutTier, number> = {
 };
 
 const TIER_CHIP: Record<StockoutTier, string> = {
-  out: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
+  out: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger-border)]",
   blocker:
-    "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/30",
-  crit: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/25",
-  warn: "bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning)]/25",
-  ok: "bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success)]/25",
+    "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger-border)]",
+  crit: "bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger-border)]",
+  warn: "bg-[var(--warning-soft)] text-[var(--warning)] border border-[var(--warning-border)]",
+  ok: "bg-[var(--success-soft)] text-[var(--success)] border border-[var(--success-border)]",
 };
 
 const TIER_LABEL: Record<StockoutTier, string> = {
@@ -186,7 +186,7 @@ export function RupturesImminentesCard({
           {rows.map((r) => (
             <li
               key={`${r.produit_id}-${r.depot_id}`}
-              className="flex items-center gap-3 bg-[var(--danger-soft)] border border-[var(--danger)]/20 rounded-xl px-3 py-2"
+              className="flex items-center gap-3 bg-[var(--danger-soft)] border border-[var(--danger-border)] rounded-xl px-3 py-2"
             >
               <span className="inline-flex items-center justify-center w-2 h-2 rounded-full shrink-0 bg-[var(--danger)]" />
               <div className="flex-1 min-w-0">

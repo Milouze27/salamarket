@@ -50,14 +50,14 @@ const TONE_STYLES: Record<
     iconBg: "bg-[var(--danger-soft)]",
     iconColor: "text-[var(--danger)]",
     metricColor: "text-[var(--danger)]",
-    border: "border-[var(--danger)]/25",
+    border: "border-[var(--danger-border)]",
     eyebrowColor: "text-[var(--danger)]",
   },
   warn: {
     iconBg: "bg-[var(--warning-soft)]",
     iconColor: "text-[var(--warning)]",
     metricColor: "text-[var(--warning)]",
-    border: "border-[var(--warning)]/25",
+    border: "border-[var(--warning-border)]",
     eyebrowColor: "text-[var(--warning)]",
   },
   info: {

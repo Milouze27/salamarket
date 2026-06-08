@@ -92,6 +92,14 @@ export default function CounterPage() {
   const fetchRows = useCallback(async () => {
     const sb = supabase();
     if (!sb) {
+      // Sans Supabase : en PROD on n'affiche JAMAIS de fausses commandes sur
+      // l'écran comptoir (le préparateur croirait à de vraies commandes
+      // prêtes). Le mock de preview reste réservé au dev local.
+      if (process.env.NODE_ENV === "production") {
+        setRows([]);
+        setLoaded(true);
+        return;
+      }
       // Fallback dev sans Supabase — mock 3 commandes pour preview design.
       setRows([
         {

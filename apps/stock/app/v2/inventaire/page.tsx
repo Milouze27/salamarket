@@ -130,8 +130,14 @@ export default function V2InventairePage() {
         totalEcart += Math.abs(ecart);
         totalTheo += r.quantite_attendue ?? 0;
       }
+      // Conformité : 100 % seulement si AUCUN écart. Si le théorique est 0
+      // mais qu'on a compté des écarts (stock fantôme), c'est 0 %, pas 100 %.
       const conf =
-        totalTheo > 0 ? Math.max(0, 100 - (totalEcart / totalTheo) * 100) : 100;
+        totalTheo > 0
+          ? Math.max(0, 100 - (totalEcart / totalTheo) * 100)
+          : totalEcart > 0
+            ? 0
+            : 100;
       const progress = `${fillable.length}/${mineAssigned.length}`;
       const lowConf = conf < 95;
       // Push iPhone admin — inventaire complété (urgent si conformité basse)

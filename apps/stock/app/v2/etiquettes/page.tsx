@@ -38,12 +38,21 @@ export default function V2EtiquettesPage() {
 
   useEffect(() => {
     if (!depot) return;
-    void listProduitsInDepot(depot.id).then((all) => {
-      const filtered = all.filter(
-        (p) => p.requires_barcode_print || p.ean?.startsWith("290"),
-      );
-      setItems(filtered);
-    });
+    void listProduitsInDepot(depot.id)
+      .then((all) => {
+        const filtered = all.filter(
+          (p) => p.requires_barcode_print || p.ean?.startsWith("290"),
+        );
+        setItems(filtered);
+      })
+      .catch((err) => {
+        // Sans ce catch, une erreur réseau laissait une liste vide avec le
+        // message trompeur « Aucun produit » (sans signal d'erreur).
+        console.error("[etiquettes] chargement produits échoué:", err);
+        toast.error(
+          "Impossible de charger les produits · vérifie la connexion",
+        );
+      });
   }, [depot]);
 
   const totalCopies = useMemo(

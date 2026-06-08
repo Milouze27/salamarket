@@ -28,8 +28,8 @@ const greetingForHour = (h: number): string => {
 // Pattern iOS Large Title : hero gradient sapin scrollable + compact
 // sticky en sapin qui apparaît au scroll. Le bg sapin met en valeur le
 // logo doré transparent et donne une signature brand forte distincte du
-// reste de l'app crème. StaffBanner est intégré dans le hero (admin/
-// employee uniquement) pour éviter le gap blanc précédent.
+// reste de l'app crème. (Les dashboards staff vivent dans l'app Stock :
+// aucune bannière staff dans le Drive client.)
 export const Header = ({ searchValue, onSearchChange }: Props) => {
   const { profile, user } = useAuth();
   const firstName = firstNameOf(profile?.full_name);

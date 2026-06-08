@@ -31,14 +31,17 @@ export const LaboShell = ({ children, title }: Props) => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <button
-              onClick={() => navigate("/admin")}
-              aria-label="Retour backoffice"
+              onClick={() => navigate("/v2/labo")}
+              aria-label="Retour au labo"
               className="w-9 h-9 -ml-1 rounded-full hover:bg-white flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform"
             >
               <ArrowLeft size={20} aria-hidden />
             </button>
             <h1 className="font-bold text-base sm:text-lg text-[#0E3B2E] tracking-tight truncate">
-              Labo {title ? <span className="font-normal text-[#0E3B2E]/70">· {title}</span> : null}
+              Labo{" "}
+              {title ? (
+                <span className="font-normal text-[#0E3B2E]/70">· {title}</span>
+              ) : null}
             </h1>
           </div>
           <Link

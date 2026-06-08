@@ -4,6 +4,7 @@ import {
   buildTicketRetraitPdf,
   type TicketLigne,
 } from "@/lib/pdf/ticket-retrait";
+import { verifyDocToken } from "@/lib/doc-token";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,15 +13,25 @@ export const runtime = "nodejs";
  * GET /api/commandes-drive/[id]/ticket
  * Ticket de caisse / reçu de retrait magasin (80 mm) d'une commande Drive.
  * `id` = commandes_drive.id.
+ *
+ * Accès : lien signé qui expire (?t=token via signTicketUrl). Le ticket
+ * contient des PII client (nom, téléphone, détail commande) ; sans token
+ * valide on refuse pour empêcher l'énumération d'UUID par un tiers externe.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> } | { params: { id: string } },
 ) {
   const params = await (ctx.params as Promise<{ id: string }>);
   const id = params.id;
   if (!id) {
     return NextResponse.json({ error: "id manquant" }, { status: 400 });
+  }
+
+  const token = new URL(req.url).searchParams.get("t");
+  const auth = verifyDocToken("ticket", id, token);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
   }
 
   const sb = supabaseServer();

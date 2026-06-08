@@ -4,6 +4,7 @@ import {
   buildFactureProPdf,
   type FactureProLigne,
 } from "@/lib/pdf/facture-pro";
+import { verifyDocToken } from "@/lib/doc-token";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -12,15 +13,25 @@ export const runtime = "nodejs";
  * GET /api/factures-pro/[id]/pdf
  * Génère la facture PDF d'une commande Pro (B2B) sur le module brand canonique.
  * `id` = commandes_pro.id. Disponible dès que la commande est facturée.
+ *
+ * Accès : lien signé qui expire (?t=token via signFacturePdfUrl). La facture
+ * contient des PII B2B (SIRET, TVA intracom, adresse, montants) ; sans token
+ * valide on refuse pour empêcher l'énumération d'UUID par un tiers externe.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> } | { params: { id: string } },
 ) {
   const params = await (ctx.params as Promise<{ id: string }>);
   const id = params.id;
   if (!id) {
     return NextResponse.json({ error: "id manquant" }, { status: 400 });
+  }
+
+  const token = new URL(req.url).searchParams.get("t");
+  const auth = verifyDocToken("facture", id, token);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
   }
 
   const sb = supabaseServer();

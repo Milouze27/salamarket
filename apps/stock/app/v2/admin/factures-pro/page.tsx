@@ -383,15 +383,24 @@ function FactureDetail({
         )}
       </dl>
 
-      <a
-        href={`/api/factures-pro/${facture.id}/pdf`}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        type="button"
+        onClick={() => {
+          // Ouvre l'onglet AVANT l'await (anti pop-up bloquée), puis pose
+          // l'URL signée générée côté serveur (route protégée par token).
+          const win = window.open("", "_blank", "noopener,noreferrer");
+          void import("@/lib/actions/doc-url")
+            .then((m) => m.signFacturePdfUrl(facture.id))
+            .then((url) => {
+              if (win) win.location.href = url;
+            })
+            .catch(() => win?.close());
+        }}
         className="mt-5 w-full bg-[var(--surface-2)] border border-rule text-text-primary rounded-[18px] py-3.5 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
       >
         <FileText className="w-4.5 h-4.5 text-[var(--primary-green)]" />
         Télécharger la facture PDF
-      </a>
+      </button>
 
       <div className="mt-3">
         {payee ? (

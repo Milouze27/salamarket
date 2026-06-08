@@ -1117,10 +1117,23 @@ export default function V2PreparationKanbanPage() {
                 )}
                 {(actionFor.statut === "pret" ||
                   actionFor.statut === "retire") && (
-                  <a
-                    href={`/api/commandes-drive/${actionFor.id}/ticket`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Onglet ouvert AVANT l'await (anti pop-up bloquée), puis
+                      // URL signée côté serveur (route ticket protégée par token).
+                      const win = window.open(
+                        "",
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                      void import("@/lib/actions/doc-url")
+                        .then((m) => m.signTicketUrl(actionFor.id))
+                        .then((url) => {
+                          if (win) win.location.href = url;
+                        })
+                        .catch(() => win?.close());
+                    }}
                     className="w-full border text-text-primary rounded-[18px] py-3 px-5 flex items-center justify-center gap-2 font-bold active:scale-[0.99] transition-transform"
                     style={{
                       background: "var(--surface-2)",
@@ -1129,7 +1142,7 @@ export default function V2PreparationKanbanPage() {
                   >
                     <Receipt className="w-4 h-4 text-primary" />
                     Imprimer le ticket de retrait
-                  </a>
+                  </button>
                 )}
                 <Link
                   href={`/v2/preparation/${actionFor.id}`}

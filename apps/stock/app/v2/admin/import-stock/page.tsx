@@ -49,12 +49,13 @@ export default function ImportStockPage() {
           text = new TextDecoder("iso-8859-1").decode(buf);
         }
         setPreview(text.split(/\r?\n/).slice(0, 6));
-        const r = await fetch("/api/cashbox/import-stock", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ csv: text, depot_id: depot.id }),
-        });
-        const data = (await r.json()) as ImportResult & { error?: string };
+        // Server action (injecte x-internal-secret côté serveur) : la route
+        // import-stock refuse désormais les appels externes.
+        const { importStockAction } = await import("@/lib/actions/cashbox");
+        const data = (await importStockAction(
+          text,
+          depot.id,
+        )) as ImportResult & { error?: string };
         if (data.error) {
           toast.error(data.error);
           setBusy(false);

@@ -140,3 +140,57 @@ export async function fetchMonthlyReportCsv(
     `salam-rapport-mensuel-${mois}.csv`,
   );
 }
+
+/**
+ * Imports CSV (catalogue stock / ventes cashmag) : ces routes mutent des
+ * données en masse → protégées par x-internal-secret. Ces actions injectent
+ * le secret côté serveur ; les pages admin les appellent au lieu d'un fetch
+ * direct. Le JSON brut de la route est renvoyé tel quel (le caller le cast).
+ */
+async function postImportProtected(
+  path: string,
+  body: unknown,
+): Promise<unknown> {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return { ok: false, error: "INTERNAL_API_SECRET non configuré." };
+  }
+  const origin = await resolveOrigin();
+  try {
+    const res = await fetch(`${origin}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-secret": internalSecret,
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    return await res.json().catch(() => ({
+      ok: false,
+      error: `HTTP ${res.status}`,
+    }));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function importStockAction(
+  csv: string,
+  depotId: string,
+): Promise<unknown> {
+  return postImportProtected("/api/cashbox/import-stock", {
+    csv,
+    depot_id: depotId,
+  });
+}
+
+export async function importCashmagAction(
+  csv: string,
+  importedBy: string,
+): Promise<unknown> {
+  return postImportProtected("/api/cashbox/import-cashmag", {
+    csv,
+    importedBy,
+  });
+}

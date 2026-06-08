@@ -49,12 +49,13 @@ export default function ImportCashmagPage() {
         text = new TextDecoder("iso-8859-1").decode(buf);
       }
       setPreview(text.split(/\r?\n/).slice(0, 6));
-      const r = await fetch("/api/cashbox/import-cashmag", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ csv: text, importedBy: "v2-admin" }),
-      });
-      const data = (await r.json()) as ImportResult;
+      // Server action (injecte x-internal-secret côté serveur) : la route
+      // import-cashmag refuse désormais les appels externes.
+      const { importCashmagAction } = await import("@/lib/actions/cashbox");
+      const data = (await importCashmagAction(
+        text,
+        "v2-admin",
+      )) as ImportResult;
       setResult(data);
       const dups = data.duplicates_skipped ?? 0;
       if (data.ok && data.inserted > 0) {

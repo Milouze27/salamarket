@@ -45,6 +45,19 @@ function numToPg(n: number | null | undefined): string {
 }
 
 export async function POST(req: Request) {
+  // Auth : import en masse → route server-to-server (server action
+  // importCashmagAction qui injecte le secret). Un curl externe est refusé.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return NextResponse.json(
+      { error: "import-cashmag misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 },
+    );
+  }
+  if (req.headers.get("x-internal-secret") !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   // Anti-abus : import lourd (écritures DB en masse). 5 imports/h/IP suffit pour
   // un usage admin légitime et bloque l'injection bulk.
   const rl = checkRateLimit(getClientIp(req), "import-cashmag", 5, 3_600_000);

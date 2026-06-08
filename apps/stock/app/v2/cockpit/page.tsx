@@ -339,7 +339,7 @@ export default function CockpitPage() {
             }
             onTap={
               snap && snap.stockout.count_total > 0
-                ? () => router.push("/v2/admin")
+                ? () => router.push("/v2/forecast")
                 : undefined
             }
           >

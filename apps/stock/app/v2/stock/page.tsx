@@ -71,16 +71,26 @@ export default function V2StockPage() {
     let cancelled = false;
     (async () => {
       const map = new Map<string, ProduitInDepot[]>();
+      const failed: string[] = [];
       for (const d of allDepots) {
         // Tolérant par dépôt : un échec n'efface pas les autres.
         const s = await listProduitsInDepot(d.id).catch((e) => {
           console.error(`[stock] dépôt ${d.nom} échoué:`, e);
+          failed.push(d.nom);
           return [] as ProduitInDepot[];
         });
         if (cancelled) return;
         map.set(d.id, s);
       }
-      if (!cancelled) setAllStocks(map);
+      if (cancelled) return;
+      setAllStocks(map);
+      // On AVERTIT si un dépôt n'a pas pu charger : sinon la vue regroupée
+      // masque silencieusement son stock (l'utilisateur croit le total complet).
+      if (failed.length > 0) {
+        toast.error(
+          `Stock partiel : ${failed.join(", ")} n'a pas pu charger. Total incomplet.`,
+        );
+      }
     })();
     return () => {
       cancelled = true;

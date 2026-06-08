@@ -193,7 +193,14 @@ export default function V2ReceptionPage() {
     // 1. Try carton
     const carton = await findCarton(code);
     if (carton) {
-      const produit = await findProduitByEanInternal(carton.produit_id);
+      let produit: Produit | null;
+      try {
+        produit = await findProduitByEanInternal(carton.produit_id);
+      } catch {
+        // Erreur DB sur le lookup : on n'invente pas un mauvais routage.
+        toast.error("Erreur réseau, réessaie le scan du carton");
+        return;
+      }
       if (produit) {
         await pushScan({
           code,
@@ -242,11 +249,15 @@ export default function V2ReceptionPage() {
     const { supabase } = await import("@/lib/supabase");
     const sb = supabase();
     if (sb) {
-      const { data } = await sb
+      const { data, error } = await sb
         .from("produits")
         .select("*")
         .eq("id", produitId)
         .maybeSingle();
+      // Une erreur DB ne doit PAS être confondue avec « produit introuvable » :
+      // le carton référence un produit réel (FK), donc un null sur erreur
+      // mènerait à un mauvais routage (création de doublon). On la propage.
+      if (error) throw new Error(error.message);
       return (data as Produit) ?? null;
     }
     return null;

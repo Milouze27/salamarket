@@ -262,55 +262,12 @@ export default function AlertesPage() {
     //    En l'absence de table de ventes magasin temps réel, on synthétise des
     //    rows depuis ce qui est traçable. Pour la démo on inclut Coca Zero hardcodé
     //    + on dérive depuis stock_par_depot quantite anormalement basse.
-    try {
-      const { data: cocaRow } = await sb
-        .from("produits")
-        .select("id, nom, ean")
-        .eq("ean", "5449000131836")
-        .maybeSingle();
-      const computed: DemarqueRow[] = [];
-      if (cocaRow) {
-        const c = cocaRow as { id: string; nom: string; ean: string | null };
-        computed.push({
-          produit: c.nom,
-          ean: c.ean ?? "—",
-          entrees: 96,
-          ventes: 78,
-          sorties_tracees: 4,
-          stock_theorique: 14,
-          stock_physique: 0,
-          ecart: -14,
-          valeur: 14 * 2.2,
-        });
-      }
-      // Ajoute 1-2 autres écarts plausibles
-      const { data: produitsList } = await sb
-        .from("produits")
-        .select("id, nom, ean")
-        .in("ean", ["3033491001234", "3057640501234"])
-        .limit(2);
-      for (const p of (produitsList ?? []) as Array<{
-        id: string;
-        nom: string;
-        ean: string;
-      }>) {
-        const ecart = -(3 + Math.floor(Math.random() * 4));
-        computed.push({
-          produit: p.nom,
-          ean: p.ean,
-          entrees: 40 + Math.floor(Math.random() * 30),
-          ventes: 30 + Math.floor(Math.random() * 20),
-          sorties_tracees: 2,
-          stock_theorique: 8,
-          stock_physique: 8 + ecart,
-          ecart,
-          valeur: Math.abs(ecart) * 3.5,
-        });
-      }
-      setDemarque(computed);
-    } catch {
-      setDemarque([]);
-    }
+    // Pas de données factices : on n'affiche AUCUNE démarque inventée
+    // (le proprio pourrait agir sur de faux écarts). Le calcul réel —
+    // stock théorique (entrées réception − ventes cashmag − sorties tracées)
+    // comparé au stock physique — sera branché quand l'historique cashmag
+    // sera consolidé. En attendant, l'onglet affiche l'état vide honnête.
+    setDemarque([]);
 
     setLoading(false);
   }

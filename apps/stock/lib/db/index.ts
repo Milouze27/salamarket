@@ -846,7 +846,34 @@ export async function completeInventaire(
       .select()
       .single();
     if (error) throw error;
-    return data as InventaireTournant;
+    const inv = data as InventaireTournant;
+
+    // Applique le comptage au stock réel : l'inventaire physique EST la
+    // vérité terrain. Sans ça, compter ne corrigeait jamais stock_par_depot
+    // (le but même de l'inventaire tournant était inopérant). On passe par
+    // adjust_stock (type 'inventaire') → stock corrigé + ledger tracé.
+    const { data: stockRow } = await sb
+      .from("stock_par_depot")
+      .select("quantite")
+      .eq("produit_id", inv.produit_id)
+      .eq("depot_id", inv.depot_id)
+      .maybeSingle();
+    const actuel = stockRow
+      ? Number((stockRow as { quantite: number }).quantite)
+      : 0;
+    const delta = quantiteComptee - actuel;
+    if (delta !== 0) {
+      const { error: errAdj } = await sb.rpc("adjust_stock", {
+        p_produit_id: inv.produit_id,
+        p_depot_id: inv.depot_id,
+        p_delta: delta,
+        p_type: "inventaire",
+        p_reference_id: inventaireId,
+      });
+      if (errAdj)
+        throw new Error(`Stock non corrigé après comptage : ${errAdj.message}`);
+    }
+    return inv;
   }
   const row = localInventaires.find((i) => i.id === inventaireId);
   if (!row) return null;

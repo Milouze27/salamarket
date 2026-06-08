@@ -38,10 +38,13 @@ function eur(n: number) {
 
 function dateFr(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso + (iso.length === 10 ? "T00:00:00" : "")).toLocaleDateString(
-    "fr-FR",
-    { day: "2-digit", month: "long", year: "numeric" }
-  );
+  return new Date(
+    iso + (iso.length === 10 ? "T00:00:00" : ""),
+  ).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 interface PoForPdf {
@@ -126,7 +129,7 @@ function buildPoPdf(po: PoForPdf): Buffer {
     doc.text(
       `Date livraison souhaitée : ${dateFr(po.date_livraison_prevue)}`,
       W / 2 + 4,
-      y
+      y,
     );
   }
   doc.setTextColor(15, 26, 20);
@@ -149,7 +152,10 @@ function buildPoPdf(po: PoForPdf): Buffer {
   for (const l of po.purchase_order_lignes) {
     const totalLine = (l.prix_achat_ht || 0) * (l.quantite_commandee || 0);
     totalHt += totalLine;
-    const ref = (l.reference_fourn ?? l.produit_id.slice(0, 8)).substring(0, 60);
+    const ref = (l.reference_fourn ?? l.produit_id.slice(0, 8)).substring(
+      0,
+      60,
+    );
     doc.text(ref, M + 3, y, { maxWidth: 110 });
     doc.text(String(l.quantite_commandee), W - M - 56, y, { align: "right" });
     doc.text(eur(l.prix_achat_ht || 0), W - M - 30, y, { align: "right" });
@@ -198,7 +204,7 @@ function buildPoPdf(po: PoForPdf): Buffer {
   doc.text(
     `Organisme : ${org} · n° ${po.fournisseurs?.certif_numero ?? "—"} · valide jusqu'au ${dateFr(po.fournisseurs?.certif_expire_le ?? null)}`,
     M + 4,
-    y + 12
+    y + 12,
   );
 
   // Footer
@@ -208,7 +214,7 @@ function buildPoPdf(po: PoForPdf): Buffer {
     "Document généré automatiquement par Salam Stock. Confirmation attendue par retour d'email.",
     W / 2,
     285,
-    { align: "center" }
+    { align: "center" },
   );
 
   return Buffer.from(doc.output("arraybuffer"));
@@ -225,7 +231,16 @@ function htmlEmail(opts: {
   organisme: string;
   expireLe: string;
 }): string {
-  const { fournisseurNom, numeroPo, depotNom, dateLiv, totalHt, confirmUrl, organisme, expireLe } = opts;
+  const {
+    fournisseurNom,
+    numeroPo,
+    depotNom,
+    dateLiv,
+    totalHt,
+    confirmUrl,
+    organisme,
+    expireLe,
+  } = opts;
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>Bon de commande ${numeroPo}</title></head>
 <body style="margin:0;padding:0;background:#FAF7EE;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#0F1A14;">
@@ -268,6 +283,20 @@ function htmlEmail(opts: {
 }
 
 export async function POST(req: Request) {
+  // Auth : route server-to-server uniquement (server action sendPoAction qui
+  // injecte le secret). Un appel externe anonyme enverrait des emails au
+  // fournisseur → on exige x-internal-secret.
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return NextResponse.json(
+      { error: "po/send misconfigured (INTERNAL_API_SECRET missing)" },
+      { status: 503 },
+    );
+  }
+  if (req.headers.get("x-internal-secret") !== internalSecret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   const parsed = await validateBody(req, sendPoSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
@@ -276,12 +305,14 @@ export async function POST(req: Request) {
 
   const { data: po, error } = await sb
     .from("purchase_orders")
-    .select(`
+    .select(
+      `
       id, numero_po, statut, date_creation, date_livraison_prevue, notes, fournisseur_id,
       fournisseurs:fournisseur_id ( nom, email, email_commandes, adresse, certif_organisme, certif_numero, certif_expire_le ),
       depots:depot_destination_id ( nom, adresse ),
       purchase_order_lignes ( reference_fourn, produit_id, quantite_commandee, prix_achat_ht, tva_pct )
-    `)
+    `,
+    )
     .eq("id", body.po_id)
     .single();
 
@@ -294,7 +325,7 @@ export async function POST(req: Request) {
   if (poTyped.statut !== "brouillon") {
     return NextResponse.json(
       { error: `PO déjà au statut ${poTyped.statut}` },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -305,15 +336,16 @@ export async function POST(req: Request) {
       {
         error: `Envoi bloqué — certif halal ${alerte === "expiree" ? "expiré" : "manquant"} pour ${poTyped.fournisseurs?.nom ?? "ce fournisseur"}.`,
       },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
-  const to = poTyped.fournisseurs?.email_commandes ?? poTyped.fournisseurs?.email;
+  const to =
+    poTyped.fournisseurs?.email_commandes ?? poTyped.fournisseurs?.email;
   if (!to) {
     return NextResponse.json(
       { error: "Aucun email commandes renseigné chez ce fournisseur" },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
@@ -340,16 +372,15 @@ export async function POST(req: Request) {
         totalHt:
           poTyped.purchase_order_lignes.reduce(
             (s, l) => s + (l.prix_achat_ht || 0) * (l.quantite_commandee || 0),
-            0
+            0,
           ) || 0,
         confirmUrl,
-        organisme:
-          poTyped.fournisseurs?.certif_organisme
-            ? ORGANISME_LABELS[
-                poTyped.fournisseurs
-                  .certif_organisme as keyof typeof ORGANISME_LABELS
-              ]
-            : "—",
+        organisme: poTyped.fournisseurs?.certif_organisme
+          ? ORGANISME_LABELS[
+              poTyped.fournisseurs
+                .certif_organisme as keyof typeof ORGANISME_LABELS
+            ]
+          : "—",
         expireLe: dateFr(poTyped.fournisseurs?.certif_expire_le ?? null),
       });
       const { data, error: sendErr } = await resend.emails.send({
@@ -370,7 +401,7 @@ export async function POST(req: Request) {
       console.error("[po/send] resend error", err);
       return NextResponse.json(
         { error: err instanceof Error ? err.message : String(err) },
-        { status: 502 }
+        { status: 502 },
       );
     }
   } else {
@@ -399,7 +430,7 @@ export async function POST(req: Request) {
   if (updErr) {
     return NextResponse.json(
       { error: `Email envoyé mais statut non mis à jour : ${updErr.message}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

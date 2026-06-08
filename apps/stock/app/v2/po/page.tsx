@@ -60,7 +60,9 @@ function eur(n: number) {
 
 function dateFr(iso: string | null) {
   if (!iso) return "—";
-  return new Date(iso + (iso.length === 10 ? "T00:00:00" : "")).toLocaleDateString("fr-FR", {
+  return new Date(
+    iso + (iso.length === 10 ? "T00:00:00" : ""),
+  ).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "short",
   });
@@ -87,7 +89,8 @@ export default function PoDashboardPage() {
     }
     const { data, error } = await sb
       .from("purchase_orders")
-      .select(`
+      .select(
+        `
         id, numero_po, fournisseur_id, depot_destination_id, statut,
         date_creation, date_envoi, date_livraison_prevue, date_reception,
         total_ht, total_ttc, email_envoye_a, email_message_id, bdl_id, notes,
@@ -96,7 +99,8 @@ export default function PoDashboardPage() {
         fournisseurs:fournisseur_id ( nom, email_commandes, certif_organisme, certif_numero, certif_expire_le ),
         depots:depot_destination_id ( nom ),
         purchase_order_lignes ( id, po_id, produit_id, reference_fourn, quantite_commandee, quantite_recue, prix_achat_ht, tva_pct, ligne_total_ht, notes )
-      `)
+      `,
+      )
       .order("date_creation", { ascending: false })
       .limit(200);
     if (error) {
@@ -127,14 +131,12 @@ export default function PoDashboardPage() {
   async function sendPo(poId: string) {
     setSending(true);
     try {
-      const res = await fetch("/api/po/send", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ po_id: poId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Erreur d'envoi");
-      toast.success(`Email envoyé à ${json.email}`);
+      // Server action (injecte x-internal-secret côté serveur) au lieu d'un
+      // fetch direct : la route /api/po/send refuse les appels externes.
+      const { sendPoAction } = await import("@/lib/actions/po");
+      const r = await sendPoAction(poId);
+      if (!r.ok) throw new Error(r.error ?? "Erreur d'envoi");
+      toast.success(`Email envoyé à ${r.email}`);
       setDrawer(null);
       await load();
     } catch (err) {
@@ -148,7 +150,10 @@ export default function PoDashboardPage() {
   const counts = useMemo(() => {
     const a_valider = pos.filter((p) => p.statut === "brouillon").length;
     const en_cours = pos.filter(
-      (p) => p.statut === "envoyee" || p.statut === "confirmee" || p.statut === "partiellement_recue"
+      (p) =>
+        p.statut === "envoyee" ||
+        p.statut === "confirmee" ||
+        p.statut === "partiellement_recue",
     ).length;
     const recues = pos.filter((p) => p.statut === "recue").length;
     return { a_valider, en_cours, recues };
@@ -161,7 +166,7 @@ export default function PoDashboardPage() {
         (p) =>
           p.statut === "envoyee" ||
           p.statut === "confirmee" ||
-          p.statut === "partiellement_recue"
+          p.statut === "partiellement_recue",
       );
     return pos.filter((p) => p.statut === "recue" || p.statut === "annulee");
   }, [pos, tab]);
@@ -171,7 +176,7 @@ export default function PoDashboardPage() {
       pos
         .filter((p) => p.statut === "brouillon")
         .reduce((s, p) => s + (Number(p.total_ht) || 0), 0),
-    [pos]
+    [pos],
   );
 
   const blockedCount = useMemo(
@@ -179,9 +184,11 @@ export default function PoDashboardPage() {
       pos.filter(
         (p) =>
           p.statut === "brouillon" &&
-          ["expiree", "manquante"].includes(certifAlerte(p.fournisseurs?.certif_expire_le))
+          ["expiree", "manquante"].includes(
+            certifAlerte(p.fournisseurs?.certif_expire_le),
+          ),
       ).length,
-    [pos]
+    [pos],
   );
 
   return (
@@ -196,9 +203,12 @@ export default function PoDashboardPage() {
           <h1 className="h1-display mt-2">
             Commandes <em className="gold">fournisseurs</em>
           </h1>
-          <p className="body-md mt-2" style={{ color: "var(--text-secondary)" }}>
-            L&apos;algo prépare les bons. Tu valides, le grossiste reçoit. Halal vérifié à
-            chaque envoi.
+          <p
+            className="body-md mt-2"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            L&apos;algo prépare les bons. Tu valides, le grossiste reçoit. Halal
+            vérifié à chaque envoi.
           </p>
         </header>
 
@@ -235,7 +245,8 @@ export default function PoDashboardPage() {
           >
             {regenerating ? (
               <>
-                <RefreshCw size={16} className="animate-spin" /> Calcul en cours…
+                <RefreshCw size={16} className="animate-spin" /> Calcul en
+                cours…
               </>
             ) : (
               <>
@@ -243,16 +254,35 @@ export default function PoDashboardPage() {
               </>
             )}
           </button>
-          <Link href="/v2/fournisseurs" className="btn-ghost" style={{ minHeight: 44 }}>
+          <Link
+            href="/v2/fournisseurs"
+            className="btn-ghost"
+            style={{ minHeight: 44 }}
+          >
             <Building2 size={16} /> Fournisseurs &amp; certifs
           </Link>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 scrollbar-none overflow-x-auto">
-          <TabBtn label="À valider" count={counts.a_valider} active={tab === "a_valider"} onClick={() => setTab("a_valider")} />
-          <TabBtn label="En cours" count={counts.en_cours} active={tab === "en_cours"} onClick={() => setTab("en_cours")} />
-          <TabBtn label="Reçues" count={counts.recues} active={tab === "recues"} onClick={() => setTab("recues")} />
+          <TabBtn
+            label="À valider"
+            count={counts.a_valider}
+            active={tab === "a_valider"}
+            onClick={() => setTab("a_valider")}
+          />
+          <TabBtn
+            label="En cours"
+            count={counts.en_cours}
+            active={tab === "en_cours"}
+            onClick={() => setTab("en_cours")}
+          />
+          <TabBtn
+            label="Reçues"
+            count={counts.recues}
+            active={tab === "recues"}
+            onClick={() => setTab("recues")}
+          />
         </div>
 
         {/* List */}
@@ -280,15 +310,26 @@ export default function PoDashboardPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="label-caps mb-1" style={{ color: "var(--text-secondary)" }}>
+                        <p
+                          className="label-caps mb-1"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
                           {po.numero_po} · {STATUT_LABELS[po.statut]}
                         </p>
-                        <h3 className="h3 truncate" style={{ color: "var(--text-primary)" }}>
+                        <h3
+                          className="h3 truncate"
+                          style={{ color: "var(--text-primary)" }}
+                        >
                           {po.fournisseurs?.nom ?? "Fournisseur"}
                         </h3>
                         <p className="body-sm mt-0.5">
-                          <Truck size={12} className="inline mr-1" style={{ verticalAlign: -2 }} />
-                          {po.depots?.nom ?? "—"} · livraison {dateFr(po.date_livraison_prevue)}
+                          <Truck
+                            size={12}
+                            className="inline mr-1"
+                            style={{ verticalAlign: -2 }}
+                          />
+                          {po.depots?.nom ?? "—"} · livraison{" "}
+                          {dateFr(po.date_livraison_prevue)}
                         </p>
                       </div>
                       <p
@@ -307,16 +348,24 @@ export default function PoDashboardPage() {
                       />
                       <span
                         className="inline-flex items-center gap-1 text-[13px] font-semibold"
-                        style={{ color: blocked ? "var(--danger)" : "var(--primary-green)" }}
+                        style={{
+                          color: blocked
+                            ? "var(--danger)"
+                            : "var(--primary-green)",
+                        }}
                       >
                         {blocked ? (
                           <>
                             <ShieldAlert size={14} /> Envoi bloqué
                           </>
                         ) : po.statut === "brouillon" ? (
-                          <>Valider <ChevronRight size={14} /></>
+                          <>
+                            Valider <ChevronRight size={14} />
+                          </>
                         ) : (
-                          <>Voir <ChevronRight size={14} /></>
+                          <>
+                            Voir <ChevronRight size={14} />
+                          </>
                         )}
                       </span>
                     </div>
@@ -363,7 +412,10 @@ function KpiCard({
       >
         {label}
       </p>
-      <p className="font-bold tabular leading-none" style={{ fontSize: 28, color: "var(--text-primary)" }}>
+      <p
+        className="font-bold tabular leading-none"
+        style={{ fontSize: 28, color: "var(--text-primary)" }}
+      >
         {value}
       </p>
       <p className="text-[12px] font-semibold mt-1 tabular" style={{ color }}>
@@ -444,7 +496,12 @@ function EmptyState({ tab }: { tab: Tab }) {
   }[tab];
   return (
     <div className="card" style={{ padding: 8 }}>
-      <SharedEmptyState icon={map.Icon} title={map.title} description={map.sub} compact />
+      <SharedEmptyState
+        icon={map.Icon}
+        title={map.title}
+        description={map.sub}
+        compact
+      />
     </div>
   );
 }

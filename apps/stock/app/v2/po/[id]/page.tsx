@@ -72,7 +72,8 @@ export default function PoDetailPage() {
     }
     const { data, error } = await sb
       .from("purchase_orders")
-      .select(`
+      .select(
+        `
         id, numero_po, fournisseur_id, depot_destination_id, statut,
         date_creation, date_envoi, date_livraison_prevue, date_reception,
         total_ht, total_ttc, email_envoye_a, email_message_id, bdl_id, notes,
@@ -81,7 +82,8 @@ export default function PoDetailPage() {
         fournisseurs:fournisseur_id ( nom, email_commandes, certif_organisme, certif_numero, certif_expire_le ),
         depots:depot_destination_id ( nom ),
         purchase_order_lignes ( id, po_id, produit_id, reference_fourn, quantite_commandee, quantite_recue, prix_achat_ht, tva_pct, ligne_total_ht, notes )
-      `)
+      `,
+      )
       .eq("id", poId)
       .single();
     if (error || !data) {
@@ -103,14 +105,17 @@ export default function PoDetailPage() {
     () =>
       lignes.reduce(
         (s, l) =>
-          s + (Number(l.prix_achat_ht) || 0) * (Number(l.quantite_commandee) || 0),
-        0
+          s +
+          (Number(l.prix_achat_ht) || 0) * (Number(l.quantite_commandee) || 0),
+        0,
       ),
-    [lignes]
+    [lignes],
   );
 
   function updateLigne(id: string, patch: Partial<PurchaseOrderLigne>) {
-    setLignes((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    setLignes((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+    );
     setDirty(true);
   }
 
@@ -118,7 +123,10 @@ export default function PoDetailPage() {
     if (!confirm("Supprimer cette ligne du brouillon ?")) return;
     const sb = supabase();
     if (!sb) return;
-    const { error } = await sb.from("purchase_order_lignes").delete().eq("id", id);
+    const { error } = await sb
+      .from("purchase_order_lignes")
+      .delete()
+      .eq("id", id);
     if (error) {
       toast.error("Suppression impossible");
       return;
@@ -141,8 +149,8 @@ export default function PoDetailPage() {
             prix_achat_ht: l.prix_achat_ht,
             notes: l.notes,
           })
-          .eq("id", l.id)
-      )
+          .eq("id", l.id),
+      ),
     );
     const failed = updates.find((r) => r.error);
     if (failed?.error) {
@@ -170,14 +178,12 @@ export default function PoDetailPage() {
     }
     setSending(true);
     try {
-      const res = await fetch("/api/po/send", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ po_id: poId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Erreur d'envoi");
-      toast.success(`Email envoyé à ${json.email}`);
+      // Server action (injecte x-internal-secret côté serveur) au lieu d'un
+      // fetch direct : la route /api/po/send refuse les appels externes.
+      const { sendPoAction } = await import("@/lib/actions/po");
+      const r = await sendPoAction(poId);
+      if (!r.ok) throw new Error(r.error ?? "Erreur d'envoi");
+      toast.success(`Email envoyé à ${r.email}`);
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -192,7 +198,10 @@ export default function PoDetailPage() {
         <PageAccentStripe accent="sapin-or" />
         <div className="px-5 pt-4 pb-nav-stack">
           <BackButton href="/v2/po" />
-          <div className="mt-6 flex items-center gap-2 text-[14px]" style={{ color: "var(--text-secondary)" }}>
+          <div
+            className="mt-6 flex items-center gap-2 text-[14px]"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <Loader2 size={16} className="animate-spin" /> Chargement…
           </div>
         </div>
@@ -213,10 +222,21 @@ export default function PoDetailPage() {
           </p>
           <h1 className="h1 mt-1">{po.fournisseurs?.nom ?? "Fournisseur"}</h1>
           <p className="body-sm mt-1">
-            <Truck size={12} className="inline mr-1" style={{ verticalAlign: -2 }} />
+            <Truck
+              size={12}
+              className="inline mr-1"
+              style={{ verticalAlign: -2 }}
+            />
             {po.depots?.nom ?? "—"}
             {po.date_livraison_prevue && (
-              <> · livraison prévue {new Date(po.date_livraison_prevue).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" })}</>
+              <>
+                {" "}
+                · livraison prévue{" "}
+                {new Date(po.date_livraison_prevue).toLocaleDateString(
+                  "fr-FR",
+                  { weekday: "short", day: "numeric", month: "long" },
+                )}
+              </>
             )}
           </p>
           <div className="mt-3">
@@ -241,7 +261,8 @@ export default function PoDetailPage() {
             }}
           >
             <p className="flex items-center gap-2 font-semibold text-[14px]">
-              <ShieldAlert size={16} /> Envoi bloqué — certif {alerte === "expiree" ? "expiré" : "manquant"}
+              <ShieldAlert size={16} /> Envoi bloqué — certif{" "}
+              {alerte === "expiree" ? "expiré" : "manquant"}
             </p>
             <p className="text-[13px] mt-1" style={{ color: "#A02921" }}>
               Mets à jour le PDF de certif dans la fiche fournisseur, ou bascule
@@ -252,10 +273,16 @@ export default function PoDetailPage() {
 
         {/* Lignes */}
         <section className="mt-5">
-          <p className="section-eyebrow mb-3">{lignes.length} ligne{lignes.length > 1 ? "s" : ""}</p>
+          <p className="section-eyebrow mb-3">
+            {lignes.length} ligne{lignes.length > 1 ? "s" : ""}
+          </p>
           {lignes.length === 0 ? (
             <div className="card text-center" style={{ padding: 28 }}>
-              <ShoppingCart size={28} color="var(--text-tertiary)" className="mx-auto mb-2" />
+              <ShoppingCart
+                size={28}
+                color="var(--text-tertiary)"
+                className="mx-auto mb-2"
+              />
               <p className="body-sm">
                 Aucune ligne. Annule ce brouillon ou ajoute des produits depuis
                 la page d&apos;un fournisseur.
@@ -271,7 +298,10 @@ export default function PoDetailPage() {
                   className="card"
                   style={{ padding: 14 }}
                 >
-                  <p className="font-semibold text-[14px]" style={{ color: "var(--text-primary)" }}>
+                  <p
+                    className="font-semibold text-[14px]"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     {l.reference_fourn ?? `Produit ${l.produit_id.slice(0, 8)}`}
                   </p>
                   <div className="grid grid-cols-2 gap-3 mt-3">
@@ -291,13 +321,19 @@ export default function PoDetailPage() {
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between">
-                    <p className="text-[13px]" style={{ color: "var(--text-secondary)" }}>
+                    <p
+                      className="text-[13px]"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       Sous-total
                     </p>
-                    <p className="font-bold tabular text-[16px]" style={{ color: "var(--text-primary)" }}>
+                    <p
+                      className="font-bold tabular text-[16px]"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {eur(
                         (Number(l.prix_achat_ht) || 0) *
-                          (Number(l.quantite_commandee) || 0)
+                          (Number(l.quantite_commandee) || 0),
                       )}
                     </p>
                   </div>
@@ -405,7 +441,10 @@ function QtyControl({
 }) {
   return (
     <div>
-      <p className="label-caps mb-1.5" style={{ color: "var(--text-secondary)" }}>
+      <p
+        className="label-caps mb-1.5"
+        style={{ color: "var(--text-secondary)" }}
+      >
         {label}
       </p>
       <div
@@ -465,7 +504,10 @@ function PriceControl({
 }) {
   return (
     <div>
-      <p className="label-caps mb-1.5" style={{ color: "var(--text-secondary)" }}>
+      <p
+        className="label-caps mb-1.5"
+        style={{ color: "var(--text-secondary)" }}
+      >
         {label}
       </p>
       <div
@@ -488,7 +530,10 @@ function PriceControl({
           className="flex-1 font-bold tabular bg-transparent outline-none"
           style={{ fontSize: 16, color: "var(--text-primary)" }}
         />
-        <span className="font-semibold text-[14px]" style={{ color: "var(--text-secondary)" }}>
+        <span
+          className="font-semibold text-[14px]"
+          style={{ color: "var(--text-secondary)" }}
+        >
           €
         </span>
       </div>
@@ -511,7 +556,9 @@ function Row({
     <div className="flex items-center justify-between py-1">
       <p
         className={muted ? "body-sm" : "text-[14px]"}
-        style={{ color: muted ? "var(--text-secondary)" : "var(--text-primary)" }}
+        style={{
+          color: muted ? "var(--text-secondary)" : "var(--text-primary)",
+        }}
       >
         {label}
       </p>

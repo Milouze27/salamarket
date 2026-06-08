@@ -449,42 +449,60 @@ const Cart = () => {
                             visuels (w-8 = 32px) mais on étend la zone
                             tactile via padding parent + hit-area pseudo
                             sur les boutons. */}
-                        <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-1 border border-border">
+                        {isWeight ? (
+                          // Ligne au poids : PAS de stepper d'unités. Le poids
+                          // se règle via le champ kg ci-dessus ; un +/- ici
+                          // multiplierait quantiteKg × quantity → poids ET prix
+                          // doublés. On ne garde qu'un bouton « retirer ».
                           <button
-                            onClick={() =>
-                              item.quantity === 1
-                                ? removeLine(item.lineId)
-                                : decrement(item.lineId)
-                            }
-                            aria-label={
-                              item.quantity === 1
-                                ? `Retirer ${item.product.name}`
-                                : `Diminuer ${item.product.name}`
-                            }
+                            onClick={() => removeLine(item.lineId)}
+                            aria-label={`Retirer ${item.product.name}`}
                             className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center text-text active:scale-90 transition-transform shadow-sm"
                           >
-                            {item.quantity === 1 ? (
-                              <Trash2
-                                size={14}
-                                className="text-destructive"
-                                strokeWidth={2.4}
-                              />
-                            ) : (
-                              <Minus size={14} strokeWidth={2.5} />
-                            )}
+                            <Trash2
+                              size={14}
+                              className="text-destructive"
+                              strokeWidth={2.4}
+                            />
                           </button>
-                          <span className="min-w-[1.75rem] w-7 text-center text-sm font-bold tabular-nums">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() => increment(item.lineId)}
-                            disabled={item.quantity >= 99}
-                            aria-label={`Augmenter ${item.product.name}`}
-                            className="w-9 h-9 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
-                          >
-                            <Plus size={14} strokeWidth={2.5} />
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-1 bg-[#FAF7EE] rounded-full p-1 border border-border">
+                            <button
+                              onClick={() =>
+                                item.quantity === 1
+                                  ? removeLine(item.lineId)
+                                  : decrement(item.lineId)
+                              }
+                              aria-label={
+                                item.quantity === 1
+                                  ? `Retirer ${item.product.name}`
+                                  : `Diminuer ${item.product.name}`
+                              }
+                              className="w-9 h-9 rounded-full bg-white border border-border flex items-center justify-center text-text active:scale-90 transition-transform shadow-sm"
+                            >
+                              {item.quantity === 1 ? (
+                                <Trash2
+                                  size={14}
+                                  className="text-destructive"
+                                  strokeWidth={2.4}
+                                />
+                              ) : (
+                                <Minus size={14} strokeWidth={2.5} />
+                              )}
+                            </button>
+                            <span className="min-w-[1.75rem] w-7 text-center text-sm font-bold tabular-nums">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => increment(item.lineId)}
+                              disabled={item.quantity >= 99}
+                              aria-label={`Augmenter ${item.product.name}`}
+                              className="w-9 h-9 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
+                            >
+                              <Plus size={14} strokeWidth={2.5} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </li>

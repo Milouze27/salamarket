@@ -203,16 +203,8 @@ export async function POST(req: Request) {
     })
     .eq("id", commande_id);
 
-  if (errUpd) {
-    // La capture Stripe a réussi mais le DB UPDATE a échoué. On log et
-    // on renvoie quand même OK avec un warning — le webhook
-    // `payment_intent.succeeded` rattrapera l'update.
-    console.error(
-      "[stripe/capture] UPDATE DB échouée après capture, webhook va rattraper :",
-      errUpd,
-    );
-  }
-
+  // Audit AVANT le retour : trace la capture Stripe et l'état du DB UPDATE,
+  // même en cas d'échec (réconciliation Stripe↔DB).
   await auditLog({
     action: "stripe.payment_intent.captured",
     tableName: "commandes_drive",
@@ -225,6 +217,26 @@ export async function POST(req: Request) {
       db_update_ok: !errUpd,
     },
   });
+
+  if (errUpd) {
+    // La capture Stripe a RÉUSSI (client débité) mais l'UPDATE DB a échoué :
+    // statut_paiement reste 'autorise', montant_capture_ttc NULL. Il ne faut
+    // PAS renvoyer 'success' (sinon le staff croit la capture enregistrée et
+    // rien ne corrige l'incohérence — Stripe ne re-déclenche pas sur un 200).
+    console.error(
+      "[stripe/capture] capture Stripe OK mais UPDATE DB échouée :",
+      errUpd,
+    );
+    return NextResponse.json(
+      {
+        error: "db_desync_after_capture",
+        message: `Paiement capturé chez Stripe mais enregistrement échoué. Prévenir l'admin (PI ${captured.id}).`,
+        paymentIntentId: captured.id,
+        montantCaptureTtc: montantReelTtc,
+      },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({
     paymentIntentId: captured.id,

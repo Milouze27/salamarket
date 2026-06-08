@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     .from("commandes_drive")
     .select(
       "id, statut_paiement, stripe_payment_intent_id, " +
-        "montant_autorise_ttc, " +
+        "montant_autorise_ttc, autorisation_expire_at, " +
         "commandes_drive_lignes (montant_estime_ttc, montant_reel_ttc)",
     )
     .eq("id", commande_id)
@@ -103,8 +103,25 @@ export async function POST(req: Request) {
     statut_paiement: string | null;
     stripe_payment_intent_id: string | null;
     montant_autorise_ttc: number | string | null;
+    autorisation_expire_at: string | null;
     commandes_drive_lignes: LigneMontant[] | null;
   };
+
+  // Pré-autorisation Stripe expirée ? (capture_method=manual → ~7 j de validité).
+  // On le détecte AVANT l'appel Stripe pour renvoyer un message actionnable au
+  // staff plutôt qu'une erreur Stripe brute « PaymentIntent ... cannot be captured ».
+  if (
+    cmd.autorisation_expire_at &&
+    new Date(cmd.autorisation_expire_at).getTime() < Date.now()
+  ) {
+    return NextResponse.json(
+      {
+        error: "autorisation_expiree",
+        detail: `La pré-autorisation a expiré le ${new Date(cmd.autorisation_expire_at).toLocaleString("fr-FR")}. Demande au client de repasser commande ou de re-régler au comptoir.`,
+      },
+      { status: 409 },
+    );
+  }
 
   if (cmd.statut_paiement !== "autorise") {
     return NextResponse.json(

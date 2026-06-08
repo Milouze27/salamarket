@@ -169,7 +169,9 @@ export default function V2SortiePage() {
       toast.error("Session perdue (dépôt/employé) — reconnecte-toi.");
       return;
     }
-    const qte = parseInt(quantite, 10);
+    // parseFloat (virgule FR → point) : une casse au poids se déclare en kg
+    // (ex. 1,5 kg de viande périmée). parseInt tronquait à 1 → casse sous-évaluée.
+    const qte = parseFloat(quantite.replace(",", "."));
     if (!Number.isFinite(qte) || qte <= 0) {
       toast.error("Quantité invalide");
       return;
@@ -310,7 +312,7 @@ export default function V2SortiePage() {
     produit &&
     type &&
     photo &&
-    parseInt(quantite, 10) > 0 &&
+    parseFloat(quantite.replace(",", ".")) > 0 &&
     (type !== "autre" || motifLibre.trim().length > 0);
 
   return (
@@ -509,11 +511,11 @@ export default function V2SortiePage() {
             <input
               id="sortie-quantite"
               type="number"
-              min={1}
+              min={0}
+              step="any"
               value={quantite}
               onChange={(e) => setQuantite(e.target.value)}
-              inputMode="numeric"
-              pattern="[0-9]*"
+              inputMode="decimal"
               className="input-field text-2xl font-bold text-center min-h-[56px]"
             />
           </div>

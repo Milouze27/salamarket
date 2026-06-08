@@ -29,8 +29,8 @@ export const runtime = "nodejs";
 
 // ─── Types renvoyés au client ─────────────────────────────────────
 export interface CockpitVentesJour {
-  jour: string;            // YYYY-MM-DD
-  ca_ttc: number;          // €
+  jour: string; // YYYY-MM-DD
+  ca_ttc: number; // €
   nb_tickets: number;
   panier_moyen: number | null;
   target_ca: number | null;
@@ -77,9 +77,9 @@ export interface CockpitCompetitorRow {
   releve_le: string;
   notes: string | null;
   // HOTFIX-VAGUE7 : champs dynamiques pour CompetitorCard
-  concurrent_nom: string;             // 'Aya Market' par défaut, peut varier
-  prix_salam_eur: number | null;      // prix Drive du produit Salam pour calcul delta
-  delta_pct: number | null;           // (releve - salam) / salam * 100 (positif = concurrent + cher)
+  concurrent_nom: string; // 'Aya Market' par défaut, peut varier
+  prix_salam_eur: number | null; // prix Drive du produit Salam pour calcul delta
+  delta_pct: number | null; // (releve - salam) / salam * 100 (positif = concurrent + cher)
 }
 
 export interface CockpitSnapshot {
@@ -108,7 +108,7 @@ export interface CockpitSnapshot {
   };
   casse_24h: CockpitCasseSoiree | null;
   competitor: CockpitCompetitorRow[];
-  warnings: string[];        // ex: ["MV pas rafraîchie", "Pas de target défini"]
+  warnings: string[]; // ex: ["MV pas rafraîchie", "Pas de target défini"]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -133,10 +133,12 @@ export async function GET(req: Request) {
   // qui ajoute le secret côté serveur. Bloque les scans externes.
   const internalSecret = process.env.INTERNAL_API_SECRET;
   if (!internalSecret) {
-    console.error("[cockpit/snapshot] INTERNAL_API_SECRET non configuré, refus.");
+    console.error(
+      "[cockpit/snapshot] INTERNAL_API_SECRET non configuré, refus.",
+    );
     return NextResponse.json(
       { error: "cockpit snapshot misconfigured (INTERNAL_API_SECRET missing)" },
-      { status: 503 }
+      { status: 503 },
     );
   }
   const provided = req.headers.get("x-internal-secret");
@@ -197,37 +199,67 @@ export async function GET(req: Request) {
     casseBaselineRes,
     competitorRes,
   ] = await Promise.allSettled([
-    // 1. CA hier
-    (depotId
-      ? sb.from("mv_ventes_quotidiennes").select("*").eq("jour", jourHier).eq("depot_id", depotId).maybeSingle()
-      : sb.from("mv_ventes_quotidiennes").select("*").eq("jour", jourHier).maybeSingle()),
-    // 2. CA N-1
-    (depotId
-      ? sb.from("mv_ventes_quotidiennes").select("*").eq("jour", jourN1).eq("depot_id", depotId).maybeSingle()
-      : sb.from("mv_ventes_quotidiennes").select("*").eq("jour", jourN1).maybeSingle()),
+    // 1. CA hier — mv_ventes_quotidiennes est CONSOLIDÉE (pas de colonne
+    //    depot_id : le breakdown par dépôt est un TODO côté MV). Filtrer par
+    //    depot_id provoquait une erreur SQL → CA vide quand un dépôt était
+    //    sélectionné. On sert donc le CA tous dépôts confondus.
+    sb
+      .from("mv_ventes_quotidiennes")
+      .select("*")
+      .eq("jour", jourHier)
+      .maybeSingle(),
+    // 2. CA N-1 (idem, consolidé)
+    sb
+      .from("mv_ventes_quotidiennes")
+      .select("*")
+      .eq("jour", jourN1)
+      .maybeSingle(),
     // 3. Target J-1
-    (depotId
-      ? sb.from("cockpit_targets").select("target_ca").eq("jour", jourHier).eq("depot_id", depotId).maybeSingle()
-      : sb.from("cockpit_targets").select("target_ca").eq("jour", jourHier).maybeSingle()),
+    depotId
+      ? sb
+          .from("cockpit_targets")
+          .select("target_ca")
+          .eq("jour", jourHier)
+          .eq("depot_id", depotId)
+          .maybeSingle()
+      : sb
+          .from("cockpit_targets")
+          .select("target_ca")
+          .eq("jour", jourHier)
+          .maybeSingle(),
     // 4. DLC alerts
     sb
       .from("v_dlc_alerts")
-      .select("lot_id, produit_id, produit_nom, jours_restants, niveau_alerte, remise_suggeree_pct, quantite_recue")
+      .select(
+        "lot_id, produit_id, produit_nom, jours_restants, niveau_alerte, remise_suggeree_pct, quantite_recue",
+      )
       .neq("niveau_alerte", "ok")
       .order("jours_restants", { ascending: true })
       .limit(60),
     // 5. Stockout (filtered to depot if provided)
-    (depotId
-      ? sb.from("v_stockout_critiques").select("*").eq("depot_id", depotId).limit(20)
-      : sb.from("v_stockout_critiques").select("*").limit(20)),
+    depotId
+      ? sb
+          .from("v_stockout_critiques")
+          .select("*")
+          .eq("depot_id", depotId)
+          .limit(20)
+      : sb.from("v_stockout_critiques").select("*").limit(20),
     // 6. Casse 24h (sortie type casse_* sur veille >= 18h)
     (() => {
       const startVeilleSoir = `${jourHier}T18:00:00`;
       const endVeille = `${jourHier}T23:59:59`;
       let q = sb
         .from("sorties_stock")
-        .select("id, type, quantite, produit_id, depot_id, created_at, produit:produits(nom, categorie, prix_vente_ttc)")
-        .in("type", ["casse_manipulation", "casse_client", "perime_dlc", "perime_ddm", "defaut_fournisseur"])
+        .select(
+          "id, type, quantite, produit_id, depot_id, created_at, produit:produits(nom, categorie, prix_vente_ttc)",
+        )
+        .in("type", [
+          "casse_manipulation",
+          "casse_client",
+          "perime_dlc",
+          "perime_ddm",
+          "defaut_fournisseur",
+        ])
         .gte("created_at", startVeilleSoir)
         .lte("created_at", endVeille);
       if (depotId) q = q.eq("depot_id", depotId);
@@ -240,7 +272,13 @@ export async function GET(req: Request) {
       let q = sb
         .from("sorties_stock")
         .select("id, quantite, produit:produits(prix_vente_ttc), created_at")
-        .in("type", ["casse_manipulation", "casse_client", "perime_dlc", "perime_ddm", "defaut_fournisseur"])
+        .in("type", [
+          "casse_manipulation",
+          "casse_client",
+          "perime_dlc",
+          "perime_ddm",
+          "defaut_fournisseur",
+        ])
         .gte("created_at", sevenDaysAgo.toISOString());
       if (depotId) q = q.eq("depot_id", depotId);
       return q;
@@ -260,9 +298,16 @@ export async function GET(req: Request) {
   // ─── Process ventes_hier ────────────────────────────────────────
   let ventesHier: CockpitVentesJour | null = null;
   let target: number | null = null;
-  if (ventesHierRes.status === "fulfilled" && !ventesHierRes.value.error && ventesHierRes.value.data) {
+  if (
+    ventesHierRes.status === "fulfilled" &&
+    !ventesHierRes.value.error &&
+    ventesHierRes.value.data
+  ) {
     const v = ventesHierRes.value.data as {
-      jour: string; ca_ttc: number | string; nb_tickets: number; panier_moyen: number | string | null;
+      jour: string;
+      ca_ttc: number | string;
+      nb_tickets: number;
+      panier_moyen: number | string | null;
     };
     ventesHier = {
       jour: v.jour,
@@ -272,25 +317,48 @@ export async function GET(req: Request) {
       target_ca: null,
       pct_target: null,
     };
-  } else if (ventesHierRes.status === "rejected" || ventesHierRes.value?.error) {
-    warnings.push("MV ventes quotidiennes inaccessible — relancer le cron refresh-cockpit-cache");
+  } else if (
+    ventesHierRes.status === "rejected" ||
+    ventesHierRes.value?.error
+  ) {
+    warnings.push(
+      "MV ventes quotidiennes inaccessible — relancer le cron refresh-cockpit-cache",
+    );
   }
 
-  if (targetRes.status === "fulfilled" && !targetRes.value.error && targetRes.value.data) {
-    target = Number((targetRes.value.data as { target_ca: number | string }).target_ca);
+  if (
+    targetRes.status === "fulfilled" &&
+    !targetRes.value.error &&
+    targetRes.value.data
+  ) {
+    target = Number(
+      (targetRes.value.data as { target_ca: number | string }).target_ca,
+    );
     if (ventesHier) {
       ventesHier.target_ca = target;
-      ventesHier.pct_target = target > 0 ? Math.round((ventesHier.ca_ttc / target) * 1000) / 10 : null;
+      ventesHier.pct_target =
+        target > 0
+          ? Math.round((ventesHier.ca_ttc / target) * 1000) / 10
+          : null;
     }
   } else if (ventesHier) {
-    warnings.push("Pas de target CA défini pour hier — pourcentage non calculable");
+    warnings.push(
+      "Pas de target CA défini pour hier — pourcentage non calculable",
+    );
   }
 
   // ─── Process ventes_n1 ──────────────────────────────────────────
   let ventesN1: CockpitVentesJour | null = null;
-  if (ventesN1Res.status === "fulfilled" && !ventesN1Res.value.error && ventesN1Res.value.data) {
+  if (
+    ventesN1Res.status === "fulfilled" &&
+    !ventesN1Res.value.error &&
+    ventesN1Res.value.data
+  ) {
     const v = ventesN1Res.value.data as {
-      jour: string; ca_ttc: number | string; nb_tickets: number; panier_moyen: number | string | null;
+      jour: string;
+      ca_ttc: number | string;
+      nb_tickets: number;
+      panier_moyen: number | string | null;
     };
     ventesN1 = {
       jour: v.jour,
@@ -304,7 +372,9 @@ export async function GET(req: Request) {
 
   const deltaN1Pct =
     ventesHier && ventesN1 && ventesN1.ca_ttc > 0
-      ? Math.round(((ventesHier.ca_ttc - ventesN1.ca_ttc) / ventesN1.ca_ttc) * 1000) / 10
+      ? Math.round(
+          ((ventesHier.ca_ttc - ventesN1.ca_ttc) / ventesN1.ca_ttc) * 1000,
+        ) / 10
       : null;
 
   // ─── Process DLC ────────────────────────────────────────────────
@@ -334,7 +404,8 @@ export async function GET(req: Request) {
       ),
     }));
     dlcRows = rawNormalized.slice(0, 14).map((r) => {
-      const valeur = (r.quantite_recue ?? 0) * (r.remise_suggeree_pct / 100) * 8;
+      const valeur =
+        (r.quantite_recue ?? 0) * (r.remise_suggeree_pct / 100) * 8;
       return {
         lot_id: r.lot_id,
         produit_id: r.produit_id,
@@ -351,7 +422,8 @@ export async function GET(req: Request) {
     dlcCountCritique = 0;
     for (const r of rawNormalized) {
       dlcValeur += (r.quantite_recue ?? 0) * (r.remise_suggeree_pct / 100) * 8;
-      if (r.niveau_alerte === "critique" || r.niveau_alerte === "forcé") dlcCountCritique += 1;
+      if (r.niveau_alerte === "critique" || r.niveau_alerte === "forcé")
+        dlcCountCritique += 1;
     }
   } else if (dlcRes.status === "rejected" || dlcRes.value?.error) {
     warnings.push("v_dlc_alerts non disponible (vérifier migration 0032)");
@@ -375,7 +447,9 @@ export async function GET(req: Request) {
   if (stockoutRes.status === "fulfilled" && !stockoutRes.value.error) {
     const raw = (stockoutRes.value.data ?? []) as StockoutInput[];
     stockoutTotal = raw.length;
-    stockoutOut = raw.filter((r) => r.tier === "out" || r.tier === "blocker").length;
+    stockoutOut = raw.filter(
+      (r) => r.tier === "out" || r.tier === "blocker",
+    ).length;
     stockoutRows = raw.slice(0, 8).map((r) => ({
       produit_id: r.produit_id,
       produit_nom: r.produit_nom,
@@ -388,7 +462,9 @@ export async function GET(req: Request) {
       reason: r.reason,
     }));
   } else if (stockoutRes.status === "rejected" || stockoutRes.value?.error) {
-    warnings.push("v_stockout_critiques non disponible (vérifier migration 0035)");
+    warnings.push(
+      "v_stockout_critiques non disponible (vérifier migration 0035)",
+    );
   }
 
   // ─── Process casse 24h ─────────────────────────────────────────
@@ -396,7 +472,11 @@ export async function GET(req: Request) {
   // typing par défaut), même quand 1 seule ligne. On extrait [0].
   let casse24h: CockpitCasseSoiree | null = null;
   if (casseRes.status === "fulfilled" && !casseRes.value.error) {
-    type CasseProduit = { nom: string; categorie: string | null; prix_vente_ttc: number | string | null };
+    type CasseProduit = {
+      nom: string;
+      categorie: string | null;
+      prix_vente_ttc: number | string | null;
+    };
     type CasseRow = {
       type: string;
       quantite: number | string;
@@ -406,7 +486,7 @@ export async function GET(req: Request) {
     let total = 0;
     const catTotals = new Map<string, number>();
     for (const r of raw) {
-      const p = Array.isArray(r.produit) ? r.produit[0] ?? null : r.produit;
+      const p = Array.isArray(r.produit) ? (r.produit[0] ?? null) : r.produit;
       const prix = Number(p?.prix_vente_ttc ?? 0);
       const v = Number(r.quantite) * prix;
       total += v;
@@ -423,14 +503,18 @@ export async function GET(req: Request) {
     }
     // Baseline 7j moyenne
     let avg7j = 0;
-    if (casseBaselineRes.status === "fulfilled" && !casseBaselineRes.value.error) {
+    if (
+      casseBaselineRes.status === "fulfilled" &&
+      !casseBaselineRes.value.error
+    ) {
       type BaseProduit = { prix_vente_ttc: number | string | null };
       type BaseRow = {
         quantite: number | string;
         produit: BaseProduit | BaseProduit[] | null;
         created_at: string;
       };
-      const baseRaw = (casseBaselineRes.value.data ?? []) as unknown as BaseRow[];
+      const baseRaw = (casseBaselineRes.value.data ??
+        []) as unknown as BaseRow[];
       // On garde uniquement les events 18-24h, on agrège par jour, on moyenne
       const perDay = new Map<string, number>();
       for (const r of baseRaw) {
@@ -438,14 +522,16 @@ export async function GET(req: Request) {
         const h = dt.getHours();
         if (h < 18 || h > 23) continue;
         const jour = r.created_at.slice(0, 10);
-        const p = Array.isArray(r.produit) ? r.produit[0] ?? null : r.produit;
+        const p = Array.isArray(r.produit) ? (r.produit[0] ?? null) : r.produit;
         const v = Number(r.quantite) * Number(p?.prix_vente_ttc ?? 0);
         perDay.set(jour, (perDay.get(jour) ?? 0) + v);
       }
       const days = [...perDay.values()];
-      avg7j = days.length > 0 ? days.reduce((a, b) => a + b, 0) / days.length : 0;
+      avg7j =
+        days.length > 0 ? days.reduce((a, b) => a + b, 0) / days.length : 0;
     }
-    const delta = avg7j > 0 ? Math.round(((total - avg7j) / avg7j) * 1000) / 10 : null;
+    const delta =
+      avg7j > 0 ? Math.round(((total - avg7j) / avg7j) * 1000) / 10 : null;
     casse24h = {
       total_eur_24h: Math.round(total * 100) / 100,
       total_eur_7j_avg: Math.round(avg7j * 100) / 100,
@@ -481,7 +567,7 @@ export async function GET(req: Request) {
     competitor = raw.map((r) => {
       const releve = Number(r.prix_releve_eur);
       const produit = Array.isArray(r.produit)
-        ? r.produit[0] ?? null
+        ? (r.produit[0] ?? null)
         : r.produit;
       const cents = produit?.prix_drive_cents ?? null;
       const prixSalam =
@@ -522,11 +608,12 @@ export async function GET(req: Request) {
     ventes_n1: ventesN1,
     delta_n1_pct: deltaN1Pct,
     dlc: {
-      count_total: dlcRows.length > 0
-        ? (dlcRes.status === "fulfilled" && !dlcRes.value.error
+      count_total:
+        dlcRows.length > 0
+          ? dlcRes.status === "fulfilled" && !dlcRes.value.error
             ? (dlcRes.value.data ?? []).length
-            : 0)
-        : 0,
+            : 0
+          : 0,
       count_critique: dlcCountCritique,
       valeur_eur: Math.round(dlcValeur * 100) / 100,
       top: dlcRows,

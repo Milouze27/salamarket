@@ -360,29 +360,43 @@ export default function BdlReceptionPage() {
       if (errProd) throw new Error(errProd.message);
       const produitId = (created as { id: string }).id;
 
-      // 2. Prix initial dans stock_par_depot pour le dépôt destination
+      // 2. Prix initial dans stock_par_depot pour le dépôt destination.
+      //    Erreur vérifiée : sinon le prix saisi serait perdu en silence
+      //    (produit invisible/non vendable dans /v2/stock).
       if (bdl.depot_destination_id) {
-        await sb.from("stock_par_depot").insert({
+        const { error: errStock } = await sb.from("stock_par_depot").insert({
           produit_id: produitId,
           depot_id: bdl.depot_destination_id,
           quantite: 0,
           prix_vente: prix,
           is_visible: true,
         });
+        if (errStock)
+          throw new Error(`Stock initial non créé : ${errStock.message}`);
+      } else {
+        throw new Error(
+          "Dépôt destination manquant sur le BDL : impossible d'enregistrer le prix.",
+        );
       }
 
       // 3. Ajoute une ligne BDL avec qty_attendue = qty saisie et qty_recue = qty saisie
       //    (statut "recu" car on a déjà la marchandise sous la main)
-      await sb.from("bons_de_livraison_lignes").insert({
-        bdl_id: bdl.id,
-        produit_id: produitId,
-        code_barre_attendu: createModal.code,
-        quantite_attendue: qty,
-        quantite_recue: qty,
-        statut: "recu",
-        scanne_le: new Date().toISOString(),
-        scanne_par: employe?.id ?? null,
-      });
+      const { error: errLigne } = await sb
+        .from("bons_de_livraison_lignes")
+        .insert({
+          bdl_id: bdl.id,
+          produit_id: produitId,
+          code_barre_attendu: createModal.code,
+          quantite_attendue: qty,
+          quantite_recue: qty,
+          statut: "recu",
+          scanne_le: new Date().toISOString(),
+          scanne_par: employe?.id ?? null,
+        });
+      if (errLigne)
+        throw new Error(
+          `Ligne de réception non enregistrée : ${errLigne.message}`,
+        );
 
       // Push iPhone admin — l'employé vient de créer une fiche produit
       // pendant une réception, l'admin doit la valider (prix notamment)
@@ -455,11 +469,13 @@ export default function BdlReceptionPage() {
     const matched = cur?.bons_de_livraison_lignes.find(
       (l) => l.produit_id === produitId,
     );
+    // Erreur vérifiée sur les deux branches : sinon la quantité « apprise »
+    // est perdue alors qu'on affiche « Carton appris » (faux succès).
     if (matched) {
       const newQte = matched.quantite_recue + learnCartonModal.qty;
       const newStat: BdlLigne["statut"] =
         newQte >= matched.quantite_attendue ? "recu" : "attendu";
-      await sb
+      const { error: errMaj } = await sb
         .from("bons_de_livraison_lignes")
         .update({
           quantite_recue: newQte,
@@ -468,17 +484,27 @@ export default function BdlReceptionPage() {
           scanne_par: employe?.id ?? null,
         })
         .eq("id", matched.id);
+      if (errMaj) {
+        toast.error("Quantité non enregistrée : " + errMaj.message);
+        return;
+      }
     } else {
-      await sb.from("bons_de_livraison_lignes").insert({
-        bdl_id: bdl.id,
-        produit_id: produitId,
-        code_barre_attendu: learnCartonModal.code,
-        quantite_attendue: learnCartonModal.qty,
-        quantite_recue: learnCartonModal.qty,
-        statut: "recu",
-        scanne_le: new Date().toISOString(),
-        scanne_par: employe?.id ?? null,
-      });
+      const { error: errIns } = await sb
+        .from("bons_de_livraison_lignes")
+        .insert({
+          bdl_id: bdl.id,
+          produit_id: produitId,
+          code_barre_attendu: learnCartonModal.code,
+          quantite_attendue: learnCartonModal.qty,
+          quantite_recue: learnCartonModal.qty,
+          statut: "recu",
+          scanne_le: new Date().toISOString(),
+          scanne_par: employe?.id ?? null,
+        });
+      if (errIns) {
+        toast.error("Ligne non enregistrée : " + errIns.message);
+        return;
+      }
     }
     toast.success(
       `Carton appris : ${produitNom} × ${learnCartonModal.qty} (codes liés)`,
@@ -617,19 +643,31 @@ export default function BdlReceptionPage() {
       return;
     }
     try {
-      // 1. Pour chaque ligne reçue, incrémenter stock_par_depot
+      // Garde : sans dépôt destination, on ne peut pas créditer le stock.
+      // (Évite un insert depot_id=null avalé → marchandise reçue, stock faux.)
+      const depotId = bdl.depot_destination_id;
+      if (!depotId) {
+        throw new Error(
+          "Dépôt destination manquant sur le BDL : réception impossible.",
+        );
+      }
+      // 1. Pour chaque ligne reçue, incrémenter stock_par_depot.
+      //    Chaque écriture est vérifiée : une erreur stoppe AVANT de marquer
+      //    le BDL réceptionné (sinon stock faux + BDL « terminé »).
       for (const l of bdl.bons_de_livraison_lignes) {
         if (l.statut !== "recu" || !l.produit_id || l.quantite_recue <= 0) {
           continue;
         }
-        const { data: existing } = await sb
+        const { data: existing, error: errSel } = await sb
           .from("stock_par_depot")
           .select("id, quantite")
           .eq("produit_id", l.produit_id)
-          .eq("depot_id", bdl.depot_destination_id!)
+          .eq("depot_id", depotId)
           .maybeSingle();
+        if (errSel)
+          throw new Error(`Lecture du stock impossible : ${errSel.message}`);
         if (existing) {
-          await sb
+          const { error: errUpd } = await sb
             .from("stock_par_depot")
             .update({
               quantite:
@@ -637,17 +675,20 @@ export default function BdlReceptionPage() {
               updated_at: new Date().toISOString(),
             })
             .eq("id", (existing as { id: string }).id);
+          if (errUpd)
+            throw new Error(`Stock non mis à jour : ${errUpd.message}`);
         } else {
-          await sb.from("stock_par_depot").insert({
+          const { error: errIns } = await sb.from("stock_par_depot").insert({
             produit_id: l.produit_id,
-            depot_id: bdl.depot_destination_id,
+            depot_id: depotId,
             quantite: l.quantite_recue,
             is_visible: true,
           });
+          if (errIns) throw new Error(`Stock non créé : ${errIns.message}`);
         }
       }
-      // 2. Marque BDL receptionnee
-      await sb
+      // 2. Marque BDL receptionnee (seulement si tout le stock est passé)
+      const { error: errBdl } = await sb
         .from("bons_de_livraison")
         .update({
           statut: "receptionnee",
@@ -655,6 +696,8 @@ export default function BdlReceptionPage() {
           receptionne_le: new Date().toISOString(),
         })
         .eq("id", bdl.id);
+      if (errBdl)
+        throw new Error(`Statut du BDL non enregistré : ${errBdl.message}`);
       // 3. Notif legacy
       // HOTFIX vague 7 : server action injecte x-internal-secret.
       void import("@/lib/actions/notify")

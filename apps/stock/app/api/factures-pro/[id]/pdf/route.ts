@@ -107,13 +107,19 @@ export async function GET(
   }>;
   const ids = rows.map((r) => r.produit_id).filter(Boolean) as string[];
   const noms = new Map<string, string>();
+  const prodTva = new Map<string, number | null>();
   if (ids.length) {
     const { data: prods } = await sb
       .from("produits")
-      .select("id, nom")
+      .select("id, nom, tva_taux")
       .in("id", ids);
-    for (const p of (prods ?? []) as Array<{ id: string; nom: string }>) {
+    for (const p of (prods ?? []) as Array<{
+      id: string;
+      nom: string;
+      tva_taux: number | null;
+    }>) {
       noms.set(p.id, p.nom);
+      prodTva.set(p.id, p.tva_taux);
     }
   }
   const lignes: FactureProLigne[] = rows.map((r) => ({
@@ -121,7 +127,12 @@ export async function GET(
     quantite: Number(r.quantite_unitaire_totale ?? 0),
     prixHtUnitaire: Number(r.prix_ht_unitaire ?? 0),
     prixHtTotal: Number(r.prix_ht_total ?? 0),
-    tvaTaux: Number(r.tva_taux ?? 0),
+    // Fallback en cascade : ligne → taux du produit → 5,5 % (alimentaire FR).
+    // Évite qu'une tva_taux NULL retombe à 0 % et fausse la ventilation TVA
+    // (qui divergerait alors du montant_tva total facturé).
+    tvaTaux: Number(
+      r.tva_taux ?? (r.produit_id ? prodTva.get(r.produit_id) : null) ?? 5.5,
+    ),
   }));
 
   try {

@@ -339,7 +339,18 @@ export default function V2PreparationKanbanPage() {
   async function advance(cmd: CommandeWithLignes, target: KanbanStatut) {
     setUpdating(true);
     try {
-      await setCommandeStatut(cmd.id, target);
+      // Passage en "prêt" d'une commande À L'UNITÉ : on décrémente le stock
+      // (sinon le canal de vente le plus courant ne réduisait jamais le stock).
+      // Les commandes AU POIDS (statut_paiement === 'autorise') décrémentent
+      // via leur propre finalisation (pesée + capture Stripe), pas ici.
+      if (target === "pret" && cmd.statut_paiement !== "autorise") {
+        const { markOrderReadyAndDecrement } =
+          await import("@/lib/staff/preparation-actions");
+        const res = await markOrderReadyAndDecrement({ commande_id: cmd.id });
+        if (!res.ok) throw new Error(res.error);
+      } else {
+        await setCommandeStatut(cmd.id, target);
+      }
       // Send "commande prête" email — fire-and-forget via server action
       // (passe l'INTERNAL_API_SECRET côté serveur).
       if (target === "pret" && cmd.client_email) {

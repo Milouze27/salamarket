@@ -39,7 +39,6 @@ import {
   listDepots,
   listLignesPourCommande,
   listProduitsInDepot,
-  setCommandeStatut,
   updateLignePreparation,
 } from "@/lib/db";
 import type {
@@ -436,8 +435,18 @@ export default function V2PreparationDetailPage() {
       toast.error(`${remaining.length} ligne(s) encore en attente`);
       return;
     }
+    // Passage en "prêt" + DÉCRÉMENT DU STOCK. Le flux legacy ne faisait qu'un
+    // UPDATE statut → les commandes à l'unité (épicerie sèche, canal n°1) ne
+    // réduisaient JAMAIS le stock. markOrderReadyAndDecrement fait les deux
+    // (décrément idempotent côté serveur).
     try {
-      await setCommandeStatut(commande.id, "pret");
+      const { markOrderReadyAndDecrement } =
+        await import("@/lib/staff/preparation-actions");
+      const res = await markOrderReadyAndDecrement({
+        commande_id: commande.id,
+        user_id: getUserUuid(employe?.id ?? null),
+      });
+      if (!res.ok) throw new Error(res.error);
     } catch (e) {
       // Échec DB : ne pas notifier/emailer un "prêt" qui n'a pas eu lieu.
       console.error("[prep] passage en prêt échoué:", e);

@@ -39,8 +39,7 @@ export async function GET(req: Request) {
     );
   }
   const auth = req.headers.get("authorization");
-  const vercelCron = req.headers.get("x-vercel-cron");
-  if (auth !== `Bearer ${secret}` && vercelCron !== "1") {
+  if (auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

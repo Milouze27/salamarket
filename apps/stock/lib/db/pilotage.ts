@@ -67,7 +67,7 @@ export async function getPilotageToday(
       // Ventes magasin (Cashmag) du jour
       sb
         .from("ventes_cashmag_import")
-        .select("prix_ttc")
+        .select("prix_ttc, quantite")
         .eq("date_vente", today),
       // Valeur de stock (optionnellement filtrée par dépôt)
       (() => {
@@ -103,8 +103,11 @@ export async function getPilotageToday(
     }
     for (const v of (cashmagRes.data ?? []) as Array<{
       prix_ttc: number | null;
+      quantite: number | null;
     }>) {
-      result.ca_jour.magasin += Number(v.prix_ttc ?? 0);
+      // prix_ttc = prix unitaire de ligne → multiplier par la quantité.
+      result.ca_jour.magasin +=
+        Number(v.quantite ?? 0) * Number(v.prix_ttc ?? 0);
     }
     result.ca_jour.drive = Math.round(result.ca_jour.drive * 100) / 100;
     result.ca_jour.magasin = Math.round(result.ca_jour.magasin * 100) / 100;

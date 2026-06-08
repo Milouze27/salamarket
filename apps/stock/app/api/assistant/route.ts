@@ -223,7 +223,9 @@ async function runTool(name: string, input: any): Promise<unknown> {
           prix_ttc: number | null;
         }>) {
           magasinQty += Number(v.quantite ?? 0);
-          magasinCa += Number(v.prix_ttc ?? 0);
+          // prix_ttc est un prix UNITAIRE de ligne → multiplier par la
+          // quantité (aligné sur monthly-report.ts et la vue mv_ventes_quotidiennes).
+          magasinCa += Number(v.quantite ?? 0) * Number(v.prix_ttc ?? 0);
         }
         return {
           produit_recherche: produit_search,

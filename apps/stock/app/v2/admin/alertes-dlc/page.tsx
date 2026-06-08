@@ -9,9 +9,11 @@
  * Source : view `v_dlc_alerts` (migration 0032). Pas d'aggrégation
  * côté client — tout est calculé côté SQL.
  *
- * Actions démo (pas de write réel encore) :
- *   - "Appliquer la remise" → toast confirmant le push Cashmag (mock)
- *   - "Tout marquer en démarque" sur les lots forcé → mock
+ * Actions RÉELLES (écriture stock_par_depot, migration 20260608000005) :
+ *   - "Appliquer la remise" → baisse le prix_vente du produit (tous dépôts)
+ *     de remise_suggeree_pct, idempotent via prix_vente_avant_remise.
+ *   - "Tout marquer en démarque" → applique la remise à tous les lots forcés.
+ *   - "Imprimer promo" → PDF étiquette prix barré/soldé.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -170,15 +172,71 @@ export default function AlertesDlcPage() {
     return { ...groups, total: alerts.length, valeurRemise };
   }, [alerts]);
 
+  /**
+   * Applique une vraie remise DLC au prix de vente d'un produit, sur tous
+   * les dépôts où il a un prix. Idempotent : on calcule TOUJOURS depuis le
+   * prix de base (prix_vente_avant_remise), jamais en cascade. Retourne le
+   * nombre de lignes mises à jour. Lève en cas d'erreur DB.
+   */
+  async function markdownProduit(
+    produitId: string,
+    remisePct: number,
+  ): Promise<number> {
+    const sb = supabase();
+    if (!sb) throw new Error("Hors ligne");
+    const { data: rows, error: selErr } = await sb
+      .from("stock_par_depot")
+      .select("id, prix_vente, prix_vente_avant_remise")
+      .eq("produit_id", produitId)
+      .not("prix_vente", "is", null);
+    if (selErr) throw new Error(selErr.message);
+    if (!rows || rows.length === 0) return 0;
+    let updated = 0;
+    for (const r of rows as Array<{
+      id: string;
+      prix_vente: number | null;
+      prix_vente_avant_remise: number | null;
+    }>) {
+      const base = Number(r.prix_vente_avant_remise ?? r.prix_vente ?? 0);
+      if (base <= 0) continue;
+      const newPrix = Math.round(base * (1 - remisePct / 100) * 100) / 100;
+      const { error: upErr } = await sb
+        .from("stock_par_depot")
+        .update({
+          prix_vente: newPrix,
+          prix_vente_avant_remise: base,
+          remise_dlc_pct: remisePct,
+          demarque_at: new Date().toISOString(),
+        })
+        .eq("id", r.id);
+      if (upErr) throw new Error(upErr.message);
+      updated++;
+    }
+    return updated;
+  }
+
   async function applyRemise(a: DlcAlert) {
     setActing(`apply:${a.lot_id}`);
-    // Démo : pas de write vers Cashmag, juste un feedback.
-    await new Promise((r) => setTimeout(r, 350));
-    toast.success(
-      `Remise ${a.remise_suggeree_pct}% appliquée — ${a.produit_nom} (${a.lot_id})`,
-      { duration: 3000 },
-    );
-    setActing(null);
+    try {
+      const n = await markdownProduit(a.produit_id, a.remise_suggeree_pct);
+      if (n === 0) {
+        toast.error(
+          `Aucun prix de vente à remiser pour ${a.produit_nom} — renseigne-le d'abord.`,
+        );
+        return;
+      }
+      toast.success(
+        `Remise -${a.remise_suggeree_pct}% appliquée — ${a.produit_nom} (${n} dépôt${n > 1 ? "s" : ""})`,
+        { duration: 3000 },
+      );
+      void load();
+    } catch (e) {
+      toast.error(
+        `Erreur application remise : ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setActing(null);
+    }
   }
 
   /**
@@ -248,14 +306,35 @@ export default function AlertesDlcPage() {
       return;
     }
     setActing("__bulk__");
-    await new Promise((r) => setTimeout(r, 500));
-    toast.success(
-      `${forces.length} lot${forces.length > 1 ? "s" : ""} marqué${forces.length > 1 ? "s" : ""} en démarque`,
-      {
-        duration: 3000,
-      },
-    );
-    setActing(null);
+    try {
+      // Dédup par produit (plusieurs lots forcés du même produit = 1 remise).
+      const parProduit = new Map<string, DlcAlert>();
+      for (const a of forces) {
+        if (!parProduit.has(a.produit_id)) parProduit.set(a.produit_id, a);
+      }
+      let okLots = 0;
+      let sansPrix = 0;
+      for (const a of parProduit.values()) {
+        const n = await markdownProduit(a.produit_id, a.remise_suggeree_pct);
+        if (n > 0) okLots++;
+        else sansPrix++;
+      }
+      if (okLots > 0) {
+        toast.success(
+          `${okLots} produit${okLots > 1 ? "s" : ""} démarqué${okLots > 1 ? "s" : ""}${sansPrix > 0 ? ` · ${sansPrix} sans prix ignoré${sansPrix > 1 ? "s" : ""}` : ""}`,
+          { duration: 3000 },
+        );
+        void load();
+      } else {
+        toast.error("Aucun prix de vente à remiser sur les lots forcés.");
+      }
+    } catch (e) {
+      toast.error(
+        `Erreur démarque : ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setActing(null);
+    }
   }
 
   const forceCount = alerts.filter((a) => a.niveau_alerte === "forcé").length;

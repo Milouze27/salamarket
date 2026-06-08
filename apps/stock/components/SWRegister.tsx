@@ -27,12 +27,74 @@ export function SWRegister() {
     const buildId = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
     const swUrl = `/sw.js?v=${encodeURIComponent(buildId)}`;
 
+    // Y avait-il DÉJÀ un SW aux commandes au montage ? Si oui, un futur
+    // `controllerchange` = une vraie MAJ (et non la 1re prise de contrôle
+    // au tout premier chargement) → on peut recharger sans risque de boucle.
+    const hadController = !!navigator.serviceWorker.controller;
+
+    // Recharge UNE seule fois quand le nouveau SW prend les commandes.
+    let refreshed = false;
+    const onControllerChange = () => {
+      if (refreshed || !hadController) return;
+      refreshed = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      onControllerChange,
+    );
+
+    // SW installé en attente, pas encore activé. On l'applique sans déranger :
+    // la bascule se fait quand l'app passe en arrière-plan (l'utilisateur
+    // retrouve la version fraîche à son retour), JAMAIS en plein milieu d'une
+    // saisie. C'est ce qui évite de rester coincé sur une vieille version.
+    let pendingWaiting: ServiceWorker | null = null;
+    const applyUpdate = (waiting: ServiceWorker | null | undefined) => {
+      if (!waiting) return;
+      pendingWaiting = waiting;
+      window.dispatchEvent(
+        new CustomEvent("sw-update-available", { detail: { waiting } }),
+      );
+      // Déjà en arrière-plan → applique tout de suite.
+      maybeActivateInBackground();
+    };
+    const maybeActivateInBackground = () => {
+      if (!pendingWaiting) return;
+      if (document.visibilityState === "hidden") {
+        pendingWaiting.postMessage({ type: "SKIP_WAITING" });
+        pendingWaiting = null;
+      }
+    };
+    document.addEventListener("visibilitychange", maybeActivateInBackground);
+
+    // Filet de sécurité : si après 30 s l'utilisateur n'a jamais quitté l'app,
+    // on bascule quand même (la nouvelle version peut corriger des bugs
+    // bloquants). Reload non intrusif : on attend qu'aucun champ ne soit en
+    // cours de saisie.
+    const forceTimer = window.setTimeout(() => {
+      if (!pendingWaiting) return;
+      const ae = document.activeElement as HTMLElement | null;
+      const typing =
+        ae &&
+        (ae.tagName === "INPUT" ||
+          ae.tagName === "TEXTAREA" ||
+          ae.isContentEditable);
+      if (typing) return; // on ne coupe pas une saisie → restera pour le prochain passage en arrière-plan
+      pendingWaiting.postMessage({ type: "SKIP_WAITING" });
+      pendingWaiting = null;
+    }, 30_000);
+
     // Defer to avoid blocking first paint. Idle-callback when available.
     const reg = () => {
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
-          // Surveille les updates pour proposer un refresh à l'utilisateur.
+          // Un SW peut être DÉJÀ en attente au chargement (MAJ précédente
+          // jamais confirmée par l'utilisateur) → on l'applique maintenant.
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            applyUpdate(registration.waiting);
+          }
+          // Surveille les updates qui arrivent pendant la session.
           registration.addEventListener("updatefound", () => {
             const installing = registration.installing;
             if (!installing) return;
@@ -41,11 +103,7 @@ export function SWRegister() {
                 installing.state === "installed" &&
                 navigator.serviceWorker.controller
               ) {
-                window.dispatchEvent(
-                  new CustomEvent("sw-update-available", {
-                    detail: { registration },
-                  })
-                );
+                applyUpdate(registration.waiting ?? installing);
               }
             });
           });
@@ -64,24 +122,30 @@ export function SWRegister() {
       window.setTimeout(reg, 1000);
     }
 
-    // Listener pour activer le SW en attente quand l'UI confirme.
+    // Action manuelle (toast « Recharger ») → bascule immédiate.
     const onActivate = async () => {
       const r = await navigator.serviceWorker.getRegistration(swUrl);
-      const waiting = r?.waiting;
+      const waiting = r?.waiting ?? pendingWaiting;
       if (!waiting) {
         window.location.reload();
         return;
       }
-      let refreshed = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (refreshed) return;
-        refreshed = true;
-        window.location.reload();
-      });
       waiting.postMessage({ type: "SKIP_WAITING" });
     };
     window.addEventListener("sw-activate-update", onActivate);
-    return () => window.removeEventListener("sw-activate-update", onActivate);
+
+    return () => {
+      window.removeEventListener("sw-activate-update", onActivate);
+      document.removeEventListener(
+        "visibilitychange",
+        maybeActivateInBackground,
+      );
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        onControllerChange,
+      );
+      window.clearTimeout(forceTimer);
+    };
   }, []);
   return null;
 }

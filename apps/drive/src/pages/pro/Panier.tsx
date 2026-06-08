@@ -222,7 +222,7 @@ function PanierInner() {
     }
     setSubmitting(true);
     try {
-      // 1. Crée la commande sans montants (on les UPDATE ensuite)
+      // 1. Crée la commande sans montants (calculés serveur par trigger)
       const { data: created, error: errCmd } = await supabase
         .from("commandes_pro")
         .insert({
@@ -235,7 +235,10 @@ function PanierInner() {
       if (errCmd) throw errCmd;
       const cmdId = created.id;
 
-      // 2. INSERT lignes (sans tva_taux, le trigger DB recopie products.tva_taux)
+      // 2. INSERT lignes (sans tva_taux, le trigger DB recopie products.tva_taux).
+      //    Le trigger recompute_commande_pro_montants recalcule alors
+      //    montant_ht/tva/ttc depuis les lignes : le client n'écrit PLUS les
+      //    montants (sécurité : empêchait une falsification via PostgREST).
       const rows: CommandeProLigneInsert[] = lignes.map((l) => ({
         commande_pro_id: cmdId,
         produit_id: l.item.produit_id,
@@ -248,18 +251,7 @@ function PanierInner() {
         .insert(rows);
       if (errLignes) throw errLignes;
 
-      // 3. UPDATE montants
-      const { error: errUpd } = await supabase
-        .from("commandes_pro")
-        .update({
-          montant_ht: totals.ht,
-          montant_tva: totals.tva,
-          montant_ttc: totals.ttc,
-        })
-        .eq("id", cmdId);
-      if (errUpd) throw errUpd;
-
-      // 4. Done
+      // 3. Done
       clear();
       toast.success("Commande envoyée. Elle sera validée sous peu.");
       navigate(`/pro/commande/${cmdId}`);

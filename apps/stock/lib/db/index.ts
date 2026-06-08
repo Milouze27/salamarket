@@ -116,7 +116,7 @@ export async function listProduitsInDepot(
     const { data, error } = await sb
       .from("stock_par_depot")
       .select(
-        "id, depot_id, quantite, prix_vente, is_visible, produit:produits(*)",
+        "id, depot_id, quantite, prix_vente, cout_achat_ht, is_visible, produit:produits(*)",
       )
       .eq("depot_id", depotId)
       .eq("is_visible", true);
@@ -129,6 +129,7 @@ export async function listProduitsInDepot(
         depot_id: r.depot_id as string,
         quantite: r.quantite as number,
         prix_vente: r.prix_vente as number | null,
+        cout_achat_ht: r.cout_achat_ht as number | null,
         is_visible: r.is_visible as boolean,
       };
     });

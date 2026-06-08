@@ -360,6 +360,24 @@ export default function V2StockPage() {
                     amount={p.prix_vente}
                     className="text-base font-extrabold text-primary mt-1 block"
                   />
+                  {p.cout_achat_ht != null &&
+                    p.prix_vente != null &&
+                    p.prix_vente > 0 && (
+                      <p
+                        className="text-[11px] font-bold mt-0.5"
+                        style={{ color: "var(--success)" }}
+                      >
+                        Marge{" "}
+                        {Math.round(
+                          ((p.prix_vente - p.cout_achat_ht) / p.prix_vente) *
+                            100,
+                        )}
+                        %{" "}
+                        <span className="font-medium text-text-tertiary">
+                          · coût {p.cout_achat_ht.toFixed(2)} €
+                        </span>
+                      </p>
+                    )}
                 </div>
               </div>
             ))}

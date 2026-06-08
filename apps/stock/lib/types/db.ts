@@ -92,6 +92,8 @@ export interface ProduitInDepot extends Produit {
   depot_id: string;
   quantite: number;
   prix_vente: number | null;
+  /** Coût d'achat HT unitaire (PMP). Base de la marge. NULL = coût inconnu. */
+  cout_achat_ht: number | null;
   is_visible: boolean;
 }
 

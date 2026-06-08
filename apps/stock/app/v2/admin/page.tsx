@@ -72,6 +72,10 @@ interface DepotStats {
   productCount: number;
   totalUnits: number;
   totalValue: number;
+  /** Valorisation au COÛT d'achat (vraie valeur immobilisée). */
+  totalCost: number;
+  /** Marge brute potentielle si tout le stock est vendu au prix affiché. */
+  margePotentielle: number;
   receptionsToday: number;
   sortiesToday: number;
   ecartsCount: number;
@@ -129,6 +133,19 @@ export default function V2AdminDashboardPage() {
             totalUnits: stock.reduce((s, p) => s + p.quantite, 0),
             totalValue: stock.reduce(
               (s, p) => s + p.quantite * (p.prix_vente ?? 0),
+              0,
+            ),
+            totalCost: stock.reduce(
+              (s, p) => s + p.quantite * (p.cout_achat_ht ?? 0),
+              0,
+            ),
+            // Marge potentielle = (prix − coût) × quantité, uniquement sur les
+            // lignes où le coût est connu (sinon on n'invente pas de marge).
+            margePotentielle: stock.reduce(
+              (s, p) =>
+                p.cout_achat_ht != null && p.prix_vente != null
+                  ? s + p.quantite * (p.prix_vente - p.cout_achat_ht)
+                  : s,
               0,
             ),
             receptionsToday: receptions.filter((r) => isToday(r.created_at))
@@ -429,9 +446,14 @@ export default function V2AdminDashboardPage() {
                         spark={[180, 196, 184, 220, 232, 245, 238, 256]}
                       />
                       <Stat
-                        label="Valeur"
-                        value={`${Math.round(s.totalValue).toLocaleString("fr-FR")} €`}
+                        label="Valeur stock"
+                        value={`${Math.round(s.totalCost).toLocaleString("fr-FR")} €`}
                         gold
+                        hint={
+                          s.margePotentielle > 0
+                            ? `marge +${Math.round(s.margePotentielle).toLocaleString("fr-FR")} €`
+                            : "au coût d'achat"
+                        }
                         spark={[3200, 3450, 3380, 3620, 3890, 3760, 4120, 4280]}
                       />
                       <Stat

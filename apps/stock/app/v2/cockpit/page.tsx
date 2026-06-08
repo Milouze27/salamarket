@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { AlertTriangle, Clock, Flame, PackageX, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { useV2 } from "@/lib/v2-store";
@@ -69,6 +70,52 @@ export default function CockpitPage() {
   // relancer le scoreur + l'IA à chaque render/refresh.
   const [briefing, setBriefing] = useState<CockpitBriefing | null>(null);
   const [briefLoading, setBriefLoading] = useState(true);
+
+  // Relevé concurrent (Aya Market…) : capture réelle → table competitor_intel.
+  const [releveOpen, setReleveOpen] = useState(false);
+  const [releveConcurrent, setReleveConcurrent] = useState("Aya Market");
+  const [releveLibelle, setReleveLibelle] = useState("");
+  const [relevePrix, setRelevePrix] = useState("");
+  const [releveUnite, setReleveUnite] = useState("kg");
+  const [releveSaving, setReleveSaving] = useState(false);
+
+  async function saveReleve() {
+    const prix = Number(relevePrix.replace(",", "."));
+    if (!releveLibelle.trim()) {
+      toast.error("Indique le produit relevé (ex. Poulet entier 1,2 kg).");
+      return;
+    }
+    if (!Number.isFinite(prix) || prix <= 0) {
+      toast.error("Prix relevé invalide.");
+      return;
+    }
+    setReleveSaving(true);
+    try {
+      const sb = supabase();
+      if (!sb) throw new Error("Hors ligne");
+      const { error: insErr } = await sb.from("competitor_intel").insert({
+        concurrent_nom: releveConcurrent.trim() || "Aya Market",
+        libelle_releve: releveLibelle.trim(),
+        prix_releve_eur: Math.round(prix * 100) / 100,
+        unite: releveUnite.trim() || null,
+        releve_par: employe?.id ?? null,
+      });
+      if (insErr) throw new Error(insErr.message);
+      toast.success(
+        `Relevé enregistré — ${releveConcurrent} · ${releveLibelle} ${prix.toFixed(2)} €`,
+      );
+      setReleveOpen(false);
+      setReleveLibelle("");
+      setRelevePrix("");
+      void loadSnapshot();
+    } catch (e) {
+      toast.error(
+        `Erreur enregistrement : ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setReleveSaving(false);
+    }
+  }
 
   const loadSnapshot = useCallback(async () => {
     try {
@@ -396,10 +443,7 @@ export default function CockpitPage() {
           {/* ZONE 6 — Competitor intel */}
           <CompetitorCard
             rows={snap?.competitor ?? []}
-            onAddRelevé={() => {
-              // Démo : route placeholder, l'orchestrateur branchera plus tard.
-              router.push("/v2/admin");
-            }}
+            onAddRelevé={() => setReleveOpen(true)}
           />
         </div>
         {/* /grid responsive */}
@@ -458,6 +502,103 @@ export default function CockpitPage() {
         {/* Spacer pour le nav-stack + safe-area iOS */}
         <div className="h-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" />
       </motion.div>
+
+      {/* Modal relevé concurrent — capture réelle vers competitor_intel */}
+      {releveOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Nouveau relevé concurrent"
+        >
+          <button
+            type="button"
+            aria-label="Fermer"
+            onClick={() => !releveSaving && setReleveOpen(false)}
+            className="absolute inset-0 bg-black/50"
+          />
+          <div
+            className="relative w-full sm:max-w-[420px] mx-3 mb-3 sm:mb-0 rounded-[22px] p-5"
+            style={{
+              background: "var(--surface-1)",
+              border: "1px solid var(--border-card)",
+            }}
+          >
+            <p className="text-[15px] font-extrabold text-[var(--text-primary)]">
+              Relevé prix concurrent
+            </p>
+            <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 mb-4">
+              Note le prix vu en rayon — il alimente la veille concurrentielle.
+            </p>
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                  Concurrent
+                </span>
+                <input
+                  value={releveConcurrent}
+                  onChange={(e) => setReleveConcurrent(e.target.value)}
+                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                />
+              </label>
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                  Produit relevé
+                </span>
+                <input
+                  value={releveLibelle}
+                  onChange={(e) => setReleveLibelle(e.target.value)}
+                  placeholder="Poulet entier halal 1,2 kg"
+                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                    Prix (€)
+                  </span>
+                  <input
+                    value={relevePrix}
+                    onChange={(e) => setRelevePrix(e.target.value)}
+                    inputMode="decimal"
+                    placeholder="9,90"
+                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                    Unité
+                  </span>
+                  <input
+                    value={releveUnite}
+                    onChange={(e) => setReleveUnite(e.target.value)}
+                    placeholder="kg"
+                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setReleveOpen(false)}
+                disabled={releveSaving}
+                className="flex-1 min-h-[46px] rounded-[14px] font-bold text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveReleve()}
+                disabled={releveSaving}
+                className="flex-1 min-h-[46px] rounded-[14px] font-bold text-[14px] bg-[var(--primary-green)] text-white disabled:opacity-60"
+              >
+                {releveSaving ? "Enregistrement…" : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </V2Shell>
   );
 }

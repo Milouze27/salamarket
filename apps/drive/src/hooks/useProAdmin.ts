@@ -80,7 +80,9 @@ export function useAdminFacturesPro() {
             raison_sociale,
             siret,
             adresse_facturation,
-            adresse_livraison
+            adresse_livraison,
+            delegue_email,
+            delegue_nom
           )
         `,
         )

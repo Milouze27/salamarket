@@ -52,6 +52,9 @@ const Cart = () => {
   const clear = useCartStore((s) => s.clear);
 
   // ─────── Code promo (state local, dégrade proprement) ───────
+  // Désactivé tant que le backend n'applique pas réellement la remise au
+  // paiement (RPC validate_promo_code absente + remise non transmise à Stripe).
+  const PROMO_ENABLED = false;
   const [promoInput, setPromoInput] = useState("");
   const [promoApplying, setPromoApplying] = useState(false);
   const [promo, setPromo] = useState<PromoResult | null>(null);
@@ -573,93 +576,102 @@ const Cart = () => {
                   </Link>
                 </p>
               )}
-              {/* Code promo — dégrade proprement si la RPC est absente :
-                  un essai affiche au pire "Code invalide", jamais d'erreur
-                  technique. Champ masqué une fois un code valide appliqué
-                  (remplacé par un récap retirable). */}
-              <div className="mt-5">
-                {promo?.valid ? (
-                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#0E3B2E]/20 bg-[#0E3B2E]/[0.04] px-4 py-3">
-                    <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#0E3B2E]">
-                      <Check size={16} className="text-[#0E3B2E]" aria-hidden />
-                      Code{" "}
-                      <span className="uppercase tracking-[0.06em]">
-                        {promo.code}
-                      </span>{" "}
-                      appliqué
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRemovePromo}
-                      className="inline-flex items-center justify-center min-h-11 min-w-11 -mr-2 rounded-full text-[#6B7280] active:scale-90 transition-transform"
-                      aria-label="Retirer le code promo"
-                    >
-                      <X size={18} strokeWidth={2.2} aria-hidden />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <label
-                      htmlFor="promo-code"
-                      className="block text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-2"
-                    >
-                      Code promo
-                    </label>
-                    <div className="flex items-stretch gap-2">
-                      <div className="relative flex-1">
-                        <Tag
+              {/* Code promo — MASQUÉ tant que le backend n'applique pas la
+                  remise au paiement (RPC validate_promo_code absente +
+                  remise non transmise à create-checkout-session). Afficher un
+                  champ qui dit toujours "invalide" ou une remise jamais
+                  facturée serait pire que pas de champ. Repasser PROMO_ENABLED
+                  à true quand la RPC ET le passage de la remise au checkout
+                  sont en place. */}
+              {PROMO_ENABLED && (
+                <div className="mt-5">
+                  {promo?.valid ? (
+                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#0E3B2E]/20 bg-[#0E3B2E]/[0.04] px-4 py-3">
+                      <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-[#0E3B2E]">
+                        <Check
                           size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+                          className="text-[#0E3B2E]"
                           aria-hidden
                         />
-                        <input
-                          id="promo-code"
-                          type="text"
-                          inputMode="text"
-                          autoCapitalize="characters"
-                          autoComplete="off"
-                          spellCheck={false}
-                          value={promoInput}
-                          onChange={(e) => {
-                            setPromoInput(e.target.value);
-                            if (promoMsg) setPromoMsg(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              void handleApplyPromo();
-                            }
-                          }}
-                          placeholder="Votre code"
-                          className="w-full h-12 pl-9 pr-3 text-base text-[#0F1A14] bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-xl uppercase tracking-[0.04em] placeholder:normal-case placeholder:tracking-normal placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
-                          aria-describedby={
-                            promoMsg ? "promo-feedback" : undefined
-                          }
-                        />
-                      </div>
+                        Code{" "}
+                        <span className="uppercase tracking-[0.06em]">
+                          {promo.code}
+                        </span>{" "}
+                        appliqué
+                      </span>
                       <button
                         type="button"
-                        onClick={() => void handleApplyPromo()}
-                        disabled={!promoInput.trim() || promoApplying}
-                        className="shrink-0 h-12 px-5 rounded-xl bg-[#0E3B2E] text-white text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={handleRemovePromo}
+                        className="inline-flex items-center justify-center min-h-11 min-w-11 -mr-2 rounded-full text-[#6B7280] active:scale-90 transition-transform"
+                        aria-label="Retirer le code promo"
                       >
-                        {promoApplying ? "..." : "Appliquer"}
+                        <X size={18} strokeWidth={2.2} aria-hidden />
                       </button>
                     </div>
-                    {promoMsg && (
-                      <p
-                        id="promo-feedback"
-                        role="status"
-                        className={`mt-2 text-[12px] font-medium ${
-                          promoMsg.ok ? "text-[#0E3B2E]" : "text-destructive"
-                        }`}
+                  ) : (
+                    <div>
+                      <label
+                        htmlFor="promo-code"
+                        className="block text-[10px] uppercase tracking-[0.28em] font-bold text-[#C9A227] mb-2"
                       >
-                        {promoMsg.text}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+                        Code promo
+                      </label>
+                      <div className="flex items-stretch gap-2">
+                        <div className="relative flex-1">
+                          <Tag
+                            size={16}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+                            aria-hidden
+                          />
+                          <input
+                            id="promo-code"
+                            type="text"
+                            inputMode="text"
+                            autoCapitalize="characters"
+                            autoComplete="off"
+                            spellCheck={false}
+                            value={promoInput}
+                            onChange={(e) => {
+                              setPromoInput(e.target.value);
+                              if (promoMsg) setPromoMsg(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void handleApplyPromo();
+                              }
+                            }}
+                            placeholder="Votre code"
+                            className="w-full h-12 pl-9 pr-3 text-base text-[#0F1A14] bg-[#FAF7EE] border border-[#0E3B2E]/15 rounded-xl uppercase tracking-[0.04em] placeholder:normal-case placeholder:tracking-normal placeholder:text-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40"
+                            aria-describedby={
+                              promoMsg ? "promo-feedback" : undefined
+                            }
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void handleApplyPromo()}
+                          disabled={!promoInput.trim() || promoApplying}
+                          className="shrink-0 h-12 px-5 rounded-xl bg-[#0E3B2E] text-white text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {promoApplying ? "..." : "Appliquer"}
+                        </button>
+                      </div>
+                      {promoMsg && (
+                        <p
+                          id="promo-feedback"
+                          role="status"
+                          className={`mt-2 text-[12px] font-medium ${
+                            promoMsg.ok ? "text-[#0E3B2E]" : "text-destructive"
+                          }`}
+                        >
+                          {promoMsg.text}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-5">
                 <TrustBar />

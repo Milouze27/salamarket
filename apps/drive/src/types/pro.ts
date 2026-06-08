@@ -15,8 +15,7 @@ export type ComptesProInsert =
 export type ComptesProUpdate =
   Database["public"]["Tables"]["comptes_pro"]["Update"];
 
-export type CommandePro =
-  Database["public"]["Tables"]["commandes_pro"]["Row"];
+export type CommandePro = Database["public"]["Tables"]["commandes_pro"]["Row"];
 export type CommandesProInsert =
   Database["public"]["Tables"]["commandes_pro"]["Insert"];
 export type CommandesProUpdate =
@@ -36,7 +35,11 @@ export type Product = Database["public"]["Tables"]["products"]["Row"];
 // Statuts (alignés sur les CHECK posés en DB)
 // ─────────────────────────────────────────────────────────────────────
 
-export type StatutComptePro = "en_validation" | "actif" | "suspendu" | "archive";
+export type StatutComptePro =
+  | "en_validation"
+  | "actif"
+  | "suspendu"
+  | "archive";
 
 export const STATUTS_COMPTE_PRO: readonly StatutComptePro[] = [
   "en_validation",
@@ -84,10 +87,7 @@ export const LABEL_STATUT_COMMANDE: Record<StatutCommandePro, string> = {
   annulee: "Annulée",
 };
 
-export type ConditionsPaiement =
-  | "comptant"
-  | "30_jours"
-  | "45_jours_fin_mois";
+export type ConditionsPaiement = "comptant" | "30_jours" | "45_jours_fin_mois";
 
 export const LABEL_CONDITIONS_PAIEMENT: Record<ConditionsPaiement, string> = {
   comptant: "Comptant",
@@ -110,14 +110,26 @@ export const FORMES_JURIDIQUES: readonly FormeJuridique[] = [
 export interface ProduitProAvecProduit extends ProduitProPrix {
   products: Pick<
     Product,
-    "id" | "name" | "image_url" | "description" | "tva_taux" | "unit" | "category"
+    | "id"
+    | "name"
+    | "image_url"
+    | "description"
+    | "tva_taux"
+    | "unit"
+    | "category"
   > | null;
 }
 
 export interface CommandeProAvecCompte extends CommandePro {
   comptes_pro: Pick<
     ComptePro,
-    "id" | "raison_sociale" | "siret" | "adresse_facturation" | "adresse_livraison"
+    | "id"
+    | "raison_sociale"
+    | "siret"
+    | "adresse_facturation"
+    | "adresse_livraison"
+    | "delegue_email"
+    | "delegue_nom"
   > | null;
 }
 

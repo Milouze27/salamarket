@@ -19,10 +19,12 @@ interface RecapData {
   drive_count: number;
   drive_ca: number;
   magasin_ca: number;
+  magasin_connu: boolean;
   alertes_count: number;
   surplus_value: number;
   receptions_attendues: number;
   receptions_ok: number;
+  receptions_lignes: Array<{ nom: string; ok: boolean }>;
   top_produit: string | null;
   top_qty: number;
 }
@@ -66,13 +68,20 @@ export function WhatsAppRecapCard() {
     const driveRows = (drive ?? []) as Array<{ total_ttc: number | string }>;
     const driveCa = driveRows.reduce((s, r) => s + Number(r.total_ttc), 0);
 
-    // BDL aujourd'hui
+    // BDL aujourd'hui (avec le nom du fournisseur pour le détail réel)
     const { data: bdl } = await sb
       .from("bons_de_livraison")
-      .select("id, statut")
+      .select("id, statut, fournisseurs:fournisseur_id(nom)")
       .eq("date_livraison_prevue", today.toISOString().slice(0, 10));
-    const bdlRows = (bdl ?? []) as Array<{ statut: string }>;
+    const bdlRows = (bdl ?? []) as unknown as Array<{
+      statut: string;
+      fournisseurs: { nom: string } | null;
+    }>;
     const recOk = bdlRows.filter((b) => b.statut === "receptionnee").length;
+    const receptionsLignes = bdlRows.slice(0, 4).map((b) => ({
+      nom: b.fournisseurs?.nom ?? "Fournisseur",
+      ok: b.statut === "receptionnee",
+    }));
 
     // Surplus en attente
     const { data: surp } = await sb
@@ -124,20 +133,36 @@ export function WhatsAppRecapCard() {
       }
     }
 
-    // Estimation magasin = mock cohérent (Cashmag pas encore importé jour J)
-    const magCa = Math.round(driveCa * (8 + Math.random() * 4));
+    // CA magasin RÉEL du jour depuis l'import Cashmag (prix_ttc unitaire ×
+    // quantité). Si rien n'est importé aujourd'hui, on l'affiche comme
+    // « à venir » plutôt qu'une valeur inventée.
+    const { data: cash } = await sb
+      .from("ventes_cashmag_import")
+      .select("prix_ttc, quantite")
+      .eq("date_vente", today.toISOString().slice(0, 10));
+    const cashRows = (cash ?? []) as Array<{
+      prix_ttc: number | string | null;
+      quantite: number | string | null;
+    }>;
+    const magasinConnu = cashRows.length > 0;
+    const magCa = cashRows.reduce(
+      (s, r) => s + Number(r.quantite ?? 0) * Number(r.prix_ttc ?? 0),
+      0,
+    );
 
     if (!mounted.current) return; // évite un setState après démontage
     setData({
       ca_jour: driveCa + magCa,
-      ca_jour_pct: 12,
+      ca_jour_pct: null,
       drive_count: driveRows.length,
       drive_ca: driveCa,
       magasin_ca: magCa,
+      magasin_connu: magasinConnu,
       alertes_count: alertCount,
       surplus_value: surpQty * 7.5,
       receptions_attendues: bdlRows.length,
       receptions_ok: recOk,
+      receptions_lignes: receptionsLignes,
       top_produit: topName,
       top_qty: topQty,
     });
@@ -182,22 +207,23 @@ export function WhatsAppRecapCard() {
 
 📅 Récap Salam Market — ${new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long" })}
 
-📊 CA jour : ${data ? fmtEur(data.ca_jour) : "—"} ${data?.ca_jour_pct ? `(+${data.ca_jour_pct}% J-7)` : ""}
+📊 CA jour : ${data ? fmtEur(data.ca_jour) : "—"}${data?.ca_jour_pct ? ` (+${data.ca_jour_pct}% J-7)` : ""}
 🛒 Drive : ${data?.drive_count ?? 0} commande${(data?.drive_count ?? 0) > 1 ? "s" : ""} (${data ? fmtEur(data.drive_ca) : "—"})
-🏪 Magasin : ${data ? fmtEur(data.magasin_ca) : "—"}
+🏪 Magasin : ${data ? (data.magasin_connu ? fmtEur(data.magasin_ca) : "à venir (Cashmag)") : "—"}
 
 ⚠️ Alertes urgentes (${data?.alertes_count ?? 0})
   • Surplus à valider : ${data ? fmtEur(data.surplus_value) : "0 €"}
-  • Casse douteuse Sodrune (IA 0.42)
-  • Démarque Coca : 14 unités
 
-📦 Réceptions : ${data?.receptions_ok ?? 0}/${data?.receptions_attendues ?? 0} OK
-  • KEREM ✓
-  • MAGHREB ✓
-  • FRANCE FRAIS reportée demain
+📦 Réceptions : ${data?.receptions_ok ?? 0}/${data?.receptions_attendues ?? 0} OK${
+              data && data.receptions_lignes.length > 0
+                ? "\n" +
+                  data.receptions_lignes
+                    .map((r) => `  • ${r.nom} ${r.ok ? "✓" : "en attente"}`)
+                    .join("\n")
+                : ""
+            }
 
-🏆 Top produit : ${data?.top_produit ?? "Couscous fin"}
-    ${data?.top_qty ?? 18} ventes
+🏆 Top produit : ${data?.top_produit ?? "—"}${data?.top_produit ? `\n    ${data.top_qty} ventes` : ""}
 
 Pose-moi une question :
 → Tapez /aide`}

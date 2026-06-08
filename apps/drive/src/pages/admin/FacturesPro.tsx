@@ -62,7 +62,8 @@ export default function AdminFacturesPro() {
       const retard = joursDeRetard(f);
       const isPayee = f.statut === "payee" || !!f.date_paiement;
       if (statutFilter === "payee") return isPayee;
-      if (statutFilter === "en_retard") return !isPayee && retard !== null && retard > 0;
+      if (statutFilter === "en_retard")
+        return !isPayee && retard !== null && retard > 0;
       if (statutFilter === "due") return !isPayee;
       return true;
     });
@@ -91,17 +92,29 @@ export default function AdminFacturesPro() {
   };
 
   const onRelancer = (f: CommandeProAvecCompte) => {
-    const email = f.comptes_pro?.raison_sociale
-      ? // On n'a pas l'email dans le select join — on fait un fetch léger.
-        null
-      : null;
-    // Fallback : un toast indicatif. Pour la V1 le mailto se construit
-    // côté détail commande où l'email est dispo. Ici on aide juste à
-    // tracer l'action.
-    void email;
-    toast.info(
-      `Relance préparée pour ${f.comptes_pro?.raison_sociale ?? "ce client"}. ` +
-        `Récup du contact dans la fiche compte.`,
+    const email = f.comptes_pro?.delegue_email;
+    if (!email) {
+      toast.error(
+        "Aucun email de contact sur ce compte Pro — impossible de relancer.",
+      );
+      return;
+    }
+    const ref = f.facture_numero ?? f.numero_commande ?? "";
+    const echeance = f.date_echeance
+      ? formatDate(f.date_echeance)
+      : "à réception";
+    const sujet = encodeURIComponent(`Relance facture ${ref} — Salam Market`);
+    const corps = encodeURIComponent(
+      `Bonjour ${f.comptes_pro?.delegue_nom ?? ""},\n\n` +
+        `Sauf erreur de notre part, la facture ${ref} d'un montant de ` +
+        `${formatEur(f.montant_ttc ?? 0)} TTC (échéance ${echeance}) reste à régler.\n\n` +
+        `Merci de procéder au paiement ou de nous indiquer la date prévue.\n\n` +
+        `Cordialement,\nK & A FOOD — Salam Market`,
+    );
+    // Ouvre le client mail prérempli (destinataire = délégué du compte Pro).
+    window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
+    toast.success(
+      `Relance ouverte pour ${f.comptes_pro?.raison_sociale ?? ""}`,
     );
   };
 
@@ -169,8 +182,12 @@ export default function AdminFacturesPro() {
                       <TableHead>N° facture</TableHead>
                       <TableHead>Client</TableHead>
                       <TableHead className="text-right">TTC</TableHead>
-                      <TableHead className="hidden md:table-cell">Date</TableHead>
-                      <TableHead className="hidden md:table-cell">Échéance</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Date
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Échéance
+                      </TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>

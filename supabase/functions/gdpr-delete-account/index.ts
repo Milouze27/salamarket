@@ -28,9 +28,13 @@ const json = (body: unknown, status = 200) =>
  *  1. profiles        → full_name='Anonyme', phone='', email masqué (colonnes NOT NULL).
  *  2. orders          → customer_email/customer_phone effacés (user_id conservé).
  *  3. commandes_drive → client_nom='Anonyme', client_telephone/client_email = null
- *                       (miroir 1-1 : commandes_drive.id = orders.id).
- *  4. push_subscriptions → suppression de toutes les souscriptions du user.
- *  5. déconnexion globale (révocation des sessions/refresh tokens).
+ *                       (miroir 1-1 : commandes_drive.id = orders.id) ET les
+ *                       commandes au poids (id ≠ orders.id) retrouvées par
+ *                       client_email/client_telephone d'origine.
+ *  4. comptes_pro     → PII délégué (nom/téléphone/email) effacées si l'user
+ *                       est délégué d'un compte Pro.
+ *  5. push_subscriptions → suppression de toutes les souscriptions du user.
+ *  6. déconnexion globale (révocation des sessions/refresh tokens).
  *
  * Sécurité : un utilisateur ne peut supprimer QUE son propre compte. L'id
  * cible provient EXCLUSIVEMENT du JWT vérifié (auth.getUser), jamais du body.
@@ -67,6 +71,22 @@ serve(async (req) => {
 
     // Masque d'email déterministe mais non réversible vers l'identité réelle.
     const maskedEmail = `deleted+${userId}@deleted.salamarket.local`;
+
+    // 1b. Capturer les PII ORIGINALES avant d'anonymiser le profil : elles
+    //     servent à retrouver les commandes au poids (commandes_drive.id ≠
+    //     orders.id → le miroir 1-1 ne les couvre pas, seul client_email/
+    //     client_telephone les relie au client).
+    const { data: profileBefore } = await supabaseAdmin
+      .from("profiles")
+      .select("email, phone")
+      .eq("id", userId)
+      .maybeSingle();
+    const originalEmails = [user.email, profileBefore?.email].filter(
+      (e): e is string => typeof e === "string" && e.length > 0,
+    );
+    const originalPhones = [profileBefore?.phone].filter(
+      (p): p is string => typeof p === "string" && p.length > 0,
+    );
 
     // 2. Anonymiser le profil (colonnes NOT NULL → on met des valeurs, pas null).
     const { error: profileErr } = await supabaseAdmin
@@ -130,6 +150,49 @@ serve(async (req) => {
       driveAnonymized = count ?? 0;
     }
 
+    // 5b. Commandes au poids : commandes_drive non miroirées dans orders
+    //     (id ≠ orders.id). On les retrouve par client_email / client_telephone
+    //     d'origine et on efface les PII (client_nom NOT NULL → 'Anonyme').
+    let driveByPii = 0;
+    const piiAnon = {
+      client_nom: "Anonyme",
+      client_telephone: null,
+      client_email: null,
+    };
+    for (const email of originalEmails) {
+      const { count } = await supabaseAdmin
+        .from("commandes_drive")
+        .update(piiAnon, { count: "exact" })
+        .eq("client_email", email);
+      driveByPii += count ?? 0;
+    }
+    for (const phone of originalPhones) {
+      const { count } = await supabaseAdmin
+        .from("commandes_drive")
+        .update(piiAnon, { count: "exact" })
+        .eq("client_telephone", phone);
+      driveByPii += count ?? 0;
+    }
+
+    // 5c. Comptes Pro : si l'utilisateur est délégué d'un compte Pro, ses PII
+    //     (nom/téléphone/email délégué, colonnes NOT NULL) doivent aussi être
+    //     effacées au titre du droit à l'effacement.
+    const { error: proErr, count: proCount } = await supabaseAdmin
+      .from("comptes_pro")
+      .update(
+        {
+          delegue_nom: "Anonyme",
+          delegue_telephone: "",
+          delegue_email: maskedEmail,
+        },
+        { count: "exact" },
+      )
+      .eq("delegue_user_id", userId);
+    if (proErr) {
+      console.error("[gdpr-delete-account] comptes_pro anon failed:", proErr);
+      return json({ error: "Pro accounts anonymization failed" }, 500);
+    }
+
     // 6. Supprimer les souscriptions push de l'utilisateur.
     const { error: pushErr } = await supabaseAdmin
       .from("push_subscriptions")
@@ -163,6 +226,8 @@ serve(async (req) => {
         profile: true,
         orders: orderIds.length,
         commandes_drive: driveAnonymized,
+        commandes_drive_au_poids: driveByPii,
+        comptes_pro: proCount ?? 0,
         push_subscriptions: true,
       },
     });

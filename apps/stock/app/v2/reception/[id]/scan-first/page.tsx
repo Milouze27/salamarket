@@ -118,6 +118,12 @@ export default function BdlScanFirstPage() {
   const [finalizeResult, setFinalizeResult] = useState<{
     pdf_url: string;
     push_sent: boolean;
+    prix_changes: Array<{
+      produit: string;
+      ancien_cout: number;
+      nouveau_cout: number;
+      variation_pct: number;
+    }>;
   } | null>(null);
   // ML-5 — le comptable doit acquitter explicitement un certif halal
   // expiré/manquant du fournisseur avant de pouvoir clôturer la réception.
@@ -388,8 +394,18 @@ export default function BdlScanFirstPage() {
         pdf_url: string;
         push_sent: boolean;
         ecart_valeur_eur: number;
+        prix_changes?: Array<{
+          produit: string;
+          ancien_cout: number;
+          nouveau_cout: number;
+          variation_pct: number;
+        }>;
       };
-      setFinalizeResult({ pdf_url: data.pdf_url, push_sent: data.push_sent });
+      setFinalizeResult({
+        pdf_url: data.pdf_url,
+        push_sent: data.push_sent,
+        prix_changes: data.prix_changes ?? [],
+      });
       toast.success(
         data.push_sent
           ? "Réception validée — push Otmane envoyée"
@@ -769,6 +785,44 @@ export default function BdlScanFirstPage() {
                 </span>
                 <Download className="w-5 h-5 text-gold" />
               </a>
+              {finalizeResult && finalizeResult.prix_changes.length > 0 && (
+                <div className="bg-gold/10 border border-gold/40 rounded-2xl px-4 py-3">
+                  <p className="text-[12.5px] font-extrabold text-primary flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-gold" />
+                    Prix d&apos;achat mis à jour (
+                    {finalizeResult.prix_changes.length}) — vérifie ta marge
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {finalizeResult.prix_changes.map((c, i) => (
+                      <li key={i} className="text-[12px] text-text-secondary">
+                        <span className="font-bold text-text-primary">
+                          {c.produit}
+                        </span>{" "}
+                        : coût {c.ancien_cout.toFixed(2)} €{" "}
+                        <span className="font-bold">
+                          → {c.nouveau_cout.toFixed(2)} €
+                        </span>{" "}
+                        <span
+                          className="font-bold"
+                          style={{
+                            color:
+                              c.variation_pct > 0
+                                ? "var(--danger)"
+                                : "var(--success)",
+                          }}
+                        >
+                          ({c.variation_pct > 0 ? "+" : ""}
+                          {c.variation_pct} %)
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-text-tertiary">
+                    Le coût (PMP) est synchronisé. Si la marge a fondu, ajuste
+                    le prix de vente dans le catalogue.
+                  </p>
+                </div>
+              )}
               {finalizeResult?.push_sent && (
                 <div className="bg-warning-soft border border-warning/40 rounded-2xl px-4 py-2.5 flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />

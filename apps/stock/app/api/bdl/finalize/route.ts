@@ -62,14 +62,14 @@ export async function POST(req: Request) {
        bons_de_livraison_lignes(
          id, produit_id, quantite_attendue, quantite_recue, ecart_qte,
          prix_achat_ht, statut, produits(nom)
-       )`
+       )`,
     )
     .eq("id", body.bdl_id)
     .single();
   if (bdlErr || !bdlRaw) {
     return NextResponse.json(
       { error: "bdl_not_found", detail: bdlErr?.message },
-      { status: 404 }
+      { status: 404 },
     );
   }
   const bdl = bdlRaw as unknown as {
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
   if (bdl.statut === "receptionnee") {
     return NextResponse.json(
       { error: "already_finalized", numero_bdl: bdl.numero_bdl },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -98,9 +98,7 @@ export async function POST(req: Request) {
   const blockers: string[] = [];
   if (bdl.temperature_reception_c === null) {
     blockers.push("temperature_missing");
-  } else if (
-    bdl.temperature_reception_c > (bdl.temperature_seuil_max_c ?? 4)
-  ) {
+  } else if (bdl.temperature_reception_c > (bdl.temperature_seuil_max_c ?? 4)) {
     blockers.push("temperature_above_threshold");
   }
   if (!bdl.photo_palette_url_1 || !bdl.photo_palette_url_2) {
@@ -109,7 +107,7 @@ export async function POST(req: Request) {
   if (blockers.length > 0) {
     return NextResponse.json(
       { error: "validation_failed", blockers },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
@@ -127,11 +125,38 @@ export async function POST(req: Request) {
   // chaque entrée est tracée dans le ledger pour audit.
   let lignesRecues = 0;
   let lignesEcart = 0;
+  // Changements de prix d'achat détectés à cette réception (le fournisseur a
+  // bougé son tarif) → renvoyés au client pour alerter le gérant sur l'impact
+  // marge. { produit, ancien_cout, nouveau_cout, variation_pct }
+  const prixChanges: Array<{
+    produit: string;
+    ancien_cout: number;
+    nouveau_cout: number;
+    variation_pct: number;
+  }> = [];
   for (const l of bdl.bons_de_livraison_lignes) {
     if (l.ecart_qte !== 0) lignesEcart++;
     const recu = l.quantite_recue;
     if (recu <= 0 || !l.produit_id || !bdl.depot_destination_id) continue;
     if (l.statut !== "recu" && l.statut !== "surplus") continue;
+
+    // Lit l'état AVANT incrément pour le coût moyen pondéré (PMP).
+    const coutRecu =
+      l.prix_achat_ht != null && l.prix_achat_ht > 0 ? l.prix_achat_ht : null;
+    let qteAvant = 0;
+    let coutAvant: number | null = null;
+    if (coutRecu != null) {
+      const { data: avant } = await sb
+        .from("stock_par_depot")
+        .select("quantite, cout_achat_ht")
+        .eq("produit_id", l.produit_id)
+        .eq("depot_id", bdl.depot_destination_id)
+        .maybeSingle();
+      qteAvant = Number((avant as { quantite: number } | null)?.quantite ?? 0);
+      coutAvant =
+        (avant as { cout_achat_ht: number | null } | null)?.cout_achat_ht ??
+        null;
+    }
 
     const { error: adjErr } = await sb.rpc("adjust_stock", {
       p_produit_id: l.produit_id,
@@ -146,10 +171,44 @@ export async function POST(req: Request) {
       console.error("[finalize] adjust_stock RPC error:", adjErr);
       return NextResponse.json(
         { error: "stock_update_failed", detail: adjErr.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
     lignesRecues++;
+
+    // SYNCHRO COÛT : répercute le prix payé en PMP (coût moyen pondéré) sur le
+    // produit. C'est ce qui garde le coût — et donc la marge — à jour quand le
+    // fournisseur change ses prix. Hors-bloquant (le stock est déjà entré).
+    if (coutRecu != null) {
+      const nouveauCout =
+        qteAvant <= 0 || coutAvant == null
+          ? Math.round(coutRecu * 10000) / 10000
+          : Math.round(
+              ((qteAvant * coutAvant + recu * coutRecu) / (qteAvant + recu)) *
+                10000,
+            ) / 10000;
+      const { error: coutErr } = await sb
+        .from("stock_par_depot")
+        .update({ cout_achat_ht: nouveauCout })
+        .eq("produit_id", l.produit_id)
+        .eq("depot_id", bdl.depot_destination_id);
+      if (coutErr) {
+        console.error("[finalize] maj cout_achat_ht échouée:", coutErr.message);
+      } else if (
+        coutAvant != null &&
+        coutAvant > 0 &&
+        Math.abs(nouveauCout - coutAvant) / coutAvant >= 0.03
+      ) {
+        // Variation ≥ 3 % du coût → on prévient le gérant.
+        prixChanges.push({
+          produit: l.produits?.nom ?? "Produit",
+          ancien_cout: coutAvant,
+          nouveau_cout: nouveauCout,
+          variation_pct:
+            Math.round(((nouveauCout - coutAvant) / coutAvant) * 1000) / 10,
+        });
+      }
+    }
   }
 
   // ─── 6. Marque le BDL réceptionné + relit l'écart total à jour ───
@@ -170,14 +229,15 @@ export async function POST(req: Request) {
     .eq("id", bdl.id)
     .single();
   const ecartTotalEur = Number(
-    (finalRaw as { ecart_valeur_eur: number } | null)?.ecart_valeur_eur ?? 0
+    (finalRaw as { ecart_valeur_eur: number } | null)?.ecart_valeur_eur ?? 0,
   );
 
   const valeurAttendue = bdl.bons_de_livraison_lignes.reduce(
     (s, l) => s + l.quantite_attendue * (l.prix_achat_ht ?? 0),
-    0
+    0,
   );
-  const ratio = valeurAttendue > 0 ? Math.abs(ecartTotalEur) / valeurAttendue : 0;
+  const ratio =
+    valeurAttendue > 0 ? Math.abs(ecartTotalEur) / valeurAttendue : 0;
 
   // ─── 7. Push admin si écart total > seuil ───────────────────────
   let pushSent = false;
@@ -218,26 +278,29 @@ export async function POST(req: Request) {
     lignes_recues: lignesRecues,
     lignes_ecart: lignesEcart,
     push_sent: pushSent,
+    prix_changes: prixChanges,
     pdf_url: `/api/bdl/bon-reception-pdf-v2?bdl_id=${bdl.id}`,
   });
 }
 
 async function pushAdminsServer(
   req: Request,
-  payload: { title: string; body: string; url?: string; tag?: string }
+  payload: { title: string; body: string; url?: string; tag?: string },
 ): Promise<void> {
   const sb = supabaseServer();
   const { data: empRaw } = await sb
     .from("employes")
     .select("id, role, prenom")
     .eq("is_active", true);
-  const ids = ((empRaw ?? []) as Array<{
-    id: string;
-    role: string;
-    prenom: string | null;
-  }>)
+  const ids = (
+    (empRaw ?? []) as Array<{
+      id: string;
+      role: string;
+      prenom: string | null;
+    }>
+  )
     .filter(
-      (e) => e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? "")
+      (e) => e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
     )
     .map((e) => e.id);
   if (ids.length === 0) return;

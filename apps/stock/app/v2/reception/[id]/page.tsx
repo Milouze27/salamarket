@@ -23,6 +23,7 @@ import type {
 } from "@/components/v2/reception/types";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
+import { calculerPmp } from "@/lib/reception/pmp";
 
 /**
  * Page réception d'un BDL — orchestrateur.
@@ -92,7 +93,7 @@ export default function BdlReceptionPage() {
          fournisseurs (id, nom),
          depots (id, nom),
          bons_de_livraison_lignes (
-           id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue, statut,
+           id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue, prix_achat_ht, statut,
            produits (id, nom, ean, categorie)
          )`,
       )
@@ -651,40 +652,78 @@ export default function BdlReceptionPage() {
           "Dépôt destination manquant sur le BDL : réception impossible.",
         );
       }
-      // 1. Pour chaque ligne reçue, incrémenter stock_par_depot.
-      //    Chaque écriture est vérifiée : une erreur stoppe AVANT de marquer
-      //    le BDL réceptionné (sinon stock faux + BDL « terminé »).
+      // Garde anti double-finalisation : relit le statut en DB (l'état local
+      // peut être périmé / double-clic / 2e onglet). Pas de UNIQUE sur
+      // stock_movements.reference_id → re-finaliser doublerait le stock.
+      const { data: frais, error: errStatut } = await sb
+        .from("bons_de_livraison")
+        .select("statut")
+        .eq("id", bdl.id)
+        .single();
+      if (errStatut)
+        throw new Error(`Lecture du BDL impossible : ${errStatut.message}`);
+      if ((frais as { statut: string }).statut === "receptionnee") {
+        throw new Error("BDL déjà réceptionné : validation refusée.");
+      }
+      // 1. Pour chaque ligne reçue, créditer le stock via la RPC atomique
+      //    adjust_stock (verrou ligne + ledger stock_movements) — même chemin
+      //    que la réception scan-first (DÉCISION 2). Chaque écriture est
+      //    vérifiée : une erreur stoppe AVANT de marquer le BDL réceptionné
+      //    (sinon stock faux + BDL « terminé »).
       for (const l of bdl.bons_de_livraison_lignes) {
         if (l.statut !== "recu" || !l.produit_id || l.quantite_recue <= 0) {
           continue;
         }
-        const { data: existing, error: errSel } = await sb
+        // Lit l'état AVANT incrément pour le coût moyen pondéré (PMP).
+        const { data: avant, error: errSel } = await sb
           .from("stock_par_depot")
-          .select("id, quantite")
+          .select("quantite, cout_achat_ht")
           .eq("produit_id", l.produit_id)
           .eq("depot_id", depotId)
           .maybeSingle();
         if (errSel)
           throw new Error(`Lecture du stock impossible : ${errSel.message}`);
-        if (existing) {
-          const { error: errUpd } = await sb
+        const qteAvant = Number(
+          (avant as { quantite: number } | null)?.quantite ?? 0,
+        );
+        const coutAvant =
+          (avant as { cout_achat_ht: number | null } | null)?.cout_achat_ht ??
+          null;
+
+        const { error: errAdj } = await sb.rpc("adjust_stock", {
+          p_produit_id: l.produit_id,
+          p_depot_id: depotId,
+          p_delta: l.quantite_recue,
+          p_type: "reception",
+          p_lot_id: null,
+          p_reference_id: bdl.id,
+          p_actor_id: employe?.id ?? null,
+        });
+        if (errAdj) throw new Error(`Stock non mis à jour : ${errAdj.message}`);
+
+        // SYNCHRO COÛT (PMP) — même helper que le flux scan-first.
+        // Hors-bloquant : le stock est déjà entré, on ne casse pas la
+        // réception pour un coût non mis à jour.
+        const nouveauCout = calculerPmp({
+          qteAvant,
+          coutAvant,
+          qteRecue: l.quantite_recue,
+          coutRecu:
+            l.prix_achat_ht != null && l.prix_achat_ht > 0
+              ? l.prix_achat_ht
+              : null,
+        });
+        if (nouveauCout != null) {
+          const { error: errCout } = await sb
             .from("stock_par_depot")
-            .update({
-              quantite:
-                (existing as { quantite: number }).quantite + l.quantite_recue,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", (existing as { id: string }).id);
-          if (errUpd)
-            throw new Error(`Stock non mis à jour : ${errUpd.message}`);
-        } else {
-          const { error: errIns } = await sb.from("stock_par_depot").insert({
-            produit_id: l.produit_id,
-            depot_id: depotId,
-            quantite: l.quantite_recue,
-            is_visible: true,
-          });
-          if (errIns) throw new Error(`Stock non créé : ${errIns.message}`);
+            .update({ cout_achat_ht: nouveauCout })
+            .eq("produit_id", l.produit_id)
+            .eq("depot_id", depotId);
+          if (errCout)
+            console.error(
+              "[finalize] maj cout_achat_ht échouée:",
+              errCout.message,
+            );
         }
       }
       // 2. Marque BDL receptionnee (seulement si tout le stock est passé)

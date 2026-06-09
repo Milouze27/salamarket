@@ -10,6 +10,7 @@ export interface BdlLigne {
   code_barre_attendu: string | null;
   quantite_attendue: number;
   quantite_recue: number;
+  prix_achat_ht: number | null;
   statut: "attendu" | "recu" | "manquant" | "surplus";
   produits?: {
     id: string;

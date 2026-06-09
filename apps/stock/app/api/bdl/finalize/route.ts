@@ -24,6 +24,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { calculerPmp } from "@/lib/reception/pmp";
 import { validateBody } from "@/lib/validate/helper";
 import { finalizeBdlSchema } from "@/lib/validate/schemas";
 
@@ -179,14 +180,14 @@ export async function POST(req: Request) {
     // SYNCHRO COÛT : répercute le prix payé en PMP (coût moyen pondéré) sur le
     // produit. C'est ce qui garde le coût — et donc la marge — à jour quand le
     // fournisseur change ses prix. Hors-bloquant (le stock est déjà entré).
-    if (coutRecu != null) {
-      const nouveauCout =
-        qteAvant <= 0 || coutAvant == null
-          ? Math.round(coutRecu * 10000) / 10000
-          : Math.round(
-              ((qteAvant * coutAvant + recu * coutRecu) / (qteAvant + recu)) *
-                10000,
-            ) / 10000;
+    // DÉCISION 2 : formule PMP partagée avec le flux manuel (lib/reception/pmp).
+    const nouveauCout = calculerPmp({
+      qteAvant,
+      coutAvant,
+      qteRecue: recu,
+      coutRecu,
+    });
+    if (nouveauCout != null) {
       const { error: coutErr } = await sb
         .from("stock_par_depot")
         .update({ cout_achat_ht: nouveauCout })

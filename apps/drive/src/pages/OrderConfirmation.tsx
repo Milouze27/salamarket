@@ -14,7 +14,11 @@ import { fr } from "date-fns/locale";
 import { toZonedTime } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  supabase,
+  functionsUrl,
+  SUPABASE_PUBLISHABLE_KEY,
+} from "@/integrations/supabase/client";
 import { useCartStore } from "@/stores/cartStore";
 import { useCheckoutStore } from "@/stores/checkoutStore";
 
@@ -184,13 +188,13 @@ const OrderConfirmation = () => {
 
         const sessionId = searchParams.get("session_id");
         const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-checkout-session`,
+          functionsUrl("verify-checkout-session"),
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${session.access_token}`,
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              apikey: SUPABASE_PUBLISHABLE_KEY,
             },
             body: JSON.stringify({
               order_id: orderId,

@@ -8,9 +8,23 @@ const FALLBACK_URL = 'https://tltmermqodelorthtbre.supabase.co';
 const FALLBACK_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsdG1lcm1xb2RlbG9ydGh0YnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjQwMDksImV4cCI6MjA5MjkwMDAwOX0.0PHyLa0a0Aar8ukfdGWw_rtnbwiQ-QaM640Y1VysaAM';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
-const SUPABASE_PUBLISHABLE_KEY =
+// Constantes résolues (env var Vercel sinon fallback hardcoded). On les
+// EXPORTE pour que les appels manuels aux Edge Functions (create-checkout-
+// session, verify-checkout-session) tapent la MÊME origine Supabase que le
+// client `supabase.functions.invoke` — au lieu de relire `import.meta.env`
+// brut qui vaut `undefined` quand la var manque sur Vercel et fait dériver
+// le fetch sur l'origine Vercel (POST relatif → 405, paiement cassé).
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL;
+export const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || FALLBACK_KEY;
+
+/**
+ * URL absolue d'une Edge Function Supabase, toujours sur l'origine Supabase
+ * (jamais l'origine Vercel). À utiliser pour les `fetch` manuels qui ne
+ * passent pas par `supabase.functions.invoke`.
+ */
+export const functionsUrl = (name: string) =>
+  `${SUPABASE_URL}/functions/v1/${name}`;
 
 // Warn loud si on retombe sur le fallback hardcoded : on veut savoir si
 // le projet Vercel n'a pas les bonnes env vars set en prod. Le fallback

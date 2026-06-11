@@ -11,7 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCartStore } from "@/stores/cartStore";
 import { useCheckoutStore } from "@/stores/checkoutStore";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  supabase,
+  functionsUrl,
+  SUPABASE_PUBLISHABLE_KEY,
+} from "@/integrations/supabase/client";
 import {
   computeCartTotalsCents,
   computePrixEstime,
@@ -193,18 +197,30 @@ export default function Checkout() {
         notes: notes.trim() || undefined,
       };
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`;
-      const res = await fetch(url, {
+      const res = await fetch(functionsUrl("create-checkout-session"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          apikey: SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      // Une Edge Function peut répondre un corps vide (ex : 405 wrong-origin,
+      // 502, timeout). Ne JAMAIS laisser un res.json() qui throw passer pour
+      // une "erreur réseau" muette : on parse en sécurité et on affiche un
+      // toast FR explicite si le serveur n'a pas répondu un JSON exploitable.
+      let data: { error?: string; commande_id?: string; checkout_url?: string; order_id?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        toast.error(
+          "Le paiement est momentanément indisponible, merci de réessayer.",
+        );
+        setLoading(false);
+        return;
+      }
 
       if (!res.ok) {
         if (res.status === 409) {

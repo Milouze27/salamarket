@@ -11,6 +11,7 @@ import { GlossaryTerm } from "@/components/v2/GlossaryTerm";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot } from "@/lib/db";
 import type { ProduitInDepot } from "@/lib/types/db";
+import { pickBarcode } from "@/lib/labels/barcode";
 
 /**
  * /v2/etiquettes — Imprimer les étiquettes.
@@ -24,6 +25,10 @@ import type { ProduitInDepot } from "@/lib/types/db";
  */
 
 type LabelFormat = "brother" | "gondole";
+
+/** Plafond de copies par produit : la génération est 100 % client (canvas +
+ *  jsPDF) ; au-delà l'onglet peut se figer sur une faute de frappe (9999…). */
+const MAX_COPIES = 200;
 
 export default function V2EtiquettesPage() {
   const depot = useV2((s) => s.currentDepot);
@@ -70,6 +75,30 @@ export default function V2EtiquettesPage() {
     if (selected.length === 0) {
       toast.error("Indique au moins une quantité d'étiquettes");
       return;
+    }
+    if (format === "brother") {
+      // Pré-contrôle code-barres : on prévient l'utilisateur si des EAN
+      // internes ont dû être réparés (check-digit recalculé) ou si des
+      // produits n'ont ni EAN valide ni SKU imprimable (Code128).
+      let repaired = 0;
+      let sansCode = 0;
+      for (const p of selected) {
+        const spec = pickBarcode(p.ean ?? "", p.id);
+        if (!spec) sansCode++;
+        else if (spec.repaired) repaired++;
+      }
+      if (repaired > 0) {
+        toast.warning(
+          `${repaired} code-barres interne${repaired > 1 ? "s" : ""} corrigé${
+            repaired > 1 ? "s" : ""
+          } (chiffre de contrôle recalculé).`,
+        );
+      }
+      if (sansCode > 0) {
+        toast(
+          `${sansCode} produit${sansCode > 1 ? "s" : ""} sans code-barres imprimable.`,
+        );
+      }
     }
     setGenerating(true);
     setProgress({ done: 0, total: totalCopies });
@@ -205,7 +234,10 @@ export default function V2EtiquettesPage() {
                     size={40}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-text-primary truncate">
+                    <p
+                      className="text-sm font-bold text-text-primary truncate"
+                      title={p.nom}
+                    >
                       {p.nom}
                     </p>
                     <p className="text-[11px] text-text-tertiary font-mono">
@@ -232,20 +264,22 @@ export default function V2EtiquettesPage() {
                   <input
                     type="number"
                     min={0}
+                    max={MAX_COPIES}
                     value={n || ""}
                     onChange={(e) =>
                       setCopies((c) => ({
                         ...c,
-                        [p.id]: Math.max(
-                          0,
-                          parseInt(e.target.value || "0", 10),
+                        [p.id]: Math.min(
+                          MAX_COPIES,
+                          Math.max(0, parseInt(e.target.value || "0", 10)),
                         ),
                       }))
                     }
                     placeholder="0"
                     inputMode="numeric"
-                    aria-label={`Nombre d'étiquettes pour ${p.nom}`}
-                    className="w-16 text-center bg-cream border border-rule rounded-xl py-2 text-sm font-bold"
+                    aria-label={`Nombre d'étiquettes pour ${p.nom} (max ${MAX_COPIES})`}
+                    title={`Nombre d'étiquettes à imprimer (max ${MAX_COPIES})`}
+                    className="w-16 text-center bg-cream border border-rule rounded-xl min-h-[44px] text-base font-bold tabular-nums"
                   />
                 </div>
               );
@@ -274,6 +308,7 @@ export default function V2EtiquettesPage() {
           <button
             onClick={generate}
             disabled={generating}
+            title={`Générer ${totalCopies} étiquette${totalCopies > 1 ? "s" : ""} ${format === "brother" ? "Brother" : "gondole"} au format PDF`}
             className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {generating ? (
@@ -324,6 +359,8 @@ function FormatTab({
     <button
       type="button"
       onClick={onClick}
+      title={`Format ${label} (${sub})`}
+      aria-pressed={active}
       className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl text-[13px] font-bold transition-colors ${
         active
           ? "bg-primary text-white shadow-card"

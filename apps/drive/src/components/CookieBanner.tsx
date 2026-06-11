@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Cookie, X } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -67,11 +67,30 @@ const writeConsent = (c: Omit<Consent, "ts" | "necessary">) => {
  * qu'accepter (recommandation CNIL).
  *
  * Le bandeau est rendu dans un portail au body pour ne jamais être
- * masqué par la BottomNav ou la StickyCartCTA. Il pousse explicitement
- * son contenu au-dessus de ces deux composants (z-50 supérieur au
- * z-40 du BottomNav / StickyCartCTA).
+ * masqué par la BottomNav ou la StickyCartCTA. Surtout, il ne masque
+ * RIEN en retour : il se POSITIONNE au-dessus de la chrome bottom
+ * (BottomNav mobile + CTA des pages funnel) au lieu de la recouvrir,
+ * conformément à la règle UX "la nav/les CTA ne doivent jamais cacher
+ * de contenu utile" — et réciproquement le banner ne doit pas voler les
+ * clics du CTA en-dessous.
+ *
+ * RouteChrome lui communique le contexte de la route courante :
+ *  - `hasBottomNav` : la BottomNav mobile (z-40, ~56px + safe-area) est
+ *    affichée → le banner se cale au-dessus.
+ *  - `hasFunnelCta` : la page funnel (panier / créneaux / paiement) rend
+ *    son propre CTA fixed bottom-0 (desktop ET mobile) → le banner se
+ *    cale au-dessus de ce CTA pour ne pas voler le clic "Choisir un
+ *    créneau" / "Payer".
  */
-export const CookieBanner = () => {
+type CookieBannerProps = {
+  hasBottomNav?: boolean;
+  hasFunnelCta?: boolean;
+};
+
+export const CookieBanner = ({
+  hasBottomNav = false,
+  hasFunnelCta = false,
+}: CookieBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
   const [analytics, setAnalytics] = useState(false);
@@ -125,19 +144,46 @@ export const CookieBanner = () => {
 
   if (!visible || typeof document === "undefined") return null;
 
+  // Offset du banner au-dessus de la chrome bottom de la route courante.
+  // On ne RECOUVRE jamais la nav ni le CTA funnel : on se cale au-dessus.
+  //
+  // - BottomNav mobile : ~56px de contenu + max(safe-area, 16px) de
+  //   padding (cf. BottomNav.tsx). Le banner passe au-dessus → +72px env.
+  // - CTA funnel (panier/créneaux/paiement) : bouton h-14 (56px) +
+  //   pt-3 (12px) + padding bottom (≥12px / safe-area) ≈ 84px. Ce CTA
+  //   existe sur desktop ET mobile (les composants ci-dessus sont
+  //   md:hidden, donc seule cette branche s'applique en desktop).
+  //
+  // En pratique hasBottomNav et hasFunnelCta sont exclusifs (sur les
+  // pages funnel la BottomNav se masque). On garde malgré tout l'offset
+  // le plus grand des deux pour rester robuste.
+  const navOffsetMobile = hasBottomNav ? 72 : 0;
+  const funnelOffset = hasFunnelCta ? 84 : 0;
+  // Mobile : la nav (md:hidden) ET le CTA funnel peuvent exister.
+  const bottomMobile = Math.max(navOffsetMobile, funnelOffset) + 12;
+  // Desktop : la nav mobile n'existe pas ; seul le CTA funnel compte.
+  const bottomDesktop = funnelOffset + 12;
+
   return createPortal(
     <>
-      {/* Banner principal — bottom-fixed, ne masque pas le contenu :
-          padding bottom dynamique via env(safe-area-inset-bottom) +
-          marge supplémentaire pour laisser respirer au-dessus de la
-          BottomNav mobile (memory rule "Nav bottom ne doit jamais
-          cacher du contenu utile"). */}
+      {/* Banner principal — fixed, ne RECOUVRE jamais la chrome bottom :
+          `bottom` calculé pour se poser au-dessus de la BottomNav mobile
+          et/ou du CTA des pages funnel (memory rule "Nav bottom / CTA ne
+          doivent jamais cacher de contenu utile" — ici l'inverse aussi :
+          le banner ne vole pas le clic du CTA en-dessous).
+          Offset mobile et desktop distincts via CSS vars (les media
+          queries ne passent pas en style inline). */}
       <div
         role="dialog"
         aria-label="Préférences de cookies"
         aria-describedby="cookie-banner-desc"
-        className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 md:px-6 md:pb-6 pointer-events-none"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+        className="fixed inset-x-0 z-50 px-3 pb-3 md:px-6 md:pb-6 pointer-events-none bottom-[var(--cookie-bottom-mobile)] md:bottom-[var(--cookie-bottom-desktop)]"
+        style={
+          {
+            "--cookie-bottom-mobile": `calc(env(safe-area-inset-bottom) + ${bottomMobile}px)`,
+            "--cookie-bottom-desktop": `calc(env(safe-area-inset-bottom) + ${bottomDesktop}px)`,
+          } as CSSProperties
+        }
       >
         <div className="pointer-events-auto mx-auto max-w-3xl rounded-2xl bg-sapin-deep text-[#FAF7EE] shadow-2xl ring-1 ring-[#C9A227]/30">
           {/* ─── MOBILE COMPACT (≤25% viewport) ───────────────────────

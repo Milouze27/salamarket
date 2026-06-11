@@ -62,7 +62,9 @@ export function RouteChrome() {
     <>
       {showStickyCart && <StickyCartCTA />}
       {showBottomNav && <BottomNav />}
-      {showCookieBanner && <CookieBanner />}
+      {showCookieBanner && (
+        <CookieBanner hasBottomNav={showBottomNav} hasFunnelCta={isFunnel} />
+      )}
     </>
   );
 }

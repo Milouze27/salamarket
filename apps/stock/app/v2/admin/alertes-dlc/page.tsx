@@ -12,8 +12,14 @@
  * Actions RÉELLES (écriture stock_par_depot, migration 20260608000005) :
  *   - "Appliquer la remise" → baisse le prix_vente du produit (tous dépôts)
  *     de remise_suggeree_pct, idempotent via prix_vente_avant_remise.
- *   - "Tout marquer en démarque" → applique la remise à tous les lots forcés.
+ *   - "Démarquer les lots éligibles" → applique la remise aux lots forcés
+ *     ENCORE vendables (DLC non dépassée).
  *   - "Imprimer promo" → PDF étiquette prix barré/soldé.
+ *
+ * RÈGLE DLC dépassée (jours_restants < 0) : un produit dont la DLC est passée
+ * NE DOIT PAS être soldé/affiché en promo anti-gaspi (vente de produit périmé).
+ * On le distingue en « À RETIRER » : pas de bouton remise/promo, le staff le
+ * sort du rayon (PDF-P2-PROMO-DLC-PERIMEE, STK-19).
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,6 +31,7 @@ import {
   PackageX,
   Printer,
   Tag,
+  Trash2,
   TrendingDown,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -112,6 +119,11 @@ function joursLabel(j: number) {
   return `J-${j}`;
 }
 
+/** DLC dépassée → le produit est périmé : on retire, on ne solde pas. */
+function estPerime(a: DlcAlert): boolean {
+  return a.jours_restants < 0;
+}
+
 export default function AlertesDlcPage() {
   const [alerts, setAlerts] = useState<DlcAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,6 +177,9 @@ export default function AlertesDlcPage() {
       if (a.niveau_alerte in groups) {
         groups[a.niveau_alerte as keyof typeof groups] += 1;
       }
+      // Démarque potentielle = remise réellement applicable. Les périmés
+      // (DLC dépassée) ne sont pas soldés → exclus du chiffrage remise.
+      if (estPerime(a)) continue;
       // Heuristique démarque potentielle = qté * remise%/100 * 8€/u moyen (mock).
       valeurRemise +=
         (a.quantite_recue ?? 0) * (a.remise_suggeree_pct / 100) * 8;
@@ -300,9 +315,13 @@ export default function AlertesDlcPage() {
   }
 
   async function forceAllDemarque() {
-    const forces = alerts.filter((a) => a.niveau_alerte === "forcé");
+    // Lots forcés ENCORE vendables (DLC non dépassée) : un périmé se retire,
+    // il ne se solde pas.
+    const forces = alerts.filter(
+      (a) => a.niveau_alerte === "forcé" && !estPerime(a),
+    );
     if (forces.length === 0) {
-      toast.info("Aucun lot forcé à démarquer");
+      toast.info("Aucun lot forcé encore vendable à démarquer");
       return;
     }
     setActing("__bulk__");
@@ -337,7 +356,12 @@ export default function AlertesDlcPage() {
     }
   }
 
-  const forceCount = alerts.filter((a) => a.niveau_alerte === "forcé").length;
+  // Lots forcés ENCORE vendables = éligibles à la démarque de masse.
+  // Les forcés périmés (DLC dépassée) sont à retirer, pas à solder.
+  const forceCount = alerts.filter(
+    (a) => a.niveau_alerte === "forcé" && !estPerime(a),
+  ).length;
+  const perimeCount = alerts.filter((a) => estPerime(a)).length;
 
   return (
     <V2Shell hideNav>
@@ -386,9 +410,27 @@ export default function AlertesDlcPage() {
         />
       </section>
 
-      {/* Bulk action */}
-      {forceCount > 0 && (
+      {/* Bandeau « à retirer » — lots dont la DLC est dépassée (périmés).
+          On ne les solde pas, on les sort du rayon (PDF-P2/STK-19). */}
+      {perimeCount > 0 && (
         <section className="px-4 sm:px-5 mt-5">
+          <div className="flex items-center gap-3 bg-[#FBE9E7] border-2 border-[#A8231A]/50 rounded-[16px] p-3.5">
+            <Trash2 className="w-5 h-5 text-[#8A1A12] shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-extrabold text-[#8A1A12]">
+                {perimeCount} lot{perimeCount > 1 ? "s" : ""} à retirer du rayon
+              </p>
+              <p className="text-[11.5px] text-[#8A1A12]/80">
+                DLC dépassée — ne pas vendre ni solder, retirer immédiatement.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Bulk action — uniquement les forcés ENCORE vendables */}
+      {forceCount > 0 && (
+        <section className="px-4 sm:px-5 mt-3">
           <button
             onClick={() => void forceAllDemarque()}
             disabled={acting === "__bulk__"}
@@ -399,7 +441,7 @@ export default function AlertesDlcPage() {
             ) : (
               <PackageX className="w-4 h-4" />
             )}
-            Tout marquer en démarque ({forceCount})
+            Démarquer les forcés éligibles ({forceCount})
           </button>
         </section>
       )}
@@ -481,33 +523,44 @@ export default function AlertesDlcPage() {
                     />
                   </div>
 
-                  {a.remise_suggeree_pct > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mt-3">
-                      <button
-                        onClick={() => void applyRemise(a)}
-                        disabled={isApplying || isPrinting}
-                        className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
-                      >
-                        {isApplying ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Tag className="w-4 h-4" />
-                        )}
-                        Remise -{a.remise_suggeree_pct}%
-                      </button>
-                      <button
-                        onClick={() => void printPromo(a)}
-                        disabled={isApplying || isPrinting}
-                        className="min-h-[44px] bg-[#A8231A] text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
-                      >
-                        {isPrinting ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Printer className="w-4 h-4" />
-                        )}
-                        Imprimer promo
-                      </button>
+                  {/* DLC dépassée → on retire, jamais de promo/remise sur un
+                      produit périmé (PDF-P2-PROMO-DLC-PERIMEE). */}
+                  {estPerime(a) ? (
+                    <div className="mt-3 flex items-center gap-2 bg-[#FBE9E7] border border-[#A8231A]/40 rounded-[14px] px-3 py-2.5">
+                      <Trash2 className="w-4 h-4 text-[#8A1A12] shrink-0" />
+                      <p className="text-[12.5px] font-bold text-[#8A1A12]">
+                        À retirer du rayon — DLC dépassée, ni vente ni promo.
+                      </p>
                     </div>
+                  ) : (
+                    a.remise_suggeree_pct > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <button
+                          onClick={() => void applyRemise(a)}
+                          disabled={isApplying || isPrinting}
+                          className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                        >
+                          {isApplying ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Tag className="w-4 h-4" />
+                          )}
+                          Remise -{a.remise_suggeree_pct}%
+                        </button>
+                        <button
+                          onClick={() => void printPromo(a)}
+                          disabled={isApplying || isPrinting}
+                          className="min-h-[44px] bg-[#A8231A] text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                        >
+                          {isPrinting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Printer className="w-4 h-4" />
+                          )}
+                          Imprimer promo
+                        </button>
+                      </div>
+                    )
                   )}
                 </li>
               );

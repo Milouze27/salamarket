@@ -58,7 +58,10 @@ export function PilotageStrip({ allDepots = false }: { allDepots?: boolean }) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[var(--accent-gold-bright)]">
-            Aujourd'hui · CA encaissé
+            {/* « commandé » et non « encaissé » : tant que le paiement Stripe
+                n'est pas capturé (montant_capture_ttc), c'est du CA commandé
+                du jour, pas de l'encaissé (COH-05). */}
+            Aujourd'hui · CA commandé
           </p>
           <p className="text-[34px] sm:text-[40px] leading-none font-extrabold tabular text-[var(--text-on-dark)] mt-1.5">
             {data ? eur(data.ca_jour.total) : "—"}

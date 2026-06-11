@@ -154,6 +154,33 @@ export async function listProduitsInDepot(
     .filter((x): x is ProduitInDepot => x !== null);
 }
 
+/**
+ * Stock disponible d'UN produit dans UN dépôt (quantité de
+ * stock_par_depot). Renvoie 0 si le produit n'a pas de ligne stock dans
+ * ce dépôt, null si la source de données est indisponible (pour ne pas
+ * bloquer à tort une sortie quand on ne sait pas).
+ */
+export async function getStockProduitDepot(
+  depotId: string,
+  produitId: string,
+): Promise<number | null> {
+  const sb = supabase();
+  if (sb) {
+    const { data, error } = await sb
+      .from("stock_par_depot")
+      .select("quantite")
+      .eq("depot_id", depotId)
+      .eq("produit_id", produitId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? ((data.quantite as number) ?? 0) : 0;
+  }
+  const row = SEED_STOCK.find(
+    (s) => s.depot_id === depotId && s.produit_id === produitId,
+  );
+  return row ? row.quantite : 0;
+}
+
 export async function findProduitByEan(ean: string): Promise<Produit | null> {
   const sb = supabase();
   if (sb) {
@@ -1163,8 +1190,14 @@ export async function listRevenueByDay(opts?: {
       .neq("statut", "annule");
     if (error) throw new Error(error.message);
 
+    // STK-02 : le CA du jour DOIT être total_ttc (source unique, = le hero
+    // PilotageStrip). Avant on sommait les lignes (prix_unitaire × quantite),
+    // ce qui divergeait du total_ttc (lignes incomplètes en seed → chart à 0 €
+    // alors que le hero affichait 321,69 €). On garde le total autoritaire et
+    // on répartit Particulier/Pro selon la fraction Pro déduite des lignes.
     for (const c of (cmds ?? []) as unknown as Array<{
       created_at: string;
+      total_ttc: number | null;
       commandes_drive_lignes: Array<{
         zone_preparation: string;
         quantite: number;
@@ -1174,15 +1207,21 @@ export async function listRevenueByDay(opts?: {
       const key = c.created_at.slice(0, 10);
       const b = buckets.get(key);
       if (!b) continue;
+      const total = Number(c.total_ttc ?? 0);
+      if (total <= 0) continue;
+      // Fraction Pro de la commande, estimée sur les lignes (à défaut → 0).
+      let ligneTotal = 0;
+      let ligneProTotal = 0;
       for (const l of c.commandes_drive_lignes ?? []) {
-        const total = Number(l.prix_unitaire) * Number(l.quantite);
-        if (l.zone_preparation === "professionnel") {
-          b.pro += total;
-        } else {
-          // particulier + traiteur regroupés (le client final)
-          b.particulier += total;
-        }
+        const lt = Number(l.prix_unitaire) * Number(l.quantite);
+        ligneTotal += lt;
+        if (l.zone_preparation === "professionnel") ligneProTotal += lt;
       }
+      const fracPro = ligneTotal > 0 ? ligneProTotal / ligneTotal : 0;
+      const partPro = total * fracPro;
+      b.pro += partPro;
+      // particulier + traiteur regroupés (le client final)
+      b.particulier += total - partPro;
     }
   } else {
     // Mode démo local : génère une courbe plausible déterministe pour
@@ -1213,8 +1252,8 @@ export async function listRevenueByDay(opts?: {
 
   return Array.from(buckets.entries()).map(([date, b]) => ({
     date,
-    particulier: b.particulier,
-    pro: b.pro,
+    particulier: Math.round(b.particulier * 100) / 100,
+    pro: Math.round(b.pro * 100) / 100,
   }));
 }
 

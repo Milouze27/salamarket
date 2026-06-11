@@ -53,6 +53,74 @@ export function decomposeTTC(ttc: number, rate: TvaRate): { ht: number; tva: num
   return { ht, tva };
 }
 
+export type TvaBuckets = Record<string, { base_ht: number; tva: number; ttc: number }>;
+
+/**
+ * Réconciliation fiscale : ventile un résidu TTC dans une ventilation TVA
+ * pré-décomposée, pour que le document balance (CA HT + TVA = CA TTC).
+ *
+ * Pourquoi : le CA TTC d'un récap est la somme des `total_ttc` facturés au
+ * niveau commande, alors que la ventilation TVA est décomposée à partir des
+ * lignes (prix_unitaire × quantité). Quand la somme des lignes ne reconstitue
+ * pas le total facturé (frais de pesée, ajustement de poids, frais de retrait,
+ * ligne manquante…), HT + TVA ≠ TTC et le Z devient inexploitable par un
+ * comptable. On répartit donc le résidu `caTtc − Σ lignes_ttc` au prorata des
+ * bases TTC déjà présentes (fallback 20% — droit commun — si aucune ligne).
+ *
+ * Muté en place. Idempotence non requise (appelé une fois par calcul).
+ *
+ * @param buckets ventilation par taux (modifiée en place)
+ * @param residuTtc caTtc − Σ buckets.ttc, déjà arrondi au centime
+ */
+export function ventilerResiduTtc(buckets: TvaBuckets, residuTtc: number): void {
+  if (Math.abs(residuTtc) < 0.01) return;
+
+  const totalBaseTtc = Object.values(buckets).reduce((s, v) => s + v.ttc, 0);
+
+  if (totalBaseTtc <= 0) {
+    // Aucune ligne décomposable : le résidu = tout le CA. On l'impute au taux
+    // de droit commun 20% pour rester équilibré et visible.
+    const rate: TvaRate = 20;
+    const { tva } = decomposeTTC(residuTtc, rate);
+    const ttcR = Math.round(residuTtc * 100) / 100;
+    const tvaR = Math.round(tva * 100) / 100;
+    buckets["20.0"] = {
+      ttc: ttcR,
+      tva: tvaR,
+      base_ht: Math.round((ttcR - tvaR) * 100) / 100,
+    };
+    return;
+  }
+
+  // Prorata sur les taux existants ; le reliquat d'arrondi va au taux à plus
+  // forte base.
+  const keys = Object.keys(buckets);
+  let distribue = 0;
+  const parts = keys.map((key) => {
+    const part =
+      Math.round((residuTtc * buckets[key].ttc) / totalBaseTtc * 100) / 100;
+    distribue += part;
+    return { key, part };
+  });
+  const reliquat = Math.round((residuTtc - distribue) * 100) / 100;
+  if (Math.abs(reliquat) >= 0.01) {
+    const biggest = parts.reduce((a, b) =>
+      buckets[b.key].ttc > buckets[a.key].ttc ? b : a,
+    );
+    biggest.part = Math.round((biggest.part + reliquat) * 100) / 100;
+  }
+  for (const { key, part } of parts) {
+    if (Math.abs(part) < 0.01) continue;
+    const rate = parseFloat(key) as TvaRate;
+    const { tva } = decomposeTTC(part, rate);
+    const ttcR = Math.round(part * 100) / 100;
+    const tvaR = Math.round(tva * 100) / 100;
+    buckets[key].ttc += ttcR;
+    buckets[key].tva += tvaR;
+    buckets[key].base_ht += Math.round((ttcR - tvaR) * 100) / 100;
+  }
+}
+
 /** Estime les frais Stripe : 1.4% + 0.25 € par transaction CB EU
  *  https://stripe.com/fr/pricing */
 export function estimateStripeFee(ttcEuro: number): number {

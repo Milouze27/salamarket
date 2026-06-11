@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import type { DailyZSummary } from "@/lib/cashbox/daily-z";
-import { downloadOrShare } from "@/lib/download-helper";
+import { downloadOrShareBlob, base64ToBlob } from "@/lib/download-helper";
 import { DownloadCompleteBar } from "@/components/v2/DownloadCompleteBar";
 
 function formatEurFr(n: number) {
@@ -73,22 +73,26 @@ export default function RecapFiscalPage() {
     // rapides (clavier, flèches) → on évite de spammer l'API daily-z.
     setLoading(true);
     if (fetchTimer.current) clearTimeout(fetchTimer.current);
+    // HOTFIX sécu : /api/cashbox/daily-z* exige x-internal-secret. On passe
+    // par la server action qui injecte le secret côté serveur.
     fetchTimer.current = setTimeout(() => {
-      fetch(`/api/cashbox/daily-z?date=${date}`)
-        .then((r) => r.json())
-        .then((data: DailyZSummary | { error: string }) => {
-          if ("error" in data) {
-            toast.error(data.error, { id: "z-error" });
+      (async () => {
+        try {
+          const { fetchDailyZ } = await import("@/lib/actions/cashbox");
+          const r = await fetchDailyZ(date);
+          if (!r.ok || !r.data) {
+            toast.error(r.error ?? "Erreur", { id: "z-error" });
             setSummary(null);
           } else {
-            setSummary(data);
+            setSummary(r.data as unknown as DailyZSummary);
           }
-        })
-        .catch((e) => {
+        } catch (e) {
           toast.error(e instanceof Error ? e.message : "Erreur");
           setSummary(null);
-        })
-        .finally(() => setLoading(false));
+        } finally {
+          setLoading(false);
+        }
+      })();
     }, 300);
     return () => {
       if (fetchTimer.current) clearTimeout(fetchTimer.current);
@@ -98,9 +102,17 @@ export default function RecapFiscalPage() {
   async function downloadPdf() {
     toast.loading("Génération du PDF…", { id: "z-pdf" });
     const filename = `salam-drive-Z-${date}.pdf`;
-    const r = await downloadOrShare({
-      url: `/api/cashbox/daily-z-pdf?date=${date}`,
-      filename,
+    // HOTFIX sécu : passe par server action (x-internal-secret).
+    const { fetchDailyZPdf } = await import("@/lib/actions/cashbox");
+    const bin = await fetchDailyZPdf(date);
+    if (!bin.ok || !bin.base64) {
+      toast.error(bin.error ?? "Erreur", { id: "z-pdf" });
+      return;
+    }
+    const blob = base64ToBlob(bin.base64, bin.contentType ?? "application/pdf");
+    const r = await downloadOrShareBlob({
+      blob,
+      filename: bin.filename ?? filename,
       contentType: "application/pdf",
       shareTitle: `Récap fiscal ${date}`,
     });
@@ -124,9 +136,17 @@ export default function RecapFiscalPage() {
   async function downloadCsv() {
     toast.loading("Génération du CSV…", { id: "z-csv" });
     const filename = `salam-drive-Z-${date}.csv`;
-    const r = await downloadOrShare({
-      url: `/api/cashbox/daily-z-csv?date=${date}`,
-      filename,
+    // HOTFIX sécu : passe par server action (x-internal-secret).
+    const { fetchDailyZCsv } = await import("@/lib/actions/cashbox");
+    const bin = await fetchDailyZCsv(date);
+    if (!bin.ok || !bin.base64) {
+      toast.error(bin.error ?? "Erreur", { id: "z-csv" });
+      return;
+    }
+    const blob = base64ToBlob(bin.base64, bin.contentType ?? "text/csv; charset=utf-8");
+    const r = await downloadOrShareBlob({
+      blob,
+      filename: bin.filename ?? filename,
       contentType: "text/csv",
       shareTitle: `Récap fiscal CSV ${date}`,
     });

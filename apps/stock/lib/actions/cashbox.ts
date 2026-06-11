@@ -121,6 +121,61 @@ async function fetchBinaryProtected(
   }
 }
 
+/**
+ * Récap fiscal journalier (daily-Z) : le JSON expose CA/TVA/net encaissé,
+ * désormais protégés par x-internal-secret côté API route. Cette action
+ * injecte le secret et renvoie le summary tel quel (le caller le cast vers
+ * DailyZSummary).
+ */
+export async function fetchDailyZ(
+  date: string,
+): Promise<{ ok: boolean; data?: unknown; error?: string }> {
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return { ok: false, error: "INTERNAL_API_SECRET non configuré." };
+  }
+  const origin = await resolveOrigin();
+  try {
+    const res = await fetch(
+      `${origin}/api/cashbox/daily-z?date=${encodeURIComponent(date)}`,
+      { headers: { "x-internal-secret": internalSecret }, cache: "no-store" },
+    );
+    const json = (await res.json().catch(() => ({}))) as
+      | Record<string, unknown>
+      | { error: string };
+    if (!res.ok) {
+      const errMsg =
+        "error" in json && typeof json.error === "string"
+          ? json.error
+          : `HTTP ${res.status}`;
+      return { ok: false, error: errMsg };
+    }
+    return { ok: true, data: json };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function fetchDailyZPdf(
+  date: string,
+): Promise<BinaryDownloadResult> {
+  return fetchBinaryProtected(
+    `/api/cashbox/daily-z-pdf?date=${encodeURIComponent(date)}`,
+    "application/pdf",
+    `salam-drive-Z-${date}.pdf`,
+  );
+}
+
+export async function fetchDailyZCsv(
+  date: string,
+): Promise<BinaryDownloadResult> {
+  return fetchBinaryProtected(
+    `/api/cashbox/daily-z-csv?date=${encodeURIComponent(date)}`,
+    "text/csv; charset=utf-8",
+    `salam-drive-Z-${date}.csv`,
+  );
+}
+
 export async function fetchMonthlyReportPdf(
   mois: string,
 ): Promise<BinaryDownloadResult> {

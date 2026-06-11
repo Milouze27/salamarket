@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computeDailyZ, yesterdayIsoParis } from "@/lib/cashbox/daily-z";
+import { checkCashboxAuth } from "@/lib/cashbox/auth";
 import { formatDateFr, formatHeureFr } from "@/lib/cashbox/tva";
 import {
   createBrandDoc,
@@ -30,6 +31,10 @@ const eur = (v: number) => formatEurFromUnits(v);
  * colonnes clé/valeur (récap fiscal).
  */
 export async function GET(req: Request) {
+  const auth = checkCashboxAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   const url = new URL(req.url);
   const date = url.searchParams.get("date") || yesterdayIsoParis();
 

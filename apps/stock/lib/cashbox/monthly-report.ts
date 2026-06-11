@@ -2,7 +2,13 @@
  * Rapport mensuel consolidé Drive + Magasin (Cashmag).
  */
 import { supabase } from "@/lib/supabase";
-import { decomposeTTC, estimateStripeFee, tvaRateForCategory } from "./tva";
+import {
+  decomposeTTC,
+  estimateStripeFee,
+  tvaRateForCategory,
+  ventilerResiduTtc,
+  type TvaBuckets,
+} from "./tva";
 
 export interface MonthlySection {
   ca_ttc: number;
@@ -128,7 +134,10 @@ export async function computeMonthlyReport(moisYYYYMM: string): Promise<MonthlyR
     ((produits ?? []) as Array<{ id: string; nom: string; categorie: string | null }>).map((p) => [p.id, p])
   );
 
-  let driveCaTtc = 0, driveCaHt = 0, driveTva = 0, driveFrais = 0;
+  // Ventilation TVA Drive isolée, pour pouvoir réconcilier le résidu (frais de
+  // pesée / lignes manquantes) avant de fusionner dans la consolidation.
+  const driveBuckets: TvaBuckets = {};
+  let driveCaTtc = 0, driveFrais = 0;
   const topProdDrive = new Map<string, { quantite: number; ca: number }>();
   for (const c of drive) {
     const ttc = Number(c.total_ttc);
@@ -140,30 +149,31 @@ export async function computeMonthlyReport(moisYYYYMM: string): Promise<MonthlyR
       const p = produitById.get(l.produit_id);
       const rate = tvaRateForCategory(p?.categorie);
       const { ht, tva } = decomposeTTC(totalLigne, rate);
-      driveCaHt += ht; driveTva += tva;
+      const key = rate.toFixed(1);
+      if (!driveBuckets[key]) driveBuckets[key] = { base_ht: 0, tva: 0, ttc: 0 };
+      driveBuckets[key].base_ht += ht;
+      driveBuckets[key].tva += tva;
+      driveBuckets[key].ttc += totalLigne;
       const name = p?.nom ?? `Produit ${l.produit_id.slice(0, 8)}`;
       const tp = topProdDrive.get(name) ?? { quantite: 0, ca: 0 };
       tp.quantite += qty; tp.ca += totalLigne;
       topProdDrive.set(name, tp);
     }
   }
+  // RÉCONCILIATION : même primitive que daily-z. driveCaTtc somme les
+  // total_ttc facturés ; driveBuckets décompose les lignes. On ventile le
+  // résidu pour que driveCaHt + driveTva = driveCaTtc et que le P&L balance.
+  const driveTtcLignes = Object.values(driveBuckets).reduce((s, v) => s + v.ttc, 0);
+  ventilerResiduTtc(driveBuckets, Math.round((driveCaTtc - driveTtcLignes) * 100) / 100);
+  const driveCaHt = Object.values(driveBuckets).reduce((s, v) => s + v.base_ht, 0);
+  const driveTva = Object.values(driveBuckets).reduce((s, v) => s + v.tva, 0);
   const drivePM = drive.length > 0 ? driveCaTtc / drive.length : 0;
 
   // CONSOLIDATION TVA
   const caTotal = magCaTtc + driveCaTtc;
   const tvaParTaux: Record<string, { base_ht: number; tva: number; ttc: number }> = {};
-  for (const c of drive) {
-    for (const l of c.commandes_drive_lignes) {
-      const p = produitById.get(l.produit_id);
-      const rate = tvaRateForCategory(p?.categorie);
-      const totalLigne = Number(l.prix_unitaire) * Number(l.quantite);
-      const { ht, tva } = decomposeTTC(totalLigne, rate);
-      const key = rate.toFixed(1);
-      if (!tvaParTaux[key]) tvaParTaux[key] = { base_ht: 0, tva: 0, ttc: 0 };
-      tvaParTaux[key].base_ht += ht;
-      tvaParTaux[key].tva += tva;
-      tvaParTaux[key].ttc += totalLigne;
-    }
+  for (const [key, v] of Object.entries(driveBuckets)) {
+    tvaParTaux[key] = { base_ht: v.base_ht, tva: v.tva, ttc: v.ttc };
   }
   for (const row of cashmag) {
     const qty = Number(row.quantite);

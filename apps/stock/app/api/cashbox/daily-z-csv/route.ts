@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computeDailyZ, yesterdayIsoParis } from "@/lib/cashbox/daily-z";
+import { checkCashboxAuth } from "@/lib/cashbox/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
  * (séparateur ;, virgule décimale, BOM UTF-8 pour Excel FR).
  */
 export async function GET(req: Request) {
+  const auth = checkCashboxAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   const url = new URL(req.url);
   const date = url.searchParams.get("date") || yesterdayIsoParis();
 

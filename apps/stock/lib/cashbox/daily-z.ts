@@ -12,6 +12,7 @@ import {
   decomposeTTC,
   estimateStripeFee,
   tvaRateForCategory,
+  ventilerResiduTtc,
   type TvaRate,
 } from "./tva";
 
@@ -223,6 +224,15 @@ export async function computeDailyZ(dateIso: string): Promise<DailyZSummary> {
       });
     }
   }
+
+  // RÉCONCILIATION FISCALE : caTtc somme les total_ttc facturés (niveau
+  // commande), tandis que tvaParTaux décompose les lignes (prix_unitaire ×
+  // quantité). Si Σ lignes ≠ Σ total_ttc (frais de pesée, ajustement de poids,
+  // ligne manquante…), le Z ne balance pas (CA HT + TVA ≠ CA TTC) et devient
+  // inexploitable par un comptable. On ventile le résidu pour rétablir
+  // l'équilibre.
+  const ttcLignes = Object.values(tvaParTaux).reduce((s, v) => s + v.ttc, 0);
+  ventilerResiduTtc(tvaParTaux, Math.round((caTtc - ttcLignes) * 100) / 100);
 
   const caHt = Object.values(tvaParTaux).reduce((s, v) => s + v.base_ht, 0);
   const tvaTotale = Object.values(tvaParTaux).reduce((s, v) => s + v.tva, 0);

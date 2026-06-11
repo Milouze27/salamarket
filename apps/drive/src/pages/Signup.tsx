@@ -103,6 +103,7 @@ export default function Signup() {
       email: true,
       password: true,
       confirm: true,
+      acceptTerms: true,
     });
     if (!valid) {
       // a11y : focus le 1er champ en erreur (ordre visuel) pour guider la
@@ -135,10 +136,10 @@ export default function Signup() {
   };
 
   const fieldClass = (key: string) =>
-    `min-h-[44px] h-12 px-4 rounded-xl border bg-white text-base text-text focus:outline-none ${
+    `min-h-[44px] h-12 px-4 rounded-xl border bg-white text-base text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-white ${
       touched[key] && errors[key]
-        ? "border-red-400 focus:border-red-500"
-        : "border-border focus:border-primary"
+        ? "border-red-400 focus:border-red-500 focus-visible:ring-red-500"
+        : "border-border focus:border-primary focus-visible:ring-[#0E3B2E]"
     }`;
 
   const hasError = (key: string) => Boolean(touched[key] && errors[key]);
@@ -290,16 +291,29 @@ export default function Signup() {
 
           {/* CGV + Politique de confidentialité — checkbox bloquante.
               Obligation légale (LCEN + RGPD : consentement éclairé). */}
+          <div className="flex flex-col mt-1">
           <label
             htmlFor="acceptTerms"
-            className="flex items-start gap-3 text-sm text-text cursor-pointer select-none mt-1"
+            className="flex items-start gap-3 text-sm text-text cursor-pointer select-none"
           >
             <input
               id="acceptTerms"
               type="checkbox"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-sapin/40 accent-sapin cursor-pointer focus:outline-none focus:ring-2 focus:ring-sapin/30"
+              aria-invalid={
+                touched.acceptTerms && !acceptedTerms ? true : undefined
+              }
+              aria-describedby={
+                touched.acceptTerms && !acceptedTerms
+                  ? "acceptTerms-error"
+                  : undefined
+              }
+              className={`mt-0.5 h-5 w-5 shrink-0 rounded border-2 accent-sapin cursor-pointer focus:outline-none focus:ring-2 focus:ring-sapin/30 ${
+                touched.acceptTerms && !acceptedTerms
+                  ? "border-red-400"
+                  : "border-sapin/40"
+              }`}
             />
             <span className="leading-snug text-[13px] text-ink/75">
               J'accepte les{" "}
@@ -323,6 +337,13 @@ export default function Signup() {
               .
             </span>
           </label>
+            {touched.acceptTerms && !acceptedTerms && (
+              <p id="acceptTerms-error" className="text-xs text-red-600 mt-1.5">
+                Vous devez accepter les CGV et la politique de confidentialité
+                pour créer un compte.
+              </p>
+            )}
+          </div>
 
           {/* Opt-in marketing — facultatif, NON coché par défaut (RGPD :
               consentement libre et spécifique, distinct de l'acceptation des
@@ -344,10 +365,15 @@ export default function Signup() {
             </span>
           </label>
 
+          {/* Le bouton reste cliquable même si le formulaire est invalide :
+              onSubmit affiche alors les messages d'erreur sous chaque champ
+              (et focus le 1er fautif) au lieu de bloquer en silence un
+              bouton grisé. Seul `loading` le désactive (anti double-submit). */}
           <button
             type="submit"
-            disabled={loading || !valid}
-            className="min-h-[44px] h-12 rounded-xl bg-sapin hover:bg-sapin-deep text-white font-semibold disabled:opacity-50 active:scale-[0.99] transition-all"
+            disabled={loading}
+            aria-disabled={!valid ? true : undefined}
+            className="min-h-[44px] h-12 rounded-xl bg-sapin hover:bg-sapin-deep text-white font-semibold aria-disabled:opacity-50 active:scale-[0.99] transition-all"
           >
             {loading ? "Création…" : "Créer mon compte"}
           </button>

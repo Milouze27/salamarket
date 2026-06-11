@@ -57,6 +57,9 @@ export const OnboardingFlow = ({ onDismiss }: OnboardingFlowProps) => {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Bienvenue chez Salamarket"
       className={cn(
         "fixed inset-0 z-[60] min-h-dvh overflow-hidden bg-gradient-to-br from-[#0E3B2E] via-[#082A20] to-[#082A20]",
         "transition-opacity duration-300 ease-out",

@@ -247,7 +247,7 @@ export const ProductCard = ({ product }: Props) => {
                 : formatPrice(product.priceCents)}
             </span>
           )}
-          <span className="text-[10.5px] uppercase tracking-[0.12em] text-[#0F1A14]/55 font-semibold truncate">
+          <span className="text-[11px] uppercase tracking-[0.12em] text-[#0F1A14]/70 font-semibold truncate">
             {unitMeta}
           </span>
         </div>

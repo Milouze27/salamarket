@@ -70,7 +70,7 @@ export default function Login() {
               aria-describedby={error ? "login-error" : undefined}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
+              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-[#0E3B2E] focus-visible:ring-offset-1 focus-visible:ring-offset-white"
             />
           </div>
 
@@ -87,7 +87,7 @@ export default function Login() {
               aria-describedby={error ? "login-error" : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary"
+              className="min-h-[44px] h-12 px-4 rounded-xl border border-border bg-white text-base text-text focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-[#0E3B2E] focus-visible:ring-offset-1 focus-visible:ring-offset-white"
             />
           </div>
 

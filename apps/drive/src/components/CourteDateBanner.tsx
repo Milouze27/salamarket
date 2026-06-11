@@ -3,8 +3,10 @@
  *
  * Affiche une bannière éditoriale fond or doux / texte sapin invitant les
  * clients à découvrir la sélection courte date jusqu'à -50%. Au clic,
- * navigation vers `/catalogue?courte_date=1` (l'orchestrator se chargera
- * du filtre côté catalogue dans une PR ultérieure).
+ * navigation vers `/?courte_date=1` : la home (Index) lit ce query param
+ * et bascule en mode rayon anti-gaspi. On NE passe PAS par `/catalogue`
+ * (qui redirige en `<Navigate to="/">` et perdrait le query param → la
+ * bannière paraissait alors « morte », ramenant à la home sans filtre).
  *
  * Lit `v_dlc_alerts` (vue créée par la migration 0032) pour afficher le
  * nombre de produits disponibles. Si Supabase n'est pas joignable ou si
@@ -72,7 +74,7 @@ export const CourteDateBanner = () => {
   return (
     <button
       type="button"
-      onClick={() => navigate("/catalogue?courte_date=1")}
+      onClick={() => navigate("/?courte_date=1")}
       className="group w-full text-left rounded-2xl border transition-all active:scale-[0.99]"
       style={{
         backgroundColor: "#F4E9C4",
@@ -80,7 +82,7 @@ export const CourteDateBanner = () => {
         color: "#0E3B2E",
         minHeight: 64,
       }}
-      aria-label={`Rayon anti-gaspi : ${count} produits courte date disponibles`}
+      aria-label={`Rayon anti-gaspi : ${count} produit${count > 1 ? "s" : ""} courte date disponible${count > 1 ? "s" : ""}`}
     >
       <div className="flex items-center gap-3 px-4 py-3.5">
         <span

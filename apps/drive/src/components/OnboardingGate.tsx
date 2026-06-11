@@ -3,12 +3,16 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 
-// Pages où l'onboarding doit être skip — soit pages publiques où il
-// gêne (trace lot), soit pages auth où il bloque l'accès aux flows de
-// connexion / création de compte / reset password. Si on ne skip pas
-// ces pages, un nouvel utilisateur tombant sur /connexion via deep
-// link voit l'overlay d'onboarding au lieu du formulaire — broken UX.
+// Pages où l'onboarding doit être skip — soit pages de deep-link
+// acquisition (fiche produit /produit/:id, trace lot /lot/:id atteints
+// via QR / pub / partage), soit pages auth où il bloque l'accès aux
+// flows de connexion / création de compte / reset password. Si on ne
+// skip pas ces pages, un nouvel utilisateur tombant dessus via deep
+// link voit l'overlay d'onboarding plein écran au lieu du contenu
+// attendu — et « Commencer mes courses » le redirige vers la home, lui
+// faisant perdre le contexte produit/lot : parcours acquisition cassé.
 const PUBLIC_PATHS_SKIP_ONBOARDING = [
+  "/produit/",
   "/lot/",
   "/connexion",
   "/inscription",

@@ -38,8 +38,10 @@ import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
 import { resolveHijriContext, formatHijri } from "@/lib/forecast/hijri";
+import { getHijriContext } from "@/lib/hijri";
 import { triggerRecompute } from "@/lib/actions/forecast";
 import type { StockoutTier } from "@/lib/forecast/holt";
+import { countRupturesImminentes } from "@/lib/forecast/counts";
 
 type HijriPhase =
   | "normal"
@@ -138,7 +140,8 @@ function recommendedOrder(row: ForecastRow): {
   const qty = Math.max(1, Math.ceil(need / 12));
   return {
     qty,
-    unit: "cartons",
+    // MGR-15 : accord FR — « 1 carton » au singulier, « N cartons » au pluriel.
+    unit: qty > 1 ? "cartons" : "carton",
     rationale: `Vise ${target} j de couverture (vitesse ajustée ${row.velocity_adj.toFixed(1)} u/j × phase × ${row.multiplicateur.toFixed(2)}).`,
   };
 }
@@ -151,13 +154,26 @@ export default function ForecastPage() {
   const [filter, setFilter] = useState<"all" | StockoutTier>("all");
   const [allDepots, setAllDepots] = useState(false);
 
+  // Phase + multiplicateurs : moteur forecast (resolveHijriContext, umalqura).
   const hijriCtx = useMemo(() => resolveHijriContext(new Date()), []);
+  // Décompte du prochain événement : on s'aligne sur lib/hijri.ts (dates MFCM
+  // officielles, source de vérité partagée avec le cockpit) pour ne PAS
+  // afficher « dans 14 jours » ici quand le cockpit dit « dans 15 jours »
+  // pour le même événement (MGR-06 : umalqura calculé vs MFCM hardcodé).
+  const nextEvent = useMemo(() => getHijriContext(), []);
 
   const load = useCallback(async () => {
     setLoading(true);
     const sb = supabase();
     if (!sb) {
       setLoading(false);
+      return;
+    }
+    // MGR2-13 : en mode « dépôt courant », tant que le dépôt n'est pas
+    // résolu on NE lance PAS une requête non filtrée (sinon on compte tous
+    // les dépôts puis on refiltre → les compteurs sautent « 5 puis 2 »).
+    // On garde l'écran en chargement jusqu'à ce que le dépôt soit connu.
+    if (!allDepots && !depot?.id) {
       return;
     }
     let query = sb
@@ -204,6 +220,17 @@ export default function ForecastPage() {
     return rows.filter((r) => r.tier === filter);
   }, [rows, filter]);
 
+  // MGR-05 : le forecast est un snapshot. Si un recompute a été fait sous une
+  // phase hijri (ex. « Aïd al-Adha J-2 », ×3.0) puis qu'on consulte la page
+  // une fois la fête passée, le bandeau affiche « Période normale » alors que
+  // les lignes portent encore des multiplicateurs Aïd → contradiction. On
+  // détecte ce décalage : si la phase stockée diffère de la phase courante,
+  // les chips/raisons hijri sont périmés et il faut relancer un calcul.
+  const phaseStale = useMemo(
+    () => rows.some((r) => r.phase_courante !== hijriCtx.phase),
+    [rows, hijriCtx.phase],
+  );
+
   const router = useRouter();
 
   async function handleRecompute() {
@@ -214,18 +241,22 @@ export default function ForecastPage() {
       // mais le bouton staff n'a pas ce secret → on passe par l'action.
       const res = await triggerRecompute();
       if (!res.ok || !res.data) {
-        toast.error(`Recompute échoué : ${res.error ?? "erreur inconnue"}`);
+        // res.error est déjà un message FR générique côté action (jamais de
+        // SQL brut). On l'affiche tel quel.
+        toast.error(
+          res.error ?? "Le calcul des ruptures n'a pas pu aboutir.",
+        );
       } else {
         toast.success(
-          `Recompute OK · ${res.data.forecast_upserted ?? 0} couples`,
+          `Calcul terminé · ${res.data.forecast_upserted ?? 0} couples mis à jour`,
           { duration: 3000 },
         );
         await load();
       }
-    } catch (err) {
-      toast.error(
-        `Recompute exception : ${err instanceof Error ? err.message : "erreur"}`,
-      );
+    } catch {
+      // Erreur réseau / server action injoignable : message FR générique,
+      // jamais l'exception brute.
+      toast.error("Le calcul des ruptures n'a pas pu aboutir. Réessaie.");
     } finally {
       setRecomputing(false);
     }
@@ -300,12 +331,22 @@ export default function ForecastPage() {
               <p className="text-[17px] font-extrabold leading-tight mt-1">
                 {hijriCtx.label}
               </p>
-              {hijriCtx.nextEventDaysAway !== null && (
+              {nextEvent.prochain && nextEvent.jours_jusqua !== null && (
                 <p className="text-[12.5px] text-white/85 mt-1.5 flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5 shrink-0" />
                   <span>
-                    Prochain pic — <strong>{hijriCtx.nextEventLabel}</strong>{" "}
-                    dans <strong>{hijriCtx.nextEventDaysAway} jours</strong>
+                    Prochain pic — <strong>{nextEvent.prochain.libelle}</strong>{" "}
+                    {nextEvent.en_cours ? (
+                      <strong>en cours</strong>
+                    ) : nextEvent.jours_jusqua === 0 ? (
+                      <strong>aujourd&apos;hui</strong>
+                    ) : nextEvent.jours_jusqua === 1 ? (
+                      <strong>demain</strong>
+                    ) : (
+                      <>
+                        dans <strong>{nextEvent.jours_jusqua} jours</strong>
+                      </>
+                    )}
                   </span>
                 </p>
               )}
@@ -314,13 +355,35 @@ export default function ForecastPage() {
         </div>
       </section>
 
+      {/* MGR-05 — bandeau « calcul périmé » : la phase des données diffère de
+          la phase courante (ex. calcul fait pendant l'Aïd, consulté après).
+          On invite à relancer le calcul plutôt que d'afficher des
+          multiplicateurs hijri qui contredisent la phase courante. */}
+      {phaseStale && rows.length > 0 && (
+        <section className="px-4 sm:px-5 mt-4">
+          <div className="flex items-start gap-3 rounded-[16px] p-3.5 bg-[var(--status-warning-bg)] border border-[var(--status-warning)]/40">
+            <AlertTriangle className="w-4 h-4 text-[var(--status-warning-text)] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[12.5px] font-extrabold text-[var(--status-warning-text)]">
+                Calcul à rafraîchir
+              </p>
+              <p className="text-[11.5px] text-text-secondary mt-0.5">
+                Ces chiffres ont été calculés sous une autre phase hijri.
+                Relance le calcul pour aligner les multiplicateurs sur «{" "}
+                {hijriCtx.label} ».
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* KPI grid — 2-up sur mobile, 4-up dès lg pour densifier le desktop (LAY-12) */}
       <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-7xl mx-auto w-full">
         <KpiCard
           variant="danger"
           icon={<AlertOctagon className="w-4 h-4" />}
           eyebrow="RUPTURES + BLOQUANT"
-          value={`${counts.out + counts.blocker}`}
+          value={`${countRupturesImminentes(rows)}`}
           label="à commander aujourd'hui"
         />
         <KpiCard
@@ -434,7 +497,7 @@ export default function ForecastPage() {
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary">
                           {r.depot_nom}
                         </span>
-                        {r.multiplicateur > 1.1 && (
+                        {r.multiplicateur > 1.1 && !phaseStale && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[var(--accent-gold-soft)] text-[var(--or-text)]">
                             × {r.multiplicateur.toFixed(2)} hijri
                           </span>
@@ -474,7 +537,7 @@ export default function ForecastPage() {
                     />
                   </div>
 
-                  {r.reason && (
+                  {r.reason && !phaseStale && (
                     <p
                       className={`mt-3 text-[12px] leading-snug rounded-xl px-3 py-2 ${style.bg} text-text-primary`}
                     >

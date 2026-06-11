@@ -30,6 +30,7 @@ import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
 import { getHijriContext, getSalutation } from "@/lib/hijri";
+import { hijriPhaseLabel } from "@/lib/forecast/hijri";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { HeroKpi } from "@/components/cockpit/hero-kpi";
 import { AlertCard, AlertCardRow } from "@/components/cockpit/alert-card";
@@ -349,16 +350,16 @@ export default function CockpitPage() {
           <AlertCard
             icon={Clock}
             tone={snap && snap.dlc.count_critique > 0 ? "danger" : "warn"}
-            eyebrow={`${snap?.dlc.count_total ?? 0} réfs en DLC courte`}
+            eyebrow={`${snap?.dlc.count_total ?? 0} réf${(snap?.dlc.count_total ?? 0) > 1 ? "s" : ""} en DLC courte`}
             title={
               snap && snap.dlc.count_total > 0
-                ? `${snap.dlc.count_total} produits à remiser aujourd'hui`
+                ? `${snap.dlc.count_total} produit${snap.dlc.count_total > 1 ? "s" : ""} à remiser aujourd'hui`
                 : "Aucune DLC critique"
             }
             metric={snap ? formatEur(snap.dlc.valeur_eur) : undefined}
             hint={
               snap && snap.dlc.valeur_eur > 0
-                ? `Valeur estimée de remise — ${snap.dlc.count_critique} en J-1 / forcés`
+                ? `Valeur de démarque estimée · ${snap.dlc.count_critique} lot${snap.dlc.count_critique > 1 ? "s" : ""} en J-1 ou forcé${snap.dlc.count_critique > 1 ? "s" : ""}`
                 : undefined
             }
             onTap={
@@ -390,10 +391,10 @@ export default function CockpitPage() {
           <AlertCard
             icon={PackageX}
             tone={snap && snap.stockout.count_out > 0 ? "danger" : "warn"}
-            eyebrow={`${snap?.stockout.count_total ?? 0} SKU sous tension`}
+            eyebrow={`${snap?.stockout.count_total ?? 0} produit${(snap?.stockout.count_total ?? 0) > 1 ? "s" : ""} sous tension`}
             title={
               snap && snap.stockout.count_total > 0
-                ? `${snap.stockout.count_total} produits vont taper rupture`
+                ? `${snap.stockout.count_total} produit${snap.stockout.count_total > 1 ? "s vont" : " va"} taper rupture`
                 : "Stock sain partout"
             }
             metric={
@@ -403,7 +404,9 @@ export default function CockpitPage() {
             }
             hint={
               snap && snap.stockout.top[0]
-                ? `Phase ${snap.stockout.top[0].phase_courante} · ×${snap.stockout.top[0].multiplicateur.toFixed(2)}`
+                ? snap.stockout.top[0].multiplicateur > 1.1
+                  ? `${hijriPhaseLabel(snap.stockout.top[0].phase_courante)} · demande × ${snap.stockout.top[0].multiplicateur.toFixed(2)}`
+                  : hijriPhaseLabel(snap.stockout.top[0].phase_courante)
                 : undefined
             }
             onTap={
@@ -564,7 +567,7 @@ export default function CockpitPage() {
                 <input
                   value={releveConcurrent}
                   onChange={(e) => setReleveConcurrent(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                 />
               </label>
               <label className="block">
@@ -575,7 +578,7 @@ export default function CockpitPage() {
                   value={releveLibelle}
                   onChange={(e) => setReleveLibelle(e.target.value)}
                   placeholder="Poulet entier halal 1,2 kg"
-                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -588,7 +591,7 @@ export default function CockpitPage() {
                     onChange={(e) => setRelevePrix(e.target.value)}
                     inputMode="decimal"
                     placeholder="9,90"
-                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                   />
                 </label>
                 <label className="block">
@@ -599,7 +602,7 @@ export default function CockpitPage() {
                     value={releveUnite}
                     onChange={(e) => setReleveUnite(e.target.value)}
                     placeholder="kg"
-                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                   />
                 </label>
               </div>

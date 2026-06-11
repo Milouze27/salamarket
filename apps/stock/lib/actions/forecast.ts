@@ -32,9 +32,15 @@ export async function triggerRecompute(): Promise<{
     const data = await recomputeStockoutForecast();
     return { ok: true, data };
   } catch (err) {
+    // On NE renvoie JAMAIS le message d'erreur brut au client : il peut
+    // exposer du SQL (« numeric field overflow », noms de colonnes…) qui
+    // n'a aucun sens pour le manager et fait fuiter le schéma. Le détail
+    // technique reste côté serveur (logs Vercel) ; l'UI reçoit un message
+    // FR générique.
+    console.error("[forecast] recompute échoué:", err);
     return {
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: "Le calcul des ruptures n'a pas pu aboutir. Réessaie dans un instant.",
     };
   }
 }

@@ -107,6 +107,26 @@ function categorieKey(rawCat: string | null): string {
   return "epicerie_seche";
 }
 
+/**
+ * Borne une valeur au domaine d'une colonne numeric(precision, scale) de
+ * Postgres, pour ne JAMAIS déclencher un "numeric field overflow" à l'upsert
+ * (qui remonterait sinon un message SQL brut à l'écran). On garde le signe et
+ * on arrondit à l'échelle décimale de la colonne.
+ *
+ * Ex : numeric(6,2) → |valeur| max = 9999.99 (4 chiffres avant la virgule).
+ */
+function clampNumeric(
+  value: number,
+  precision: number,
+  scale: number,
+): number {
+  if (!Number.isFinite(value)) return 0;
+  const max = Math.pow(10, precision - scale) - Math.pow(10, -scale);
+  const clamped = Math.max(-max, Math.min(max, value));
+  const factor = Math.pow(10, scale);
+  return Math.round(clamped * factor) / factor;
+}
+
 /** Moyenne ventes/jour sur N derniers jours pour un couple. */
 function avgVelocity(
   ventesByDay: Map<string, number>,
@@ -315,8 +335,13 @@ export async function recomputeStockoutForecast(
     const velocityAdj = velocityBase * mult;
 
     const stock = Number(s.quantite);
+    // days_cover est stocké en numeric(6,2) (max 9999.99). Un stock élevé
+    // divisé par une vélocité minuscule peut exploser ce plafond → on borne
+    // au domaine de la colonne pour éviter le "numeric field overflow".
     const daysCover =
-      velocityAdj > 0.01 ? Math.round((stock / velocityAdj) * 100) / 100 : null;
+      velocityAdj > 0.01
+        ? clampNumeric(stock / velocityAdj, 6, 2)
+        : null;
     const tier = tierFromCover(stock, daysCover);
     tierCounts[tier] += 1;
 
@@ -335,23 +360,23 @@ export async function recomputeStockoutForecast(
     velocityUpserts.push({
       produit_id: s.produit_id,
       depot_id: s.depot_id,
-      level: Math.round(next.level * 10000) / 10000,
-      trend: Math.round(next.trend * 10000) / 10000,
+      level: clampNumeric(next.level, 12, 4),
+      trend: clampNumeric(next.trend, 12, 4),
       alpha: params.alpha,
       beta: params.beta,
       last_observed_at: todayIso,
-      last_observed_qty: Math.round(observation * 1000) / 1000,
+      last_observed_qty: clampNumeric(observation, 12, 3),
       computed_at: computedAt,
     });
 
     forecastUpserts.push({
       produit_id: s.produit_id,
       depot_id: s.depot_id,
-      stock_actuel: stock,
-      velocity_base: Math.round(velocityBase * 10000) / 10000,
-      velocity_adj: Math.round(velocityAdj * 10000) / 10000,
+      stock_actuel: clampNumeric(stock, 12, 3),
+      velocity_base: clampNumeric(velocityBase, 12, 4),
+      velocity_adj: clampNumeric(velocityAdj, 12, 4),
       phase_courante: hijriCtx.phase,
-      multiplicateur: mult,
+      multiplicateur: clampNumeric(mult, 5, 2),
       days_cover: daysCover,
       tier,
       reason,

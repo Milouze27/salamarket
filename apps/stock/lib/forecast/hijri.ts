@@ -138,6 +138,12 @@ const PHASE_LABEL: Record<HijriPhase, string> = {
   achoura_j3: "Achoura",
 };
 
+/** Label FR d'une phase hijri (pour l'UI, jamais l'enum brute). Accepte une
+ *  string libre (ex. valeur DB) → fallback « Période normale » si inconnue. */
+export function hijriPhaseLabel(phase: HijriPhase | string): string {
+  return PHASE_LABEL[phase as HijriPhase] ?? "Période normale";
+}
+
 export function resolveHijriContext(now: Date = new Date()): HijriContext {
   const hijri = toHijri(now);
 

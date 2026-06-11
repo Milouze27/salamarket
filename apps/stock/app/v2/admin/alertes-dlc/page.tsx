@@ -113,7 +113,11 @@ function fmtDateFr(iso: string) {
 }
 
 function joursLabel(j: number) {
-  if (j < 0) return `${Math.abs(j)} j passés`;
+  if (j < 0) {
+    const n = Math.abs(j);
+    // MGR-14 : accord FR — « 1 j passé » au singulier, « N j passés » au pluriel.
+    return `${n} j passé${n > 1 ? "s" : ""}`;
+  }
   if (j === 0) return "Aujourd'hui";
   if (j === 1) return "J-1";
   return `J-${j}`;
@@ -128,6 +132,11 @@ export default function AlertesDlcPage() {
   const [alerts, setAlerts] = useState<DlcAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
+  // MGR-13 : la vue v_dlc_alerts se calcule depuis les lots/DLC, pas depuis le
+  // prix remisé → après application la ligne reste identique. On marque
+  // localement les lots déjà démarqués pour basculer le bouton en état
+  // « appliquée » (non re-cliquable) tant qu'on reste sur la page.
+  const [appliedLots, setAppliedLots] = useState<Set<string>>(new Set());
 
   async function load() {
     setLoading(true);
@@ -163,6 +172,7 @@ export default function AlertesDlcPage() {
       ),
     }));
     setAlerts(normalized);
+    setAppliedLots(new Set());
     setLoading(false);
   }
 
@@ -244,7 +254,15 @@ export default function AlertesDlcPage() {
         `Remise -${a.remise_suggeree_pct}% appliquée — ${a.produit_nom} (${n} dépôt${n > 1 ? "s" : ""})`,
         { duration: 3000 },
       );
-      void load();
+      // MGR-13 : marque tous les lots de ce produit comme démarqués (la remise
+      // s'applique au produit, donc à tous ses lots affichés).
+      setAppliedLots((prev) => {
+        const next = new Set(prev);
+        for (const al of alerts) {
+          if (al.produit_id === a.produit_id) next.add(al.lot_id);
+        }
+        return next;
+      });
     } catch (e) {
       toast.error(
         `Erreur application remise : ${e instanceof Error ? e.message : String(e)}`,
@@ -343,7 +361,12 @@ export default function AlertesDlcPage() {
           `${okLots} produit${okLots > 1 ? "s" : ""} démarqué${okLots > 1 ? "s" : ""}${sansPrix > 0 ? ` · ${sansPrix} sans prix ignoré${sansPrix > 1 ? "s" : ""}` : ""}`,
           { duration: 3000 },
         );
-        void load();
+        // MGR-13 : marque les lots démarqués (tous les forcés encore vendables).
+        setAppliedLots((prev) => {
+          const next = new Set(prev);
+          for (const al of forces) next.add(al.lot_id);
+          return next;
+        });
       } else {
         toast.error("Aucun prix de vente à remiser sur les lots forcés.");
       }
@@ -535,18 +558,25 @@ export default function AlertesDlcPage() {
                   ) : (
                     a.remise_suggeree_pct > 0 && (
                       <div className="grid grid-cols-2 gap-2 mt-3">
-                        <button
-                          onClick={() => void applyRemise(a)}
-                          disabled={isApplying || isPrinting}
-                          className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
-                        >
-                          {isApplying ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Tag className="w-4 h-4" />
-                          )}
-                          Remise -{a.remise_suggeree_pct}%
-                        </button>
+                        {appliedLots.has(a.lot_id) ? (
+                          <div className="min-h-[44px] bg-success-soft border border-success/30 text-success rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Remise appliquée
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => void applyRemise(a)}
+                            disabled={isApplying || isPrinting}
+                            className="min-h-[44px] bg-primary text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                          >
+                            {isApplying ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Tag className="w-4 h-4" />
+                            )}
+                            Remise -{a.remise_suggeree_pct}%
+                          </button>
+                        )}
                         <button
                           onClick={() => void printPromo(a)}
                           disabled={isApplying || isPrinting}

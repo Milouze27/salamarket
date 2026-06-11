@@ -16,6 +16,7 @@
  *     pour ne pas afficher 0.
  */
 import { supabase } from "@/lib/supabase";
+import { RUPTURE_TIERS } from "@/lib/forecast/counts";
 
 export interface PilotageToday {
   ca_jour: { drive: number; magasin: number; total: number };
@@ -82,11 +83,15 @@ export async function getPilotageToday(
         if (depotId) q = q.eq("depot_id", depotId);
         return q;
       })(),
-      // Ce qui presse : ruptures critiques
+      // Ce qui presse : ruptures imminentes. MÊME définition métier que la
+      // page /v2/forecast (lib/forecast/counts.ts : tiers out|blocker, « à
+      // commander aujourd'hui »). Avant on incluait `crit` ici → le badge
+      // affichait « 2 » quand forecast n'en listait qu'une (MGR2-13 : clique
+      // 2, voit 1). On s'aligne sur la source unique RUPTURE_TIERS.
       sb
         .from("v_stockout_critiques")
         .select("produit_id, tier")
-        .in("tier", ["out", "blocker", "crit"]),
+        .in("tier", RUPTURE_TIERS as unknown as string[]),
     ]);
 
     const result: PilotageToday = {

@@ -128,6 +128,35 @@ async function loadRefs() {
   const employes = empR.data;
   const produits = prodR.data;
 
+  // F3 : harmoniser la casse des noms fournisseurs (DAVIGEL / FRANCE FRAIS en
+  // MAJ vs « Bigard Castres » en Capitalized → /v2/fournisseurs paraissait
+  // bricolé). On passe tout en Title Case FR propre, idempotent (un nom déjà
+  // bien formé n'est pas touché). Accents préservés ; petits mots de liaison
+  // (de/du/des/et/la/le…) en minuscule en milieu de nom.
+  const PETITS_MOTS = new Set(['de', 'du', 'des', 'et', 'la', 'le', 'les', 'aux', 'au', 'en', 'sur']);
+  const titleCaseFr = (s) =>
+    s
+      .trim()
+      .toLocaleLowerCase('fr-FR')
+      .split(/(\s+|-)/)
+      .map((part, i) => {
+        if (/^\s+$/.test(part) || part === '-') return part;
+        if (i > 0 && PETITS_MOTS.has(part)) return part;
+        return part.charAt(0).toLocaleUpperCase('fr-FR') + part.slice(1);
+      })
+      .join('');
+  for (const f of fournisseurs) {
+    const next = titleCaseFr(f.nom);
+    if (next !== f.nom) {
+      if (!DRY) {
+        await sb.from('fournisseurs').update({ nom: next }).eq('id', f.id);
+        track('fournisseurs', 'update', 1);
+      }
+      log('ok', `fournisseur casse normalisée : "${f.nom}" → "${next}"`);
+      f.nom = next;
+    }
+  }
+
   const findDepot = (term) => depots.find((d) => d.nom.toLowerCase().includes(term.toLowerCase()));
   const findFourn = (term) => fournisseurs.find((f) => f.nom.toLowerCase().includes(term.toLowerCase()));
   const findProd = (term) => produits.find((p) => p.nom.toLowerCase().includes(term.toLowerCase()));

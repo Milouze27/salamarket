@@ -324,7 +324,12 @@ export default function CasseAnomaliesPage() {
               transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
               className="h-[200px] -mx-2 mt-3"
             >
-              <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                minWidth={0}
+                minHeight={180}
+              >
                 <BarChart
                   data={dataActive}
                   margin={{ top: 8, right: 8, left: 8, bottom: 0 }}

@@ -238,7 +238,12 @@ export function RevenueChart({
             </p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            minHeight={180}
+          >
             <AreaChart
               data={sliced}
               margin={{ top: 8, right: 8, left: 8, bottom: 0 }}

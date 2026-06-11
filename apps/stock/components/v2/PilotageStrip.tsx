@@ -95,7 +95,12 @@ export function PilotageStrip({ allDepots = false }: { allDepots?: boolean }) {
           urgent={enCours > 0}
         />
         <Indicateur
-          href="/v2/forecast"
+          // Le badge est calculé sur le même périmètre que la strip (allDepots
+          // ou dépôt courant). On transmet ce périmètre à /v2/forecast via
+          // ?scope= pour que la page s'ouvre sur le MÊME scope → « clique 2,
+          // voit 2 » (MGR2-13). Sans ça forecast démarre sur le dépôt courant
+          // et n'en montrait qu'une quand le badge en comptait deux.
+          href={allDepots ? "/v2/forecast?scope=all" : "/v2/forecast"}
           icon={PackageX}
           value={data ? String(data.presse.ruptures) : "—"}
           label="Ruptures imminentes"

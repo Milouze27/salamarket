@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertOctagon,
   AlertTriangle,
@@ -148,11 +148,17 @@ function recommendedOrder(row: ForecastRow): {
 
 export default function ForecastPage() {
   const depot = useV2((s) => s.currentDepot);
+  // ?scope=all → on arrive depuis le badge « Ruptures imminentes » du pilotage
+  // (calculé tous dépôts). On ouvre alors forecast sur le même périmètre pour
+  // que le nombre du badge == le nombre listé ici (MGR2-13).
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<ForecastRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [recomputing, setRecomputing] = useState(false);
   const [filter, setFilter] = useState<"all" | StockoutTier>("all");
-  const [allDepots, setAllDepots] = useState(false);
+  const [allDepots, setAllDepots] = useState(
+    searchParams.get("scope") === "all",
+  );
 
   // Phase + multiplicateurs : moteur forecast (resolveHijriContext, umalqura).
   const hijriCtx = useMemo(() => resolveHijriContext(new Date()), []);

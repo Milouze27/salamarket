@@ -98,6 +98,8 @@ const Slots = () => {
           </div>
         ) : groups.length > 0 ? (
           <div
+            role="radiogroup"
+            aria-label="Jour de retrait"
             className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sticky z-30 bg-bg/95 backdrop-blur"
             style={{
               // Sticky offset notch-aware : le header consomme
@@ -116,6 +118,10 @@ const Slots = () => {
               return (
                 <button
                   key={g.dayKey}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={`${g.dayLabel} ${g.dayLabelSub}`}
                   onClick={() => setActiveDayKey(g.dayKey)}
                   className={cn(
                     "shrink-0 h-16 min-w-[5rem] px-3 rounded-2xl border flex flex-col items-center justify-center transition-colors",
@@ -171,7 +177,11 @@ const Slots = () => {
           </div>
         ) : activeGroup ? (
           activeGroup.slots.some((s) => isSlotSelectable(s, now)) ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div
+              role="radiogroup"
+              aria-label="Créneau de retrait"
+              className="grid grid-cols-2 md:grid-cols-3 gap-3"
+            >
               {activeGroup.slots.map((slot) => {
                 const state = slotState(slot, now);
                 const selectable = state === "selectable";
@@ -189,6 +199,9 @@ const Slots = () => {
                   <button
                     key={slot.id}
                     type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`${formatSlotRange(slot)}, ${sub}`}
                     disabled={!selectable}
                     onClick={() => {
                       // Toggle off si on re-clique sur le slot déjà
@@ -239,7 +252,11 @@ const Slots = () => {
           }}
         >
           <div className="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
-            <p className="text-sm text-text text-center">
+            <p
+              role="status"
+              aria-live="polite"
+              className="text-sm text-text text-center"
+            >
               Retrait {formatSlotDayHuman(selectedSlot)} à{" "}
               <span className="font-semibold">
                 {formatSlotStartTime(selectedSlot)}

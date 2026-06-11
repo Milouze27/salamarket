@@ -17,6 +17,16 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { TrustBar } from "@/components/TrustBar";
 import { HalalSeal } from "@/components/HalalSeal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { formatPrice, unitLabel } from "@/lib/format";
@@ -89,11 +99,12 @@ const Cart = () => {
     : 0;
   const total = Math.max(0, subtotal - discountCents);
 
-  // A-t-on au moins une ligne au poids ? Conditionne l'affichage du
-  // bandeau "vous serez débité du poids réel".
-  const hasWeightLine = items.some(
-    (i) => i.unitType === "weight" || i.unitType === "weight_bracket",
-  );
+  // A-t-on au moins une ligne au poids RÉEL (facturée au poids pesé) ?
+  // Conditionne le bandeau "vous serez débité du poids réel" + le suffixe
+  // "(estimation)" du sous-total. Les forfaits weight_bracket sont à prix
+  // fixe : ils ne sont PAS facturés au poids réel, on les exclut ici sinon
+  // le message est trompeur (B1-08).
+  const hasRealWeightLine = items.some((i) => i.unitType === "weight");
 
   const itemCount = items.reduce((n, i) => n + i.quantity, 0);
 
@@ -202,11 +213,13 @@ const Cart = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, cartSignature, subtotal]);
 
-  const handleClear = () => {
-    if (window.confirm("Vider le panier ? Cette action est irréversible.")) {
-      clear();
-      toast.success("Panier vidé");
-    }
+  // Confirmation "Vider le panier" via AlertDialog Radix (cohérent avec la
+  // DA, portail + scroll-lock, pas de confirm() natif bloquant — B1-11).
+  const [clearOpen, setClearOpen] = useState(false);
+  const handleConfirmClear = () => {
+    clear();
+    setClearOpen(false);
+    toast.success("Panier vidé");
   };
 
   const handleCheckout = () => {
@@ -260,7 +273,7 @@ const Cart = () => {
                 {itemCount} article{itemCount > 1 ? "s" : ""}
               </span>
               <button
-                onClick={handleClear}
+                onClick={() => setClearOpen(true)}
                 className="inline-flex items-center gap-1.5 min-h-11 bg-destructive/10 text-destructive font-bold text-[12px] px-3.5 py-2.5 rounded-full border border-destructive/20 active:scale-95 transition-transform"
               >
                 <Trash2 size={12} strokeWidth={2.4} />
@@ -269,8 +282,9 @@ const Cart = () => {
             </div>
 
             {/* Bandeau pré-autorisation Drive au poids — affiché ssi
-                au moins une ligne au poids dans le panier. */}
-            {hasWeightLine && (
+                au moins une ligne au poids RÉEL (pas un forfait bracket à
+                prix fixe, qui n'est pas facturé au poids pesé — B1-08). */}
+            {hasRealWeightLine && (
               <div className="flex items-start gap-3 rounded-2xl border border-[#C9A227]/40 bg-[#FBF6E2] p-4 text-[#3E2E0A] text-[13px] leading-relaxed">
                 <Scale
                   size={18}
@@ -407,7 +421,7 @@ const Cart = () => {
                       {isBracket && bracket && (
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] font-bold text-[#C9A227]">
-                            <Scale size={11} aria-hidden /> Bracket
+                            <Scale size={11} aria-hidden /> Forfait
                           </span>
                           <span className="text-xs text-[#0F1A14]/70 font-semibold">
                             {bracket.label}
@@ -528,7 +542,7 @@ const Cart = () => {
               <div className="space-y-2.5 text-[14px]">
                 <div className="flex items-baseline justify-between">
                   <span className="text-[#6B7280]">
-                    Sous-total {hasWeightLine ? "(estimation)" : ""}
+                    Sous-total {hasRealWeightLine ? "(estimation)" : ""}
                   </span>
                   <span className="text-[#0F1A14] tabular-nums">
                     {formatPrice(subtotal)}
@@ -558,13 +572,13 @@ const Cart = () => {
               </div>
               <div className="mt-4 pt-4 border-t border-[#0E3B2E]/15 flex items-baseline justify-between">
                 <span className="text-[13px] uppercase tracking-[0.18em] font-bold text-[#0E3B2E]">
-                  Total {hasWeightLine ? "estimé" : ""}
+                  Total {hasRealWeightLine ? "estimé" : ""}
                 </span>
                 <span className="text-[28px] font-extrabold text-[#0E3B2E] tabular-nums tracking-[-0.025em]">
                   {formatPrice(total)}
                 </span>
               </div>
-              {hasWeightLine && (
+              {hasRealWeightLine && (
                 <p className="mt-3 text-[12px] text-[#0F1A14]/60 inline-flex items-start gap-1.5">
                   <Info size={12} className="mt-0.5 shrink-0" aria-hidden />
                   Vous serez débité du poids réel pesé en magasin.{" "}
@@ -735,6 +749,26 @@ const Cart = () => {
           </div>
         </div>
       )}
+
+      <AlertDialog open={clearOpen} onOpenChange={setClearOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vider le panier ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tous les articles seront retirés. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmClear}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Vider le panier
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -14,6 +14,11 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 const PUBLIC_PATHS_SKIP_ONBOARDING = [
   "/produit/",
   "/lot/",
+  // Deep-links parcours d'achat (lien partagé / marque-page) : l'overlay
+  // d'onboarding masquait le panier / les créneaux derrière un spinner
+  // (B1-13). On les skip comme les fiches produit.
+  "/panier",
+  "/creneaux",
   "/connexion",
   "/inscription",
   "/pro/login",

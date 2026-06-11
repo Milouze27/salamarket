@@ -50,7 +50,7 @@ const fetchUserOrders = async (
     .from("commandes_drive")
     .select(
       "id, statut, mode_paiement, statut_paiement, total_ttc, created_at, creneau_retrait, " +
-        "commandes_drive_lignes (produit_id, quantite, prix_unitaire, montant_estime_ttc, quantite_kg, produit:produits(nom))",
+        "commandes_drive_lignes (produit_id, quantite, prix_unitaire, montant_estime_ttc, quantite_estimee, quantite_reelle_pesee, produit:produits(nom))",
     )
     .eq("client_email", email)
     .order("created_at", { ascending: false })
@@ -74,7 +74,15 @@ const fetchUserOrders = async (
       unit_price_cents: Math.round(Number(l.prix_unitaire ?? 0) * 100),
       quantity: Number(l.quantite ?? 0),
       line_total_cents: Math.round(Number(l.montant_estime_ttc ?? 0) * 100),
-      quantite_kg: l.quantite_kg != null ? Number(l.quantite_kg) : null,
+      // Poids en kg : réel pesé si disponible, sinon estimé (la colonne
+      // `quantite_kg` n'existe pas dans commandes_drive_lignes — c'était
+      // l'origine de l'erreur PostgREST 42703 sur la page Mes commandes).
+      quantite_kg:
+        l.quantite_reelle_pesee != null
+          ? Number(l.quantite_reelle_pesee)
+          : l.quantite_estimee != null
+            ? Number(l.quantite_estimee)
+            : null,
     }));
 
     const creneauStart = (cd as any).creneau_retrait as string | null;

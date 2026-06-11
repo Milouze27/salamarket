@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clock, Loader2 } from "lucide-react";
-import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -39,26 +38,30 @@ interface SlotInfo {
   slot_end: string;
 }
 
+// FIX P3 (jour de retrait) : on formate STRICTEMENT en fuseau Europe/Paris
+// via date-fns-tz (option { timeZone }), comme useSlots.ts. L'ancienne
+// version mixait toZonedTime + format(date-fns) sans timeZone, ce qui
+// réinterprétait l'objet selon le fuseau du navigateur et pouvait décaler
+// le jour d'un cran (créneau de demain affiché "Aujourd'hui"). On compare
+// les jours sur la clé "yyyy-MM-dd" calculée dans le MÊME fuseau.
 function formatSlotLabel(slot: SlotInfo) {
-  const start = toZonedTime(new Date(slot.slot_start), PARIS_TZ);
-  const end = toZonedTime(new Date(slot.slot_end), PARIS_TZ);
+  const startDate = new Date(slot.slot_start);
+  const endDate = new Date(slot.slot_end);
 
-  const today = toZonedTime(new Date(), PARIS_TZ);
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const dayKey = (d: Date) =>
+    format(d, "yyyy-MM-dd", { timeZone: PARIS_TZ });
 
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+  const startKey = dayKey(startDate);
+  const todayKey = dayKey(new Date());
+  const tomorrowKey = dayKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
   let dayLabel: string;
-  if (isSameDay(start, today)) dayLabel = "Aujourd'hui";
-  else if (isSameDay(start, tomorrow)) dayLabel = "Demain";
-  else dayLabel = format(start, "EEE d MMM", { locale: fr });
+  if (startKey === todayKey) dayLabel = "Aujourd'hui";
+  else if (startKey === tomorrowKey) dayLabel = "Demain";
+  else dayLabel = format(startDate, "EEE d MMM", { timeZone: PARIS_TZ, locale: fr });
 
-  const startTime = format(start, "HH'h'mm", { locale: fr });
-  const endTime = format(end, "HH'h'mm", { locale: fr });
+  const startTime = format(startDate, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr });
+  const endTime = format(endDate, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr });
 
   return `${dayLabel} · ${startTime} - ${endTime}`;
 }
@@ -69,6 +72,7 @@ export default function Checkout() {
 
   const items = useCartStore((s) => s.items);
   const selectedSlotId = useCheckoutStore((s) => s.selectedSlotId);
+  const promoCode = useCheckoutStore((s) => s.promoCode);
 
   // Paiement en ligne uniquement — paiement au retrait retiré
   // (risque de non-retrait et abandon de commande)
@@ -195,6 +199,10 @@ export default function Checkout() {
         pickup_slot_id: selectedSlotId,
         payment_method: paymentMethod,
         notes: notes.trim() || undefined,
+        // Code promo : transmis tel quel, RE-VALIDÉ et appliqué côté serveur
+        // (l'edge recalcule la remise via la RPC validate_promo_code — on ne
+        // fait jamais confiance au client pour le montant remisé).
+        promo_code: promoCode || undefined,
       };
 
       const res = await fetch(functionsUrl("create-checkout-session"), {

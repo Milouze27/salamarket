@@ -20,10 +20,16 @@ import { normalizeSearch } from "@/lib/search";
 
 // Options de tri B2C. "pertinence" = ordre catalogue par défaut (catégorie
 // puis nom, déjà trié côté useProducts) ; les autres réordonnent en mémoire.
-type SortKey = "pertinence" | "prix_asc" | "prix_desc" | "nom";
+type SortKey =
+  | "pertinence"
+  | "nouveautes"
+  | "prix_asc"
+  | "prix_desc"
+  | "nom";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "pertinence", label: "Pertinence" },
+  { key: "nouveautes", label: "Nouveautés" },
   { key: "prix_asc", label: "Prix croissant" },
   { key: "prix_desc", label: "Prix décroissant" },
   { key: "nom", label: "Nom A→Z" },
@@ -136,7 +142,16 @@ const Index = () => {
     // trier pour ne pas muter le tableau partagé du cache TanStack.
     if (sort === "pertinence") return filtered;
     const sorted = [...filtered];
-    if (sort === "prix_asc") {
+    if (sort === "nouveautes") {
+      // Plus récent d'abord (products.created_at desc). createdAt peut être
+      // absent : on retombe alors sur 0 (epoch) pour ces produits, qui sont
+      // simplement relégués en fin de liste plutôt que de casser le tri.
+      const ts = (p: { createdAt?: string | null }): number => {
+        const t = p.createdAt ? Date.parse(p.createdAt) : NaN;
+        return Number.isFinite(t) ? t : 0;
+      };
+      sorted.sort((a, b) => ts(b) - ts(a));
+    } else if (sort === "prix_asc") {
       sorted.sort((a, b) => sortPriceCents(a) - sortPriceCents(b));
     } else if (sort === "prix_desc") {
       sorted.sort((a, b) => sortPriceCents(b) - sortPriceCents(a));

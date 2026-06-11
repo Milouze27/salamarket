@@ -27,6 +27,13 @@ interface Payload {
   pickup_slot_id: string;
   payment_method: "online" | "in_store";
   notes?: string;
+  /**
+   * Code promo saisi côté client (Cart → checkoutStore). JAMAIS la source
+   * du montant : la remise est RECALCULÉE ici via la RPC SECURITY DEFINER
+   * validate_promo_code(p_code, p_total_cents). On ne fait pas confiance au
+   * client pour le discount.
+   */
+  promo_code?: string;
 }
 
 serve(async (req) => {
@@ -180,6 +187,42 @@ serve(async (req) => {
 
     if (subtotal <= 0) return json({ error: "Montant invalide" }, 400);
 
+    // ── REMISE PROMO — recalcul serveur (jamais confiance au client) ──
+    // On ré-appelle la RPC validate_promo_code avec le subtotal RÉEL
+    // calculé côté serveur. Le client envoie seulement le CODE ; le
+    // montant de la remise est ré-établi ici. Échec / code invalide /
+    // minimum non atteint → remise = 0 (on ne bloque jamais la commande,
+    // on facture simplement le plein tarif). discountCents est borné au
+    // subtotal.
+    let promoCode: string | null = null;
+    let discountCents = 0;
+    const rawPromo =
+      typeof body.promo_code === "string" ? body.promo_code.trim() : "";
+    if (rawPromo) {
+      const { data: promoData, error: promoErr } = await supabaseAdmin.rpc(
+        "validate_promo_code",
+        { p_code: rawPromo.toUpperCase(), p_total_cents: subtotal },
+      );
+      if (!promoErr && promoData) {
+        const rec = (Array.isArray(promoData) ? promoData[0] : promoData) as
+          | { valid?: boolean; code?: string; discount_cents?: number }
+          | null;
+        if (rec && rec.valid === true) {
+          const d = Number(rec.discount_cents);
+          if (Number.isFinite(d) && d > 0) {
+            discountCents = Math.min(Math.round(d), subtotal);
+            promoCode =
+              typeof rec.code === "string" && rec.code.trim()
+                ? rec.code.trim().toUpperCase()
+                : rawPromo.toUpperCase();
+          }
+        }
+      }
+      // promoErr (RPC absente) ou code invalide → discountCents reste 0.
+    }
+    // Montant réellement dû après remise (≥ 0). Source de vérité serveur.
+    const totalCents = Math.max(0, subtotal - discountCents);
+
     // Calcul montant_autorise (marge 20 % SEULEMENT sur lignes weight)
     // — source unique de vérité côté serveur. Le frontend
     // (Checkout.tsx) calcule la MÊME chose via computeCartTotalsCents.
@@ -195,8 +238,12 @@ serve(async (req) => {
         otherCentsServer += it.line_total_cents;
       }
     }
-    const autoriseCentsServer =
-      Math.ceil(weightCentsServer * 1.2) + otherCentsServer;
+    // La remise promo réduit aussi le montant pré-autorisé : on la déduit
+    // après application de la marge ×1,20 sur le poids (borné à ≥ 0).
+    const autoriseCentsServer = Math.max(
+      0,
+      Math.ceil(weightCentsServer * 1.2) + otherCentsServer - discountCents,
+    );
     const autoriseTtcServer = autoriseCentsServer / 100;
 
     // 4. Vérifie le créneau (existe + ≥1h dans le futur)
@@ -272,7 +319,10 @@ serve(async (req) => {
       // c. Crée la commande dans commandes_drive (statut métier
       //    'en_preparation' ; statut_paiement reste NULL — sera mis à
       //    'autorise' par /api/stripe/create-payment-intent).
-      const subtotalEur = subtotal / 100;
+      //    total_ttc = total estimé APRÈS remise promo (montant que le
+      //    client paiera, hors ajustement de pesée). La remise a déjà été
+      //    déduite de autoriseTtcServer ci-dessus.
+      const totalTtc = totalCents / 100;
       const { data: cmd, error: cmdErr } = await supabaseAdmin
         .from("commandes_drive")
         .insert({
@@ -283,7 +333,7 @@ serve(async (req) => {
           client_email: user.email ?? null,
           creneau_retrait: slot.slot_start,
           statut: "en_preparation",
-          total_ttc: subtotalEur,
+          total_ttc: totalTtc,
           // Pré-calculé ici pour que create-payment-intent (salam-stock)
           // lise une valeur unique source-de-vérité, au lieu de
           // recompute (× 1.20 sur tout le panier) ce qui ignorait la
@@ -336,7 +386,7 @@ serve(async (req) => {
       return json({
         commande_id: cmd.id,
         numero_commande: numeroCommande,
-        montant_estime_ttc: subtotalEur,
+        montant_estime_ttc: totalTtc,
         montant_autorise_ttc: autoriseTtcServer,
       });
     }
@@ -352,7 +402,10 @@ serve(async (req) => {
         payment_status: "unpaid",
         items: trustedItems,
         subtotal_cents: subtotal,
-        total_cents: subtotal,
+        // total_cents = montant réellement dû APRÈS remise promo. Avant ce
+        // fix, on stockait `subtotal` ici ET aucune remise n'était passée à
+        // Stripe : le client était débité du PLEIN TARIF malgré le code promo.
+        total_cents: totalCents,
         customer_email: user.email,
         customer_phone: profile?.phone,
         notes: body.notes ?? null,
@@ -382,6 +435,26 @@ serve(async (req) => {
     // la "automatic payment methods" rule est activée côté Dashboard.
     // Requis également côté Dashboard : Settings → Payment methods →
     // toggle Wallets + Apple Pay domain `salamarket-drive.vercel.app`.
+    //
+    // REMISE PROMO : les line_items facturent le plein tarif (unit_amount).
+    // Pour débiter le montant remisé, on attache un coupon Stripe amount_off
+    // (en cents EUR) recalculé côté serveur. On garde au moins 1 centime à
+    // régler (Stripe Checkout en mode "payment" refuse un total de 0). Si le
+    // discount couvre tout le panier, on le plafonne à subtotal - 1.
+    const stripeDiscountCents =
+      discountCents > 0 ? Math.min(discountCents, subtotal - 1) : 0;
+    let couponId: string | undefined;
+    if (stripeDiscountCents > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: stripeDiscountCents,
+        currency: "eur",
+        duration: "once",
+        name: promoCode ? `Remise ${promoCode}` : "Remise",
+        metadata: { order_id: order.id, promo_code: promoCode ?? "" },
+      });
+      couponId = coupon.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: user.email,
@@ -393,11 +466,14 @@ serve(async (req) => {
         },
         quantity: it.quantity,
       })),
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       success_url: `${SITE_URL}/commande/confirmee/${order.id}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/paiement?cancelled=1&order_id=${order.id}`,
       metadata: {
         order_id: order.id,
         user_id: user.id,
+        promo_code: promoCode ?? "",
+        discount_cents: String(discountCents),
       },
       locale: "fr",
     });

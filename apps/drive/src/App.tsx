@@ -263,6 +263,13 @@ const App = () => (
                   }
                 />
                 {/* ───────────── Drive Pro — public ───────────── */}
+                {/* Racine /pro : pas d'écran dédié (l'entrée Pro se fait par
+                    login ou inscription). On redirige vers /pro/login pour ne
+                    plus 404 sur les liens/QR pointant la racine du module. */}
+                <Route
+                  path="/pro"
+                  element={<Navigate to="/pro/login" replace />}
+                />
                 <Route path="/pro/inscription" element={<ProInscription />} />
                 <Route path="/pro/login" element={<ProLogin />} />
                 {/* Drive Pro — authentifié (ProCompteActifGuard interne gère le statut compte) */}

@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useCartStore } from "@/stores/cartStore";
+import { useCheckoutStore } from "@/stores/checkoutStore";
 import { useAuth } from "@/providers/AuthProvider";
 import { formatPrice, productUnitLabel } from "@/lib/format";
 import { MIN_ORDER_CENTS } from "@/lib/constants";
@@ -113,6 +114,8 @@ const Cart = () => {
   // ⚠️ La transmission de la remise à Stripe (create-checkout-session) est
   // gérée par la vague V10 sur l'edge function — voir cross_wave_deps.
   const PROMO_ENABLED = true;
+  // Code promo persisté pour le checkout (re-validé côté serveur).
+  const setPromoCode = useCheckoutStore((s) => s.setPromoCode);
   const [promoInput, setPromoInput] = useState("");
   const [promoApplying, setPromoApplying] = useState(false);
   const [promo, setPromo] = useState<PromoResult | null>(null);
@@ -164,6 +167,15 @@ const Cart = () => {
         `${i.product.id}:${i.unitType}:${i.quantity}:${i.quantiteKg ?? ""}:${i.bracketIndex ?? ""}`,
     )
     .join("|");
+
+  // Synchronise le code promo VALIDE vers le checkoutStore (persisté), pour
+  // que Checkout.tsx puisse le transmettre à create-checkout-session. La
+  // remise est toujours RE-VALIDÉE côté serveur — ce code n'est qu'un
+  // indice, jamais le montant. Si le code tombe (retrait, panier sous le
+  // minimum), on le purge ici.
+  useEffect(() => {
+    setPromoCode(promo?.valid ? promo.code : null);
+  }, [promo?.valid, promo?.code, setPromoCode]);
 
   const handleApplyPromo = async () => {
     const code = promoInput.trim();

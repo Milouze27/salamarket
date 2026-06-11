@@ -17,9 +17,8 @@ import {
   TriangleAlert,
   XCircle,
 } from "lucide-react";
-import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 import { toast } from "sonner";
 
 import { AppHeader } from "@/components/AppHeader";
@@ -116,31 +115,33 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// FIX P3 (jour de retrait) : formatage STRICT en fuseau Europe/Paris via
+// date-fns-tz (option { timeZone }), aligné sur Checkout/OrderConfirmation
+// et useSlots. Évite le décalage d'un jour ("Aujourd'hui" au lieu du
+// créneau réel) dû au mix toZonedTime + format(date-fns) sans timeZone.
+const dayKeyParis = (d: Date) =>
+  format(d, "yyyy-MM-dd", { timeZone: PARIS_TZ });
+
 const formatSlot = (slot: UserOrder["pickup_slot"]): string => {
   if (!slot) return "Créneau à confirmer";
-  const start = toZonedTime(new Date(slot.slot_start), PARIS_TZ);
-  const end = toZonedTime(new Date(slot.slot_end), PARIS_TZ);
-  const today = toZonedTime(new Date(), PARIS_TZ);
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+  const start = new Date(slot.slot_start);
+  const end = new Date(slot.slot_end);
+  const startKey = dayKeyParis(start);
+  const todayKey = dayKeyParis(new Date());
+  const tomorrowKey = dayKeyParis(new Date(Date.now() + 24 * 60 * 60 * 1000));
   let day: string;
-  if (isSameDay(start, today)) day = "Aujourd'hui";
-  else if (isSameDay(start, tomorrow)) day = "Demain";
-  else day = format(start, "EEE d MMM", { locale: fr });
-  return `${day} · ${format(start, "HH'h'mm", { locale: fr })}–${format(end, "HH'h'mm", { locale: fr })}`;
+  if (startKey === todayKey) day = "Aujourd'hui";
+  else if (startKey === tomorrowKey) day = "Demain";
+  else day = format(start, "EEE d MMM", { timeZone: PARIS_TZ, locale: fr });
+  return `${day} · ${format(start, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr })}–${format(end, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr })}`;
 };
 
 const formatCreatedAt = (iso: string): string => {
-  const date = toZonedTime(new Date(iso), PARIS_TZ);
-  const today = toZonedTime(new Date(), PARIS_TZ);
-  if (date.toDateString() === today.toDateString()) {
-    return `Aujourd'hui à ${format(date, "HH'h'mm", { locale: fr })}`;
+  const date = new Date(iso);
+  if (dayKeyParis(date) === dayKeyParis(new Date())) {
+    return `Aujourd'hui à ${format(date, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr })}`;
   }
-  return format(date, "d MMM yyyy", { locale: fr });
+  return format(date, "d MMM yyyy", { timeZone: PARIS_TZ, locale: fr });
 };
 
 const StatusPill = ({ status }: { status: string }) => {

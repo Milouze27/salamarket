@@ -23,4 +23,8 @@ export interface Product {
   estimatedWeightKg?: number | null;
   poidsMinKg?: number | null;
   poidsMaxKg?: number | null;
+
+  // Date d'ajout au catalogue (products.created_at) — alimente le tri
+  // "Nouveautés". Optionnelle : absente si le hook ne la sélectionne pas.
+  createdAt?: string | null;
 }

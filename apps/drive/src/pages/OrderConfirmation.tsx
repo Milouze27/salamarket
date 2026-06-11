@@ -9,9 +9,8 @@ import {
   Loader2,
   QrCode,
 } from "lucide-react";
-import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -93,24 +92,28 @@ interface Order {
   pickup_slot: PickupSlot | null;
 }
 
+// FIX P3 (jour de retrait) : formatage STRICT en fuseau Europe/Paris via
+// date-fns-tz, aligné sur Checkout.tsx et useSlots.ts. Évite le décalage
+// d'un jour (créneau de demain affiché "Aujourd'hui") causé par le mix
+// toZonedTime + format(date-fns) sans timeZone.
 function formatSlotLabel(slot: PickupSlot) {
-  const start = toZonedTime(new Date(slot.slot_start), PARIS_TZ);
-  const end = toZonedTime(new Date(slot.slot_end), PARIS_TZ);
-  const today = toZonedTime(new Date(), PARIS_TZ);
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+  const startDate = new Date(slot.slot_start);
+  const endDate = new Date(slot.slot_end);
+
+  const dayKey = (d: Date) =>
+    format(d, "yyyy-MM-dd", { timeZone: PARIS_TZ });
+
+  const startKey = dayKey(startDate);
+  const todayKey = dayKey(new Date());
+  const tomorrowKey = dayKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
   let dayLabel: string;
-  if (isSameDay(start, today)) dayLabel = "Aujourd'hui";
-  else if (isSameDay(start, tomorrow)) dayLabel = "Demain";
-  else dayLabel = format(start, "EEE d MMM", { locale: fr });
+  if (startKey === todayKey) dayLabel = "Aujourd'hui";
+  else if (startKey === tomorrowKey) dayLabel = "Demain";
+  else dayLabel = format(startDate, "EEE d MMM", { timeZone: PARIS_TZ, locale: fr });
 
-  const startTime = format(start, "HH'h'mm", { locale: fr });
-  const endTime = format(end, "HH'h'mm", { locale: fr });
+  const startTime = format(startDate, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr });
+  const endTime = format(endDate, "HH'h'mm", { timeZone: PARIS_TZ, locale: fr });
   return `${dayLabel} · ${startTime} - ${endTime}`;
 }
 
@@ -121,6 +124,7 @@ const OrderConfirmation = () => {
 
   const clearCart = useCartStore((s) => s.clear);
   const clearSlot = useCheckoutStore((s) => s.clearSlot);
+  const clearPromoCode = useCheckoutStore((s) => s.clearPromoCode);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -222,6 +226,7 @@ const OrderConfirmation = () => {
         ) {
           clearCart();
           clearSlot();
+          clearPromoCode();
         }
         setLoading(false);
       } catch (err) {
@@ -282,6 +287,7 @@ const OrderConfirmation = () => {
           ) {
             clearCart();
             clearSlot();
+            clearPromoCode();
           }
           setOrder(refreshed);
           return;
@@ -604,6 +610,7 @@ const OrderConfirmation = () => {
             onClick={() => {
               clearCart();
               clearSlot();
+              clearPromoCode();
               navigate("/commandes");
             }}
           >
@@ -615,6 +622,7 @@ const OrderConfirmation = () => {
             onClick={() => {
               clearCart();
               clearSlot();
+              clearPromoCode();
               navigate("/");
             }}
           >

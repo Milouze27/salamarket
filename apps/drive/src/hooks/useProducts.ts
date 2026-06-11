@@ -6,7 +6,7 @@ import type { Product, ProductUnit, ProductUnitType } from "@/types/product";
 // n'a pas été appliquée en local, le select tombera en erreur — c'est
 // volontaire pour rendre visible l'incompatibilité de schéma.
 const PRODUCT_COLUMNS =
-  "id, name, description, price_cents, unit, category, image_url, in_stock, unit_type, price_per_kg, estimated_weight_kg, poids_min_kg, poids_max_kg";
+  "id, name, description, price_cents, unit, category, image_url, in_stock, unit_type, price_per_kg, estimated_weight_kg, poids_min_kg, poids_max_kg, created_at";
 
 export const useProducts = () => {
   return useQuery<Product[]>({
@@ -39,6 +39,7 @@ export const useProducts = () => {
         estimatedWeightKg: row.estimated_weight_kg,
         poidsMinKg: row.poids_min_kg,
         poidsMaxKg: row.poids_max_kg,
+        createdAt: row.created_at ?? null,
       }));
     },
   });

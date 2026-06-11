@@ -55,7 +55,13 @@ export default function CockpitTvPage() {
   const router = useRouter();
   const [snap, setSnap] = useState<CockpitSnapshot | null>(null);
   const [briefing, setBriefing] = useState<CockpitBriefing | null>(null);
-  const [now, setNow] = useState<Date>(() => new Date());
+  // Tout l'écran dépend du temps (horloge, date, salutation, contexte hijri) et
+  // de l'API navigateur (wake-lock). Rendu tel quel, le HTML SSR ≠ HTML client
+  // → erreurs d'hydratation React #418/#425/#422. On garde donc `now` à null au
+  // 1er rendu (serveur ET premier rendu client identiques = aucun mismatch), puis
+  // on le renseigne dans un effet, côté client uniquement. `mounted` = guard.
+  const [now, setNow] = useState<Date | null>(null);
+  const mounted = now !== null;
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   // ─── Data : snapshot + briefing, rechargés en boucle ──────────────
@@ -82,7 +88,10 @@ export default function CockpitTvPage() {
   }, [loadData]);
 
   // ─── Horloge (1/s) pour le coin haut-droit ────────────────────────
+  // Première valeur posée ici (et pas à l'init du state) → l'horloge n'existe
+  // que côté client, ce qui élimine le mismatch d'hydratation.
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
@@ -148,20 +157,49 @@ export default function CockpitTvPage() {
   const activePanel = panels[panelIdx] ?? "kpi";
 
   // ─── Contexte hijri (fallback local instantané) ───────────────────
-  const hijriLocal = useMemo(() => getHijriContext(), []);
-  const salutation = snap?.salutation ?? getSalutation();
-  const hijriMessage = snap?.hijri.message ?? hijriLocal.message;
+  // Tout ce bloc dépend de l'heure courante : on ne le calcule qu'une fois
+  // monté côté client (now non-null) pour ne pas casser l'hydratation.
   const prenom = "Otmane";
+  const salutation = snap?.salutation ?? (now ? getSalutation(now) : "");
+  const hijriMessage = useMemo(
+    () => snap?.hijri.message ?? (now ? getHijriContext().message : ""),
+    [snap?.hijri.message, now],
+  );
 
-  const heure = now.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dateLong = now.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const heure = now
+    ? now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const dateLong = now
+    ? now.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "";
+
+  // Premier rendu (serveur + 1re passe client) : écran sapin neutre, identique
+  // des deux côtés → React peut hydrater sans aucun mismatch. Le contenu réel
+  // apparaît à la frame suivante, une fois `now` posé dans l'effet horloge.
+  if (!mounted) {
+    return (
+      <div
+        suppressHydrationWarning
+        className="fixed inset-0 z-[200] overflow-hidden flex items-center justify-center"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 80% 0%, var(--primary-green) 0%, var(--primary-green-dark) 55%, #061f17 100%)",
+          color: "var(--text-on-dark-muted)",
+        }}
+      >
+        <p
+          className="font-bold"
+          style={{ fontSize: "clamp(18px, 2vw, 30px)" }}
+        >
+          Chargement du cockpit…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

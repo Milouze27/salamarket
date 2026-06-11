@@ -19,67 +19,8 @@ import {
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
+import { useLoyalty } from "@/hooks/useLoyalty";
 import { supabase } from "@/integrations/supabase/client";
-
-/**
- * Solde de fidélité « Baraka ». La vague V1 prévoit un hook `useLoyalty`
- * dédié, mais il peut ne pas encore exister (cross-wave) et la table
- * sous-jacente peut ne pas être migrée. On lit donc directement la table
- * `loyalty_accounts` (clé user_id) avec un fallback 100% gracieux :
- * - hook V1 absent → cette lecture autonome prend le relais ;
- * - table absente / RLS / aucune ligne → `available: false`, la carte
- *   Baraka est simplement masquée (jamais de crash).
- */
-type BarakaState = {
-  available: boolean;
-  loading: boolean;
-  points: number;
-};
-
-function useBarakaSolde(userId: string | undefined): BarakaState {
-  const [state, setState] = useState<BarakaState>({
-    available: false,
-    loading: true,
-    points: 0,
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!userId) {
-      setState({ available: false, loading: false, points: 0 });
-      return;
-    }
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("loyalty_accounts")
-          .select("points_balance")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (cancelled) return;
-        if (error) {
-          // Table absente / non lisible → on masque la carte.
-          setState({ available: false, loading: false, points: 0 });
-          return;
-        }
-        setState({
-          available: data != null,
-          loading: false,
-          points: Number(data?.points_balance ?? 0),
-        });
-      } catch {
-        if (!cancelled) {
-          setState({ available: false, loading: false, points: 0 });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  return state;
-}
 
 const PHONE_RE = /^(\+33|0)[1-9]\d{8}$/;
 
@@ -102,7 +43,11 @@ type ProfilValues = z.infer<typeof ProfilSchema>;
 export default function Account() {
   const { profile, user, signOut, loading } = useAuth();
   const navigate = useNavigate();
-  const baraka = useBarakaSolde(user?.id);
+  // Cagnotte Baraka — solde calculé côté serveur par la RPC
+  // get_loyalty_balance(p_email), clé = email du compte (comme l'export de
+  // commandes via client_email). useLoyalty dégrade en 0 sans jamais throw.
+  const loyaltyEmail = user?.email ?? profile?.email ?? null;
+  const baraka = useLoyalty(loyaltyEmail);
 
   // Édition profil. `localProfile` reflète la dernière valeur enregistrée
   // pour un affichage optimiste : le AuthProvider ne ré-expose pas le
@@ -443,9 +388,9 @@ export default function Account() {
               )}
             </section>
 
-            {/* Solde Baraka (fidélité) — masqué si le programme n'est pas
-                disponible (hook V1 absent ou table non migrée). */}
-            {baraka.available && (
+            {/* Solde Baraka (fidélité) — masqué tant que le solde est nul ou
+                en cours de calcul (RPC non déployée → 0 → carte masquée). */}
+            {baraka.points > 0 && (
               <section
                 className="rounded-2xl border border-gold/30 bg-gradient-to-br from-sapin to-sapin-deep p-5 flex items-center gap-4 shadow-sm"
                 aria-label="Solde de fidélité Baraka"
@@ -461,20 +406,10 @@ export default function Account() {
                     Cagnotte Baraka
                   </p>
                   <p className="text-white font-bold text-2xl tabular-nums mt-0.5 leading-none">
-                    {baraka.loading ? (
-                      <Loader2
-                        size={20}
-                        className="animate-spin text-white/70"
-                        aria-hidden
-                      />
-                    ) : (
-                      <>
-                        {baraka.points}{" "}
-                        <span className="text-base font-semibold text-white/80">
-                          point{baraka.points > 1 ? "s" : ""}
-                        </span>
-                      </>
-                    )}
+                    {baraka.points}{" "}
+                    <span className="text-base font-semibold text-white/80">
+                      point{baraka.points > 1 ? "s" : ""}
+                    </span>
                   </p>
                 </div>
               </section>

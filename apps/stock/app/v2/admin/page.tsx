@@ -344,10 +344,14 @@ export default function V2AdminDashboardPage() {
             className="px-4 sm:px-5 mt-8"
           />
 
-          {/* ┌─ ACTIVITÉ — CA temps réel ─┐ */}
+          {/* ┌─ ACTIVITÉ — CA Drive temps réel ─┐ */}
+          {/* Périmètre explicite : ce graphe = commandes Drive (particulier +
+              pro), PAS le CA magasin Cashmag. Sans ce libellé, le total Drive
+              (qq centaines d'€) était lu comme le CA total du magasin et
+              paraissait incohérent avec le « CA hier » magasin du cockpit. */}
           <p className="px-4 sm:px-5 mt-3 section-eyebrow flex items-center gap-1.5">
             <TrendingUp className="w-3 h-3" />
-            Activité du jour
+            CA Drive (hors magasin)
             <span
               aria-hidden
               title="Données live"
@@ -701,7 +705,7 @@ export default function V2AdminDashboardPage() {
                           {d?.nom} · {e?.prenom} {e?.nom}
                         </p>
                         <p className="text-[11px] text-text-tertiary">
-                          Théo {inv.quantite_attendue ?? "—"} · Compté{" "}
+                          Théorique {inv.quantite_attendue ?? "—"} · Compté{" "}
                           {inv.quantite_comptee ?? "—"}
                         </p>
                       </div>
@@ -828,7 +832,7 @@ function Stat({
       <p className="text-[9.5px] text-text-tertiary uppercase tracking-wide font-bold flex items-baseline gap-1">
         {label}
         {hint && (
-          <span className="text-text-tertiary/80 normal-case tracking-normal font-medium">
+          <span className="text-text-tertiary/80 normal-case tracking-normal font-medium whitespace-nowrap">
             · {hint}
           </span>
         )}
@@ -905,14 +909,15 @@ function ActivityRow({
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-text-primary">
-            Sortie {SORTIE_LABEL[row.item.type] ?? row.item.type} ×{" "}
-            {row.item.quantite} · {d?.nom}
+            Sortie {SORTIE_LABEL[row.item.type] ?? row.item.type} · qté{" "}
+            {formatQty(row.item.quantite)} · {d?.nom}
           </p>
           <p className="text-[10px] text-text-tertiary">
             {e?.prenom} {e?.nom} · {timeAgo(row.date)}
-            {row.item.ia_coherence_score !== null && (
-              <> · IA {Math.round(row.item.ia_coherence_score * 100)}%</>
-            )}
+            {row.item.ia_coherence_score != null &&
+              row.item.ia_coherence_score > 0 && (
+                <> · IA {Math.round(row.item.ia_coherence_score * 100)}%</>
+              )}
           </p>
         </div>
       </div>
@@ -929,7 +934,7 @@ function ActivityRow({
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-bold text-text-primary">
-          Transfert {ds?.nom} → {dd?.nom} · qté {row.item.quantite}
+          Transfert {ds?.nom} → {dd?.nom} · qté {formatQty(row.item.quantite)}
         </p>
         <p className="text-[10px] text-text-tertiary">
           {e?.prenom} {e?.nom} · {timeAgo(row.date)}
@@ -937,6 +942,13 @@ function ActivityRow({
       </div>
     </div>
   );
+}
+
+/** Quantité lisible : entier sans décimale, poids avec virgule FR (kg). */
+function formatQty(q: number): string {
+  return Number.isInteger(q)
+    ? String(q)
+    : q.toLocaleString("fr-FR", { maximumFractionDigits: 3 });
 }
 
 function timeAgo(iso: string): string {

@@ -109,6 +109,7 @@ export default function AlertesPage() {
   const [surplus, setSurplus] = useState<AlerteSurplus[]>([]);
   const [demarque, setDemarque] = useState<DemarqueRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortiesError, setSortiesError] = useState(false);
   const [detail, setDetail] = useState<SortieSuspecte | null>(null);
 
   /** Action ACCEPTER : marque la sortie comme reviewed (score → 1.0
@@ -221,12 +222,16 @@ export default function AlertesPage() {
       return;
     }
     // 1. Sorties suspectes (score IA < 0.7)
+    // NB : on NE joint PAS `employes` directement — anon n'a plus SELECT sur
+    // cette table depuis le lockdown PII (migration 20260531000021). Le join
+    // PostgREST `employes(prenom,nom)` renvoyait un 401 permission denied qui
+    // faisait échouer TOUTE la requête → faux « aucune sortie suspecte ». On
+    // récupère l'employe_id ici et on résout le nom via la vue employes_public.
     const { data: dsorties, error: sortiesErr } = await sb
       .from("sorties_stock")
       .select(
-        `id, type, motif_libre, quantite, photo_url, ia_coherence_score, ia_coherence_notes, created_at,
+        `id, type, motif_libre, quantite, photo_url, ia_coherence_score, ia_coherence_notes, created_at, employe_id,
          produits (nom),
-         employes (prenom, nom),
          depots (nom)`,
       )
       .lt("ia_coherence_score", 0.7)
@@ -238,8 +243,38 @@ export default function AlertesPage() {
         sortiesErr,
       );
       toast.error("Impossible de charger les sorties suspectes");
+      setSortiesError(true);
+      setSorties([]);
+    } else {
+      setSortiesError(false);
+      // Résolution des noms d'employés via la vue anon-safe.
+      const rows = (dsorties ?? []) as unknown as Array<
+        Omit<SortieSuspecte, "employes"> & { employe_id: string | null }
+      >;
+      const ids = [
+        ...new Set(rows.map((r) => r.employe_id).filter(Boolean)),
+      ] as string[];
+      const empMap = new Map<string, { prenom: string | null; nom: string }>();
+      if (ids.length > 0) {
+        const { data: emps } = await sb
+          .from("employes_public")
+          .select("id, prenom, nom")
+          .in("id", ids);
+        for (const e of (emps ?? []) as Array<{
+          id: string;
+          prenom: string | null;
+          nom: string;
+        }>) {
+          empMap.set(e.id, { prenom: e.prenom, nom: e.nom });
+        }
+      }
+      setSorties(
+        rows.map((r) => ({
+          ...r,
+          employes: r.employe_id ? (empMap.get(r.employe_id) ?? null) : null,
+        })) as unknown as SortieSuspecte[],
+      );
     }
-    setSorties((dsorties ?? []) as unknown as SortieSuspecte[]);
 
     // 2. Surplus
     const { data: dsurplus, error: surplusErr } = await sb
@@ -338,7 +373,7 @@ export default function AlertesPage() {
           icon={<Sparkles className="w-4 h-4" />}
           eyebrow="IA SCORE"
           value={`${sorties.filter((s) => s.ia_coherence_score < 0.5).length}`}
-          label="employés < 0.5"
+          label="sorties < 0.5"
         />
       </section>
 
@@ -382,7 +417,12 @@ export default function AlertesPage() {
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
         ) : tab === "sorties" ? (
-          <SortiesPanel sorties={sorties} onDetail={(s) => setDetail(s)} />
+          <SortiesPanel
+            sorties={sorties}
+            error={sortiesError}
+            onRetry={() => void loadAll()}
+            onDetail={(s) => setDetail(s)}
+          />
         ) : tab === "demarque" ? (
           <DemarquePanel rows={demarque} />
         ) : tab === "surplus" ? (
@@ -591,11 +631,38 @@ function Badge({ children }: { children: React.ReactNode }) {
 
 function SortiesPanel({
   sorties,
+  error,
+  onRetry,
   onDetail,
 }: {
   sorties: SortieSuspecte[];
+  error: boolean;
+  onRetry: () => void;
   onDetail: (s: SortieSuspecte) => void;
 }) {
+  // État d'ERREUR distinct de l'état vide : ne JAMAIS afficher « aucune sortie
+  // suspecte » quand le chargement a échoué (faux négatif dangereux pour le
+  // proprio qui croirait l'IA verte alors qu'on n'a rien pu lire).
+  if (error) {
+    return (
+      <div className="bg-danger-soft border border-danger/30 rounded-2xl p-6 text-center">
+        <AlertTriangle className="w-7 h-7 text-danger mx-auto mb-2" />
+        <p className="font-bold text-text-primary">
+          Impossible de charger les sorties suspectes
+        </p>
+        <p className="text-xs text-text-secondary mt-1">
+          Le centre d&apos;alertes n&apos;a pas pu lire les données. Ce
+          n&apos;est pas un « tout va bien ».
+        </p>
+        <button
+          onClick={onRetry}
+          className="mt-4 bg-danger text-white rounded-full px-5 py-2 text-[13px] font-bold active:scale-[0.98] transition-transform"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
   if (sorties.length === 0) {
     return (
       <div className="bg-success-soft border border-success/20 rounded-2xl p-6 text-center">

@@ -19,6 +19,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { askAssistant } from "@/lib/actions/assistant";
+import { useV2 } from "@/lib/v2-store";
 
 interface ChatMsg {
   id: string;
@@ -64,6 +65,7 @@ function md(text: string): string {
 
 export default function AssistantIAPage() {
   const router = useRouter();
+  const prenom = useV2((s) => s.currentEmploye?.prenom);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -135,7 +137,7 @@ export default function AssistantIAPage() {
       {/* Chat zone */}
       <section className="px-4 pt-5 pb-[200px]">
         {messages.length === 0 ? (
-          <EmptyState onPick={(q) => void send(q)} />
+          <EmptyState prenom={prenom} onPick={(q) => void send(q)} />
         ) : (
           <div className="space-y-3.5">
             {messages.map((m) =>
@@ -268,7 +270,13 @@ export default function AssistantIAPage() {
   );
 }
 
-function EmptyState({ onPick }: { onPick: (q: string) => void }) {
+function EmptyState({
+  prenom,
+  onPick,
+}: {
+  prenom?: string | null;
+  onPick: (q: string) => void;
+}) {
   return (
     <div className="bg-white border border-rule rounded-[20px] p-6 shadow-card">
       <div className="flex items-center gap-3">
@@ -277,7 +285,7 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
         </div>
         <div>
           <h2 className="text-[16px] font-extrabold text-text-primary">
-            Bonjour Otmane
+            Bonjour{prenom ? ` ${prenom}` : ""}
           </h2>
           <p className="text-[12px] text-text-secondary">
             Pose-moi une question sur ton business.
@@ -298,8 +306,8 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
         ))}
       </div>
       <p className="text-[10.5px] text-text-tertiary text-center mt-5">
-        L&apos;assistant interroge Supabase via 6 tools : ventes, stock,
-        alertes, top produits, employés, démarque.
+        L&apos;assistant analyse tes ventes, ton stock, tes alertes, tes top
+        produits, ton équipe et ta démarque.
       </p>
     </div>
   );

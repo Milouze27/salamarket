@@ -10,7 +10,7 @@
  * en réponse naturelle française.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { assistantQuerySchema } from "@/lib/validate/schemas";
 
@@ -75,7 +75,7 @@ const TOOLS = [
   {
     name: "query_stock_actuel",
     description:
-      "Retourne le stock actuel pour un produit donné (ou top 10 plus bas en stock si pas de produit_search). Inclut quantité par dépôt et prix.",
+      "Stock actuel. AVEC produit_search : détail d'un produit (quantité par dépôt, prix_vente, cout_achat_ht). SANS produit_search : `stock_par_depot` = synthèse PAR DÉPÔT (nb_references, total_unites, valeur_au_cout_eur, valeur_au_prix_vente_eur) — utilise ces valeurs pour répondre à « valeur totale du stock par dépôt » ; plus `produits_les_plus_bas` (top 10 stock bas).",
     input_schema: {
       type: "object",
       properties: {
@@ -150,8 +150,11 @@ const TOOLS = [
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function runTool(name: string, input: any): Promise<unknown> {
-  const sb = supabase();
-  if (!sb) return { error: "Supabase indisponible" };
+  // service_role : la route est server-only et gardée par x-internal-secret.
+  // Indispensable pour lire `employes` (RLS anon révoqué depuis le lockdown
+  // PII 20260531000021) dans query_alertes / query_employes_perf, et pour
+  // agréger tout le stock sans dépendre du filtre is_visible côté anon.
+  const sb = supabaseServer();
   // Borne les entrées texte (anti-DoS / requêtes ilike pathologiques) : un
   // terme de recherche au-delà de 120 caractères est tronqué.
   if (input && typeof input.produit_search === "string") {
@@ -259,19 +262,69 @@ async function runTool(name: string, input: any): Promise<unknown> {
         const { data: prods } = await sb
           .from("produits")
           .select(
-            "id, nom, ean, categorie, stock_par_depot(quantite, prix_vente, depots(nom))",
+            "id, nom, ean, categorie, stock_par_depot(quantite, prix_vente, cout_achat_ht, depots(nom))",
           )
           .ilike("nom", `%${produit_search}%`)
           .limit(5);
         return prods ?? [];
       }
-      // Top 10 plus bas en stock total
-      const { data: all } = await sb
+      // Sans produit : VALEUR TOTALE du stock par dépôt (réfs, unités, valeur
+      // au coût et au prix de vente) PLUS le top 10 des plus bas en stock.
+      // Avant, on ne renvoyait que les 15 lignes les plus basses sans prix →
+      // l'IA sous-évaluait massivement le stock (101 u. vs 1674 réelles) et
+      // disait « je n'ai pas les prix ». On agrège ici comme le dashboard.
+      const { data: lignes } = await sb
         .from("stock_par_depot")
-        .select("quantite, produits(id, nom, categorie), depots(nom)")
+        .select(
+          "quantite, prix_vente, cout_achat_ht, produit_id, depots(nom)",
+        );
+      const parDepot = new Map<
+        string,
+        {
+          depot: string;
+          nb_refs: number;
+          total_unites: number;
+          valeur_cout: number;
+          valeur_vente: number;
+        }
+      >();
+      for (const l of (lignes ?? []) as unknown as Array<{
+        quantite: number;
+        prix_vente: number | null;
+        cout_achat_ht: number | null;
+        produit_id: string;
+        depots: { nom: string } | { nom: string }[] | null;
+      }>) {
+        const depObj = Array.isArray(l.depots) ? l.depots[0] : l.depots;
+        const nom = depObj?.nom ?? "Dépôt inconnu";
+        const cur = parDepot.get(nom) ?? {
+          depot: nom,
+          nb_refs: 0,
+          total_unites: 0,
+          valeur_cout: 0,
+          valeur_vente: 0,
+        };
+        const q = Number(l.quantite ?? 0);
+        cur.nb_refs += 1;
+        cur.total_unites += q;
+        cur.valeur_cout += q * Number(l.cout_achat_ht ?? 0);
+        cur.valeur_vente += q * Number(l.prix_vente ?? 0);
+        parDepot.set(nom, cur);
+      }
+      const stock_par_depot = Array.from(parDepot.values()).map((d) => ({
+        depot: d.depot,
+        nb_references: d.nb_refs,
+        total_unites: d.total_unites,
+        valeur_au_cout_eur: Math.round(d.valeur_cout * 100) / 100,
+        valeur_au_prix_vente_eur: Math.round(d.valeur_vente * 100) / 100,
+      }));
+      // Top 10 plus bas en stock (utile pour les questions « quoi recommander »)
+      const { data: bas } = await sb
+        .from("stock_par_depot")
+        .select("quantite, produits(nom, categorie), depots(nom)")
         .order("quantite", { ascending: true })
-        .limit(15);
-      return all ?? [];
+        .limit(10);
+      return { stock_par_depot, produits_les_plus_bas: bas ?? [] };
     }
 
     if (name === "query_alertes") {

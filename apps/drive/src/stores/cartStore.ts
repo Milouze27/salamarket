@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { safeStorage } from "@/lib/safe-storage";
 import type { Product, ProductUnitType } from "@/types/product";
 import {
   computeCartTotalsCents,
@@ -279,6 +280,16 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "salamarket-cart",
+      // Storage défensif (createJSONStorage(safeStorage)) au lieu du
+      // localStorage brut par défaut de zustand. Sur iOS Safari en
+      // navigation privée / PWA standalone stricte / quota dépassé, un
+      // accès localStorage brut THROW (SecurityError / QuotaExceeded) :
+      // l'écriture du panier échoue silencieusement et, au reload, la
+      // lecture peut throw aussi → panier perdu / valeur NULL. safeStorage
+      // (déjà utilisé par le client supabase) intercepte chaque accès et
+      // bascule sur une Map mémoire, donc le panier survit au reload dans
+      // toutes les conditions de stockage au lieu d'être vidé.
+      storage: createJSONStorage(() => safeStorage),
       // Bump version : on a migré le shape CartItem (ajout lineId,
       // unitType). On vide l'ancien panier pour éviter les crashs sur
       // lecture d'items legacy.

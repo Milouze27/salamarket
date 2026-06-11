@@ -40,9 +40,23 @@ export function slotState(
   return "selectable";
 }
 
+/**
+ * Le magasin ferme le dimanche (hero/footer = "Lun – Sam"). On filtre
+ * tout créneau dont le jour (heure de Paris) tombe un dimanche, QUEL QUE
+ * SOIT l'état de la base : tant que l'edge function ensure-slots n'est pas
+ * redéployée (CLI supabase non loggé, cf. deferred), la DB peut encore
+ * contenir des créneaux dominicaux. Ce garde-fou client garantit qu'aucun
+ * bouton dimanche ne s'affiche jamais.
+ */
+export function isStoreOpenDay(slot: Slot): boolean {
+  const d = toZonedTime(new Date(slot.slot_start), PARIS_TZ);
+  return d.getDay() !== 0; // 0 = dimanche
+}
+
 export function groupSlotsByDay(slots: Slot[]): DayGroup[] {
   const map = new Map<string, Slot[]>();
   for (const s of slots) {
+    if (!isStoreOpenDay(s)) continue;
     const d = toZonedTime(new Date(s.slot_start), PARIS_TZ);
     const key = format(d, "yyyy-MM-dd", { timeZone: PARIS_TZ });
     if (!map.has(key)) map.set(key, []);
@@ -109,8 +123,12 @@ export function useSlots() {
       );
       if (fnErr) throw fnErr;
 
+      // Filtre dimanche dès la source : QUEL QUE SOIT ce que renvoie la DB
+      // ou l'edge function (potentiellement non redéployée, cf. deferred),
+      // aucun créneau dominical n'entre dans le state. Garantit qu'un slot
+      // dimanche ne peut être ni affiché ni sélectionné.
       if (ensured?.slots && Array.isArray(ensured.slots)) {
-        setSlots(ensured.slots as Slot[]);
+        setSlots((ensured.slots as Slot[]).filter(isStoreOpenDay));
       } else {
         // fallback : lecture directe
         const now = new Date();
@@ -122,7 +140,7 @@ export function useSlots() {
           .lt("slot_start", in7.toISOString())
           .order("slot_start", { ascending: true });
         if (selErr) throw selErr;
-        setSlots((data ?? []) as Slot[]);
+        setSlots(((data ?? []) as Slot[]).filter(isStoreOpenDay));
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erreur inconnue";

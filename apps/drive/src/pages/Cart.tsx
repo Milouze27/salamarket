@@ -272,7 +272,7 @@ const Cart = () => {
 
   return (
     <div className="min-h-dvh bg-[#FAF7EE] text-text flex flex-col">
-      <AppHeader showBack title="Mon panier" />
+      <AppHeader showBack title="Mon panier" hideCart />
 
       <main
         className="flex-1 max-w-2xl w-full mx-auto px-6 md:px-8 pt-6 flex flex-col gap-4"

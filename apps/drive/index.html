@@ -100,11 +100,13 @@
     <meta name="description" content="Salamarket Drive : votre supermarché halal en click &amp; collect à Toulouse. Commandez en ligne, retirez en magasin.">
     <meta name="author" content="Salamarket Drive" />
 
-    <!-- Preload du splash HTML (priorité absolue, c'est le 1er truc affiché) -->
-    <link rel="preload" as="image" href="/splash/iphone-1170x2532.png" fetchpriority="high" />
+    <!-- Le logo du splash HTML est le 1er élément peint sur toutes les
+         routes → preload justifié. Le splash PNG (iphone-1170x2532) n'est
+         qu'un background-image conditionnel (mobile portrait) et le hero
+         webp n'est consommé que sur la home : les preloader sur TOUTES les
+         routes (panier, créneaux, PDP…) déclenchait des warnings console
+         "preloaded but not used". On les a retirés. -->
     <link rel="preload" as="image" href="/brand/logo-horizontal-transparent.png" fetchpriority="high" />
-    <!-- Preload du LCP (1ère slide hero) — gain ~100-200ms sur le first paint -->
-    <link rel="preload" as="image" href="/hero/slide-1-boucherie.webp" fetchpriority="high" />
 
     
     

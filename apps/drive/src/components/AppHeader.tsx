@@ -7,9 +7,18 @@ import { HeaderUserMenu } from "@/components/HeaderUserMenu";
 interface Props {
   showBack?: boolean;
   title?: string;
+  /** Masque l'icône panier + son badge compteur. Utilisé sur la page
+   *  panier elle-même : y afficher un badge "1" sur l'icône est redondant
+   *  avec le compteur "1 article" déjà présent dans le corps de page
+   *  (doublon "Mon panier | 1 | 1 article"). */
+  hideCart?: boolean;
 }
 
-export const AppHeader = ({ showBack = false, title }: Props) => {
+export const AppHeader = ({
+  showBack = false,
+  title,
+  hideCart = false,
+}: Props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const count = useCartCount();
@@ -53,22 +62,24 @@ export const AppHeader = ({ showBack = false, title }: Props) => {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => navigate("/panier")}
-            aria-label={
-              count > 0
-                ? `Voir le panier (${count} article${count > 1 ? "s" : ""})`
-                : "Voir le panier"
-            }
-            className="relative w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-white flex items-center justify-center text-text active:scale-90 transition-transform"
-          >
-            <ShoppingBag size={22} aria-hidden />
-            {count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#C9A227] text-[#0E3B2E] text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm">
-                {count > 9 ? "9+" : count}
-              </span>
-            )}
-          </button>
+          {!hideCart && (
+            <button
+              onClick={() => navigate("/panier")}
+              aria-label={
+                count > 0
+                  ? `Voir le panier (${count} article${count > 1 ? "s" : ""})`
+                  : "Voir le panier"
+              }
+              className="relative w-11 h-11 md:w-10 md:h-10 rounded-full hover:bg-white flex items-center justify-center text-text active:scale-90 transition-transform"
+            >
+              <ShoppingBag size={22} aria-hidden />
+              {count > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#C9A227] text-[#0E3B2E] text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm">
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
+            </button>
+          )}
           <HeaderUserMenu />
         </div>
       </div>

@@ -267,14 +267,28 @@ body {
    d'input. Les sélecteurs combinés (input.input-field…) gagnent sur .input-field
    tout en restant scopés à la media coarse — le 15px desktop reste intact. */
 @media (pointer: coarse) {
+  /* R2 / iOS zoom-au-focus : la règle d'élément (0,0,1) était écrasée par les
+     classes Tailwind text-[14px]/text-[15px] (0,1,0) sur la recherche
+     fournisseurs, le select mois du rapport mensuel, l'input date du récap
+     fiscal et la palette ⌘K → zoom iOS persistant. On force donc 16px sur tous
+     les contrôles de saisie, en couvrant explicitement [type=date]/[type=...]
+     et [role=combobox] (combobox custom shadcn). Scopé à pointer:coarse → le
+     rendu souris/desktop reste intact. */
   input,
   select,
   textarea,
+  [type="date"],
+  [type="text"],
+  [type="search"],
+  [type="number"],
+  [type="email"],
+  [type="tel"],
+  [role="combobox"],
   input.input-field,
   select.input-field,
   textarea.input-field,
   .input-field {
-    font-size: max(16px, 1rem);
+    font-size: max(16px, 1rem) !important;
   }
 }
 
@@ -737,12 +751,17 @@ button,
       var(--nav-height) + var(--safe-bottom) + var(--nav-breathing)
     );
   }
-  /* Comme pb-nav-stack, mais réserve EN PLUS la hauteur du FAB Assistant
-     (56px) + son offset au-dessus de la nav (36px) pour qu'aucun montant ni
-     CTA du dernier item ne passe sous le bouton flottant (règle UX FAB). */
+  /* Comme pb-nav-stack, mais réserve EN PLUS la zone du FAB Assistant.
+     R2 — mesure live 390px : le FAB occupe la bande [136px, 192px] au-dessus
+     du bas du viewport (bottom:136px, h:56px). Avec +92px la clearance au-
+     dessus du sommet du FAB n'était que de 64px → sur /v2/po le montant du
+     dernier PO (« 1 046 € ») frôlait encore le bouton. On porte l'extra à
+     124px : padding = nav(100)+breathing(64)+124 = 288px, soit ~96px de marge
+     franche au-dessus du sommet du FAB (192px). Aucun montant/CTA du dernier
+     item ne passe plus sous le bouton flottant (règle UX FAB). */
   .pb-fab-stack {
     padding-bottom: calc(
-      var(--nav-height) + var(--safe-bottom) + var(--nav-breathing) + 92px
+      var(--nav-height) + var(--safe-bottom) + var(--nav-breathing) + 124px
     );
   }
   /* Float a CTA strip above the bottom nav (or above safe-area when no nav). */

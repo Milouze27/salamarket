@@ -131,7 +131,13 @@ export function DepotSwitcher() {
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-danger border-2 border-white rounded-full" />
           )}
         </span>
-        <span className="max-w-[120px] truncate">
+        {/* EMP2-01 / R2 — sur mobile (390px) le label « Professionnel » (166px)
+          mangeait toute la largeur et écrasait le bloc identité de l'employé à
+          0px. On masque donc le NOM en pointer:coarse (icône + dot suffisent à
+          identifier le dépôt), tout en gardant un libellé accessible (sr-only)
+          et le nom complet sur desktop (pointer:fine). */}
+        <span className="sr-only">{current?.nom ?? "Dépôt"}</span>
+        <span className="hidden [@media(pointer:fine)]:inline max-w-[120px] truncate">
           {current?.nom ?? "Dépôt"}
         </span>
         <ChevronDown

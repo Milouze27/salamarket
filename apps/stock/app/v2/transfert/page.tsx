@@ -203,10 +203,25 @@ export default function V2TransfertPage() {
     }
   }
 
-  // Bouton actif dès qu'une source/dest/produit valides sont choisis ;
-  // la quantité est validée au clic (vide / 0 / supérieure au stock → toast).
+  // Erreur quantité inline : dépassement du stock source disponible.
+  // On bloque visuellement (bouton + message) au lieu de laisser passer
+  // jusqu'au toast au clic — un transfert > stock pousserait le dépôt
+  // source en négatif.
+  const depasseStock =
+    stockSource !== null &&
+    typeof quantite === "number" &&
+    quantite > stockSource;
+
+  // Bouton actif seulement avec source/dest/produit valides ET une
+  // quantité saisie qui ne dépasse pas le stock disponible.
   const canSubmit =
-    !!source && !!destination && source.id !== destination.id && !!produit;
+    !!source &&
+    !!destination &&
+    source.id !== destination.id &&
+    !!produit &&
+    typeof quantite === "number" &&
+    quantite > 0 &&
+    !depasseStock;
 
   return (
     <V2Shell hideNav>
@@ -400,9 +415,12 @@ export default function V2TransfertPage() {
                 if (v === "") setQuantite("");
                 else {
                   const n = parseInt(v, 10);
-                  // Clamp [1, 9999] : pas de quantité négative ni absurde.
+                  // Clamp à [1, stock source] (plafond 9999 si stock
+                  // inconnu) : impossible de transférer plus que le
+                  // disponible, donc pas de stock négatif côté source.
+                  const plafond = stockSource ?? 9999;
                   setQuantite(
-                    Number.isNaN(n) ? "" : Math.max(1, Math.min(n, 9999)),
+                    Number.isNaN(n) ? "" : Math.max(1, Math.min(n, plafond)),
                   );
                 }
               }}
@@ -410,9 +428,19 @@ export default function V2TransfertPage() {
                 stockSource !== null ? `0 · ${stockSource} max` : "Quantité"
               }
               aria-label="Quantité à transférer"
+              aria-invalid={depasseStock}
               inputMode="numeric"
               className="input-field text-2xl font-bold text-center"
             />
+            {depasseStock && (
+              <p
+                role="alert"
+                className="text-[12px] font-bold text-danger mt-2 text-center"
+              >
+                Stock source insuffisant · {stockSource} disponible
+                {(stockSource ?? 0) > 1 ? "s" : ""}
+              </p>
+            )}
           </div>
 
           <div>

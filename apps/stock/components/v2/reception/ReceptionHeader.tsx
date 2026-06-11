@@ -128,17 +128,25 @@ export function ReceptionHeader({
             Progression
           </span>
           <span className="text-[13px] font-extrabold tabular text-text-primary">
-            {progression.scanned} / {progression.total} unités
+            {progression.received} / {progression.total} unités
           </span>
         </div>
         <div className="h-2.5 rounded-full bg-cream overflow-hidden">
           <motion.div
-            className="h-full bg-primary"
+            className={`h-full ${
+              progression.hasSurReception ? "bg-warning" : "bg-primary"
+            }`}
             initial={{ width: 0 }}
             animate={{ width: `${progression.pct}%` }}
             transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
           />
         </div>
+        {progression.hasSurReception && (
+          <p className="text-[11px] font-bold text-warning mt-1.5">
+            Sur-réception détectée · reçu {progression.received} pour{" "}
+            {progression.total} attendus. Vérifie les lignes en ambre.
+          </p>
+        )}
       </div>
     </header>
   );

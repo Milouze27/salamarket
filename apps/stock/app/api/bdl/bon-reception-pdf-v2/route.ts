@@ -20,7 +20,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 import { generateLotQrUrl } from "@/lib/qr-lot";
 import {
   createBrandDoc,
@@ -124,8 +124,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "bdl_id requis" }, { status: 400 });
   }
 
-  const sb = supabase();
-  if (!sb) {
+  // service_role : la table `employes` (signature réceptionneur) est sous
+  // RLS sans policy SELECT pour le rôle anon → 404 "permission denied for
+  // table employes". Le BR est généré server-side, on lit hors RLS.
+  let sb;
+  try {
+    sb = supabaseServer();
+  } catch {
     return NextResponse.json({ error: "supabase_unavailable" }, { status: 503 });
   }
 

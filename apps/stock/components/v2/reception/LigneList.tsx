@@ -104,32 +104,65 @@ export function LigneList({
 
 /** Carte d'une ligne attendue (statut, nom, code-barre, qté reçue/attendue). */
 function LigneRow({ ligne: l }: { ligne: BdlLigne }) {
-  const isRecu = l.statut === "recu";
+  // Sur-réception : reçu STRICTEMENT plus que l'attendu. On la sort du vert
+  // "Reçu" (qui suggère "tout va bien") vers un état d'avertissement ambre
+  // avec l'excédent affiché — signal métier (erreur de saisie probable).
+  // STK-OPS-03 / b10-02.
+  const surExcedent = l.quantite_recue - l.quantite_attendue;
+  const isSurReception = surExcedent > 0 && l.quantite_attendue > 0;
+  const isRecu = l.statut === "recu" && !isSurReception;
   const isSurplus = l.statut === "surplus";
+  const tone = isSurReception
+    ? "warning"
+    : isRecu
+      ? "success"
+      : isSurplus
+        ? "danger"
+        : "neutral";
+  const borderCls =
+    tone === "success"
+      ? "border-success/40"
+      : tone === "warning"
+        ? "border-warning/50"
+        : tone === "danger"
+          ? "border-danger/40"
+          : "border-rule";
+  const badgeBgCls =
+    tone === "success"
+      ? "bg-success-soft text-success"
+      : tone === "warning"
+        ? "bg-warning-soft text-warning"
+        : tone === "danger"
+          ? "bg-danger-soft text-danger"
+          : "bg-cream text-text-tertiary";
+  const textCls =
+    tone === "success"
+      ? "text-success"
+      : tone === "warning"
+        ? "text-warning"
+        : tone === "danger"
+          ? "text-danger"
+          : "text-text-primary";
+  const labelCls =
+    tone === "success"
+      ? "text-success"
+      : tone === "warning"
+        ? "text-warning"
+        : tone === "danger"
+          ? "text-danger"
+          : "text-text-tertiary";
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white border rounded-2xl p-3 flex items-center gap-3 ${
-        isRecu
-          ? "border-success/40"
-          : isSurplus
-            ? "border-danger/40"
-            : "border-rule"
-      }`}
+      className={`bg-white border rounded-2xl p-3 flex items-center gap-3 ${borderCls}`}
     >
       <span
-        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-          isRecu
-            ? "bg-success-soft text-success"
-            : isSurplus
-              ? "bg-danger-soft text-danger"
-              : "bg-cream text-text-tertiary"
-        }`}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${badgeBgCls}`}
       >
         {isRecu ? (
           <CheckCircle2 className="w-5 h-5" />
-        ) : isSurplus ? (
+        ) : isSurReception || isSurplus ? (
           <AlertTriangle className="w-5 h-5" />
         ) : (
           <PackagePlus className="w-5 h-5" />
@@ -144,33 +177,21 @@ function LigneRow({ ligne: l }: { ligne: BdlLigne }) {
         </p>
       </div>
       <div className="text-right">
-        <p
-          className={`text-[14px] font-extrabold tabular ${
-            isRecu
-              ? "text-success"
-              : isSurplus
-                ? "text-danger"
-                : "text-text-primary"
-          }`}
-        >
+        <p className={`text-[14px] font-extrabold tabular ${textCls}`}>
           {l.quantite_recue} / {l.quantite_attendue}
         </p>
         <p
-          className={`text-[10.5px] uppercase font-bold tracking-wide mt-0.5 ${
-            isRecu
-              ? "text-success"
-              : isSurplus
-                ? "text-danger"
-                : "text-text-tertiary"
-          }`}
+          className={`text-[10.5px] uppercase font-bold tracking-wide mt-0.5 ${labelCls}`}
         >
-          {isRecu
-            ? "Reçu"
-            : isSurplus
-              ? "Surplus"
-              : l.statut === "manquant"
-                ? "Manquant"
-                : "À scanner"}
+          {isSurReception
+            ? `Sur-réception +${surExcedent}`
+            : isRecu
+              ? "Reçu"
+              : isSurplus
+                ? "Surplus"
+                : l.statut === "manquant"
+                  ? "Manquant"
+                  : "À scanner"}
         </p>
       </div>
     </motion.div>

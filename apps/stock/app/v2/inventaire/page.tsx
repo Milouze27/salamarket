@@ -80,40 +80,72 @@ export default function V2InventairePage() {
     return rows.sort((a) => (a.employe_assigne_id === employe.id ? -1 : 1));
   }, [rows, employe]);
 
-  async function validateAll() {
-    if (!employe) return;
-
-    const mineAssigned = rows.filter(
-      (r) => r.statut === "assigne" && r.employe_assigne_id === employe.id,
+  // Décompte de clôture, source unique partagée par le bouton et
+  // validateAll. Un produit "à moi" est soit ENCORE à compter (statut
+  // assigne), soit DÉJÀ compté (statut compte/valide, p.ex. dans une
+  // session antérieure). Le compteur du bouton doit refléter le total
+  // réellement compté (saisie locale d'une ligne assigne + lignes déjà
+  // comptées), sinon il affiche 0/0 et bloque la clôture alors que des
+  // produits sont comptés (bug STK-OPS-05).
+  const cloture = useMemo(() => {
+    const minePending = rows.filter(
+      (r) => r.statut === "assigne" && r.employe_assigne_id === employe?.id,
     );
-    const fillable = mineAssigned.filter((r) => {
+    const mineDone = rows.filter(
+      (r) =>
+        (r.statut === "compte" || r.statut === "valide") &&
+        r.employe_assigne_id === employe?.id,
+    );
+    const fillable = minePending.filter((r) => {
       const raw = (counts[r.id] ?? "").trim();
       if (raw === "") return false;
       const c = Number(raw);
       return Number.isFinite(c) && c >= 0;
     });
+    const totalMine = minePending.length + mineDone.length;
+    // Comptés = déjà comptés (DB) + saisis localement maintenant.
+    const compteCount = mineDone.length + fillable.length;
+    return { minePending, mineDone, fillable, totalMine, compteCount };
+  }, [rows, counts, employe]);
 
-    if (mineAssigned.length === 0) {
+  async function validateAll() {
+    if (!employe) return;
+
+    const { minePending, mineDone, fillable, totalMine } = cloture;
+
+    if (totalMine === 0) {
       toast.error("Aucun produit à valider sur cet inventaire.", {
         id: "inv-nothing-to-do",
       });
       return;
     }
 
+    // Rien de nouveau à saisir mais des produits déjà comptés : l'inventaire
+    // est déjà couvert, on ne bloque pas l'utilisateur sur un faux 0/0.
+    if (fillable.length === 0 && mineDone.length > 0) {
+      toast.success("Tous tes produits sont déjà comptés.", {
+        id: "inv-already-done",
+      });
+      return;
+    }
+
     if (fillable.length === 0) {
       toast.error(
-        `Compte au moins un produit (sur ${mineAssigned.length}) avant de valider.`,
+        `Compte au moins un produit (sur ${minePending.length}) avant de valider.`,
         { id: "inv-empty" },
       );
       return;
     }
 
-    const partial = fillable.length < mineAssigned.length;
+    // Partiel = il reste des produits NON comptés (ni saisis maintenant, ni
+    // déjà comptés en base).
+    const partial = fillable.length + mineDone.length < totalMine;
     if (partial) {
+      const restant = totalMine - fillable.length - mineDone.length;
       const ok =
         typeof window !== "undefined" &&
         window.confirm(
-          `Tu as compté ${fillable.length} produit${fillable.length > 1 ? "s" : ""} sur ${mineAssigned.length}. ` +
+          `Il reste ${restant} produit${restant > 1 ? "s" : ""} non compté${restant > 1 ? "s" : ""} sur ${totalMine}. ` +
             "Valider partiellement ?\n\nLes produits non comptés resteront à compter plus tard.",
         );
       if (!ok) return;
@@ -138,7 +170,7 @@ export default function V2InventairePage() {
           : totalEcart > 0
             ? 0
             : 100;
-      const progress = `${fillable.length}/${mineAssigned.length}`;
+      const progress = `${fillable.length + mineDone.length}/${totalMine}`;
       const lowConf = conf < 95;
       // Push iPhone admin — inventaire complété (urgent si conformité basse)
       void import("@/lib/notifications").then((m) =>
@@ -167,8 +199,8 @@ export default function V2InventairePage() {
               employe: `${employe.prenom} ${employe.nom}`,
               conformite: conf,
               ecarts: totalEcart,
-              comptes: fillable.length,
-              assignes: mineAssigned.length,
+              comptes: fillable.length + mineDone.length,
+              assignes: totalMine,
             },
           });
         } catch (e) {
@@ -327,22 +359,24 @@ export default function V2InventairePage() {
       <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
           {(() => {
-            const mineAssigned = rows.filter(
-              (r) =>
-                r.statut === "assigne" && r.employe_assigne_id === employe?.id,
-            );
-            const filledCount = mineAssigned.filter((r) => {
-              const raw = (counts[r.id] ?? "").trim();
-              if (raw === "") return false;
-              const c = Number(raw);
-              return Number.isFinite(c) && c >= 0;
-            }).length;
-            const nothingAssigned = mineAssigned.length === 0;
-            const noneFilled = !nothingAssigned && filledCount === 0;
+            const { totalMine, compteCount, minePending, fillable } = cloture;
+            const nothingAssigned = totalMine === 0;
+            // "Rien à saisir" : aucune ligne assigne reste OU aucune saisie en
+            // cours, mais des produits sont déjà comptés → bouton actif (la
+            // clôture est possible), juste pas en mode "compte d'abord".
+            const noneFilled =
+              !nothingAssigned &&
+              fillable.length === 0 &&
+              compteCount === 0;
+            // On peut valider dès qu'il y a au moins un produit compté
+            // (localement ou déjà en base), ou rien à faire (déjà tout compté).
+            const canValidate =
+              !nothingAssigned &&
+              (fillable.length > 0 || minePending.length === 0);
             return (
               <button
                 onClick={validateAll}
-                disabled={submitting || nothingAssigned}
+                disabled={submitting || nothingAssigned || !canValidate}
                 className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors ${
                   noneFilled ? "bg-warning text-white" : "bg-primary text-white"
                 }`}
@@ -356,8 +390,8 @@ export default function V2InventairePage() {
                         : "Valider l'inventaire"}
                   </p>
                   <p className="text-[15px] font-extrabold mt-0.5">
-                    {filledCount}/{mineAssigned.length} compté
-                    {mineAssigned.length > 1 ? "s" : ""}
+                    {compteCount}/{totalMine} compté
+                    {totalMine > 1 ? "s" : ""}
                   </p>
                 </div>
                 <span className="bg-white/15 backdrop-blur-sm rounded-full p-2.5">

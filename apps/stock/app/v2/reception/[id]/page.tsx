@@ -173,16 +173,39 @@ export default function BdlReceptionPage() {
 
   // ─── KPI dérivés ───────────────────────────────────────────────
   const progression = useMemo(() => {
-    if (!bdl) return { scanned: 0, total: 0, pct: 0 };
+    if (!bdl)
+      return {
+        scanned: 0,
+        received: 0,
+        total: 0,
+        pct: 0,
+        hasSurReception: false,
+      };
     const total = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + l.quantite_attendue,
       0,
     );
+    // scanned : plafonné à l'attendu par ligne → alimente la barre (jamais
+    // > 100 %). received : somme BRUTE de quantite_recue → compteur honnête,
+    // cohérent avec les lignes (corrige STK-OPS-02 : header 30 vs lignes 150).
     const scanned = bdl.bons_de_livraison_lignes.reduce(
       (s, l) => s + Math.min(l.quantite_recue, l.quantite_attendue),
       0,
     );
-    return { scanned, total, pct: total > 0 ? (scanned / total) * 100 : 0 };
+    const received = bdl.bons_de_livraison_lignes.reduce(
+      (s, l) => s + l.quantite_recue,
+      0,
+    );
+    const hasSurReception = bdl.bons_de_livraison_lignes.some(
+      (l) => l.quantite_recue > l.quantite_attendue,
+    );
+    return {
+      scanned,
+      received,
+      total,
+      pct: total > 0 ? (scanned / total) * 100 : 0,
+      hasSurReception,
+    };
   }, [bdl]);
 
   const allRecu = useMemo(() => {

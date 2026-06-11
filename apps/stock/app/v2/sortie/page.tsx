@@ -29,6 +29,7 @@ import { PhotoCapture } from "@/components/reception/PhotoCapture";
 import {
   createSortie,
   findProduitByEan,
+  getStockProduitDepot,
   listEmployes,
   searchProduits,
 } from "@/lib/db";
@@ -90,6 +91,10 @@ export default function V2SortiePage() {
   const employe = useV2((s) => s.currentEmploye);
 
   const [produit, setProduit] = useState<Produit | null>(null);
+  // Stock disponible du produit dans le dépôt actif : affiché en contexte
+  // et utilisé comme garde-fou (sortie > stock = stock négatif silencieux).
+  // null = inconnu/chargement (on ne bloque pas tant qu'on ne sait pas).
+  const [stockDispo, setStockDispo] = useState<number | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Produit[]>([]);
@@ -122,6 +127,27 @@ export default function V2SortiePage() {
         console.error("[sortie] chargement admins échoué:", err);
       });
   }, []);
+
+  // Stock dispo du produit sélectionné dans le dépôt actif.
+  useEffect(() => {
+    if (!produit || !depot) {
+      setStockDispo(null);
+      return;
+    }
+    let annule = false;
+    setStockDispo(null);
+    void getStockProduitDepot(depot.id, produit.id)
+      .then((q) => {
+        if (!annule) setStockDispo(q);
+      })
+      .catch((err) => {
+        console.error("[sortie] stock dispo indisponible:", err);
+        if (!annule) setStockDispo(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [produit, depot]);
 
   const handleScanRef = useRef<((code: string) => void) | undefined>(undefined);
   const handleScan = async (code: string) => {
@@ -178,6 +204,20 @@ export default function V2SortiePage() {
     }
     if (type === "autre" && !motifLibre.trim()) {
       toast.error("Indiquez le motif libre");
+      return;
+    }
+    // Décimales réservées aux produits vendus au poids. Une sortie de
+    // 1,5 "Poulet entier" (unité) n'a pas de sens → on bloque.
+    if (!produitAuPoids && !Number.isInteger(qte)) {
+      toast.error("Ce produit se compte à l'unité : quantité entière requise");
+      return;
+    }
+    // Garde-fou stock : une sortie > stock pousserait stock_par_depot en
+    // négatif. On bloque quand on connaît le stock dispo.
+    if (stockDispo !== null && qte > stockDispo) {
+      toast.error(
+        `Stock insuffisant : ${stockDispo} en stock, sortie de ${qte} refusée`,
+      );
       return;
     }
     setSubmitting(true);
@@ -306,13 +346,25 @@ export default function V2SortiePage() {
     }
   }
 
+  // unit_type='weight' (ou bracket) = produit vendu au poids → décimales OK.
+  const produitAuPoids =
+    produit?.unit_type === "weight" || produit?.unit_type === "weight_bracket";
+  const qteParsed = parseFloat(quantite.replace(",", "."));
+  const qteValide = Number.isFinite(qteParsed) && qteParsed > 0;
+  const depasseStock =
+    stockDispo !== null && qteValide && qteParsed > stockDispo;
+  const decimaleInterdite =
+    qteValide && !produitAuPoids && !Number.isInteger(qteParsed);
+
   const canSubmit =
     depot &&
     employe &&
     produit &&
     type &&
     photo &&
-    parseFloat(quantite.replace(",", ".")) > 0 &&
+    qteValide &&
+    !depasseStock &&
+    !decimaleInterdite &&
     (type !== "autre" || motifLibre.trim().length > 0);
 
   return (
@@ -503,21 +555,43 @@ export default function V2SortiePage() {
       {produit && type && (
         <section className="px-5 mt-6 space-y-4">
           <div>
-            <label htmlFor="sortie-quantite">
-              <span className="label-caps text-text-tertiary mb-2 block">
-                Quantité
-              </span>
-            </label>
+            <div className="flex items-baseline justify-between mb-2">
+              <label htmlFor="sortie-quantite">
+                <span className="label-caps text-text-tertiary block">
+                  Quantité{produitAuPoids ? " (kg)" : ""}
+                </span>
+              </label>
+              {stockDispo !== null && (
+                <span className="text-xs text-text-tertiary">
+                  Stock dispo :{" "}
+                  <span className="font-bold text-text-primary tabular-nums">
+                    {stockDispo}
+                  </span>
+                </span>
+              )}
+            </div>
             <input
               id="sortie-quantite"
               type="number"
               min={0}
-              step="any"
+              max={stockDispo ?? undefined}
+              step={produitAuPoids ? "any" : "1"}
               value={quantite}
               onChange={(e) => setQuantite(e.target.value)}
-              inputMode="decimal"
+              aria-invalid={depasseStock || decimaleInterdite}
+              inputMode={produitAuPoids ? "decimal" : "numeric"}
               className="input-field text-2xl font-bold text-center min-h-[56px]"
             />
+            {depasseStock && (
+              <p role="alert" className="text-[12px] font-bold text-danger mt-2">
+                Stock insuffisant · {stockDispo} en stock seulement
+              </p>
+            )}
+            {!depasseStock && decimaleInterdite && (
+              <p role="alert" className="text-[12px] font-bold text-danger mt-2">
+                Produit à l&apos;unité · quantité entière requise
+              </p>
+            )}
           </div>
 
           <div>

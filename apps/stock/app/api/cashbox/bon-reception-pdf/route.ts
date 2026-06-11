@@ -13,7 +13,7 @@
  * À distinguer de l'INPUT bon_de_livraison qui est le doc du fournisseur.
  */
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 import {
   createBrandDoc,
   drawHeader,
@@ -111,8 +111,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "bdl_id requis" }, { status: 400 });
   }
 
-  const sb = supabase();
-  if (!sb) {
+  // Lecture côté serveur avec service_role : la table `employes`
+  // (réceptionneur, pour la signature numérique) est protégée par RLS et
+  // le rôle anon n'a pas de policy SELECT → 404 "permission denied for
+  // table employes". Le BR est un document d'archivage légal généré
+  // server-side, on lit donc hors RLS.
+  let sb;
+  try {
+    sb = supabaseServer();
+  } catch {
     return NextResponse.json({ error: "supabase_unavailable" }, { status: 503 });
   }
 

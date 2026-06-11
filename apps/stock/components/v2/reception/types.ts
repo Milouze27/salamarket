@@ -39,9 +39,16 @@ export interface BdlDetail {
 
 /** Progression dérivée (unités scannées / attendues). */
 export interface Progression {
+  /** Unités comptées vers l'objectif, plafonnées à l'attendu par ligne
+   *  (sert au calcul du pourcentage de la barre). */
   scanned: number;
+  /** Total réellement reçu (somme brute des quantite_recue, peut dépasser
+   *  l'attendu en cas de sur-réception). Source du compteur affiché. */
+  received: number;
   total: number;
   pct: number;
+  /** Vrai si au moins une ligne a reçu plus que l'attendu. */
+  hasSurReception: boolean;
 }
 
 /** État du flow d'apprentissage carton↔produit. */

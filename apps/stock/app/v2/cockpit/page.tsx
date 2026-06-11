@@ -29,7 +29,8 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
-import { getHijriContext } from "@/lib/hijri";
+import { getHijriContext, getSalutation } from "@/lib/hijri";
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { HeroKpi } from "@/components/cockpit/hero-kpi";
 import { AlertCard, AlertCardRow } from "@/components/cockpit/alert-card";
 import { RamadanCard } from "@/components/cockpit/ramadan-card";
@@ -60,6 +61,12 @@ export default function CockpitPage() {
   const employe = useV2((s) => s.currentEmploye);
   const depot = useV2((s) => s.currentDepot);
 
+  // Warnings cockpit = diagnostics techniques. Masqués en prod (jamais
+  // exposés au client en démo) sauf build dev ou flag explicite.
+  const showCockpitWarnings =
+    process.env.NEXT_PUBLIC_BUILD_ID === "dev" ||
+    process.env.NEXT_PUBLIC_SHOW_COCKPIT_WARNINGS === "true";
+
   const [snap, setSnap] = useState<CockpitSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +85,9 @@ export default function CockpitPage() {
   const [relevePrix, setRelevePrix] = useState("");
   const [releveUnite, setReleveUnite] = useState("kg");
   const [releveSaving, setReleveSaving] = useState(false);
+
+  // Scroll-lock iOS quand la modale de relevé est ouverte (anti scroll-leak).
+  useBodyScrollLock(releveOpen);
 
   async function saveReleve() {
     const prix = Number(relevePrix.replace(",", "."));
@@ -222,8 +232,20 @@ export default function CockpitPage() {
   // Fallback hijri si snap pas encore chargé (pour ne PAS attendre le réseau
   // avant d'afficher "Sabah el khir Otmane, Ramadan dans 28 jours").
   const hijriLocal = useMemo(() => getHijriContext(), []);
+  // Eyebrow du header contextuel à l'heure (le cockpit s'ouvre aussi le
+  // soir pour le brief du lendemain). Avant : « Cockpit matin » figé.
+  const cockpitMoment = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 11) return "Cockpit matin";
+    if (h < 18) return "Cockpit journée";
+    return "Cockpit soir";
+  }, []);
   const prenom = employe?.prenom ?? "Otmane";
-  const salutation = snap?.salutation ?? "Sabah el khir";
+  // Salutation contextuelle selon l'heure locale (Sabah el khir le matin,
+  // Salam la journée, Msa el khir le soir). Avant : fallback figé sur
+  // "Sabah el khir" → affichait « matin » même la nuit. Le snapshot serveur
+  // prime s'il en fournit une.
+  const salutation = snap?.salutation ?? getSalutation();
   const hijriMessage = snap?.hijri.message ?? hijriLocal.message;
   const hijriEnCours = snap?.hijri.en_cours ?? hijriLocal.en_cours;
   const hijriProchainLib =
@@ -245,7 +267,7 @@ export default function CockpitPage() {
       <div className="px-4 sm:px-5 md:px-8 pt-3 pb-2 flex items-center justify-between gap-3 max-w-7xl mx-auto w-full">
         <div className="flex flex-col">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--accent-gold-dim)]">
-            Cockpit matin
+            {cockpitMoment}
           </p>
           <p className="text-[12.5px] text-[var(--text-secondary)] tabular">
             {snap ? `Mis à jour ${timeAgo(snap.generated_at)}` : "Chargement…"}
@@ -448,8 +470,12 @@ export default function CockpitPage() {
         </div>
         {/* /grid responsive */}
 
-        {/* Footer : warnings dev/admin */}
-        {snap && snap.warnings.length > 0 && (
+        {/* Footer : warnings dev/admin — messages d'ops techniques (ex.
+            « snapshot dépôt filtré sur colonne absente »). Réservés au
+            debug : on ne les montre qu'en build dev ou si le flag
+            NEXT_PUBLIC_SHOW_COCKPIT_WARNINGS est explicitement "true",
+            jamais au client pendant une démo. */}
+        {showCockpitWarnings && snap && snap.warnings.length > 0 && (
           <div
             className="rounded-[16px] p-3 flex items-start gap-2.5 border"
             style={{

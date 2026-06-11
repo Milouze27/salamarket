@@ -39,7 +39,39 @@ export default function V2LoginPage() {
   const [employes, setEmployesList] = useState<Employe[]>([]);
   const [shake, setShake] = useState(false);
   const [errored, setErrored] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const submittedRef = useRef<string | null>(null);
+
+  // Anti brute-force côté client : après MAX_ESSAIS PIN faux, on verrouille
+  // le keypad LOCKOUT_MS. Le PIN n'a que 4 chiffres (10 000 combinaisons) :
+  // sans frein, un essai toutes les ~400ms les épuise en <1h. Le lockout
+  // casse cette cadence (le rate-limit serveur reste la barrière dure ;
+  // ici c'est la défense UX visible + premier rempart). Compteur en mémoire
+  // de page : suffisant contre un essai manuel au comptoir.
+  const MAX_ESSAIS = 5;
+  const LOCKOUT_MS = 30_000;
+  const [echecs, setEchecs] = useState(0);
+  const [lockUntil, setLockUntil] = useState(0);
+  const [lockRemaining, setLockRemaining] = useState(0);
+  const locked = lockRemaining > 0;
+
+  // Tick du compte à rebours de lockout (affiche les secondes restantes).
+  useEffect(() => {
+    if (lockUntil === 0) return;
+    const tick = () => {
+      const rem = Math.max(0, Math.ceil((lockUntil - Date.now()) / 1000));
+      setLockRemaining(rem);
+      if (rem === 0) {
+        setLockUntil(0);
+        setEchecs(0);
+        setErrorMsg(null);
+        setErrored(false);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [lockUntil]);
 
   useEffect(() => {
     void listEmployes().then(setEmployesList);
@@ -51,21 +83,24 @@ export default function V2LoginPage() {
 
   const press = useCallback(
     (d: string) => {
-      if (pin.length >= 4 || loading) return;
+      if (pin.length >= 4 || loading || locked) return;
+      // Première frappe après une erreur : on efface le message d'alerte.
+      setErrorMsg(null);
+      setErrored(false);
       haptic(10);
       setPin((p) => (p.length >= 4 ? p : p + d));
     },
-    [pin.length, loading],
+    [pin.length, loading, locked],
   );
 
   const back = useCallback(() => {
-    if (loading) return;
+    if (loading || locked) return;
     setPin((p) => {
       if (p.length === 0) return p;
       haptic(8);
       return p.slice(0, -1);
     });
-  }, [loading]);
+  }, [loading, locked]);
 
   // Saisie clavier physique (démo desktop / bornes avec pavé).
   useEffect(() => {
@@ -85,17 +120,26 @@ export default function V2LoginPage() {
         try {
           const e = await loginByPin(pin);
           if (!e) {
-            toast.error(
-              "PIN incorrect. Vérifie ta carte ou appelle le manager.",
-              { id: "pin-error" },
-            );
+            const n = echecs + 1;
+            setEchecs(n);
+            const restants = MAX_ESSAIS - n;
+            if (restants <= 0) {
+              // Lockout : on verrouille le keypad LOCKOUT_MS.
+              setLockUntil(Date.now() + LOCKOUT_MS);
+              setErrorMsg(
+                `Trop d'essais. Saisie bloquée ${Math.round(LOCKOUT_MS / 1000)} s — appelle le manager.`,
+              );
+            } else {
+              setErrorMsg(
+                `Code PIN incorrect — ${restants} essai${restants > 1 ? "s" : ""} restant${restants > 1 ? "s" : ""}.`,
+              );
+            }
             setShake(true);
             setErrored(true);
             haptic([12, 60, 12]);
             setTimeout(() => {
               setPin("");
               setShake(false);
-              setErrored(false);
               submittedRef.current = null;
             }, 420);
           } else {
@@ -124,7 +168,7 @@ export default function V2LoginPage() {
         }
       })();
     }
-  }, [pin, loading, setEmploye, setDepot, router]);
+  }, [pin, loading, echecs, setEmploye, setDepot, router]);
 
   // Démo PINs visible uniquement quand le flag est explicitement "true".
   // En prod (sans le flag), on cache pour pas exposer les codes des employés
@@ -242,7 +286,7 @@ export default function V2LoginPage() {
               <KeyButton
                 key={d}
                 onPress={() => press(String(d))}
-                disabled={loading || pin.length >= 4}
+                disabled={loading || locked || pin.length >= 4}
                 label={`Chiffre ${d}`}
               >
                 {d}
@@ -251,7 +295,7 @@ export default function V2LoginPage() {
             <div />
             <KeyButton
               onPress={() => press("0")}
-              disabled={loading || pin.length >= 4}
+              disabled={loading || locked || pin.length >= 4}
               label="Chiffre 0"
             >
               0
@@ -259,7 +303,7 @@ export default function V2LoginPage() {
             <button
               type="button"
               onClick={back}
-              disabled={pin.length === 0 || loading}
+              disabled={pin.length === 0 || loading || locked}
               className="aspect-square rounded-[20px] flex items-center justify-center active:scale-[0.94] transition-transform duration-150 ease-out disabled:opacity-30"
               style={{
                 background: "var(--surface-2)",
@@ -273,9 +317,9 @@ export default function V2LoginPage() {
             </button>
           </div>
 
-          <div className="h-9 mt-6 flex items-center justify-center">
+          <div className="min-h-9 mt-6 flex items-center justify-center px-4 text-center">
             <AnimatePresence mode="popLayout">
-              {loading && (
+              {loading ? (
                 <motion.div
                   key="loading"
                   initial={{ opacity: 0, y: 6 }}
@@ -294,7 +338,25 @@ export default function V2LoginPage() {
                   />
                   Authentification…
                 </motion.div>
-              )}
+              ) : errorMsg ? (
+                // Erreur PIN : message en couleur d'alerte (danger), persistant
+                // jusqu'à la frappe suivante. aria-live assertif pour les lecteurs
+                // d'écran (avant : seul un toast crème transitoire, illisible).
+                <motion.p
+                  key="error"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-[13.5px] font-bold"
+                  style={{ color: "var(--danger)" }}
+                >
+                  {locked && lockRemaining > 0
+                    ? `Saisie bloquée — réessaie dans ${lockRemaining} s.`
+                    : errorMsg}
+                </motion.p>
+              ) : null}
             </AnimatePresence>
           </div>
 

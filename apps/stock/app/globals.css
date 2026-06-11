@@ -639,7 +639,14 @@ button,
      Style magazine : numéro tabulaire + tiret + label caps,
      tout en or saturé. Composant React = EditorialEyebrow. */
   .eyebrow {
-    display: inline-flex;
+    /* flex (block-level), pas inline-flex : placé juste après un
+       <BackButton> (lui-même inline-flex), un eyebrow inline-flex se
+       collait À DROITE du bouton sur la même ligne (gap 0). En flex
+       block-level, le mt-* des call-sites crée enfin le saut de ligne
+       attendu. width:fit-content garde la pill au plus juste. */
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
     align-items: center;
     gap: 4px;
     text-transform: uppercase;

@@ -110,7 +110,7 @@ export function DepotSwitcher() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-2 bg-white border border-rule rounded-full pl-2 pr-3 py-1.5 text-[13px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform`}
+        className={`inline-flex items-center gap-2 min-h-[44px] bg-white border border-rule rounded-full pl-2 pr-3 py-1.5 text-[13px] font-bold text-text-primary shadow-card active:scale-[0.98] transition-transform`}
         aria-label="Choisir un dépôt"
         aria-expanded={open}
       >

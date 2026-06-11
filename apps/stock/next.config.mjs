@@ -34,13 +34,19 @@ const CSP = [
   "img-src 'self' data: blob: https:",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "frame-src js.stripe.com hooks.stripe.com",
+  // 'self' requis : la carte « Écran de retrait client » de /v2/admin
+  // embarque /v2/counter en iframe same-origin (aperçu comptoir). Sans
+  // 'self', frame-src n'autorisant que Stripe, l'iframe était bloquée en prod.
+  "frame-src 'self' js.stripe.com hooks.stripe.com",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'",
+  // 'self' (pas 'none') : autorise l'embed same-origin de /v2/counter
+  // par /v2/admin. frame-ancestors prime sur X-Frame-Options ; 'none'
+  // bloquait l'aperçu comptoir interne. Reste anti-clickjacking cross-origin.
+  "frame-ancestors 'self'",
   "upgrade-insecure-requests",
 ].join("; ");
 
@@ -95,9 +101,11 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // X-Frame-Options : DENY tout embed iframe (anti clickjacking).
-          // Stock = staff app, jamais d'embed légitime.
-          { key: "X-Frame-Options", value: "DENY" },
+          // X-Frame-Options : SAMEORIGIN — anti clickjacking cross-origin,
+          // mais autorise l'embed same-origin légitime (l'aperçu comptoir
+          // /v2/counter en iframe dans la carte « Écran de retrait client »
+          // de /v2/admin). DENY bloquait aussi cet embed interne.
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
           // CSP enforced (cf. const CSP ci-dessus). Verrouille les sources
           // exécutables/réseau aux seuls domaines légitimes Stripe /
           // Supabase / Anthropic / Sentry.

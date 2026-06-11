@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 
 interface AdminMenuProps {
   /** Le rôle de l'employé (affiché en sous-titre). */
@@ -37,6 +38,10 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
   const { density, toggle: toggleDensity } = useDensity();
   const isNight = resolved === "nuit";
   const isCompact = density === "compact";
+
+  // Scroll-lock iOS pendant que le drawer est ouvert (anti scroll-leak :
+  // le body défilait sous l'overlay sur iPhone/PWA).
+  useBodyScrollLock(open);
 
   // Ferme avec Escape
   useEffect(() => {
@@ -247,7 +252,7 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="w-9 h-9 rounded-full bg-primary text-white border border-primary flex items-center justify-center active:scale-95 transition-transform"
+        className="w-11 h-11 rounded-full bg-primary text-white border border-primary flex items-center justify-center active:scale-95 transition-transform"
         aria-label="Compte et réglages"
         aria-haspopup="dialog"
         aria-expanded={open}

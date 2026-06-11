@@ -44,6 +44,7 @@ import { useV2 } from "@/lib/v2-store";
 import { listDepots, searchProduits } from "@/lib/db";
 import type { Depot, Produit } from "@/lib/types/db";
 import { filterItemsForRole } from "@/lib/nav-roles";
+import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 
 /**
  * CommandPalette — ⌘K, l'autoroute universelle de Stock (ARCH-04).
@@ -603,6 +604,9 @@ export function CommandPalette() {
       setQuery("");
     }
   }, [open]);
+
+  // Scroll-lock iOS quand la palette est ouverte (anti scroll-leak body).
+  useBodyScrollLock(open);
 
   // Live search produits (debounce 180ms).
   useEffect(() => {

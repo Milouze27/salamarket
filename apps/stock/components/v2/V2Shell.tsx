@@ -607,7 +607,7 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher (Cmd+K)"
-                className="[@media(pointer:fine)]:hidden w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
+                className="[@media(pointer:fine)]:hidden w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
               >
                 <Search className="w-4 h-4" strokeWidth={2.2} />
               </button>

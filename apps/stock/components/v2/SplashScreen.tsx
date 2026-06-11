@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
  * Web splash screen displayed on the very first visit to "/".
  * - Fond dégradé vert sapin foncé (sapin foncé → sapin vertical)
  * - Logo Xlab "S" sapin/or au centre
- * - "Salam Market" blanc + "Stock" or
+ * - "Salam" blanc + "Stock" or (nom produit = « Salam Stock », unifié)
  * - Sous-texte "Gestion multi-dépôts" blanc 60%
  * - Fade-in du logo (300ms), pulse subtil du texte (loop 2s)
  *
@@ -68,7 +68,7 @@ export function SplashScreen() {
               letterSpacing: "-0.02em",
             }}
           >
-            Salam Market
+            Salam
           </p>
           <p
             style={{

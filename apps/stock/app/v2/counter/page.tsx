@@ -81,10 +81,15 @@ function bayWeight(bay: string | null): number {
 export default function CounterPage() {
   const [rows, setRows] = useState<CounterRow[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [now, setNow] = useState<Date>(() => new Date());
+  // Horloge : null au premier rendu (SSR + hydratation initiale identiques)
+  // puis fixée côté client après le mount. Avant : useState(() => new Date())
+  // rendait l'heure SERVEUR au SSR ≠ heure client → hydration mismatch
+  // React #418/#425 sur l'écran comptoir.
+  const [now, setNow] = useState<Date | null>(null);
 
   // Horloge en haut à droite — tick toutes les 30s (assez précis pour TV).
   useEffect(() => {
+    setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
@@ -260,10 +265,14 @@ export default function CounterPage() {
             }}
           >
             <Clock3 className="w-4 h-4 text-[var(--accent-gold-bright)]" />
-            {now.toLocaleTimeString("fr-FR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            <span suppressHydrationWarning>
+              {now
+                ? now.toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "--:--"}
+            </span>
           </div>
           <p
             className="text-[var(--text-tertiary)] mt-2 tracking-widest uppercase"

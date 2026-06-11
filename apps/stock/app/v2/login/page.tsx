@@ -9,14 +9,8 @@ import { listEmployes, loginByPin } from "@/lib/db";
 import { useV2 } from "@/lib/v2-store";
 import type { Employe } from "@/lib/types/db";
 import { V2Logo } from "@/components/v2/V2Logo";
+import { roleLabel } from "@/lib/role-label";
 
-const ROLE_LABEL: Record<string, string> = {
-  manager: "Manager",
-  admin: "Administrateur",
-  reception: "Réception",
-  preparation: "Préparation",
-  caisse: "Caisse",
-};
 
 function haptic(pattern: number | number[]) {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -233,13 +227,7 @@ export default function V2LoginPage() {
             className="text-[14.5px] mt-2"
             style={{ color: "var(--text-tertiary)" }}
           >
-            Saisis tes 4 chiffres pour ouvrir ta session.
-          </p>
-          <p
-            className="text-[12.5px] mt-1.5"
-            style={{ color: "var(--text-tertiary)" }}
-          >
-            Saisis les 4 chiffres de ta carte employé (fournis par Otmane).
+            Saisis les 4 chiffres de ta carte employé pour ouvrir ta session.
           </p>
         </header>
 
@@ -400,7 +388,7 @@ export default function V2LoginPage() {
                       className="text-[10.5px] font-semibold uppercase tracking-wide shrink-0"
                       style={{ color: "var(--text-tertiary)" }}
                     >
-                      {ROLE_LABEL[e.role] ?? e.role}
+                      {roleLabel(e.role)}
                     </span>
                   </li>
                 ))}

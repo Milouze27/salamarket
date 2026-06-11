@@ -14,16 +14,18 @@ import { BackButton } from "@/components/v2/BackButton";
 import type { MonthlyReport } from "@/lib/cashbox/monthly-report";
 import { downloadOrShareBlob, base64ToBlob } from "@/lib/download-helper";
 import { DownloadCompleteBar } from "@/components/v2/DownloadCompleteBar";
+import { formatTvaRateFr } from "@/lib/cashbox/tva";
 
-const fr = (n: number) => new Intl.NumberFormat("fr-FR", {
-  style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0,
-}).format(n);
 const fr2 = (n: number) => new Intl.NumberFormat("fr-FR", {
   style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2,
 }).format(n);
 
-function previousMonthYYYYMM() {
-  const d = new Date(); d.setMonth(d.getMonth() - 1);
+// ADM-14 — défaut = MOIS EN COURS (1ère option du combo, cohérent avec le
+// titre de la page). Évite l'ambiguïté « Mai sélectionné alors qu'on est en
+// juin » : l'utilisateur choisit explicitement un mois clos passé via le
+// sélecteur s'il le souhaite.
+function currentMonthYYYYMM() {
+  const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 function monthLabel(v: string) {
@@ -33,7 +35,7 @@ function monthLabel(v: string) {
 
 export default function RapportMensuelPage() {
   const router = useRouter();
-  const [mois, setMois] = useState(previousMonthYYYYMM());
+  const [mois, setMois] = useState(currentMonthYYYYMM());
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloaded, setDownloaded] = useState<{ filename: string } | null>(null);
@@ -191,16 +193,19 @@ export default function RapportMensuelPage() {
                   <span className="text-text-tertiary font-medium ml-1">vs mois précédent</span>
                 </p>
               )}
+              {/* ADM-07 — barre de RÉPARTITION (pas une alerte) : on bannit
+                l'or (réservé aux états d'alerte) et on utilise deux teintes
+                sapin de la marque pour distinguer Magasin / Drive. */}
               <div className="mt-4 h-2 rounded-full bg-cream overflow-hidden flex">
                 <div className="bg-primary h-full" style={{ width: `${report.consolidation.repartition.magasin_pct}%` }} />
-                <div className="bg-gold-bright h-full" style={{ width: `${report.consolidation.repartition.drive_pct}%` }} />
+                <div className="bg-primary-hover h-full" style={{ width: `${report.consolidation.repartition.drive_pct}%` }} />
               </div>
               <div className="flex justify-between mt-2 text-[11px]">
                 <span className="inline-flex items-center gap-1.5 text-text-secondary">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />Magasin {report.consolidation.repartition.magasin_pct.toFixed(0)}%
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-text-secondary">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold-bright" />Drive {report.consolidation.repartition.drive_pct.toFixed(0)}%
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-hover" />Drive {report.consolidation.repartition.drive_pct.toFixed(0)}%
                 </span>
               </div>
               <div className="mt-5 border-t border-rule pt-4">
@@ -208,7 +213,7 @@ export default function RapportMensuelPage() {
                 <div className="space-y-1.5">
                   {Object.entries(report.consolidation.tva_par_taux).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0])).map(([rate, v]) => (
                     <div key={rate} className="flex items-baseline text-[12.5px]">
-                      <span className="w-[80px] font-bold text-text-primary tabular">TVA {rate}%</span>
+                      <span className="w-[80px] font-bold text-text-primary tabular">TVA {formatTvaRateFr(rate)}</span>
                       <span className="flex-1 text-right tabular font-bold text-text-primary">{fr2(v.tva)}</span>
                       <span className="ml-3 text-text-tertiary text-[10.5px] tabular w-[110px] text-right">base {fr2(v.base_ht)}</span>
                     </div>
@@ -314,7 +319,7 @@ function SectionCard({ icon, eyebrow, ca, m1l, m1v, m2l, m2v, top, hint }: {
                 <span className="text-text-tertiary w-4 tabular">{idx + 1}.</span>
                 <span className="flex-1 truncate text-text-primary font-semibold">{p.designation}</span>
                 <span className="text-text-tertiary tabular text-[10.5px]">×{p.quantite}</span>
-                <span className="font-bold text-text-primary tabular w-[68px] text-right">{fr(p.ca)}</span>
+                <span className="font-bold text-text-primary tabular w-[84px] text-right">{fr2(p.ca)}</span>
               </li>
             ))}
           </ul>

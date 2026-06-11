@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { computeDailyZ, yesterdayIsoParis } from "@/lib/cashbox/daily-z";
 import { checkCashboxAuth } from "@/lib/cashbox/auth";
-import { formatDateFr, formatHeureFr } from "@/lib/cashbox/tva";
+import { formatDateFr, formatHeureFr, formatTvaRateFr } from "@/lib/cashbox/tva";
 import {
   createBrandDoc,
   drawHeader,
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       for (const [rate, v] of Object.entries(summary.tva_par_taux).sort(
         (a, b) => parseFloat(a[0]) - parseFloat(b[0])
       )) {
-        doc.text(`TVA ${rate}%`, MARGIN, y);
+        doc.text(`TVA ${formatTvaRateFr(rate)}`, MARGIN, y);
         doc.text(eur(v.tva), PAGE_W - MARGIN, y, { align: "right" });
         doc.setFontSize(8);
         setInk(doc, PALETTE.muted.rgb);

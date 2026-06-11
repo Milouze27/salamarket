@@ -127,6 +127,23 @@ export function estimateStripeFee(ttcEuro: number): number {
   return ttcEuro * 0.014 + 0.25;
 }
 
+/**
+ * Format français d'un taux de TVA (ADM-06).
+ * Entrée numérique ou chaîne (clé de bucket "5.5"/"10.0"/"20.0") → libellé FR
+ * avec virgule décimale et espace insécable avant le %.
+ * Ex. 5.5 → "5,5 %", 10 → "10 %", "20.0" → "20 %".
+ */
+export function formatTvaRateFr(rate: number | string): string {
+  const n = typeof rate === "string" ? parseFloat(rate) : rate;
+  if (Number.isNaN(n)) return String(rate);
+  // Pas de décimale superflue (10,0 % → 10 %), mais on garde 5,5 %.
+  const str = new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(n);
+  return `${str} %`;
+}
+
 /** Format français : 1 234,56 € */
 export function formatEurFr(n: number): string {
   return new Intl.NumberFormat("fr-FR", {

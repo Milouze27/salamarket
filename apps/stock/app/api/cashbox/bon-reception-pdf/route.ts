@@ -14,6 +14,7 @@
  */
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { verifyDocToken } from "@/lib/doc-token";
 import {
   createBrandDoc,
   drawHeader,
@@ -109,6 +110,17 @@ export async function GET(req: Request) {
   const bdlId = url.searchParams.get("bdl_id");
   if (!bdlId) {
     return NextResponse.json({ error: "bdl_id requis" }, { status: 400 });
+  }
+
+  // ADM-04 — le BR expose SIRET fournisseur, nom du réceptionneur, notes et
+  // photos palette. Servi par <a href> au staff (login PIN, pas de session
+  // Supabase), on protège donc l'accès par un lien signé qui expire
+  // (?t=token via signBonReceptionPdfUrl), comme facture Pro / ticket. Sans
+  // token valide on refuse pour fermer l'énumération d'UUID par un tiers.
+  const token = url.searchParams.get("t");
+  const auth = verifyDocToken("bon-reception", bdlId, token);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: 401 });
   }
 
   // Lecture côté serveur avec service_role : la table `employes`
@@ -267,8 +279,19 @@ export async function GET(req: Request) {
         y = margin;
       }
 
-      // Tronque le nom à la largeur dispo (mesure réelle)
-      const fullNom = l.produits?.nom ?? "Produit";
+      // Tronque le nom à la largeur dispo (mesure réelle).
+      // ADM-04 (BR) — si la jointure produits.nom est nulle (produit non
+      // rattaché), on n'écrit plus le générique « Produit » illisible : on
+      // retombe sur l'EAN réel (produits.ean ou code_barre_attendu), puis en
+      // dernier recours « Réf. <8 derniers car. de l'id ligne> ».
+      const refFallback = (
+        l.produits?.ean ??
+        l.code_barre_attendu ??
+        ""
+      ).trim();
+      const fullNom =
+        l.produits?.nom?.trim() ||
+        (refFallback ? `Réf. ${refFallback}` : `Réf. ${l.id.slice(0, 8)}`);
       const nomLines = doc.splitTextToSize(fullNom, COL_NOM_W);
       const nomDisplay = nomLines[0] + (nomLines.length > 1 ? "…" : "");
       doc.text(nomDisplay, COL_NOM_X, y);

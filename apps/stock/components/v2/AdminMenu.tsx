@@ -7,6 +7,7 @@ import { LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { roleLabel } from "@/lib/role-label";
 
 interface AdminMenuProps {
   /** Le rôle de l'employé (affiché en sous-titre). */
@@ -26,14 +27,6 @@ interface AdminMenuProps {
  * + le Plus-sheet (V2Shell) + ⌘K. Ce composant ne garde que ce qui lui était
  * propre : le thème jour/nuit, la densité d'affichage et la déconnexion.
  */
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Administrateur",
-  manager: "Manager",
-  preparation: "Préparation",
-  reception: "Réception",
-  caisse: "Caisse",
-};
-
 export function AdminMenu({ role, name, onLogout }: AdminMenuProps) {
   const [open, setOpen] = useState(false);
   const { resolved, toggle: toggleTheme } = useTheme();
@@ -110,7 +103,7 @@ export function AdminMenu({ role, name, onLogout }: AdminMenuProps) {
                     className="text-[10px] font-bold uppercase tracking-[0.14em]"
                     style={{ color: "var(--accent-gold-dim)" }}
                   >
-                    {role ? (ROLE_LABEL[role] ?? role) : "Compte"}
+                    {role ? roleLabel(role) : "Compte"}
                   </p>
                   <p className="text-sm font-bold text-text-primary leading-tight">
                     {name ?? "Réglages"}

@@ -259,15 +259,29 @@ export default function BonsReceptionAdminPage() {
                         </p>
                       )}
                     </div>
-                    <a
-                      href={`/api/cashbox/bon-reception-pdf?bdl_id=${r.id}`}
-                      target="_blank"
-                      rel="noopener"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // ADM-04 : route BR protégée par lien signé. On ouvre
+                        // l'onglet avant l'await (anti pop-up) puis on y pose
+                        // l'URL signée générée côté serveur.
+                        const win = window.open(
+                          "",
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                        void import("@/lib/actions/doc-url")
+                          .then((m) => m.signBonReceptionPdfUrl(r.id))
+                          .then((url) => {
+                            if (win) win.location.href = url;
+                          })
+                          .catch(() => win?.close());
+                      }}
                       className="bg-primary text-white rounded-full px-3.5 py-2 text-[11.5px] font-bold inline-flex items-center gap-1.5 shadow-card active:scale-[0.97] transition-transform shrink-0"
                     >
                       <Download className="w-3.5 h-3.5" />
                       BR PDF
-                    </a>
+                    </button>
                   </div>
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-rule text-[11.5px] text-text-secondary">

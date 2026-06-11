@@ -19,6 +19,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import type { DailyZSummary } from "@/lib/cashbox/daily-z";
 import { downloadOrShareBlob, base64ToBlob } from "@/lib/download-helper";
 import { DownloadCompleteBar } from "@/components/v2/DownloadCompleteBar";
+import { formatTvaRateFr } from "@/lib/cashbox/tva";
 
 function formatEurFr(n: number) {
   return new Intl.NumberFormat("fr-FR", {
@@ -56,6 +57,26 @@ function yesterdayIsoParis() {
   );
   paris.setDate(paris.getDate() - 1);
   return paris.toISOString().slice(0, 10);
+}
+
+/**
+ * ADM-09 — garde-fou sur les toasts loading (z-pdf / z-csv / z-email).
+ * Affiche le toast de chargement et arme un timeout : si l'opération
+ * n'aboutit pas dans `ms` (échec silencieux du palier <a>/Share côté iOS,
+ * download qui ne résout jamais), le toast bascule en erreur au lieu de
+ * tourner indéfiniment. Renvoie un `clear()` à appeler dès qu'une issue
+ * (succès/erreur/annulation) est traitée.
+ */
+function loadingToastWithTimeout(
+  id: string,
+  message: string,
+  ms = 15000,
+): () => void {
+  toast.loading(message, { id });
+  const timer = setTimeout(() => {
+    toast.error("Délai dépassé — réessaie le téléchargement.", { id });
+  }, ms);
+  return () => clearTimeout(timer);
 }
 
 export default function RecapFiscalPage() {
@@ -100,12 +121,13 @@ export default function RecapFiscalPage() {
   }, [date]);
 
   async function downloadPdf() {
-    toast.loading("Génération du PDF…", { id: "z-pdf" });
+    const clearGuard = loadingToastWithTimeout("z-pdf", "Génération du PDF…");
     const filename = `salam-drive-Z-${date}.pdf`;
     // HOTFIX sécu : passe par server action (x-internal-secret).
     const { fetchDailyZPdf } = await import("@/lib/actions/cashbox");
     const bin = await fetchDailyZPdf(date);
     if (!bin.ok || !bin.base64) {
+      clearGuard();
       toast.error(bin.error ?? "Erreur", { id: "z-pdf" });
       return;
     }
@@ -116,6 +138,7 @@ export default function RecapFiscalPage() {
       contentType: "application/pdf",
       shareTitle: `Récap fiscal ${date}`,
     });
+    clearGuard();
     if (r.success) {
       toast.success(
         r.strategy === "share"
@@ -134,12 +157,13 @@ export default function RecapFiscalPage() {
   }
 
   async function downloadCsv() {
-    toast.loading("Génération du CSV…", { id: "z-csv" });
+    const clearGuard = loadingToastWithTimeout("z-csv", "Génération du CSV…");
     const filename = `salam-drive-Z-${date}.csv`;
     // HOTFIX sécu : passe par server action (x-internal-secret).
     const { fetchDailyZCsv } = await import("@/lib/actions/cashbox");
     const bin = await fetchDailyZCsv(date);
     if (!bin.ok || !bin.base64) {
+      clearGuard();
       toast.error(bin.error ?? "Erreur", { id: "z-csv" });
       return;
     }
@@ -150,6 +174,7 @@ export default function RecapFiscalPage() {
       contentType: "text/csv",
       shareTitle: `Récap fiscal CSV ${date}`,
     });
+    clearGuard();
     if (r.success) {
       toast.success(
         r.strategy === "share"
@@ -168,7 +193,7 @@ export default function RecapFiscalPage() {
   }
 
   async function sendEmail() {
-    toast.loading("Envoi par email…", { id: "z-email" });
+    const clearGuard = loadingToastWithTimeout("z-email", "Envoi par email…");
     try {
       // HOTFIX vague 7 : passer par server action (x-internal-secret).
       const { sendInternalNotify } = await import("@/lib/actions/notify");
@@ -181,10 +206,12 @@ export default function RecapFiscalPage() {
         },
       });
       if (!r.ok) throw new Error(r.error ?? "Envoi échoué");
+      clearGuard();
       toast.success("Email envoyé à l'adresse comptable configurée", {
         id: "z-email",
       });
     } catch (e) {
+      clearGuard();
       toast.error(e instanceof Error ? e.message : "Erreur", { id: "z-email" });
     }
   }
@@ -235,8 +262,8 @@ export default function RecapFiscalPage() {
               Aucune vente Drive le {formatDateFr(date)}
             </p>
             <p className="text-xs text-text-secondary mt-1.5">
-              Si tu attends des données, vérifie que les commandes sont bien
-              synchronisées via le trigger Supabase (0009 sync).
+              Si tu attends des données, vérifie que les commandes Drive du jour
+              ont bien été validées.
             </p>
           </div>
         ) : (
@@ -315,7 +342,7 @@ export default function RecapFiscalPage() {
                 .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
                 .map(([rate, v]) => (
                   <div key={rate} className="flex items-baseline">
-                    <span className="w-[88px] tabular">TVA {rate}%</span>
+                    <span className="w-[88px] tabular">TVA {formatTvaRateFr(rate)}</span>
                     <span className="flex-1 tabular text-right">
                       {formatEurFr(v.tva)}
                     </span>

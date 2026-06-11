@@ -36,11 +36,21 @@ export function ValidationFooter({
       <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
         {bdl.statut === "receptionnee" ? (
           <>
-            {/* BR PDF — disponible une fois la réception validée */}
-            <a
-              href={`/api/cashbox/bon-reception-pdf?bdl_id=${bdl.id}`}
-              target="_blank"
-              rel="noopener"
+            {/* BR PDF — disponible une fois la réception validée.
+              ADM-04 : route protégée par lien signé (token HMAC qui expire).
+              On ouvre l'onglet AVANT l'await (anti pop-up bloquée) puis on y
+              pose l'URL signée générée côté serveur. */}
+            <button
+              type="button"
+              onClick={() => {
+                const win = window.open("", "_blank", "noopener,noreferrer");
+                void import("@/lib/actions/doc-url")
+                  .then((m) => m.signBonReceptionPdfUrl(bdl.id))
+                  .then((url) => {
+                    if (win) win.location.href = url;
+                  })
+                  .catch(() => win?.close());
+              }}
               className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
             >
               <span className="flex items-center gap-3">
@@ -57,7 +67,7 @@ export function ValidationFooter({
                 </span>
               </span>
               <Download className="w-5 h-5 text-gold" />
-            </a>
+            </button>
           </>
         ) : (
           <>

@@ -21,3 +21,9 @@ export async function signTicketUrl(id: string): Promise<string> {
   const t = signDocToken("ticket", id);
   return `/api/commandes-drive/${encodeURIComponent(id)}/ticket?t=${encodeURIComponent(t)}`;
 }
+
+/** URL signée du Bon de réception PDF (valable 1h). bdlId = bons_de_livraison.id. */
+export async function signBonReceptionPdfUrl(bdlId: string): Promise<string> {
+  const t = signDocToken("bon-reception", bdlId);
+  return `/api/cashbox/bon-reception-pdf?bdl_id=${encodeURIComponent(bdlId)}&t=${encodeURIComponent(t)}`;
+}

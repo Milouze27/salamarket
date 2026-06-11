@@ -43,6 +43,7 @@ import {
 import { useV2 } from "@/lib/v2-store";
 import { dataMode, countDlcAlerts } from "@/lib/db";
 import { filterItemsForRole } from "@/lib/nav-roles";
+import { roleLabel } from "@/lib/role-label";
 import { DepotSwitcher } from "./DepotSwitcher";
 import { V2Logo } from "./V2Logo";
 import { AdminMenu } from "./AdminMenu";
@@ -567,11 +568,9 @@ export function V2Shell({
                     {employe.prenom}
                   </p>
                   <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#C9A227] truncate">
-                    {employe.role === "admin"
-                      ? "Admin"
-                      : employe.role === "manager"
-                        ? "Manager"
-                        : employe.role}
+                    {/* EMP-01 — libellé FR unique via roleLabel (bannit l'enum
+                      brut 'preparation' et les rendus incohérents). */}
+                    {roleLabel(employe.role)}
                     {depot ? ` · ${depot.nom}` : ""}
                   </p>
                 </div>
@@ -590,7 +589,7 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher — palette de commandes (Cmd+K)"
-                className="hidden [@media(pointer:fine)]:inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
+                className="hidden [@media(pointer:fine)]:inline-flex shrink-0 items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
               >
                 <Search className="w-3.5 h-3.5 opacity-80" strokeWidth={2.2} />
                 <span className="opacity-80">Rechercher</span>
@@ -601,21 +600,30 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher (Cmd+K)"
-                className="[@media(pointer:fine)]:hidden w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
+                className="[@media(pointer:fine)]:hidden shrink-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
               >
                 <Search className="w-4 h-4" strokeWidth={2.2} />
               </button>
 
-              {/* DepotSwitcher discret */}
-              <DepotSwitcher />
+              {/* DepotSwitcher discret.
+                EMP2-01 / MGR-07 — les actions du header ne doivent PAS se
+                compresser : sans shrink-0 sur les boutons, flexbox réduisait
+                le bloc identité (flex-1 min-w-0) à 0px sur mobile 390px, le
+                nom/rôle de l'employé devenant illisible. On fige donc la
+                largeur des actions ; l'identité absorbe le reste et truncate. */}
+              <span className="shrink-0">
+                <DepotSwitcher />
+              </span>
 
               {/* Menu / répertoire unique — toutes les pages groupées + compte&réglages.
                 Disponible pour tous les rôles (logout vit dedans). */}
-              <AdminMenu
-                role={employe.role}
-                name={employe.prenom ?? undefined}
-                onLogout={logout}
-              />
+              <span className="shrink-0">
+                <AdminMenu
+                  role={employe.role}
+                  name={employe.prenom ?? undefined}
+                  onLogout={logout}
+                />
+              </span>
             </div>
             {mode === "local" && process.env.NODE_ENV === "development" && (
               <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">

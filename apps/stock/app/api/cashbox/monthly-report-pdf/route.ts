@@ -18,6 +18,7 @@ import {
   PAGE_W,
 } from "@/lib/pdf/brand";
 import { checkCashboxAuth as checkAuth } from "@/lib/cashbox/auth";
+import { formatTvaRateFr } from "@/lib/cashbox/tva";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -85,7 +86,7 @@ export async function GET(req: Request) {
     for (const [rate, v] of Object.entries(
       report.consolidation.tva_par_taux,
     ).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))) {
-      doc.text(`TVA ${rate}%`, MARGIN, y);
+      doc.text(`TVA ${formatTvaRateFr(rate)}`, MARGIN, y);
       doc.text(`Base : ${eur(v.base_ht)}`, MARGIN + 30, y);
       doc.text(`TVA : ${eur(v.tva)}`, MARGIN + 80, y);
       doc.text(`TTC : ${eur(v.ttc)}`, MARGIN + 130, y);

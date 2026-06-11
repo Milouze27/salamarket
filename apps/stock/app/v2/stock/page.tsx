@@ -411,22 +411,41 @@ export default function V2StockPage() {
                   {canSeeMargin &&
                     p.cout_achat_ht != null &&
                     p.prix_vente != null &&
-                    p.prix_vente > 0 && (
-                      <p
-                        className="text-[11px] font-bold mt-0.5"
-                        style={{ color: "var(--success)" }}
-                      >
-                        Marge{" "}
-                        {Math.round(
-                          ((p.prix_vente - p.cout_achat_ht) / p.prix_vente) *
-                            100,
-                        )}
-                        %{" "}
-                        <span className="font-medium text-text-tertiary">
-                          · coût {p.cout_achat_ht.toFixed(2)} €
-                        </span>
-                      </p>
-                    )}
+                    p.prix_vente > 0 &&
+                    (() => {
+                      const margePct = Math.round(
+                        ((p.prix_vente - p.cout_achat_ht) / p.prix_vente) * 100,
+                      );
+                      // Marge négative = PV sous le coût : volontaire en promo
+                      // anti-gaspi (DLC courte). On ne la peint pas en vert
+                      // (succès trompeur) et on signale le contexte par un
+                      // badge léger, sans masquer le chiffre.
+                      const negative = margePct < 0;
+                      return (
+                        <p
+                          className="text-[11px] font-bold mt-0.5"
+                          style={{
+                            color: negative
+                              ? "var(--text-tertiary)"
+                              : "var(--success)",
+                          }}
+                        >
+                          Marge {margePct}%{" "}
+                          {negative && (
+                            <span
+                              className="font-bold uppercase tracking-wide text-[9.5px]"
+                              style={{ color: "var(--accent-gold)" }}
+                            >
+                              promo/DLC
+                            </span>
+                          )}
+                          <span className="font-medium text-text-tertiary">
+                            {" "}
+                            · coût {p.cout_achat_ht.toFixed(2)} €
+                          </span>
+                        </p>
+                      );
+                    })()}
                 </div>
               </div>
             ))}

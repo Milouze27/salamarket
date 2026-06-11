@@ -8,11 +8,11 @@ import {
   ArrowLeft,
   Bot,
   ChevronDown,
+  Database,
   Send,
   Sparkles,
   TrendingUp,
   User,
-  Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
@@ -35,6 +35,22 @@ const SUGGESTIONS = [
   "Quelle est ma démarque actuelle ?",
   "Quels employés ont le score IA le plus bas ?",
 ];
+
+// Traduit les noms de fonctions internes (jargon dev SQL-like) en libellés
+// métier lisibles par un commerçant. L'écran ne doit jamais exposer
+// « query_alertes(type) » : on affiche « Alertes », « Stock actuel », etc.
+const TOOL_LABELS: Record<string, string> = {
+  query_ventes_periode: "Ventes sur la période",
+  query_stock_actuel: "Stock actuel",
+  query_alertes: "Alertes",
+  query_top_produits: "Top produits",
+  query_employes_perf: "Performance équipe",
+  query_demarque: "Démarque",
+};
+
+function toolLabel(name: string): string {
+  return TOOL_LABELS[name] ?? name.replace(/^query_/, "").replace(/_/g, " ");
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -323,15 +339,17 @@ function ToolBadges({
   open: boolean;
   onToggle: () => void;
 }) {
+  // Libellés métier dédupliqués (plusieurs appels d'une même source = 1 chip).
+  const sources = Array.from(new Set(tools.map((t) => toolLabel(t.name))));
   return (
     <div className="mt-2">
       <button
         onClick={onToggle}
         className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary"
       >
-        <Wrench className="w-3 h-3" />
-        {tools.length} tool{tools.length > 1 ? "s" : ""} exécuté
-        {tools.length > 1 ? "s" : ""}
+        <Database className="w-3 h-3" />
+        {sources.length} source{sources.length > 1 ? "s" : ""} consultée
+        {sources.length > 1 ? "s" : ""}
         <ChevronDown
           className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
         />
@@ -344,17 +362,14 @@ function ToolBadges({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="mt-2 space-y-1.5">
-              {tools.map((t, i) => (
-                <div
-                  key={i}
-                  className="bg-cream rounded-xl px-3 py-2 text-[11px] font-mono"
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {sources.map((label) => (
+                <span
+                  key={label}
+                  className="bg-cream rounded-full px-2.5 py-1 text-[11px] font-bold text-text-secondary"
                 >
-                  <span className="text-primary font-bold">{t.name}</span>
-                  <span className="text-text-tertiary">
-                    ({Object.keys(t.input as object).join(", ")})
-                  </span>
-                </div>
+                  {label}
+                </span>
               ))}
             </div>
           </motion.div>

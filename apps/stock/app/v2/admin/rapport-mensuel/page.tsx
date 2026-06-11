@@ -33,6 +33,28 @@ function monthLabel(v: string) {
   return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
+// Un « top produit » doit nommer un PRODUIT, pas un n° de ticket. Les imports
+// Cashmag sans détail-ligne portent une désignation synthétique du type
+// « Ticket J1-20260610 #134 » : ce n'est pas un produit, on l'écarte du Top.
+// On retire aussi le mot « démo » des libellés (rapport destiné au comptable).
+function isTicketLabel(designation: string): boolean {
+  return /^ticket\b/i.test(designation.trim());
+}
+function cleanProduitLabel(designation: string): string {
+  return designation
+    .replace(/\bd[ée]mo\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// Un delta n'a de sens qu'avec un mois précédent comparable. Au tout premier
+// mois de données (le précédent est vide ou quasi nul), le % explose
+// (« +8355 % ») et n'a aucune valeur : on l'affiche « 1er mois » à la place.
+const EVOLUTION_MAX_PCT = 500;
+function evolutionIsMeaningful(evo: number | null): evo is number {
+  return evo !== null && Math.abs(evo) <= EVOLUTION_MAX_PCT;
+}
+
 export default function RapportMensuelPage() {
   const router = useRouter();
   const [mois, setMois] = useState(currentMonthYYYYMM());
@@ -185,12 +207,16 @@ export default function RapportMensuelPage() {
               <p className="text-[32px] font-extrabold text-text-primary mt-1.5 tabular leading-none">
                 {fr2(report.consolidation.ca_ttc_total)}
               </p>
-              {report.consolidation.evolution_vs_mois_precedent !== null && (
+              {evolutionIsMeaningful(report.consolidation.evolution_vs_mois_precedent) ? (
                 <p className={`mt-2 inline-flex items-center gap-1 text-[12px] font-bold tabular ${report.consolidation.evolution_vs_mois_precedent >= 0 ? "text-success" : "text-danger"}`}>
                   {report.consolidation.evolution_vs_mois_precedent >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                   {report.consolidation.evolution_vs_mois_precedent >= 0 ? "+" : ""}
                   {report.consolidation.evolution_vs_mois_precedent.toFixed(1)}%
                   <span className="text-text-tertiary font-medium ml-1">vs mois précédent</span>
+                </p>
+              ) : (
+                <p className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium tabular text-text-tertiary">
+                  1er mois de données — pas de comparaison
                 </p>
               )}
               {/* ADM-07 — barre de RÉPARTITION (pas une alerte) : on bannit
@@ -295,6 +321,11 @@ function SectionCard({ icon, eyebrow, ca, m1l, m1v, m2l, m2v, top, hint }: {
   m1l: string; m1v: string; m2l: string; m2v: string;
   top: Array<{ designation: string; quantite: number; ca: number }>; hint: string;
 }) {
+  // On n'affiche que de VRAIS produits : on écarte les désignations qui sont
+  // des n° de ticket (Cashmag sans détail-ligne) et on nettoie le mot « démo ».
+  const topProduits = top
+    .filter((p) => !isTicketLabel(p.designation))
+    .map((p) => ({ ...p, designation: cleanProduitLabel(p.designation) }));
   return (
     <div className="bg-white border border-rule rounded-[20px] p-5 shadow-card">
       <p className="section-eyebrow">{icon}{eyebrow}</p>
@@ -310,11 +341,11 @@ function SectionCard({ icon, eyebrow, ca, m1l, m1v, m2l, m2v, top, hint }: {
           <p className="text-[15px] font-extrabold text-text-primary tabular mt-1">{m2v}</p>
         </div>
       </div>
-      {top.length > 0 && (
+      {topProduits.length > 0 && (
         <div className="mt-4 border-t border-rule pt-3">
-          <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-2">Top {Math.min(top.length, 5)} produits</p>
+          <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-2">Top {Math.min(topProduits.length, 5)} produits</p>
           <ul className="space-y-1.5">
-            {top.slice(0, 5).map((p, idx) => (
+            {topProduits.slice(0, 5).map((p, idx) => (
               <li key={p.designation} className="flex items-baseline gap-2 text-[12px]">
                 <span className="text-text-tertiary w-4 tabular">{idx + 1}.</span>
                 <span className="flex-1 truncate text-text-primary font-semibold">{p.designation}</span>

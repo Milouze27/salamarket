@@ -47,6 +47,22 @@ function anonymize(fullName: string): string {
   return `${first} ${last.charAt(0).toUpperCase()}.`;
 }
 
+/**
+ * Affiche un numéro de commande propre côté CLIENT (écran public).
+ * Le préfixe technique « DEMO- » (jeu de données de démonstration) ne doit
+ * jamais être exposé au comptoir : on le retire à l'affichage, sans toucher
+ * la donnée en base. « DEMO-20260611-001 » → « 001 ».
+ */
+function displayNumero(numero: string): string {
+  const raw = (numero ?? "").trim();
+  const stripped = raw.replace(/^DEMO-/i, "");
+  // Ne garder que le segment court final (après le dernier tiret) s'il existe,
+  // pour un repère lisible de loin (« 001 »). Sinon on garde tel quel.
+  const parts = stripped.split("-");
+  const tail = parts[parts.length - 1];
+  return tail || stripped;
+}
+
 function formatHm(iso: string | null): string {
   if (!iso) return "--:--";
   const d = new Date(iso);
@@ -458,7 +474,7 @@ function BayCard({ row, isOldest }: { row: CounterRow; isOldest: boolean }) {
         className="font-bold tracking-wide text-[var(--text-primary)] tabular"
         style={{ fontSize: "clamp(18px, 1.8vw, 28px)" }}
       >
-        {row.numero_commande}
+        {displayNumero(row.numero_commande)}
       </p>
 
       {/* Client + heure */}

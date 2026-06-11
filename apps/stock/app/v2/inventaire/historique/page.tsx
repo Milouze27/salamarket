@@ -154,7 +154,7 @@ export default function V2InventaireHistoriquePage() {
                             {e?.prenom ?? "?"} {e?.nom ?? ""}
                           </p>
                           <p className="text-[11px] text-text-tertiary">
-                            Théo {i.quantite_attendue ?? "—"} · Compté{" "}
+                            Théorique {i.quantite_attendue ?? "—"} · Compté{" "}
                             {i.quantite_comptee ?? "—"}
                           </p>
                         </div>

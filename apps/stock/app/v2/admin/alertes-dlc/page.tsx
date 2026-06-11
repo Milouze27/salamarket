@@ -429,7 +429,7 @@ export default function AlertesDlcPage() {
           icon={<Tag className="w-4 h-4" />}
           eyebrow="REMISE TOTALE"
           value={`-${Math.round(kpi.valeurRemise)} €`}
-          label="estimation démo"
+          label="démarque potentielle estimée"
         />
       </section>
 
@@ -535,10 +535,13 @@ export default function AlertesDlcPage() {
                           : "—"
                       }
                     />
+                    {/* Lot périmé (DLC dépassée) = à jeter : aucune remise ne
+                        s'applique. Afficher « -50% » ici contredirait le badge
+                        « ni vente ni promo ». On neutralise donc la valeur. */}
                     <Stat
                       label="Remise"
-                      value={`-${a.remise_suggeree_pct}%`}
-                      strong={a.remise_suggeree_pct > 0}
+                      value={estPerime(a) ? "—" : `-${a.remise_suggeree_pct}%`}
+                      strong={!estPerime(a) && a.remise_suggeree_pct > 0}
                     />
                     <Stat
                       label="Niveau"

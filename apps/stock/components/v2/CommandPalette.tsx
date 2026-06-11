@@ -720,7 +720,7 @@ export function CommandPalette() {
               autoFocus
               value={query}
               onValueChange={setQuery}
-              placeholder="Que voulez-vous faire ? casse, étiquette, forecast, produit…"
+              placeholder="Que veux-tu faire ? casse, étiquette, forecast, produit…"
               className="flex-1 bg-transparent outline-none text-[15px] text-text-primary placeholder:text-text-tertiary font-medium"
             />
             <kbd className="hidden [@media(pointer:fine)]:inline-flex items-center gap-1 text-[10px] font-bold text-text-tertiary bg-cream border border-rule rounded-md px-1.5 py-0.5 tracking-wider">

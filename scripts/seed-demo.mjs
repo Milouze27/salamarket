@@ -55,6 +55,27 @@ const sb = createClient(SUPABASE_URL, SERVICE_KEY, {
 // ── Helpers ────────────────────────────────────────────────────────
 const report = { tables_touched: [], inserted: {}, updated: {}, errors: [], skipped: [] };
 
+// EAN-13 interne — MÊME algo que apps/stock/lib/labels/barcode.ts (figé par B2).
+// On le redéclare ici car barcode.ts est "use client" (non importable en .mjs).
+const INTERNAL_EAN_PREFIX = '290';
+function ean13CheckDigit(twelveDigits) {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const d = twelveDigits.charCodeAt(i) - 48;
+    sum += i % 2 === 0 ? d : d * 3;
+  }
+  return (10 - (sum % 10)) % 10;
+}
+function makeInternalEan13(seq) {
+  const body = String(Math.trunc(Math.abs(seq))).padStart(9, '0').slice(-9);
+  const twelve = INTERNAL_EAN_PREFIX + body;
+  return twelve + String(ean13CheckDigit(twelve));
+}
+function isValidEan13(ean) {
+  if (!/^\d{13}$/.test(ean || '')) return false;
+  return Number(ean[12]) === ean13CheckDigit(ean.slice(0, 12));
+}
+
 function log(level, msg) {
   const dryTag = DRY ? '[DRY]' : '';
   const tag = { info: '·', ok: '✓', warn: '!', err: '✗' }[level] || '·';
@@ -119,6 +140,55 @@ async function loadRefs() {
   log('ok', `fourn Bigard: ${fournBigard?.nom} (${fournBigard?.id}) certif=${fournBigard?.certif_organisme || 'NONE'}`);
 
   return { depots, fournisseurs, employes, produits, depotParticulier, fournBigard, findProd, findDepot };
+}
+
+// ── 0bis. B7/B2 : Réparer les EAN internes 290 au check-digit faux ──
+//
+// Bug historique : le 13e chiffre des codes internes 290 valait le numéro
+// d'ordre au lieu du check-digit calculé → bwip-js refuse, étiquettes non
+// scannables. B2 a figé l'algo (makeInternalEan13). Ici on réécrit chaque
+// EAN 290 invalide avec une SÉQUENCE UNIQUE (pas une simple recompute du
+// 13e chiffre, qui collisionnerait : 290020000001{1..5} répareraient tous
+// vers le même ...16). On part d'une base de séquence haute pour ne jamais
+// percuter les codes 290 déjà valides en base.
+async function repairInternalEans() {
+  log('info', 'B7/B2: réparer les EAN internes 290 au check-digit faux…');
+
+  const { data: rows, error } = await sb
+    .from('produits')
+    .select('id, ean')
+    .like('ean', '290%');
+  if (error) { log('warn', `lecture EAN 290 échouée: ${error.message}`); return; }
+
+  const all290 = rows || [];
+  const invalid = all290.filter((r) => !isValidEan13(r.ean));
+  const valid = all290.filter((r) => isValidEan13(r.ean));
+  log('info', `EAN 290: ${all290.length} total, ${invalid.length} invalides`);
+  if (invalid.length === 0) { log('ok', 'aucun EAN 290 invalide — rien à réparer'); return; }
+
+  // Base de séquence : au-dessus de tous les seq 290 déjà utilisés, pour
+  // garantir l'unicité des codes régénérés.
+  const usedSeqs = new Set(
+    all290
+      .map((r) => (r.ean || '').slice(3, 12))
+      .filter((b) => /^\d{9}$/.test(b))
+      .map((b) => Number(b)),
+  );
+  let seq = Math.max(0, ...usedSeqs) + 1;
+
+  for (const r of invalid) {
+    while (usedSeqs.has(seq)) seq++;
+    const fixed = makeInternalEan13(seq);
+    usedSeqs.add(seq);
+    seq++;
+    if (DRY) { log('info', `would fix ${r.ean} → ${fixed} (id ${r.id})`); continue; }
+    const upd = await safeOp('produits', 'update', () =>
+      sb.from('produits').update({ ean: fixed }).eq('id', r.id));
+    if (upd) {
+      track('produits', 'update', 1);
+      log('ok', `EAN ${r.ean} → ${fixed} (id ${r.id})`);
+    }
+  }
 }
 
 // ── 1. DEMO-001 : Seed 1 PO Bigard draft (3 lignes ~1240€) ──────────
@@ -763,6 +833,11 @@ async function verify() {
     const r = await c.q();
     log('ok', `${c.name}: count=${r.count ?? '?'} sample=${JSON.stringify((r.data || []).slice(0, 2))}`);
   }
+  // Vérif EAN internes 290 : tous valides après réparation ?
+  const { data: eans290 } = await sb.from('produits').select('ean').like('ean', '290%');
+  const bad = (eans290 || []).filter((r) => !isValidEan13(r.ean));
+  log(bad.length === 0 ? 'ok' : 'err',
+    `EAN 290: ${(eans290 || []).length} total, ${bad.length} invalides${bad.length ? ' → ' + bad.map((b) => b.ean).join(',') : ''}`);
 }
 
 // ── Main ───────────────────────────────────────────────────────────
@@ -770,6 +845,7 @@ async function verify() {
   log('info', `Seed démo Salamarket — DRY=${DRY} URL=${SUPABASE_URL}`);
   try {
     const refs = await loadRefs();
+    await repairInternalEans();
     await seedPo(refs);
     await seedCommandesDrive(refs);
     await seedForecast(refs);

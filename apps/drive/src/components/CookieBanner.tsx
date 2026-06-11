@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Cookie, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { emitConsentChange } from "@/lib/cookie-consent";
+import { useDialogA11y } from "@/hooks/useDialogA11y";
 
 const STORAGE_KEY = "cookieConsent";
 
@@ -141,6 +142,13 @@ export const CookieBanner = ({
     setVisible(false);
     setShowPrefs(false);
   };
+
+  // a11y (A11Y-02/03) : la modale Préférences est un vrai dialog modal
+  // (scrim + aria-modal) → Escape la ferme, le focus initial entre dedans,
+  // Tab y est piégé et le focus revient au déclencheur à la fermeture.
+  const prefsRef = useDialogA11y<HTMLDivElement>(showPrefs, () =>
+    setShowPrefs(false),
+  );
 
   if (!visible || typeof document === "undefined") return null;
 
@@ -291,9 +299,10 @@ export const CookieBanner = ({
           pas popovers". */}
       {showPrefs && (
         <div
+          ref={prefsRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Préférences de cookies détaillées"
+          aria-labelledby="cookie-prefs-title"
           className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/55 backdrop-blur-sm p-0 md:p-6"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowPrefs(false);
@@ -301,7 +310,10 @@ export const CookieBanner = ({
         >
           <div className="w-full md:max-w-lg bg-[#FAF7EE] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh]">
             <header className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-[#0E3B2E]/10">
-              <h2 className="text-[18px] font-bold text-[#0E3B2E]">
+              <h2
+                id="cookie-prefs-title"
+                className="text-[18px] font-bold text-[#0E3B2E]"
+              >
                 Préférences de cookies
               </h2>
               <button

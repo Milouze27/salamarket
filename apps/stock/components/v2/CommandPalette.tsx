@@ -45,6 +45,7 @@ import { listDepots, searchProduits } from "@/lib/db";
 import type { Depot, Produit } from "@/lib/types/db";
 import { filterItemsForRole } from "@/lib/nav-roles";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
+import { useDialogA11y } from "@/lib/hooks/useDialogA11y";
 
 /**
  * CommandPalette — ⌘K, l'autoroute universelle de Stock (ARCH-04).
@@ -578,7 +579,8 @@ export function CommandPalette() {
         setOpen((v) => !v);
         return;
       }
-      // Échap pendant ouverture géré par cmdk lui-même.
+      // Escape pendant l'ouverture est géré par useDialogA11y (focus-trap +
+      // close), branché plus bas sur le conteneur de la palette.
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -607,6 +609,12 @@ export function CommandPalette() {
 
   // Scroll-lock iOS quand la palette est ouverte (anti scroll-leak body).
   useBodyScrollLock(open);
+
+  // a11y (A11Y-01/A11Y-02) : Escape ferme la palette (le badge « ESC » le
+  // promettait sans le faire — cmdk ne capte Escape qu'en Radix Dialog),
+  // focus-trap réel (Tab borné) et retour du focus au déclencheur.
+  const close = useCallback(() => setOpen(false), []);
+  const dialogRef = useDialogA11y<HTMLDivElement>(open, close);
 
   // Live search produits (debounce 180ms).
   useEffect(() => {
@@ -672,6 +680,7 @@ export function CommandPalette() {
 
   return (
     <div
+      ref={dialogRef}
       className="fixed inset-0 z-[100] flex items-start justify-center px-3 pt-[10vh] sm:pt-[14vh]"
       role="dialog"
       aria-modal="true"

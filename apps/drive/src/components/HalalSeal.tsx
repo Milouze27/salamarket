@@ -63,8 +63,11 @@ export const HalalSeal = ({ size = "md", className }: HalalSealProps) => {
         className="halal-seal-ring absolute rounded-full border-[1.5px] border-[#C9A227]/55"
         style={{ inset: t.ring }}
       />
+      {/* a11y A11Y-08 : or assombri #7A5E00 (≈5.7:1 sur crème, AA) au lieu de
+          #C9A227 (2.26:1, échec WCAG AA) pour ce petit texte 9-12px. Le ring
+          décoratif au-dessus garde l'or vif #C9A227 (élément non textuel). */}
       <span
-        className="relative uppercase font-bold text-[#C9A227] leading-tight"
+        className="relative uppercase font-bold text-[#7A5E00] leading-tight"
         style={{ fontSize: t.kicker, letterSpacing: "0.2em" }}
       >
         Halal

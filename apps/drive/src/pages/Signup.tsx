@@ -337,8 +337,17 @@ export default function Signup() {
               .
             </span>
           </label>
+            {/* a11y (B1-12) : message annoncé au lecteur d'écran via
+                role=alert + aria-live, cohérent avec la bannière d'erreur
+                serveur et le formulaire de connexion (sinon le blocage CGV
+                restait silencieux pour les utilisateurs clavier/SR). */}
             {touched.acceptTerms && !acceptedTerms && (
-              <p id="acceptTerms-error" className="text-xs text-red-600 mt-1.5">
+              <p
+                id="acceptTerms-error"
+                role="alert"
+                aria-live="polite"
+                className="text-xs text-red-600 mt-1.5"
+              >
                 Vous devez accepter les CGV et la politique de confidentialité
                 pour créer un compte.
               </p>

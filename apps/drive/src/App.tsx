@@ -13,6 +13,7 @@ import { RouteChrome } from "@/components/RouteChrome";
 import { RoutedErrorBoundary } from "@/components/RoutedErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { OnboardingGate } from "@/components/OnboardingGate";
+import { SkipLink } from "@/components/SkipLink";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
 // pénaliser le 1st paint sur l'écran d'accueil et la connexion. Le
@@ -128,6 +129,8 @@ const App = () => (
       <BrowserRouter>
         <RoutedErrorBoundary>
           <AuthProvider>
+            {/* a11y A11Y-11 : 1er focusable de la page, saute le header. */}
+            <SkipLink />
             <OnboardingGate />
             <InstallPrompt />
             <Suspense fallback={<RouteFallback />}>

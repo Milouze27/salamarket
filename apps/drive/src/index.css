@@ -446,3 +446,26 @@ body {
   overscroll-behavior-y: contain;
   overflow-x: clip;
 }
+
+/* a11y motion — prefers-reduced-motion global (S2 « tics motion »).
+   Au-delà du ring du sceau (déjà coupé plus haut), on neutralise les
+   animations d'entrée (tailwindcss-animate : animate-in / slide-in / zoom-in
+   des modales, cartes, onboarding) et on réduit les transitions à un fondu
+   quasi-instantané pour les utilisateurs qui demandent moins de mouvement.
+   On NE met pas animation:none brutal partout (casserait les spinners de
+   chargement, qui restent un signal utile) : on borne durée et itérations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Les spinners de chargement gardent leur rotation continue (feedback). */
+  .animate-spin {
+    animation-duration: 0.8s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

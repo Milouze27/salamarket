@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HalalSeal } from "@/components/HalalSeal";
+import { useDialogA11y } from "@/hooks/useDialogA11y";
 
 const EXIT_DURATION_MS = 300;
 
@@ -55,11 +56,17 @@ export const OnboardingFlow = ({ onDismiss }: OnboardingFlowProps) => {
     }, EXIT_DURATION_MS);
   };
 
+  // a11y (A11Y-03 / B1-14 / WELCOME-MODAL-NO-FOCUS) : focus initial dans le
+  // modal, focus-trap (Tab borné), et Escape ferme l'onboarding comme le CTA —
+  // un overlay plein écran sans échappatoire clavier piégeait l'utilisateur.
+  const containerRef = useDialogA11y<HTMLDivElement>(!isExiting, handleComplete);
+
   return (
     <div
+      ref={containerRef}
       role="dialog"
       aria-modal="true"
-      aria-label="Bienvenue chez Salamarket"
+      aria-labelledby="onboarding-title"
       className={cn(
         "fixed inset-0 z-[60] min-h-dvh overflow-hidden bg-gradient-to-br from-[#0E3B2E] via-[#082A20] to-[#082A20]",
         "transition-opacity duration-300 ease-out",
@@ -88,6 +95,7 @@ export const OnboardingFlow = ({ onDismiss }: OnboardingFlowProps) => {
 
       {/* Phrase de bienvenue — display sobre, cream sur sapin nuit. */}
       <h2
+        id="onboarding-title"
         className={cn(
           "max-w-[26ch] text-center text-white",
           "text-[26px] sm:text-[32px] md:text-[40px] lg:text-[44px]",

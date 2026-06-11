@@ -158,7 +158,7 @@ export function DriveRevenueChart({
         transition={{ duration: 0.28, ease: [0.22, 0.61, 0.36, 1] }}
         className="h-[180px] -mx-2 mt-3"
       >
-        <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+        <ResponsiveContainer width="100%" height={180}>
           <AreaChart
             data={sliced}
             margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
@@ -199,7 +199,8 @@ export function DriveRevenueChart({
               tickLine={false}
               axisLine={false}
               width={28}
-              domain={["dataMin - 50", "dataMax + 80"]}
+              allowDecimals={false}
+              domain={[0, "dataMax + 80"]}
             />
             <Tooltip
               cursor={{

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   BadgeCheck,
+  CalendarX,
   Factory,
   Loader2,
   PackageCheck,
@@ -14,7 +15,7 @@ import {
   Truck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { BRAND } from "@/config/brand";
+import { BRAND, STATUS } from "@/config/brand";
 import { qrSvg } from "@/lib/qr-svg";
 
 /**
@@ -93,22 +94,43 @@ const certifierLogoLabel = (certifierId: string | null): string => {
 };
 
 const LotPublic = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: rawId } = useParams<{ id: string }>();
+  // ─── Normalisation de l'ID lot pour les deep-links ──────────────
+  // Un QR scanné, un lien partagé ou une URL tapée à la main peuvent
+  // arriver avec une casse différente (/lot/l2026-05-a23), un espace
+  // ou un %20 en fin (trailing). Les IDs de lot sont stockés en
+  // MAJUSCULES sans espace ; on normalise AVANT toute requête et tout
+  // affichage pour ne jamais déclarer "introuvable" un lot qui existe.
+  const id = useMemo(
+    () => (rawId ? rawId.trim().toUpperCase() : rawId),
+    [rawId],
+  );
   const [lot, setLot] = useState<Lot | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  // ─── SEO : update <title> + meta description from the lot ────
+  // ─── SEO : update <title> from the lot ──────────────────────────
+  // On ne pose un <title> définitif qu'une fois le lot RÉSOLU. Tant
+  // que la résolution n'a pas confirmé l'existence du lot, on garde un
+  // titre neutre : un lot inexistant ne doit jamais produire un titre
+  // « Lot X · Traçabilité halal » qui le légitimerait à tort (SEO,
+  // partage de lien). Le titre riche (avec le produit) est posé plus
+  // bas, dans l'effet qui dépend de `lot`.
   useEffect(() => {
-    if (!id) return;
-    document.title = `Lot ${id} · Traçabilité halal · Salamarket`;
-  }, [id]);
+    if (loading) {
+      document.title = "Traçabilité halal · Salamarket";
+    } else if (notFound || !lot) {
+      document.title = "Lot introuvable · Traçabilité halal · Salamarket";
+    }
+  }, [loading, notFound, lot]);
 
   useEffect(() => {
-    if (lot?.produits?.nom) {
-      document.title = `Lot ${lot.id} — ${lot.produits.nom} · Traçabilité halal Salamarket`;
+    if (lot) {
+      document.title = lot.produits?.nom
+        ? `Lot ${lot.id} — ${lot.produits.nom} · Traçabilité halal Salamarket`
+        : `Lot ${lot.id} · Traçabilité halal · Salamarket`;
       const desc = document.querySelector('meta[name="description"]');
-      const content = `Traçabilité halal du lot ${lot.id} — ${lot.produits.nom}. Certifié ${lot.certifier_name ?? "halal"}. Abattu à ${lot.abattoir_nom ?? "—"} le ${formatDate(lot.date_abattage)}. Page publique auto-vérifiable.`;
+      const content = `Traçabilité halal du lot ${lot.id}${lot.produits?.nom ? ` — ${lot.produits.nom}` : ""}. Certifié ${lot.certifier_name ?? "halal"}. Abattu à ${lot.abattoir_nom ?? "—"} le ${formatDate(lot.date_abattage)}. Page publique auto-vérifiable.`;
       if (desc) {
         desc.setAttribute("content", content);
       } else {
@@ -197,6 +219,37 @@ const LotPublic = () => {
     return exp >= today ? "valide" : "expire";
   }, [lot]);
   const certifExpired = certifState === "expire";
+
+  // ─── DLC dépassée — l'autre moitié du verdict halal ──────────────
+  // Un certificat valide ne suffit PAS : si la DLC du lot est passée,
+  // le produit est périmé et la page ne doit JAMAIS afficher un sceau
+  // vert plein « Certifié & vérifié ». Comparaison à minuit (start of
+  // day) : une DLC qui tombe AUJOURD'HUI reste consommable jusqu'à la
+  // fin de la journée.
+  const dlcPassed = useMemo<boolean>(() => {
+    const raw = lot?.dlc;
+    if (!raw) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(`${raw}${raw.length === 10 ? "T00:00:00" : ""}`);
+    if (Number.isNaN(d.getTime())) return false;
+    return d < today;
+  }, [lot]);
+
+  // Verdict global du moat : vert plein UNIQUEMENT si le certificat est
+  // valide ET la DLC non dépassée. Tout problème (certif expiré OU lot
+  // périmé) bascule l'affichage hors du « tout-vert » rassurant.
+  // Priorité d'affichage : certif expiré (rouge, le plus grave) >
+  // DLC dépassée (ambre) > validité inconnue (neutre) > vérifié (vert).
+  const verdict = useMemo<
+    "certif-expire" | "dlc-depassee" | "inconnu" | "verifie"
+  >(() => {
+    if (certifExpired) return "certif-expire";
+    if (dlcPassed) return "dlc-depassee";
+    if (certifState === "inconnu") return "inconnu";
+    return "verifie";
+  }, [certifExpired, dlcPassed, certifState]);
+  const hasIssue = verdict !== "verifie";
 
   // ─── QR re-scannable (auto-encodé, zéro service externe) ─────────
   // Le client peut re-montrer / re-scanner / partager cette preuve.
@@ -303,6 +356,49 @@ const LotPublic = () => {
   const produit = lot.produits;
   const fournisseur = lot.fournisseurs;
 
+  // ─── Thème du badge HERO selon le verdict ────────────────────────
+  // Un seul endroit décide des couleurs/icône/libellé du sceau, pour
+  // que les 4 sous-éléments (fond, bordure, pastille, texte) ne
+  // puissent jamais diverger entre eux.
+  const heroBadge = {
+    "certif-expire": {
+      bg: "rgba(229,72,61,0.18)",
+      border: BRAND.colors.destructive,
+      dot: BRAND.colors.destructive,
+      dotFg: "#FFFFFF",
+      icon: <ShieldAlert className="w-4 h-4" />,
+      textColor: "#FFE7E4",
+      label: "Certificat expiré",
+    },
+    "dlc-depassee": {
+      bg: "rgba(217,119,6,0.20)",
+      border: BRAND.colors.warning,
+      dot: BRAND.colors.warning,
+      dotFg: "#FFFFFF",
+      icon: <CalendarX className="w-4 h-4" />,
+      textColor: "#FFE9CC",
+      label: "DLC dépassée",
+    },
+    inconnu: {
+      bg: "rgba(255,255,255,0.12)",
+      border: "rgba(255,255,255,0.25)",
+      dot: "rgba(255,255,255,0.2)",
+      dotFg: BRAND.colors.primary,
+      icon: <ShieldQuestion className="w-4 h-4" />,
+      textColor: "rgba(255,255,255,0.9)",
+      label: "Validité non renseignée",
+    },
+    verifie: {
+      bg: "rgba(255,255,255,0.14)",
+      border: BRAND.colors.accent,
+      dot: BRAND.colors.accent,
+      dotFg: BRAND.colors.primary,
+      icon: <ShieldCheck className="w-4 h-4" />,
+      textColor: BRAND.colors.accent,
+      label: "Certifié & vérifié",
+    },
+  }[verdict];
+
   return (
     <div
       className="min-h-dvh"
@@ -353,59 +449,27 @@ const LotPublic = () => {
 
           {/* ─── Badge de confiance — le verdict, vu d'un coup d'œil ─────
               Le client musulman doit savoir AVANT TOUT si la chaîne halal
-              est vérifiée. Vert = certifié & vérifié, rouge = expiré,
-              neutre = validité non renseignée (jamais un faux vert). */}
+              est vérifiée. Vert = certifié & vérifié, rouge = certificat
+              expiré, ambre = DLC dépassée (produit périmé), neutre =
+              validité non renseignée. JAMAIS un faux vert. */}
           <div
             className="inline-flex items-center gap-2.5 rounded-full pl-2.5 pr-4 py-2"
             style={{
-              background: certifExpired
-                ? "rgba(229,72,61,0.18)"
-                : certifState === "inconnu"
-                  ? "rgba(255,255,255,0.12)"
-                  : "rgba(255,255,255,0.14)",
-              border: `1.5px solid ${
-                certifExpired
-                  ? BRAND.colors.destructive
-                  : certifState === "inconnu"
-                    ? "rgba(255,255,255,0.25)"
-                    : BRAND.colors.accent
-              }`,
+              background: heroBadge.bg,
+              border: `1.5px solid ${heroBadge.border}`,
             }}
           >
             <span
               className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-              style={{
-                background: certifExpired
-                  ? BRAND.colors.destructive
-                  : certifState === "inconnu"
-                    ? "rgba(255,255,255,0.2)"
-                    : BRAND.colors.accent,
-                color: certifExpired ? "#FFFFFF" : BRAND.colors.primary,
-              }}
+              style={{ background: heroBadge.dot, color: heroBadge.dotFg }}
             >
-              {certifExpired ? (
-                <ShieldAlert className="w-4 h-4" />
-              ) : certifState === "inconnu" ? (
-                <ShieldQuestion className="w-4 h-4" />
-              ) : (
-                <ShieldCheck className="w-4 h-4" />
-              )}
+              {heroBadge.icon}
             </span>
             <span
               className="text-[13px] font-extrabold tracking-tight"
-              style={{
-                color: certifExpired
-                  ? "#FFE7E4"
-                  : certifState === "inconnu"
-                    ? "rgba(255,255,255,0.9)"
-                    : BRAND.colors.accent,
-              }}
+              style={{ color: heroBadge.textColor }}
             >
-              {certifExpired
-                ? "Certificat expiré"
-                : certifState === "inconnu"
-                  ? "Validité non renseignée"
-                  : "Certifié & vérifié"}
+              {heroBadge.label}
             </span>
           </div>
         </div>
@@ -452,6 +516,49 @@ const LotPublic = () => {
               >
                 La validité du certificat halal de ce lot n&apos;est plus à jour
                 dans notre registre. Contactez le magasin avant tout achat.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Bandeau AMBRE : DLC dépassée (produit périmé) ──────────
+            La DLC du lot est passée à la date de consultation : le
+            produit est périmé. On l'annonce franchement, sans jamais le
+            masquer derrière un sceau vert. Indépendant du certificat :
+            un lot peut avoir un certif valide ET une DLC dépassée. */}
+        {dlcPassed && (
+          <div
+            role="alert"
+            className="p-5 rounded-2xl flex items-start gap-3"
+            style={{
+              background: "rgba(217,119,6,0.10)",
+              border: `1.5px solid ${BRAND.colors.warning}`,
+            }}
+          >
+            <CalendarX
+              className="w-6 h-6 shrink-0 mt-0.5"
+              style={{ color: BRAND.colors.warning }}
+            />
+            <div className="min-w-0">
+              <p
+                className="text-[11px] font-bold tracking-[0.16em] uppercase mb-1"
+                style={{ color: STATUS.warningText }}
+              >
+                DLC dépassée
+              </p>
+              <p
+                className="text-[14px] font-bold leading-snug mb-1"
+                style={{ color: BRAND.colors.text }}
+              >
+                Date limite de consommation dépassée le{" "}
+                {formatDate(lot.dlc)}
+              </p>
+              <p
+                className="text-[13px] leading-relaxed"
+                style={{ color: BRAND.colors.muted }}
+              >
+                Ce lot ne doit plus être consommé. La traçabilité reste
+                consultable, mais contactez le magasin avant tout achat.
               </p>
             </div>
           </div>
@@ -582,7 +689,16 @@ const LotPublic = () => {
               {
                 icon: <Truck className="w-4 h-4" />,
                 label: "Fournisseur",
-                title: fournisseur?.nom ?? "Fournisseur non renseigné",
+                // Asymétrie assumée : l'identité du fournisseur est verrouillée
+                // RLS pour le public (table fournisseurs staff-only). Si le lot
+                // EST rattaché à un fournisseur mais qu'on n'a pas pu en lire le
+                // nom (anon), on l'annonce comme protégé — pas « non renseigné »,
+                // qui laisserait croire à une chaîne incomplète.
+                title:
+                  fournisseur?.nom ??
+                  (lot.fournisseur_id
+                    ? "Fournisseur référencé"
+                    : "Fournisseur non renseigné"),
                 rows: [
                   { k: "SIRET", v: fournisseur?.siret ?? null, mono: true },
                   { k: "Lot fournisseur", v: lot.supplier_lot, mono: true },
@@ -601,7 +717,12 @@ const LotPublic = () => {
                 title: BRAND.store.name,
                 rows: [
                   { k: "Réception", v: formatDate(lot.date_reception) },
-                  { k: "DLC", v: lot.dlc ? formatDate(lot.dlc) : null, accent: true },
+                  {
+                    k: dlcPassed ? "DLC dépassée" : "DLC",
+                    v: lot.dlc ? formatDate(lot.dlc) : null,
+                    accent: !dlcPassed,
+                    danger: dlcPassed,
+                  },
                   { k: "DDM", v: lot.ddm ? formatDate(lot.ddm) : null },
                 ],
               },
@@ -616,7 +737,7 @@ const LotPublic = () => {
                   },
                 ],
                 last: true,
-                highlight: !certifExpired,
+                highlight: !hasIssue,
               },
             ]}
           />
@@ -640,7 +761,11 @@ const LotPublic = () => {
           </div>
         )}
 
-        {/* ─── Bloc trust ─────────────────────────────────── */}
+        {/* ─── Bloc trust : message contextuel selon le verdict ───────
+            Quand le certificat est expiré OU la DLC dépassée, on remplace
+            le message rassurant « Preuve auto-vérifiable » par une mise en
+            garde adaptée. Le QR, lui, reste TOUJOURS affiché en-dessous :
+            la traçabilité reste consultable et re-scannable même périmée. */}
         {certifExpired ? (
           <section
             className="p-5 rounded-2xl text-center"
@@ -668,9 +793,36 @@ const LotPublic = () => {
               connaître son statut à jour avant tout achat.
             </p>
           </section>
+        ) : dlcPassed ? (
+          <section
+            className="p-5 rounded-2xl text-center"
+            style={{
+              background: "rgba(217,119,6,0.08)",
+              border: `1px solid ${BRAND.colors.warning}`,
+            }}
+          >
+            <CalendarX
+              className="w-6 h-6 mx-auto mb-2"
+              style={{ color: BRAND.colors.warning }}
+            />
+            <p
+              className="text-[11px] font-bold tracking-[0.18em] uppercase mb-2"
+              style={{ color: STATUS.warningText }}
+            >
+              Lot périmé
+            </p>
+            <p
+              className="text-[13px] leading-relaxed"
+              style={{ color: BRAND.colors.text }}
+            >
+              La traçabilité halal de ce lot reste consultable, mais sa date
+              limite de consommation est dépassée. Ne le consommez plus et
+              contactez le magasin.
+            </p>
+          </section>
         ) : (
           <section
-            className="p-6 rounded-2xl text-center"
+            className="p-5 rounded-2xl text-center"
             style={{
               background: BRAND.colors.accentSoft,
               border: `1px solid ${BRAND.colors.borderMedium}`,
@@ -687,41 +839,50 @@ const LotPublic = () => {
               Preuve auto-vérifiable
             </p>
             <p
-              className="text-[13px] leading-relaxed mb-5"
+              className="text-[13px] leading-relaxed"
               style={{ color: BRAND.colors.text }}
             >
-              Cette page est publique et auto-vérifiable. Scannez ce code à tout
-              moment pour la retrouver, ou montrez-le à un proche.
+              Cette page est publique et auto-vérifiable. Scannez le code
+              ci-dessous à tout moment pour la retrouver, ou montrez-le à un
+              proche.
             </p>
+          </section>
+        )}
 
-            {/* ─── QR re-scannable, encodé localement ───────────────── */}
-            {qrDataUrl && (
-              <div className="flex flex-col items-center">
-                <div
-                  className="rounded-2xl p-3"
-                  style={{
-                    background: "#FFFFFF",
-                    border: `1px solid ${BRAND.colors.borderMedium}`,
-                    boxShadow: "0 4px 16px rgba(14,59,46,0.10)",
-                  }}
-                >
-                  <img
-                    src={qrDataUrl}
-                    alt={`QR du lot ${lot.id}`}
-                    width={168}
-                    height={168}
-                    className="block"
-                    style={{ width: 168, height: 168 }}
-                  />
-                </div>
-                <p
-                  className="mt-3 text-[11px] font-bold tracking-[0.08em] tabular-nums"
-                  style={{ color: BRAND.colors.accentText }}
-                >
-                  LOT {lot.id}
-                </p>
-              </div>
-            )}
+        {/* ─── QR re-scannable, encodé localement (TOUJOURS visible) ───
+            Le client peut re-montrer / re-scanner / partager cette preuve,
+            quel que soit l'état du lot. */}
+        {qrDataUrl && (
+          <section
+            className="p-6 rounded-2xl flex flex-col items-center"
+            style={{
+              background: BRAND.colors.surface,
+              border: `1px solid ${BRAND.colors.border}`,
+            }}
+          >
+            <div
+              className="rounded-2xl p-3"
+              style={{
+                background: "#FFFFFF",
+                border: `1px solid ${BRAND.colors.borderMedium}`,
+                boxShadow: "0 4px 16px rgba(14,59,46,0.10)",
+              }}
+            >
+              <img
+                src={qrDataUrl}
+                alt={`QR du lot ${lot.id}`}
+                width={168}
+                height={168}
+                className="block"
+                style={{ width: 168, height: 168 }}
+              />
+            </div>
+            <p
+              className="mt-3 text-[11px] font-bold tracking-[0.08em] tabular-nums"
+              style={{ color: BRAND.colors.accentText }}
+            >
+              LOT {lot.id}
+            </p>
           </section>
         )}
 
@@ -799,6 +960,7 @@ interface TimelineRow {
   v: string | null;
   mono?: boolean;
   accent?: boolean;
+  danger?: boolean;
 }
 interface TimelineStep {
   icon: React.ReactNode;
@@ -862,7 +1024,11 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
                     >
                       <span
                         className="text-[12px] font-semibold shrink-0"
-                        style={{ color: BRAND.colors.muted }}
+                        style={{
+                          color: r.danger
+                            ? STATUS.warningText
+                            : BRAND.colors.muted,
+                        }}
                       >
                         {r.k}
                       </span>
@@ -871,9 +1037,11 @@ function Timeline({ steps }: { steps: TimelineStep[] }) {
                           r.mono ? "tabular-nums" : ""
                         }`}
                         style={{
-                          color: r.accent
-                            ? BRAND.colors.primary
-                            : BRAND.colors.text,
+                          color: r.danger
+                            ? STATUS.warningText
+                            : r.accent
+                              ? BRAND.colors.primary
+                              : BRAND.colors.text,
                         }}
                       >
                         {r.v}

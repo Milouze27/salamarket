@@ -7,10 +7,12 @@ import {
   Award,
   BadgeCheck,
   CalendarDays,
+  CalendarX,
   Copy,
   Factory,
   Loader2,
   Printer,
+  ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -77,7 +79,14 @@ const formatDate = (iso: string | null): string => {
 
 export default function V2LotDetailPage() {
   const params = useParams<{ id: string }>();
-  const lotId = params?.id ?? "";
+  // Normalisation de l'ID lot (deep-link / QR / saisie manuelle) : les IDs
+  // sont stockés en MAJUSCULES sans espace. On trim + uppercase AVANT toute
+  // requête et tout affichage pour ne jamais déclarer « introuvable » un lot
+  // qui existe (ex. /v2/lots/l2026-05-a23 ou un %20 en fin d'URL).
+  const lotId = useMemo(
+    () => (params?.id ? decodeURIComponent(params.id).trim().toUpperCase() : ""),
+    [params?.id],
+  );
   const [lot, setLot] = useState<Lot | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -147,17 +156,32 @@ export default function V2LotDetailPage() {
     };
   }, [lotId]);
 
+  // Jour courant en Europe/Paris au format ISO (YYYY-MM-DD) : sert de
+  // référence pour comparer certif et DLC date-à-date sans dérive de fuseau.
+  const todayParis = useMemo(
+    () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" }),
+    [],
+  );
+
   const certifValid = useMemo(() => {
     if (!lot?.certifier_valid_until) return null;
     // Comparaison date-à-date en Europe/Paris : le certif halal est valide
     // jusqu'à la FIN du jour `valid_until`. Comparer un timestamp à `new Date()`
     // le faisait expirer ~2 h trop tôt (minuit UTC) le jour de validité.
-    const validUntil = lot.certifier_valid_until.slice(0, 10);
-    const todayParis = new Date().toLocaleDateString("en-CA", {
-      timeZone: "Europe/Paris",
-    });
-    return validUntil >= todayParis;
-  }, [lot]);
+    return lot.certifier_valid_until.slice(0, 10) >= todayParis;
+  }, [lot, todayParis]);
+
+  // DLC dépassée : un lot dont la date limite de consommation est passée est
+  // périmé. Le staff doit le voir, et le titre « Halal vérifié » ne doit pas
+  // rester vert plein dessus. DLC qui tombe aujourd'hui = encore consommable.
+  const dlcPassed = useMemo(() => {
+    if (!lot?.dlc) return false;
+    return lot.dlc.slice(0, 10) < todayParis;
+  }, [lot, todayParis]);
+
+  // Verdict global du moat (priorité : certif expiré > DLC dépassée > OK).
+  const certifExpired = certifValid === false;
+  const hasIssue = certifExpired || dlcPassed;
 
   function copyUrl() {
     if (!publicUrl) return;
@@ -266,6 +290,44 @@ export default function V2LotDetailPage() {
       {/* ─── Content ────────────────────────────────────────── */}
       {!loading && lot && (
         <div className="px-5 mt-6 space-y-4">
+          {/* Alertes intégrité du moat — vues EN PREMIER par le staff.
+              Certificat expiré (rouge) et/ou DLC dépassée (ambre). */}
+          {certifExpired && (
+            <div
+              role="alert"
+              className="rounded-2xl p-4 flex items-start gap-3 bg-danger-soft border border-[var(--danger-border)]"
+            >
+              <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-danger" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-danger mb-0.5">
+                  Certificat expiré
+                </p>
+                <p className="text-[13px] font-semibold text-text-primary leading-snug">
+                  Certificat de traçabilité expiré le{" "}
+                  {formatDate(lot.certifier_valid_until)}. Ne pas présenter ce
+                  lot comme certifié sans renouvellement.
+                </p>
+              </div>
+            </div>
+          )}
+          {dlcPassed && (
+            <div
+              role="alert"
+              className="rounded-2xl p-4 flex items-start gap-3 bg-warning-soft border border-[var(--warning-border)]"
+            >
+              <CalendarX className="w-5 h-5 shrink-0 mt-0.5 text-warning" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-warning mb-0.5">
+                  DLC dépassée
+                </p>
+                <p className="text-[13px] font-semibold text-text-primary leading-snug">
+                  Date limite de consommation dépassée le {formatDate(lot.dlc)}.
+                  Lot périmé — à retirer de la vente.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* QR card — admin-only preview + print */}
           <section className="bg-white border border-rule rounded-2xl p-5 shadow-card">
             <div className="flex items-center justify-between mb-4">
@@ -342,11 +404,18 @@ export default function V2LotDetailPage() {
             </div>
           </section>
 
-          {/* Certification */}
+          {/* Certification — le titre suit l'état réel du certificat :
+              JAMAIS « Halal vérifié » sur un certificat expiré. */}
           <Section
             eyebrow="02 — Certification"
-            title="Halal vérifié"
-            icon={<ShieldCheck className="w-5 h-5" />}
+            title={certifExpired ? "Certificat expiré" : "Halal vérifié"}
+            icon={
+              certifExpired ? (
+                <ShieldAlert className="w-5 h-5" />
+              ) : (
+                <ShieldCheck className="w-5 h-5" />
+              )
+            }
           >
             <DataRow label="Certificateur" value={lot.certifier_name} />
             <DataRow label="Identifiant" value={lot.certifier_id} mono />
@@ -354,15 +423,17 @@ export default function V2LotDetailPage() {
               <div className="flex items-center gap-2 py-1.5">
                 <span
                   className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                    certifValid === false
+                    certifExpired
                       ? "bg-danger-soft text-danger"
                       : "bg-success-soft text-success"
                   }`}
                 >
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                  {certifValid === false
-                    ? "Expiré"
-                    : "Valide"} jusqu&apos;au{" "}
+                  {certifExpired ? (
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                  ) : (
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                  )}
+                  {certifExpired ? "Expiré le" : "Valide jusqu'au"}{" "}
                   {formatDate(lot.certifier_valid_until)}
                 </span>
               </div>
@@ -422,7 +493,12 @@ export default function V2LotDetailPage() {
               value={formatDate(lot.date_reception)}
             />
             {lot.dlc && (
-              <DataRow label="DLC" value={formatDate(lot.dlc)} accent />
+              <DataRow
+                label={dlcPassed ? "DLC dépassée" : "DLC"}
+                value={formatDate(lot.dlc)}
+                accent={!dlcPassed}
+                danger={dlcPassed}
+              />
             )}
             {lot.ddm && <DataRow label="DDM" value={formatDate(lot.ddm)} />}
           </Section>
@@ -479,20 +555,29 @@ function DataRow({
   value,
   mono = false,
   accent = false,
+  danger = false,
 }: {
   label: string;
   value: string | null;
   mono?: boolean;
   accent?: boolean;
+  danger?: boolean;
 }) {
   if (!value) return null;
+  const valueColor = danger
+    ? "text-warning"
+    : accent
+      ? "text-primary"
+      : "text-text-primary";
   return (
     <div className="flex items-baseline justify-between gap-3 py-1.5 border-b border-rule last:border-b-0">
-      <span className="text-[12px] font-semibold text-text-secondary shrink-0">
+      <span
+        className={`text-[12px] font-semibold shrink-0 ${danger ? "text-warning" : "text-text-secondary"}`}
+      >
         {label}
       </span>
       <span
-        className={`text-[14px] font-bold text-right truncate ${mono ? "tabular-nums" : ""} ${accent ? "text-primary" : "text-text-primary"}`}
+        className={`text-[14px] font-bold text-right truncate ${mono ? "tabular-nums" : ""} ${valueColor}`}
       >
         {value}
       </span>

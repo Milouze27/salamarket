@@ -332,7 +332,7 @@ const Admin = () => {
             {historyQuery.isLoading ? (
               <Skeleton className="h-full w-full rounded-2xl" />
             ) : historyQuery.data && historyQuery.data.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minHeight={180}>
                 <AreaChart
                   data={historyQuery.data}
                   margin={{ top: 10, right: 0, left: -20, bottom: 0 }}

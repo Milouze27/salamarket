@@ -51,7 +51,12 @@ const ChartContainer = React.forwardRef<
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        {/* minHeight évite le warning Recharts "width(-1)"/"height(-1)" : sans
+            dimension de départ, le ResponsiveContainer rend avec -1 le premier
+            frame (avant que le ratio aspect-video soit mesuré). */}
+        <RechartsPrimitive.ResponsiveContainer minHeight={180}>
+          {children}
+        </RechartsPrimitive.ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   );

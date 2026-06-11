@@ -17,56 +17,17 @@
  * tap target ≥ 44px (mémoire user iPhone PWA).
  */
 
-import { useEffect, useState } from "react";
 import { ChevronRight, Leaf } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
-
-interface DlcRow {
-  produit_id: string;
-  niveau_alerte: string;
-}
+import { useDlcProductIds } from "@/components/HalalBadgeLink";
 
 export const CourteDateBanner = () => {
   const navigate = useNavigate();
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const { data, error } = await supabase
-          .from("v_dlc_alerts")
-          .select("produit_id, niveau_alerte")
-          .neq("niveau_alerte", "ok")
-          .neq("niveau_alerte", "forcé"); // les forcés sont retirés du Drive
-
-        if (cancelled) return;
-
-        if (error) {
-          console.warn("[CourteDateBanner] fetch error:", error.message);
-          setCount(0);
-          return;
-        }
-
-        // Dédoublonne par produit (un produit peut avoir plusieurs lots).
-        const rows = (data ?? []) as DlcRow[];
-        const unique = new Set(rows.map((r) => r.produit_id));
-        setCount(unique.size);
-      } catch (e) {
-        if (!cancelled) {
-          console.warn("[CourteDateBanner] unexpected error:", e);
-          setCount(0);
-        }
-      }
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Même source que le filtre /?courte_date=1 (useDlcProductIds) → le compteur
+  // affiché ne peut plus diverger du nombre réel de produits filtrés
+  // (cf. ANTIGASPI-PHANTOM-COUNT). Batch v_dlc_alerts partagé, 0 requête en plus.
+  const ids = useDlcProductIds();
+  const count = ids?.size ?? null;
 
   // Hide tant qu'on n'a pas chargé OU si aucun produit dispo.
   if (count === null || count === 0) return null;

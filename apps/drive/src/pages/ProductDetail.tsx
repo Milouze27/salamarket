@@ -265,13 +265,33 @@ const ProductDetail = () => {
   // /lot/{id}. Plus de fallback lot démo codé en dur ici.
 
   if (isLoading) {
+    // CLS (PERF-01) : le skeleton DOIT reproduire la structure et la hauteur
+    // de la fiche réelle, sinon le passage skeleton→contenu fait sauter toute
+    // la page (CLS mesuré 0.473). On réplique le conteneur grille desktop, le
+    // décalage `-mt-4` mobile et assez de blocs pour réserver la hauteur du
+    // bloc info (titre, prix, badge halal, description, sections).
+    const shimmer =
+      "bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer";
     return (
       <div className="min-h-dvh bg-[#FAF7EE]">
-        <div className="aspect-square w-full max-w-2xl mx-auto bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
-        <div className="px-4 py-5 space-y-3 max-w-2xl mx-auto">
-          <div className="h-8 w-2/3 rounded bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
-          <div className="h-5 w-1/3 rounded bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
-          <div className="h-20 w-full rounded bg-[linear-gradient(90deg,#E8E4D8_0%,#F2F2EE_50%,#E8E4D8_100%)] bg-[length:200%_100%] animate-skeleton-shimmer" />
+        <div className="md:max-w-6xl md:mx-auto md:px-8 md:pt-24 md:grid md:grid-cols-[1.05fr_1fr] md:gap-12 lg:gap-16">
+          <div className="md:sticky md:top-24 md:self-start">
+            <div
+              className={`aspect-square w-full max-w-2xl mx-auto md:max-w-none md:rounded-[36px] ${shimmer}`}
+            />
+          </div>
+          <div className="max-w-2xl mx-auto px-4 -mt-4 md:mt-0 md:px-0 pb-cta-only md:!pb-8">
+            <div className="px-1 pt-2 space-y-3">
+              <div className={`h-3 w-24 rounded ${shimmer}`} />
+              <div className={`h-9 w-2/3 rounded ${shimmer}`} />
+              <div className={`h-8 w-1/3 rounded ${shimmer}`} />
+              <div className={`h-[72px] w-full rounded-3xl ${shimmer}`} />
+              <div className={`h-16 w-full rounded-2xl ${shimmer}`} />
+              <div className={`h-4 w-full rounded ${shimmer}`} />
+              <div className={`h-4 w-5/6 rounded ${shimmer}`} />
+              <div className={`h-4 w-3/4 rounded ${shimmer}`} />
+            </div>
+          </div>
         </div>
       </div>
     );

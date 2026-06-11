@@ -25,11 +25,13 @@
  * directement produit_id côté lots/DLC.
  */
 
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, ShieldCheck } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/format";
+import {
+  useLatestLotsByProduct,
+  useDlcAlertsByProduct,
+} from "@/hooks/useDlcBatch";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data — lot le plus récent (passeport halal)
@@ -42,54 +44,19 @@ interface LatestLot {
 
 /**
  * Lot le plus récent d'un produit. `enabled=false` (ex. produit non viande)
- * court-circuite la requête. Best-effort : toute erreur RLS/réseau → null,
- * jamais de throw (on dégrade en fallback « Halal certifié » sans lien).
+ * court-circuite la dérivation. Lit le batch partagé (useLatestLotsByProduct,
+ * une seule requête `produits_lots` dédupliquée via TanStack) au lieu d'un
+ * fetch par carte → supprime le N+1 du catalogue.
  */
 function useLatestLot(productId: string | undefined, enabled: boolean) {
-  const [lot, setLot] = useState<LatestLot | null>(null);
-
-  useEffect(() => {
-    if (!enabled || !productId) {
-      setLot(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("produits_lots" as never)
-          .select("id, certifier_name")
-          .eq("produit_id", productId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (cancelled) return;
-        if (error || !data) {
-          setLot(null);
-          return;
-        }
-        setLot(data as unknown as LatestLot);
-      } catch {
-        if (!cancelled) setLot(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [productId, enabled]);
-
-  return lot;
+  const { data } = useLatestLotsByProduct();
+  if (!enabled || !productId || !data) return null;
+  return data.get(productId) ?? null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Data — remise DLC active (v_dlc_alerts)
 // ─────────────────────────────────────────────────────────────────────────────
-
-interface DlcAlertRow {
-  niveau_alerte: string | null;
-  remise_suggeree_pct: number | null;
-  jours_restants: number | null;
-}
 
 export interface DlcDiscount {
   /** Pourcentage de remise (entier, ex. 30 pour -30 %). */
@@ -119,61 +86,29 @@ export function useDlcDiscount(
   priceCents: number,
   enabled = true,
 ): DlcDiscount | null {
-  const [discount, setDiscount] = useState<DlcDiscount | null>(null);
+  const { data } = useDlcAlertsByProduct();
+  if (!enabled || !productId || !data) return null;
 
-  useEffect(() => {
-    if (!enabled || !productId) {
-      setDiscount(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("v_dlc_alerts" as never)
-          .select("niveau_alerte, remise_suggeree_pct, jours_restants")
-          .eq("produit_id", productId);
-        if (cancelled) return;
-        if (error || !data) {
-          setDiscount(null);
-          return;
-        }
-        const rows = (data as unknown as DlcAlertRow[]).filter(
-          (r) =>
-            r.niveau_alerte !== "ok" &&
-            r.niveau_alerte !== "forcé" &&
-            (r.remise_suggeree_pct ?? 0) > 0,
-        );
-        if (rows.length === 0) {
-          setDiscount(null);
-          return;
-        }
-        // Remise la plus avantageuse pour le client (le lot le plus urgent
-        // porte généralement la plus forte remise).
-        const best = rows.reduce((a, b) =>
-          (b.remise_suggeree_pct ?? 0) > (a.remise_suggeree_pct ?? 0) ? b : a,
-        );
-        const pct = best.remise_suggeree_pct ?? 0;
-        if (pct <= 0 || pct >= 100) {
-          setDiscount(null);
-          return;
-        }
-        setDiscount({
-          pct,
-          joursRestants: best.jours_restants,
-          fullCents: priceCents,
-          discountedCents: Math.round(priceCents * (1 - pct / 100)),
-        });
-      } catch {
-        if (!cancelled) setDiscount(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [productId, priceCents, enabled]);
-
-  return discount;
+  const rows = (data.get(productId) ?? []).filter(
+    (r) =>
+      r.niveau_alerte !== "ok" &&
+      r.niveau_alerte !== "forcé" &&
+      (r.remise_suggeree_pct ?? 0) > 0,
+  );
+  if (rows.length === 0) return null;
+  // Remise la plus avantageuse pour le client (le lot le plus urgent porte
+  // généralement la plus forte remise).
+  const best = rows.reduce((a, b) =>
+    (b.remise_suggeree_pct ?? 0) > (a.remise_suggeree_pct ?? 0) ? b : a,
+  );
+  const pct = best.remise_suggeree_pct ?? 0;
+  if (pct <= 0 || pct >= 100) return null;
+  return {
+    pct,
+    joursRestants: best.jours_restants,
+    fullCents: priceCents,
+    discountedCents: Math.round(priceCents * (1 - pct / 100)),
+  };
 }
 
 /**
@@ -183,51 +118,23 @@ export function useDlcDiscount(
  * Retourne null tant que c'est en cours (≠ Set vide = chargé mais aucun produit).
  */
 export function useDlcProductIds(enabled = true): Set<string> | null {
-  const [ids, setIds] = useState<Set<string> | null>(null);
-
-  useEffect(() => {
-    if (!enabled) {
-      setIds(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from("v_dlc_alerts" as never)
-          .select("produit_id, niveau_alerte, remise_suggeree_pct");
-        if (cancelled) return;
-        if (error || !data) {
-          setIds(new Set());
-          return;
-        }
-        const rows = data as unknown as Array<{
-          produit_id: string | null;
-          niveau_alerte: string | null;
-          remise_suggeree_pct: number | null;
-        }>;
-        const set = new Set<string>();
-        for (const r of rows) {
-          if (
-            r.produit_id &&
-            r.niveau_alerte !== "ok" &&
-            r.niveau_alerte !== "forcé" &&
-            (r.remise_suggeree_pct ?? 0) > 0
-          ) {
-            set.add(r.produit_id);
-          }
-        }
-        setIds(set);
-      } catch {
-        if (!cancelled) setIds(new Set());
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
-
-  return ids;
+  // Dérive du même batch partagé que les cartes (une requête v_dlc_alerts
+  // dédupliquée) au lieu d'un fetch dédié.
+  const { data, isError } = useDlcAlertsByProduct();
+  if (!enabled) return null;
+  if (isError) return new Set();
+  if (!data) return null; // encore en chargement
+  const set = new Set<string>();
+  for (const [produitId, rows] of data) {
+    const eligible = rows.some(
+      (r) =>
+        r.niveau_alerte !== "ok" &&
+        r.niveau_alerte !== "forcé" &&
+        (r.remise_suggeree_pct ?? 0) > 0,
+    );
+    if (eligible) set.add(produitId);
+  }
+  return set;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

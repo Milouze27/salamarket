@@ -158,6 +158,32 @@ Convert `products` back to a view (as 0023 intended) or create a sync trigger. T
 2. Recreating as view per 0023.
 3. Updating `produits_pro_prix` and `commandes_pro_lignes` FK to reference `produits(id)`.
 
+### Resolution retenue (COH-01, 2026-06-11) — SYNC trigger
+
+L'approche « vue » a été **écartée** : `products` est la cible de deux FK
+(`commandes_pro_lignes.produit_id`, `produits_pro_prix.produit_id`) — on ne
+peut pas remplacer une table référencée par une vue, et un DROP est destructif.
+On garde donc `products` comme table cible des FK et on la tient
+**synchronisée** depuis `produits` (source de vérité) :
+
+- Migration `20260611000010_coh01_sync_produits_to_products.sql` :
+  - fonction `public.sync_produit_to_products()` + trigger
+    `trg_sync_produit_to_products` (AFTER INSERT/UPDATE on `produits`) :
+    upsert d'une ligne `produits` visible_drive=true vers `products` (mapping
+    `nom→name`, `prix_drive_cents→price_cents`, `drive_category→category`,
+    `image_drive_url→image_url`, `drive_unit→unit`, …) ; si `visible_drive`
+    bascule à false → `products.in_stock=false` (le produit sort du catalogue
+    sans casser ses FK pro, pas de DELETE).
+  - backfill one-shot : aligne `products` sur l'état courant de `produits`.
+- Le **volet données** du backfill a été appliqué en prod le 2026-06-11 via
+  `scripts/coh01-sync-catalogue.mjs` (service_role, faute d'accès `db push`) :
+  `products` passe de 16 → 60 lignes, **56 in_stock=true** = catalogue Drive
+  complet et cohérent (prix/catégorie alignés sur `produits`).
+- **À FAIRE** : appliquer le volet DDL (fonction + trigger) via
+  `supabase db push --include-all --yes` dès qu'un accès DB est disponible,
+  pour que la synchro soit maintenue **en continu** (sinon elle reste un
+  backfill ponctuel à rejouer à chaque modif catalogue).
+
 ---
 
 ## Tables

@@ -2,7 +2,7 @@
 /**
  * seed-demo.mjs — Seed unifié des data démo (PO, commandes, forecast, activité, weekly picks, casse).
  *
- * Mission : préparer la prod pour la démo Otmane (J = 10 juin 2026).
+ * Mission : préparer la prod pour la démo Otmane (J = 11 juin 2026).
  *
  * Fixe 6 démo-blockers :
  *   - DEMO-001 : /v2/po vide → seed 1 PO Bigard 3 lignes ~1240€
@@ -18,8 +18,10 @@
  *   node scripts/seed-demo.mjs            # run live
  *   node scripts/seed-demo.mjs --dry      # affiche les ops sans exécuter
  *
- * Re-run J-1 démo : exécuter ce même script à 23h00 le 9 juin 2026 pour
- * recaler toutes les dates "aujourd'hui" sur le jour de la démo.
+ * Re-run J-1 démo : exécuter ce même script la veille au soir pour recaler
+ * toutes les dates "aujourd'hui" sur le jour de la démo. Les dates sensibles
+ * (DLC du lot traçabilité, J-1/J-8 cockpit) sont dérivées de today() → le
+ * script reste correct quel que soit le jour d'exécution.
  */
 
 import { readFileSync } from 'node:fs';
@@ -594,6 +596,15 @@ async function seedLotTracabilite(refs) {
   // Récupère le fournisseur Bigard (ou fallback) déjà patché halal.
   const fourn = refs.fournBigard;
 
+  // Dates dérivées de today() pour rester valides quel que soit le jour de
+  // run : DLC = J-1 (dépassée → déclenche l'alerte démo "forcé/démarquer"),
+  // abattage = J-14, réception = J-3.
+  const isoDaysAgo = (n) => {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  };
+
   const lotPayload = {
     id: 'L2026-05-A23',
     produit_id: prod.id,
@@ -604,9 +615,9 @@ async function seedLotTracabilite(refs) {
     certifier_valid_until: '2027-03-15',
     abattoir_nom: 'Établissements Bigard Castres',
     abattoir_pays: 'FR',
-    date_abattage: '2026-05-28',
-    date_reception: new Date().toISOString().slice(0, 10),
-    dlc: '2026-06-10',
+    date_abattage: isoDaysAgo(14),
+    date_reception: isoDaysAgo(3),
+    dlc: isoDaysAgo(1),
     quantite_recue: 12.5,
     unite: 'kg',
     notes:

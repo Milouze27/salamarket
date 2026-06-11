@@ -26,13 +26,12 @@ import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useCartStore } from "@/stores/cartStore";
-import { formatPrice, unitLabel } from "@/lib/format";
+import { formatPrice, productUnitLabel, productUnitHint } from "@/lib/format";
 import {
   computePrixEstime,
   formatKg,
   formatPriceWithUnit,
   getBrackets,
-  unitHint,
 } from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
 import {
@@ -42,11 +41,9 @@ import {
 } from "@/components/HalalBadgeLink";
 import { cn } from "@/lib/utils";
 import { cdnImage } from "@/lib/imageUrl";
+import { usePoidsInput } from "@/hooks/usePoidsInput";
 
 const MAX_QTY = 50;
-const MIN_KG = 0.1;
-const MAX_KG = 5;
-const STEP_KG = 0.1;
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -65,9 +62,12 @@ const ProductDetail = () => {
     [product],
   );
 
-  // États unifiés — selon unitType on lit qty / kg / bracketIndex
+  // États unifiés — selon unitType on lit qty / poids / bracketIndex.
+  // Le poids estimé passe par usePoidsInput (clamp partagé avec le panier :
+  // l'affiché ne diverge jamais du facturé, cf. B1-01..04).
   const [qty, setQty] = useState(1);
-  const [kg, setKg] = useState<number>(1);
+  const poids = usePoidsInput(1);
+  const kg = poids.kg;
   const [bracketIndex, setBracketIndex] = useState(0);
   const [justAdded, setJustAdded] = useState(false);
   const [heroFailed, setHeroFailed] = useState(false);
@@ -102,9 +102,8 @@ const ProductDetail = () => {
     setNotifyEmail("");
     setNotifySubmitting(false);
     setNotifySubscribed(false);
-    if (product) {
-      setKg(1);
-    }
+    // Le poids estimé se ré-initialise tout seul (usePoidsInput ré-applique
+    // son initialKg=1 ; pas de reset manuel à faire ici).
   }, [id, product]);
 
   useEffect(() => {
@@ -300,7 +299,7 @@ const ProductDetail = () => {
     );
   }
 
-  const hint = unitHint(product);
+  const hint = productUnitHint(product);
 
   // Composant Stepper kg réutilisé desktop + mobile.
   // Boutons 44×44 pour respecter Apple HIG (≥44pt). Input en
@@ -310,10 +309,8 @@ const ProductDetail = () => {
     <div className="flex items-center gap-2 bg-[#FAF7EE] rounded-2xl p-2 border border-[#0E3B2E]/15">
       <button
         type="button"
-        onClick={() =>
-          setKg((v) => Math.max(MIN_KG, Math.round((v - STEP_KG) * 10) / 10))
-        }
-        disabled={kg <= MIN_KG}
+        onClick={poids.decrement}
+        disabled={poids.atMin}
         aria-label="Diminuer le poids estimé"
         className="w-11 h-11 rounded-full bg-white border border-[#0E3B2E]/12 flex items-center justify-center text-[#0E3B2E] active:scale-90 transition-transform shadow-sm disabled:opacity-30"
       >
@@ -321,28 +318,14 @@ const ProductDetail = () => {
       </button>
       <div className="flex flex-col items-center min-w-[5.5rem]">
         <input
-          type="number"
+          // type="text" + inputMode décimal : on pilote la valeur en chaîne
+          // pour pouvoir réécrire le champ au blur (clamp visuel 9999→5,
+          // 0→0,1, 2,567→2,6). usePoidsInput partage ce clamp avec le panier.
+          type="text"
           inputMode="decimal"
-          min={MIN_KG}
-          max={MAX_KG}
-          step={STEP_KG}
-          value={kg}
-          onChange={(e) => {
-            // BUG-012 — parse robuste du poids saisi à la main.
-            //  • virgule FR → point (clavier décimal iOS pose une virgule) ;
-            //  • on ne garde QUE le 1er nombre signé/décimal et on ignore
-            //    le reste (ex. "1.2.3" → 1.2, "1kg" → 1), évite les NaN ;
-            //  • Number.isFinite filtre vide / "-" / "." / texte ;
-            //  • valeur négative ou 0 → clamp MIN_KG (pas de poids ≤ 0) ;
-            //  • hors-borne haute → clamp MAX_KG (ex. "999" → 5) ;
-            //  • arrondi au dixième (pas étapp fournisseur = 100 g).
-            const raw = e.target.value.replace(",", ".");
-            const match = raw.match(/-?\d*\.?\d+/);
-            if (!match) return;
-            const v = parseFloat(match[0]);
-            if (!Number.isFinite(v)) return;
-            setKg(Math.min(MAX_KG, Math.max(MIN_KG, Math.round(v * 10) / 10)));
-          }}
+          value={poids.text}
+          onChange={(e) => poids.onChange(e.target.value)}
+          onBlur={poids.onBlur}
           className="w-20 text-center text-base font-bold tabular-nums text-[#0E3B2E] bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/40 rounded-md py-0.5"
           aria-label="Poids estimé en kg"
         />
@@ -352,10 +335,8 @@ const ProductDetail = () => {
       </div>
       <button
         type="button"
-        onClick={() =>
-          setKg((v) => Math.min(MAX_KG, Math.round((v + STEP_KG) * 10) / 10))
-        }
-        disabled={kg >= MAX_KG}
+        onClick={poids.increment}
+        disabled={poids.atMax}
         aria-label="Augmenter le poids estimé"
         className="w-11 h-11 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform shadow-sm disabled:opacity-40"
       >
@@ -679,7 +660,7 @@ const ProductDetail = () => {
               )}
               {unitType === "unit" && (
                 <span className="text-sm text-[#6B7280]">
-                  · {unitLabel(product.unit)}
+                  · {productUnitLabel(product)}
                 </span>
               )}
             </div>

@@ -5,7 +5,23 @@ import {
   formatDate,
   formatDateTime,
   formatQty,
+  productUnitLabel,
+  productUnitHint,
 } from "@/lib/format";
+import type { Product } from "@/types/product";
+import { clampPoidsKg } from "@/hooks/usePoidsInput";
+
+const makeProduct = (over: Partial<Product>): Product => ({
+  id: "p1",
+  name: "Produit",
+  description: "",
+  priceCents: 999,
+  unit: "piece",
+  category: "boucherie",
+  imageUrl: "",
+  inStock: true,
+  ...over,
+});
 
 describe("formatEur", () => {
   it("formate en euros fr-FR avec 2 décimales", () => {
@@ -98,5 +114,88 @@ describe("formatQty", () => {
 
   it("formate 0", () => {
     expect(formatQty(0)).toBe("0");
+  });
+});
+
+describe("productUnitLabel — dérivé du unitType (COH-12 / B1-10)", () => {
+  it("weight → 'au kg' (vrai produit au poids)", () => {
+    expect(
+      productUnitLabel(makeProduct({ unitType: "weight", unit: "kg" })),
+    ).toBe("au kg");
+  });
+
+  it("weight_bracket → 'prix forfait · taille au choix' (pas vente au poids)", () => {
+    expect(
+      productUnitLabel(makeProduct({ unitType: "weight_bracket", unit: "kg" })),
+    ).toBe("prix forfait · taille au choix");
+  });
+
+  it("unit avec unit='piece' → 'à la pièce'", () => {
+    expect(
+      productUnitLabel(makeProduct({ unitType: "unit", unit: "piece" })),
+    ).toBe("à la pièce");
+  });
+
+  it("unit avec unit='pack' → 'le pack'", () => {
+    expect(
+      productUnitLabel(makeProduct({ unitType: "unit", unit: "pack" })),
+    ).toBe("le pack");
+  });
+
+  it("unit avec unit='kg' incohérent → 'à la pièce' (jamais 'au kg')", () => {
+    // COH-12 : produit forfait à la pièce mal saisi unit='kg' en DB.
+    expect(
+      productUnitLabel(makeProduct({ unitType: "unit", unit: "kg" })),
+    ).toBe("à la pièce");
+  });
+
+  it("unitType absent (ancien produit) → traité comme unit", () => {
+    expect(productUnitLabel(makeProduct({ unitType: undefined, unit: "piece" }))).toBe(
+      "à la pièce",
+    );
+  });
+});
+
+describe("productUnitHint — phrase sous le prix (B1-09)", () => {
+  it("weight → facturé au poids réel", () => {
+    expect(productUnitHint(makeProduct({ unitType: "weight" }))).toMatch(
+      /poids.réel/i,
+    );
+  });
+
+  it("weight_bracket → 'Prix forfait · taille au choix' (pas 'Vente au poids')", () => {
+    const out = productUnitHint(makeProduct({ unitType: "weight_bracket" }));
+    expect(out).toBe("Prix forfait · taille au choix");
+    expect(out).not.toMatch(/vente au poids/i);
+  });
+
+  it("unit → null (pas de hint)", () => {
+    expect(productUnitHint(makeProduct({ unitType: "unit" }))).toBeNull();
+  });
+});
+
+describe("clampPoidsKg — clamp partagé produit ⇄ panier (B1-01..04)", () => {
+  it("clampe le haut : 9999 → 5 (jamais d'affiché 9999)", () => {
+    expect(clampPoidsKg(9999)).toBe(5);
+  });
+
+  it("clampe le bas : 0 → 0,1 (jamais de poids nul)", () => {
+    expect(clampPoidsKg(0)).toBe(0.1);
+  });
+
+  it("arrondit au pas de 100 g : 2,567 → 2,6", () => {
+    expect(clampPoidsKg(2.567)).toBe(2.6);
+  });
+
+  it("valeur valide inchangée : 1,5 → 1,5", () => {
+    expect(clampPoidsKg(1.5)).toBe(1.5);
+  });
+
+  it("NaN → MIN (0,1)", () => {
+    expect(clampPoidsKg(NaN)).toBe(0.1);
+  });
+
+  it("négatif → MIN (0,1)", () => {
+    expect(clampPoidsKg(-3)).toBe(0.1);
   });
 });

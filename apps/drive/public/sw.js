@@ -2,50 +2,55 @@
  *
  * Responsabilités :
  *  1. Web Push (iOS 16.4+ PWA standalone) — notifs commandes gérante.
- *  2. Offline shell : si on a déjà chargé l'app au moins une fois, on
- *     ressert index.html + le JS/CSS hashé depuis le cache. Sinon
- *     fallback /offline.html (sapin design).
- *  3. Runtime cache stale-while-revalidate sur /assets/* (Vite hash → URLs
- *     immuables, donc tout est cacheable sans risque de version stale).
+ *  2. Navigation HTML : NETWORK-FIRST STRICT. On ne ressert JAMAIS un
+ *     index.html mis en cache tant qu'on a du réseau. Fallback uniquement
+ *     /offline.html (écran sapin statique) si le réseau est mort.
+ *  3. Runtime cache cache-first sur /assets/* (Vite hash → URLs immuables,
+ *     donc tout est cacheable sans risque de version stale).
  *
- * Versioning : bump CACHE_VERSION pour purger les anciens caches.
+ * ⚠️ POURQUOI PAS DE SHELL CACHE (index.html) — bug d'hydratation
+ * (P1 sw-hydration). index.html référence les chunks JS hashés du build
+ * COURANT (<script src="/assets/index-HASH.js">). Servir un index.html
+ * mis en cache lors d'un build PRÉCÉDENT pointe vers des chunks périmés :
+ * React monte le DOM (root.children > 0, 0 erreur console) mais le bundle
+ * chargé ne correspond plus → les event handlers ne se rattachent pas →
+ * steppers/boutons/CTA inertes. Le `unregister()+reload` réparait tout
+ * parce qu'il forçait le navigateur à refetch un index.html frais.
+ * Network-first strict élimine la classe entière de ce bug : la coquille
+ * vient toujours du réseau, donc HTML et chunks sont toujours cohérents.
+ * Drive est une app en ligne (catalogue/panier/Stripe ont besoin du
+ * réseau) — un mode "offline app complète" n'a aucun sens ici.
+ *
+ * Versioning : bump CACHE_VERSION à chaque déploiement qui touche ce SW.
+ * Comme le contenu de sw.js change alors, le navigateur réinstalle le SW
+ * → activate purge les caches des anciennes versions.
  */
 
-const CACHE_VERSION = 'v4';
-const SHELL_CACHE = `salamarket-shell-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v5';
 const ASSETS_CACHE = `salamarket-assets-${CACHE_VERSION}`;
 const OFFLINE_CACHE = `salamarket-offline-${CACHE_VERSION}`;
 
 const OFFLINE_URL = '/offline.html';
-const SHELL_URL = '/index.html';
 const OFFLINE_ASSETS = [
   OFFLINE_URL,
   '/brand/logo-horizontal.png',
 ];
 
 self.addEventListener('install', (event) => {
+  // Pré-cache la coquille offline (toujours dispo, même au 1er load).
+  // On NE pré-cache PAS index.html (cf. note en tête : source du bug
+  // d'hydratation).
   event.waitUntil(
-    Promise.all([
-      // Pré-cache la coquille offline (toujours dispo, même au 1er load).
-      caches.open(OFFLINE_CACHE).then((cache) => cache.addAll(OFFLINE_ASSETS)),
-      // Pré-cache l'index.html — le navigateur fetch déjà cette URL au
-      // chargement, donc on l'aura aussi via le runtime handler ; ce
-      // preload garantit qu'on en a une copie même si l'utilisateur a
-      // installé la PWA depuis un share-link direct (deep route).
-      caches.open(SHELL_CACHE).then((cache) =>
-        cache.add(SHELL_URL).catch(() => {
-          /* Si le HTML n'est pas atteignable au install (rare), on
-             ne bloque pas — il sera caché dès la première navigation. */
-        })
-      ),
-    ])
+    caches.open(OFFLINE_CACHE).then((cache) => cache.addAll(OFFLINE_ASSETS))
   );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  // Purge tous les caches d'anciennes versions (CACHE_VERSION bump).
-  const allowed = new Set([SHELL_CACHE, ASSETS_CACHE, OFFLINE_CACHE]);
+  // Purge tous les caches d'anciennes versions (CACHE_VERSION bump), y
+  // compris les anciens SHELL_CACHE (salamarket-shell-v4) qui contenaient
+  // l'index.html périmé responsable du bug d'hydratation.
+  const allowed = new Set([ASSETS_CACHE, OFFLINE_CACHE]);
   event.waitUntil(
     caches
       .keys()
@@ -77,37 +82,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. Navigation HTML : network-first, fallback index.html cache,
-  //    puis offline.html en dernier recours.
-  //    Stratégie : on PRÉFÈRE servir index.html cache (qui sait charger
-  //    l'app SPA si JS/CSS sont aussi cachés) plutôt qu'offline.html
-  //    qui est juste un message statique. Si index.html non caché ou
-  //    SPA non encore initialisée → offline.html sapin.
+  // 1. Navigation HTML : NETWORK-FIRST STRICT.
+  //    On sert TOUJOURS l'index.html du réseau (coquille SPA fraîche,
+  //    cohérente avec les chunks hashés du build courant). On ne met PAS
+  //    en cache l'index.html et on ne le ressert JAMAIS depuis un cache :
+  //    c'était la cause du bug d'hydratation (cf. note en tête de fichier).
+  //    Seul fallback en cas de réseau mort : offline.html (écran statique).
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // En passant, on rafraîchit notre copie du shell pour la
-          // prochaine navigation offline (stale-while-revalidate-ish).
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(SHELL_CACHE).then((cache) => {
-              cache.put(SHELL_URL, clone).catch(() => {});
-            });
-          }
-          return response;
-        })
-        .catch(async () => {
-          // Offline : ressert le shell SPA si dispo, sinon écran offline.
-          const shell = await caches.match(SHELL_URL, { ignoreSearch: true });
-          if (shell) return shell;
-          const offline = await caches.match(OFFLINE_URL, { ignoreSearch: true });
-          if (offline) return offline;
-          return new Response(
-            '<h1>Hors ligne</h1><p>Vérifiez votre connexion.</p>',
-            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-          );
-        })
+      fetch(request).catch(async () => {
+        const offline = await caches.match(OFFLINE_URL, { ignoreSearch: true });
+        if (offline) return offline;
+        return new Response(
+          '<h1>Hors ligne</h1><p>Vérifiez votre connexion.</p>',
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        );
+      })
     );
     return;
   }

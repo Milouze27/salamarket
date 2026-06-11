@@ -13,6 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { checkCashboxAuth } from "@/lib/cashbox/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,6 +29,15 @@ interface RouteCtx {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function POST(req: Request, { params }: RouteCtx) {
+  // Auth fail-secure : mutation d'appro (statut PO + quantités reçues) en
+  // service_role. Réservée aux appels internes/cron (x-internal-secret ou
+  // Bearer CRON_SECRET). Aucun front anon ne doit pouvoir énumérer des
+  // po_id pour corrompre les enregistrements d'approvisionnement.
+  const auth = checkCashboxAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const poId = params?.id;
   if (!poId) {
     return NextResponse.json({ error: "po id manquant" }, { status: 400 });

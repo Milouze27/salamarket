@@ -112,9 +112,20 @@ export default function AlertesPage() {
   const [sortiesError, setSortiesError] = useState(false);
   const [detail, setDetail] = useState<SortieSuspecte | null>(null);
 
+  // Garde rôle (defense-in-depth) : seuls admin/manager peuvent modérer une
+  // sortie suspecte (altère le score d'audit IA + push collègue). La nav est
+  // déjà restreinte côté V2Shell, mais on revérifie au point d'action — la
+  // RLS sur sorties_stock reste à durcir côté DB (migration sécu séparée).
+  const canModerate =
+    employe?.role === "admin" || employe?.role === "manager";
+
   /** Action ACCEPTER : marque la sortie comme reviewed (score → 1.0
    *  pour la sortir du filtre lt(0.7)) + préfixe note + reload. */
   async function handleAccept(d: SortieSuspecte) {
+    if (!canModerate) {
+      toast.error("Action réservée aux managers");
+      return;
+    }
     const sb = supabase();
     if (!sb) return;
     const note = `[✓ Accepté par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;
@@ -137,6 +148,10 @@ export default function AlertesPage() {
   /** Action CLARIFICATION : push notif iPhone à l'employé ayant fait
    *  la sortie. La sortie reste flagged pour review ultérieure. */
   async function handleClarification(d: SortieSuspecte) {
+    if (!canModerate) {
+      toast.error("Action réservée aux managers");
+      return;
+    }
     const sb = supabase();
     if (!sb) return;
     // Trouve employe.id depuis le name (pas dispo direct sur SortieSuspecte)
@@ -193,6 +208,10 @@ export default function AlertesPage() {
    *  la sortir du filtre) + revert mental du stock à faire à la main
    *  (pas d'undo automatique pour préserver l'audit). */
   async function handleReject(d: SortieSuspecte) {
+    if (!canModerate) {
+      toast.error("Action réservée aux managers");
+      return;
+    }
     const sb = supabase();
     if (!sb) return;
     const note = `[✗ REJETÉ par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;

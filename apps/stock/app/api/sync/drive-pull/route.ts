@@ -15,6 +15,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkCashboxAuth } from "@/lib/cashbox/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -73,11 +74,24 @@ interface DrivePickupSlot {
   slot_start: string;
 }
 
-export async function GET() {
+// Auth fail-secure : la route écrit en service_role sur commandes_drive
+// (PII clients : nom/téléphone/email). Réservée aux appels internes/cron.
+// NB : le front /v2/preparation ne l'appelle que si NEXT_PUBLIC_HAS_DRIVE_SYNC
+// === "1" (dormant aujourd'hui) ; si réactivé, ce fetch devra porter
+// l'en-tête Authorization: Bearer ${CRON_SECRET} (ou x-internal-secret).
+export async function GET(req: Request) {
+  const auth = checkCashboxAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   return runSync();
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const auth = checkCashboxAuth(req);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
   return runSync();
 }
 

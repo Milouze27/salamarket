@@ -573,11 +573,36 @@ export default function V2SortiePage() {
             <input
               id="sortie-quantite"
               type="number"
-              min={0}
+              min={produitAuPoids ? undefined : 1}
               max={stockDispo ?? undefined}
               step={produitAuPoids ? "any" : "1"}
               value={quantite}
               onChange={(e) => setQuantite(e.target.value)}
+              onBlur={() => {
+                // Clamp JS réel à [min, stockDispo] (EMP-06) : l'attribut max
+                // natif n'empêche pas la saisie au clavier. On rabote à la
+                // sortie du champ pour ne pas gêner la frappe, et on borne le
+                // plancher (jamais 0 ni négatif).
+                const v = parseFloat(quantite.replace(",", "."));
+                if (!Number.isFinite(v)) return;
+                let clamped = v;
+                if (stockDispo !== null && clamped > stockDispo) {
+                  clamped = stockDispo;
+                }
+                const plancher = produitAuPoids ? 0 : 1;
+                if (clamped < plancher || clamped <= 0) {
+                  clamped = produitAuPoids ? 0 : 1;
+                }
+                if (clamped !== v) {
+                  setQuantite(String(clamped));
+                  if (stockDispo !== null && v > stockDispo) {
+                    toast.warning(
+                      `Quantité ramenée au stock disponible (${stockDispo}).`,
+                      { duration: 2500 },
+                    );
+                  }
+                }
+              }}
               aria-invalid={depasseStock || decimaleInterdite}
               inputMode={produitAuPoids ? "decimal" : "numeric"}
               className="input-field text-2xl font-bold text-center min-h-[56px]"

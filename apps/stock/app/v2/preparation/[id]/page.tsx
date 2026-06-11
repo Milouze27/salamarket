@@ -39,6 +39,7 @@ import {
   listDepots,
   listLignesPourCommande,
   listProduitsInDepot,
+  listProduitsNomsByIds,
   updateLignePreparation,
 } from "@/lib/db";
 import type {
@@ -169,12 +170,34 @@ export default function V2PreparationDetailPage() {
       depotIds.map((dId) => listProduitsInDepot(dId)),
     );
     depotIds.forEach((dId, i) => allByDepot.set(dId, stocks[i]));
-    const enriched: EnrichedLigne[] = ls.map((l) => {
+    // Filet EMP-04 : si un produit de la commande n'est pas (ou plus) dans le
+    // stock du dépôt de la ligne, le join ci-dessus le rate → nom "Produit" +
+    // vignette "?". On résout alors nom/catégorie directement par produit_id
+    // pour que le préparateur sache toujours quoi collecter.
+    const enrichedRaw: EnrichedLigne[] = ls.map((l) => {
       const stock = allByDepot.get(l.depot_id) ?? [];
       const p = stock.find((x) => x.id === l.produit_id);
       return { ...l, produit: p };
     });
-    setLignes(enriched);
+    const missingIds = enrichedRaw
+      .filter((l) => !l.produit && l.produit_id)
+      .map((l) => l.produit_id);
+    if (missingIds.length > 0) {
+      const noms = await listProduitsNomsByIds(missingIds);
+      for (const l of enrichedRaw) {
+        if (!l.produit && l.produit_id) {
+          const hit = noms.get(l.produit_id);
+          if (hit) {
+            l.produit = {
+              id: l.produit_id,
+              nom: hit.nom,
+              categorie: hit.categorie,
+            } as Produit;
+          }
+        }
+      }
+    }
+    setLignes(enrichedRaw);
   }
 
   /** Group by zone_preparation (particulier / professionnel / traiteur),
@@ -611,16 +634,19 @@ export default function V2PreparationDetailPage() {
                   >
                     <div className="flex items-center gap-3 w-full">
                       <ProductThumbnail
-                        nom={l.produit?.nom ?? "?"}
+                        nom={l.produit?.nom ?? "Produit non référencé"}
                         categorie={l.produit?.categorie}
                         size={48}
                         rounded="xl"
                       />
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`text-sm font-bold truncate ${done ? "line-through" : ""}`}
+                          className={`text-sm font-bold truncate ${done ? "line-through" : ""} ${
+                            l.produit?.nom ? "" : "text-text-tertiary italic"
+                          }`}
                         >
-                          {l.produit?.nom ?? "Produit"}
+                          {l.produit?.nom ??
+                            `Produit non référencé — réf. ${l.produit_id.slice(0, 8)}`}
                         </p>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <ClientTypeBadge

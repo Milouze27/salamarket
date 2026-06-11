@@ -39,11 +39,13 @@ export interface BdlDetail {
 
 /** Progression dérivée (unités scannées / attendues). */
 export interface Progression {
-  /** Unités comptées vers l'objectif, plafonnées à l'attendu par ligne
-   *  (sert au calcul du pourcentage de la barre). */
+  /** Unités comptées vers l'objectif, plafonnées à l'attendu par ligne.
+   *  Source UNIQUE du pourcentage de la barre ET du compteur affiché
+   *  (bandeau header + bouton Valider) — EMP-02/EMP-03. */
   scanned: number;
   /** Total réellement reçu (somme brute des quantite_recue, peut dépasser
-   *  l'attendu en cas de sur-réception). Source du compteur affiché. */
+   *  l'attendu en cas de sur-réception). Sert UNIQUEMENT à dériver
+   *  l'excédent de sur-réception affiché à part, jamais au ratio d'avancement. */
   received: number;
   total: number;
   pct: number;

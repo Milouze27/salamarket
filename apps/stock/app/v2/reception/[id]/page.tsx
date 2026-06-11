@@ -14,6 +14,10 @@ import { ValidationFooter } from "@/components/v2/reception/ValidationFooter";
 import { CartonLearnModal } from "@/components/v2/reception/CartonLearnModal";
 import { SurplusModal } from "@/components/v2/reception/SurplusModal";
 import { CreateProductModal } from "@/components/v2/reception/CreateProductModal";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/v2/reception/ConfirmDialog";
 import type {
   BdlDetail,
   BdlLigne,
@@ -49,6 +53,14 @@ export default function BdlReceptionPage() {
   const [editingNumFourn, setEditingNumFourn] = useState(false);
   const [numFournDraft, setNumFournDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Dialog de confirmation maison (remplace window.confirm natif — EMP-07).
+  const {
+    request: confirmRequest,
+    confirm,
+    onConfirm: onConfirmDialog,
+    onCancel: onCancelDialog,
+  } = useConfirmDialog();
 
   // Carton learning state — flow pour apprendre la liaison carton↔produit
   const [learnCartonModal, setLearnCartonModal] =
@@ -655,9 +667,13 @@ export default function BdlReceptionPage() {
       return;
     }
     if (!allRecu) {
-      const ok = window.confirm(
-        "Certaines lignes ne sont ni reçues ni marquées manquantes. Valider quand même ?",
-      );
+      const ok = await confirm({
+        title: "Lignes non traitées",
+        message:
+          "Certaines lignes ne sont ni reçues ni marquées manquantes. Valider quand même ?",
+        confirmLabel: "Valider quand même",
+        cancelLabel: "Continuer le scan",
+      });
       if (!ok) return;
     }
     setSubmitting(true);
@@ -932,6 +948,13 @@ export default function BdlReceptionPage() {
         onPrixChange={setNewProdPrix}
         onQtyChange={setNewProdQty}
         onSubmit={() => void submitCreateProduct()}
+      />
+
+      {/* Dialog de confirmation maison — remplace window.confirm (EMP-07) */}
+      <ConfirmDialog
+        request={confirmRequest}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
       />
     </V2Shell>
   );

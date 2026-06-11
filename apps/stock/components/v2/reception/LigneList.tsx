@@ -170,7 +170,12 @@ function LigneRow({ ligne: l }: { ligne: BdlLigne }) {
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-[13.5px] font-bold text-text-primary truncate">
-          {l.produits?.nom ?? "Produit (sans nom)"}
+          {l.produits?.nom ??
+            `Produit non référencé${
+              l.code_barre_attendu || l.produits?.ean
+                ? ` — EAN ${l.code_barre_attendu ?? l.produits?.ean}`
+                : ""
+            }`}
         </p>
         <p className="text-[11px] text-text-tertiary mono mt-0.5">
           {l.code_barre_attendu ?? l.produits?.ean ?? "—"}

@@ -375,8 +375,12 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         setPhase("error");
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError("Décodage échoué : " + msg);
+      // Message FR fixe : on loggue le détail technique pour le diagnostic
+      // mais on n'expose jamais le err.message anglais à l'employé (EMP-08).
+      console.error("[Scanner] décodage photo échoué:", err);
+      setError(
+        "Lecture de la photo impossible. Reprends une photo nette du code-barre, ou saisis le code à la main.",
+      );
       setPhase("error");
     } finally {
       setPhotoBusy(false);
@@ -543,7 +547,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             <div className="w-14 h-14 mx-auto rounded-2xl bg-danger/20 flex items-center justify-center mb-3">
               <AlertTriangle className="w-7 h-7 text-danger" />
             </div>
-            <p className="font-bold text-lg">Caméra indisponible</p>
+            <p className="font-bold text-lg">Scan impossible</p>
             <p className="text-sm text-white/80 mt-2 whitespace-pre-line">
               {error}
             </p>
@@ -643,8 +647,13 @@ function humanError(raw: string): string {
   if (m.includes("notreadable") || m.includes("trackstart")) {
     return "Caméra utilisée par une autre app. Ferme l'app Caméra/FaceTime puis réessaie, ou utilise « Photo via Caméra iOS native ».";
   }
-  if (m.includes("notfound") || m.includes("devicesnotfound")) {
-    return "Caméra introuvable. Vérifie l'app Caméra iOS d'abord.";
+  if (
+    m.includes("notfound") ||
+    m.includes("devicesnotfound") ||
+    m.includes("device not found") ||
+    m.includes("requested device")
+  ) {
+    return "Aucune caméra détectée sur cet appareil. Utilise « Photo via Caméra iOS native » ci-dessous.";
   }
   if (m.includes("overconstrained")) {
     return "La caméra ne supporte pas le mode demandé. Utilise « Photo via Caméra iOS native » ci-dessous.";
@@ -656,9 +665,8 @@ function humanError(raw: string): string {
   ) {
     return "La caméra en direct n'est pas accessible depuis ce contexte. Utilise « Photo via Caméra iOS native » en bas.";
   }
-  return (
-    "Caméra indisponible : " +
-    raw +
-    ". Utilise « Photo via Caméra iOS native » ci-dessous."
-  );
+  // Filet final : message FR fixe, JAMAIS le err.message technique anglais
+  // (qui fuitait, ex. « Requested device not found »), et sans répéter le
+  // titre « Caméra indisponible » déjà affiché au-dessus — EMP-08.
+  return "La caméra n'a pas pu démarrer. Utilise « Photo via Caméra iOS native » ci-dessous, ou la saisie manuelle.";
 }

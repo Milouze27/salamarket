@@ -132,7 +132,11 @@ export default function BonsReceptionAdminPage() {
       nbLignes += r.bons_de_livraison_lignes.length;
       for (const l of r.bons_de_livraison_lignes) {
         totalAttendu += l.quantite_attendue;
-        totalRecu += Math.min(l.quantite_recue, l.quantite_attendue);
+        // ADM-02 : on somme le reçu RÉEL (brut), comme la carte BR et le BR
+        // PDF (document fiscal). Plafonner ici créait un KPI (134/178) qui
+        // contredisait la carte et le PDF (137/178) pour le même BR. Le total
+        // d'unités reçues doit refléter la marchandise réellement entrée.
+        totalRecu += l.quantite_recue;
       }
     }
     return { nbBdl: filtered.length, nbLignes, totalRecu, totalAttendu };

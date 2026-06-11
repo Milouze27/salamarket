@@ -57,6 +57,10 @@ import {
 } from "@/components/reception/scanner-overlay";
 import { TemperatureInput } from "@/components/reception/temperature-input";
 import { SignOffModal } from "@/components/reception/sign-off-modal";
+import {
+  ConfirmDialog,
+  useConfirmDialog,
+} from "@/components/v2/reception/ConfirmDialog";
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
 import { certifAlerte } from "@/lib/types/po";
@@ -128,6 +132,14 @@ export default function BdlScanFirstPage() {
   // ML-5 — le comptable doit acquitter explicitement un certif halal
   // expiré/manquant du fournisseur avant de pouvoir clôturer la réception.
   const [certifAck, setCertifAck] = useState(false);
+
+  // Dialog de confirmation maison (remplace window.confirm natif — EMP-07).
+  const {
+    request: confirmRequest,
+    confirm,
+    onConfirm: onConfirmDialog,
+    onCancel: onCancelDialog,
+  } = useConfirmDialog();
 
   // Buffer température : on n'écrit en DB qu'au blur (évite 10 updates/sec)
   const tempDebounceRef = useRef<number | null>(null);
@@ -287,14 +299,15 @@ export default function BdlScanFirstPage() {
         if (data.kind === "blocked") {
           const attendu = data.quantite_attendue ?? "?";
           const siConfirme = data.quantite_si_confirme ?? "?";
-          const ok =
-            typeof window !== "undefined" &&
-            window.confirm(
-              `Sur-comptage détecté (>150 %).\n` +
-                `${data.label}\n` +
-                `Confirmer ${siConfirme}/${attendu} reçus ? ` +
-                `Annule si c'est un double scan.`,
-            );
+          const ok = await confirm({
+            title: "Sur-comptage détecté (>150 %)",
+            message:
+              `${data.label}\n` +
+              `Confirmer ${siConfirme}/${attendu} reçus ? ` +
+              `Annule si c'est un double scan.`,
+            confirmLabel: `Confirmer ${siConfirme}/${attendu}`,
+            cancelLabel: "Annuler (double scan)",
+          });
           if (!ok) {
             return {
               kind: "warn",
@@ -336,7 +349,7 @@ export default function BdlScanFirstPage() {
         };
       }
     },
-    [bdlId, employe?.id, fetchBdl],
+    [bdlId, employe?.id, fetchBdl, confirm],
   );
 
   // ─── Photo capture ────────────────────────────────────────────
@@ -919,6 +932,13 @@ export default function BdlScanFirstPage() {
         ecartTotalEur={Number(bdl.ecart_valeur_eur ?? 0)}
         ecartValeurAttendueEur={valeurAttendueEur}
         ecartLignes={ecartLignes}
+      />
+
+      {/* Dialog de confirmation maison — remplace window.confirm (EMP-07) */}
+      <ConfirmDialog
+        request={confirmRequest}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
       />
     </V2Shell>
   );

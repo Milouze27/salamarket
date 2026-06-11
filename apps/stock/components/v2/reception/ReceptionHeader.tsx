@@ -128,7 +128,7 @@ export function ReceptionHeader({
             Progression
           </span>
           <span className="text-[13px] font-extrabold tabular text-text-primary">
-            {progression.received} / {progression.total} unités
+            {progression.scanned} / {progression.total} unités
           </span>
         </div>
         <div className="h-2.5 rounded-full bg-cream overflow-hidden">
@@ -143,8 +143,9 @@ export function ReceptionHeader({
         </div>
         {progression.hasSurReception && (
           <p className="text-[11px] font-bold text-warning mt-1.5">
-            Sur-réception détectée · reçu {progression.received} pour{" "}
-            {progression.total} attendus. Vérifie les lignes en ambre.
+            Sur-réception · {progression.received - progression.scanned} unité
+            {progression.received - progression.scanned > 1 ? "s" : ""} en trop
+            (hors compteur d&apos;avancement). Vérifie les lignes en ambre.
           </p>
         )}
       </div>

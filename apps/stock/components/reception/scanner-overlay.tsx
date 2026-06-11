@@ -567,8 +567,16 @@ function humanError(raw: string): string {
   if (m.includes("notreadable") || m.includes("trackstart")) {
     return "Caméra utilisée par une autre app. Ferme l'app Caméra puis réessaie.";
   }
-  if (m.includes("notfound")) {
-    return "Caméra introuvable. Vérifie l'app Caméra iOS d'abord.";
+  if (
+    m.includes("notfound") ||
+    m.includes("devicesnotfound") ||
+    m.includes("device not found") ||
+    m.includes("requested device")
+  ) {
+    return "Aucune caméra détectée sur cet appareil.";
   }
-  return "Caméra indisponible : " + raw;
+  // Filet final : message FR fixe, jamais le err.message technique anglais
+  // (ex. « Requested device not found ») ni la répétition du titre
+  // « Caméra indisponible » déjà affiché au-dessus — EMP-08.
+  return "La caméra n'a pas pu démarrer. Réessaie ou recharge la page.";
 }

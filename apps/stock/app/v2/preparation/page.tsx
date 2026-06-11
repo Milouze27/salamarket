@@ -783,12 +783,33 @@ export default function V2PreparationKanbanPage() {
                                 Détail
                                 <ChevronRight className="w-3.5 h-3.5" />
                               </Link>
-                              {!isFinal && (
+                              {/* Ticket de retrait : accessible pour les
+                                  commandes prêtes/retirées via la feuille
+                                  d'options (seul endroit qui l'expose). */}
+                              {(col.key === "pret" ||
+                                col.key === "retire") && (
                                 <button
                                   onClick={() => setActionFor(cmd)}
-                                  className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform"
+                                  aria-label="Options (ticket de retrait)"
+                                  className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] text-text-primary rounded-full active:scale-[0.95] transition-transform"
+                                  style={{
+                                    background: "var(--surface-2)",
+                                    boxShadow:
+                                      "inset 0 0 0 1px var(--border-card)",
+                                  }}
                                 >
-                                  Avancer
+                                  <Receipt className="w-3.5 h-3.5 text-primary" />
+                                </button>
+                              )}
+                              {!isFinal && col.next && (
+                                <button
+                                  onClick={() =>
+                                    void advance(cmd, col.next as KanbanStatut)
+                                  }
+                                  disabled={updating}
+                                  className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] text-[12px] font-bold text-white bg-primary rounded-full py-2 active:scale-[0.98] transition-transform disabled:opacity-50"
+                                >
+                                  {col.nextLabel ?? "Avancer"}
                                   <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                               )}

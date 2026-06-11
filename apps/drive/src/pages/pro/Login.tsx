@@ -170,6 +170,7 @@ export default function ProLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="text-base md:text-base"
               />
             </div>
 
@@ -183,6 +184,7 @@ export default function ProLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="text-base md:text-base"
               />
             </div>
 
@@ -195,7 +197,7 @@ export default function ProLogin() {
             <Button
               type="submit"
               disabled={loading || !email || !password}
-              className="bg-gold text-sapin-deep hover:bg-gold-bright disabled:opacity-50 h-11"
+              className="bg-gold text-sapin-deep hover:bg-gold-bright disabled:opacity-50 h-11 rounded-xl font-bold"
             >
               {loading ? "Connexion…" : "Se connecter"}
             </Button>

@@ -353,6 +353,7 @@ export default function ProInscription() {
                           <FormControl>
                             <Input
                               placeholder="Ex : SARL Le Bistrot des Halles"
+                              className="text-base md:text-base"
                               {...field}
                             />
                           </FormControl>
@@ -373,6 +374,7 @@ export default function ProInscription() {
                                 inputMode="numeric"
                                 maxLength={14}
                                 placeholder="14 chiffres"
+                                className="text-base md:text-base"
                                 {...field}
                               />
                             </FormControl>
@@ -418,7 +420,11 @@ export default function ProInscription() {
                             TVA intracommunautaire (optionnel)
                           </FormLabel>
                           <FormControl>
-                            <Input placeholder="FR12345678901" {...field} />
+                            <Input
+                              placeholder="FR12345678901"
+                              className="text-base md:text-base"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -435,6 +441,7 @@ export default function ProInscription() {
                             <Textarea
                               rows={2}
                               placeholder="Rue, code postal, ville"
+                              className="text-base"
                               {...field}
                             />
                           </FormControl>
@@ -454,6 +461,7 @@ export default function ProInscription() {
                             <Textarea
                               rows={2}
                               placeholder="Laissez vide pour livrer à l'adresse de facturation"
+                              className="text-base"
                               {...field}
                             />
                           </FormControl>
@@ -481,6 +489,7 @@ export default function ProInscription() {
                             <Input
                               autoComplete="name"
                               placeholder="Prénom et nom"
+                              className="text-base md:text-base"
                               {...field}
                             />
                           </FormControl>
@@ -501,6 +510,7 @@ export default function ProInscription() {
                                 type="tel"
                                 autoComplete="tel"
                                 placeholder="0612345678 ou +212612345678"
+                                className="text-base md:text-base"
                                 {...field}
                               />
                             </FormControl>
@@ -519,6 +529,7 @@ export default function ProInscription() {
                                 type="email"
                                 autoComplete="email"
                                 placeholder="contact@entreprise.fr"
+                                className="text-base md:text-base"
                                 {...field}
                               />
                             </FormControl>
@@ -539,6 +550,7 @@ export default function ProInscription() {
                               type="password"
                               autoComplete="new-password"
                               placeholder="Min. 8 caractères"
+                              className="text-base md:text-base"
                               {...field}
                             />
                           </FormControl>

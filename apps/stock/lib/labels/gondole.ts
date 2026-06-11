@@ -223,13 +223,8 @@ export async function buildGondoleBatchPdf(
   return doc.output("blob");
 }
 
-/** Layout PROMO DLC : prix barré + prix soldé + bandeau remise. */
-export async function buildPromoDlcPdf(input: PromoDlcInput): Promise<Blob> {
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "mm",
-    format: [W, H],
-  });
+/** Dessine UNE étiquette PROMO DLC sur la page courante du doc. */
+async function paintPromoDlc(doc: jsPDF, input: PromoDlcInput): Promise<void> {
   const qr = input.lot ? await qrPng(input.lot) : null;
   drawHead(doc, input);
 
@@ -281,5 +276,40 @@ export async function buildPromoDlcPdf(input: PromoDlcInput): Promise<Blob> {
   doc.line(6, H - 18, W - 6, H - 18);
 
   drawFooter(doc, input, qr);
+}
+
+/** Étiquette PROMO DLC — PDF 1 page (prix barré + prix soldé + bandeau remise). */
+export async function buildPromoDlcPdf(input: PromoDlcInput): Promise<Blob> {
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: [W, H],
+  });
+  await paintPromoDlc(doc, input);
+  return doc.output("blob");
+}
+
+/**
+ * Planche promo DLC du jour : toutes les étiquettes promo dans UN seul PDF
+ * multipage (1 étiquette / page), à imprimer en lot pour le démarquage
+ * anti-gaspi du matin. Même format que l'étiquette unitaire — chaque page
+ * se découpe et se colle sur son produit. Callback de progression pour les
+ * gros lots.
+ */
+export async function buildPromoDlcBatchPdf(
+  inputs: PromoDlcInput[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<Blob> {
+  if (inputs.length === 0) throw new Error("Aucune étiquette promo à générer.");
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "mm",
+    format: [W, H],
+  });
+  for (let i = 0; i < inputs.length; i++) {
+    if (i > 0) doc.addPage([W, H], "landscape");
+    await paintPromoDlc(doc, inputs[i]);
+    onProgress?.(i + 1, inputs.length);
+  }
   return doc.output("blob");
 }

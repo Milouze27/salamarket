@@ -28,6 +28,8 @@ import type {
 import { useV2 } from "@/lib/v2-store";
 import { supabase } from "@/lib/supabase";
 import { calculerPmp } from "@/lib/reception/pmp";
+import { createLotFromReception } from "@/lib/db";
+import { LotHalalDrawer, type LotHalalForm } from "./LotHalalDrawer";
 
 /**
  * Page réception d'un BDL — orchestrateur.
@@ -53,6 +55,8 @@ export default function BdlReceptionPage() {
   const [editingNumFourn, setEditingNumFourn] = useState(false);
   const [numFournDraft, setNumFournDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Drawer de capture du LOT halal (DLC, abattoir, certif) à la validation.
+  const [lotDrawerOpen, setLotDrawerOpen] = useState(false);
 
   // Dialog de confirmation maison (remplace window.confirm natif — EMP-07).
   const {
@@ -102,7 +106,7 @@ export default function BdlReceptionPage() {
       .from("bons_de_livraison")
       .select(
         `id, numero_bdl, numero_bdl_fournisseur, fournisseur_id, depot_destination_id, date_livraison_prevue, statut, photo_palette_url_1, photo_palette_url_2, photo_bdl_url, notes,
-         fournisseurs (id, nom),
+         fournisseurs (id, nom, certif_organisme),
          depots (id, nom),
          bons_de_livraison_lignes (
            id, produit_id, code_barre_attendu, quantite_attendue, quantite_recue, prix_achat_ht, statut,
@@ -676,6 +680,15 @@ export default function BdlReceptionPage() {
       });
       if (!ok) return;
     }
+    // Pré-requis OK → on capture les métadonnées du LOT halal (DLC, abattoir,
+    // certif) avant d'écrire le stock. Le vrai travail est fait dans
+    // doFinalize, déclenché par la confirmation du drawer.
+    setLotDrawerOpen(true);
+  }
+
+  // ─── Validation effective + création des LOTS halal ───────────
+  async function doFinalize(lotForm: LotHalalForm) {
+    if (!bdl) return;
     setSubmitting(true);
     const sb = supabase();
     if (!sb) {
@@ -764,6 +777,37 @@ export default function BdlReceptionPage() {
               errCout.message,
             );
         }
+
+        // LOT HALAL — crée un lot tracé par produit reçu (DLC, abattoir,
+        // certif partagés sur l'arrivage). Alimente FEFO + alertes DLC +
+        // passeport QR public. Hors-bloquant : si la traçabilité lot échoue
+        // (table non migrée, mode démo…), la réception reste valide — le
+        // stock est déjà entré, on ne casse pas la réception pour ça.
+        try {
+          await createLotFromReception({
+            produit_id: l.produit_id,
+            depot_id: depotId,
+            bdl_id: bdl.id,
+            quantite_recue: l.quantite_recue,
+            unite: "u",
+            supplier_lot: lotForm.supplier_lot,
+            fournisseur_id: bdl.fournisseur_id,
+            certifier_id: lotForm.certifier_id,
+            certifier_name: lotForm.certifier_id,
+            date_abattage: lotForm.date_abattage,
+            abattoir_nom: lotForm.abattoir_nom,
+            abattoir_pays: lotForm.abattoir_pays,
+            dlc: lotForm.dlc,
+            ddm: lotForm.ddm,
+            created_by: employe?.id ?? null,
+            notes: `Lot créé à la réception du BDL ${bdl.numero_bdl}.`,
+          });
+        } catch (lotErr) {
+          console.warn(
+            "[finalize] création lot halal non-bloquante échouée:",
+            lotErr,
+          );
+        }
       }
       // 2. Marque BDL receptionnee (seulement si tout le stock est passé)
       const { error: errBdl } = await sb
@@ -803,6 +847,7 @@ export default function BdlReceptionPage() {
         }),
       );
       toast.success("Réception validée. Admin notifié.");
+      setLotDrawerOpen(false);
       router.replace("/v2/reception");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur validation");
@@ -948,6 +993,26 @@ export default function BdlReceptionPage() {
         onPrixChange={setNewProdPrix}
         onQtyChange={setNewProdQty}
         onSubmit={() => void submitCreateProduct()}
+      />
+
+      {/* Capture du LOT halal (DLC, abattoir, certif) + scan-vision DLC,
+          déclenché à la validation avant l'écriture du stock. */}
+      <LotHalalDrawer
+        open={lotDrawerOpen}
+        nbLignes={
+          bdl.bons_de_livraison_lignes.filter(
+            (l) => l.statut === "recu" && l.produit_id && l.quantite_recue > 0,
+          ).length
+        }
+        fournisseurNom={bdl.fournisseurs?.nom ?? null}
+        defaultCertifier={
+          (
+            bdl.fournisseurs as { certif_organisme?: string | null } | null
+          )?.certif_organisme ?? null
+        }
+        submitting={submitting}
+        onClose={() => setLotDrawerOpen(false)}
+        onConfirm={(form) => void doFinalize(form)}
       />
 
       {/* Dialog de confirmation maison — remplace window.confirm (EMP-07) */}

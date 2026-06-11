@@ -11,26 +11,64 @@ import {
   Package,
   Wheat,
 } from "lucide-react";
+import { BRAND } from "@/config/brand";
 
 export const isPlaceholderUrl = (url?: string | null) =>
   !url || url.includes("placehold.co") || url.includes("placeholder.com");
 
+// Palette décorative par CATÉGORIE — uniquement pour le visuel de
+// remplacement quand un produit n'a pas de photo. Ces teintes (rouge
+// boucherie, bleu poissonnerie, vert légumes…) n'ont pas d'équivalent
+// dans les tokens de marque BRAND.colors : ce sont des accents purement
+// illustratifs, regroupés ici comme source unique locale. Le fallback
+// générique, lui, réutilise les vrais tokens sapin/or de BRAND.colors.
+const CATEGORY_PALETTE = {
+  beefRedFrom:   "#7A1F1A", beefRedTo:   "#3D0F0C",
+  charcFrom:     "#A23E2A", charcTo:     "#4F1A12",
+  fishFrom:      "#1E5F7A", fishTo:      "#0C2E3D",
+  fruitFrom:     "#9C4221", fruitTo:     "#4A1C0E",
+  legumeFrom:    "#2D5F2F", legumeTo:    "#0F2D11",
+  cremeFrom:     "#F1E5C8", cremeTo:     "#C9A864",
+  epiceFrom:     "#8B6F3D", epiceTo:     "#3D2F18",
+  patisFrom:     "#C9892F", patisTo:     "#5A3D14",
+  biscuitFrom:   "#A8772E", biscuitTo:   "#4D330C",
+  boissonFrom:   "#1A5F4A", boissonTo:   "#0A2E22",
+  goldIcon:      "#F5C77E",
+  blueIcon:      "#7FD4E8",
+  peachIcon:     "#FFD89B",
+  greenIcon:     "#A8D89B",
+  darkIcon:      "#3E2E0A",
+  creamIcon:     "#FFE9C4",
+  mintIcon:      "#A8E8C9",
+} as const;
+
+// Les gradients sont posés en CSS inline (linear-gradient 135deg = to-br)
+// plutôt qu'en classes Tailwind `from-[#…] to-[#…]` : le JIT Tailwind ne
+// peut pas générer des classes construites dynamiquement à partir de
+// variables, donc on évite toute classe arbitraire interpolée.
 const map: Record<
   string,
-  { Icon: typeof Beef; gradient: string; accent: string; label: string }
+  { Icon: typeof Beef; from: string; to: string; accent: string; label: string }
 > = {
-  boucherie:    { Icon: Beef,       gradient: "from-[#7A1F1A] to-[#3D0F0C]", accent: "#F5C77E", label: "Boucherie" },
-  charcuterie:  { Icon: Drumstick,  gradient: "from-[#A23E2A] to-[#4F1A12]", accent: "#F5C77E", label: "Charcuterie" },
-  poissonnerie: { Icon: Fish,       gradient: "from-[#1E5F7A] to-[#0C2E3D]", accent: "#7FD4E8", label: "Poissonnerie" },
-  fruits:       { Icon: Apple,      gradient: "from-[#9C4221] to-[#4A1C0E]", accent: "#FFD89B", label: "Fruits" },
-  legumes:      { Icon: Leaf,       gradient: "from-[#2D5F2F] to-[#0F2D11]", accent: "#A8D89B", label: "Légumes" },
-  cremerie:     { Icon: Milk,       gradient: "from-[#F1E5C8] to-[#C9A864]", accent: "#3E2E0A", label: "Crémerie" },
-  epicerie:     { Icon: Wheat,      gradient: "from-[#8B6F3D] to-[#3D2F18]", accent: "#F5C77E", label: "Épicerie" },
-  patisserie:   { Icon: Croissant,  gradient: "from-[#C9892F] to-[#5A3D14]", accent: "#FFE9C4", label: "Pâtisserie" },
-  biscuiterie:  { Icon: Cookie,     gradient: "from-[#A8772E] to-[#4D330C]", accent: "#FFE9C4", label: "Biscuiterie" },
-  boissons:     { Icon: GlassWater, gradient: "from-[#1A5F4A] to-[#0A2E22]", accent: "#A8E8C9", label: "Boissons" },
+  boucherie:    { Icon: Beef,       from: CATEGORY_PALETTE.beefRedFrom, to: CATEGORY_PALETTE.beefRedTo, accent: CATEGORY_PALETTE.goldIcon,  label: "Boucherie" },
+  charcuterie:  { Icon: Drumstick,  from: CATEGORY_PALETTE.charcFrom,   to: CATEGORY_PALETTE.charcTo,   accent: CATEGORY_PALETTE.goldIcon,  label: "Charcuterie" },
+  poissonnerie: { Icon: Fish,       from: CATEGORY_PALETTE.fishFrom,    to: CATEGORY_PALETTE.fishTo,    accent: CATEGORY_PALETTE.blueIcon,  label: "Poissonnerie" },
+  fruits:       { Icon: Apple,      from: CATEGORY_PALETTE.fruitFrom,   to: CATEGORY_PALETTE.fruitTo,   accent: CATEGORY_PALETTE.peachIcon, label: "Fruits" },
+  legumes:      { Icon: Leaf,       from: CATEGORY_PALETTE.legumeFrom,  to: CATEGORY_PALETTE.legumeTo,  accent: CATEGORY_PALETTE.greenIcon, label: "Légumes" },
+  cremerie:     { Icon: Milk,       from: CATEGORY_PALETTE.cremeFrom,   to: CATEGORY_PALETTE.cremeTo,   accent: CATEGORY_PALETTE.darkIcon,  label: "Crémerie" },
+  epicerie:     { Icon: Wheat,      from: CATEGORY_PALETTE.epiceFrom,   to: CATEGORY_PALETTE.epiceTo,   accent: CATEGORY_PALETTE.goldIcon,  label: "Épicerie" },
+  patisserie:   { Icon: Croissant,  from: CATEGORY_PALETTE.patisFrom,   to: CATEGORY_PALETTE.patisTo,   accent: CATEGORY_PALETTE.creamIcon, label: "Pâtisserie" },
+  biscuiterie:  { Icon: Cookie,     from: CATEGORY_PALETTE.biscuitFrom, to: CATEGORY_PALETTE.biscuitTo, accent: CATEGORY_PALETTE.creamIcon, label: "Biscuiterie" },
+  boissons:     { Icon: GlassWater, from: CATEGORY_PALETTE.boissonFrom, to: CATEGORY_PALETTE.boissonTo, accent: CATEGORY_PALETTE.mintIcon,  label: "Boissons" },
 };
-const fallback = { Icon: Package, gradient: "from-[#0E3B2E] to-[#082A20]", accent: "#C9A227", label: "Salamarket" };
+// Fallback générique : tokens de marque (sapin → sapin nuit, accent or).
+const fallback = {
+  Icon: Package,
+  from: BRAND.colors.primary,
+  to: BRAND.colors.primaryDark,
+  accent: BRAND.colors.accent,
+  label: "Salamarket",
+};
 
 interface Props {
   category?: string | null;
@@ -43,7 +81,10 @@ export const ProductImageFallback = ({ category, size = "md" }: Props) => {
   const labelSize = size === "sm" ? "text-[9px]" : size === "lg" ? "text-[12px]" : "text-[10px]";
   return (
     <div
-      className={`relative w-full h-full flex flex-col items-center justify-center gap-3 bg-gradient-to-br ${fb.gradient} overflow-hidden`}
+      className="relative w-full h-full flex flex-col items-center justify-center gap-3 overflow-hidden"
+      style={{
+        backgroundImage: `linear-gradient(135deg, ${fb.from}, ${fb.to})`,
+      }}
       aria-hidden
     >
       <div

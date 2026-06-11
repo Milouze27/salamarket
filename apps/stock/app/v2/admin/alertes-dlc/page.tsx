@@ -27,6 +27,7 @@ import {
   AlertOctagon,
   AlertTriangle,
   CheckCircle2,
+  FileText,
   Loader2,
   PackageX,
   Printer,
@@ -70,16 +71,16 @@ const NIVEAU_STYLE: Record<
   { bg: string; text: string; border: string; chipBg: string }
 > = {
   forcé: {
-    bg: "bg-[#FBE9E7]",
-    text: "text-[#8A1A12]",
-    border: "border-[#A8231A]/50",
-    chipBg: "bg-[#A8231A] text-white",
+    bg: "bg-danger-soft",
+    text: "text-danger",
+    border: "border-[color:var(--danger-border)]",
+    chipBg: "bg-danger text-white",
   },
   critique: {
-    bg: "bg-[#FBE9E7]",
-    text: "text-[#A8231A]",
-    border: "border-[#E5483D]/40",
-    chipBg: "bg-[#E5483D] text-white",
+    bg: "bg-danger-soft",
+    text: "text-danger",
+    border: "border-[color:var(--danger-border)]",
+    chipBg: "bg-danger text-white",
   },
   attention: {
     bg: "bg-[#FEF3E2]",
@@ -332,6 +333,103 @@ export default function AlertesDlcPage() {
     }
   }
 
+  /**
+   * Planche promo du jour : un seul PDF multipage avec TOUTES les étiquettes
+   * promo DLC éligibles (non périmées, remise > 0). On récupère les prix en
+   * deux requêtes groupées (anti N+1) plutôt qu'une requête par lot.
+   */
+  async function printPlancheDuJour() {
+    // Éligibles = encore vendables avec une remise réelle. Dédup par produit
+    // (un même produit peut avoir plusieurs lots DLC → une seule étiquette).
+    const eligibles = alerts.filter(
+      (a) => !estPerime(a) && a.remise_suggeree_pct > 0,
+    );
+    const parProduit = new Map<string, DlcAlert>();
+    for (const a of eligibles) {
+      if (!parProduit.has(a.produit_id)) parProduit.set(a.produit_id, a);
+    }
+    const lignes = [...parProduit.values()];
+    if (lignes.length === 0) {
+      toast.info("Aucune étiquette promo à imprimer aujourd'hui");
+      return;
+    }
+    setActing("__planche__");
+    try {
+      const produitIds = lignes.map((a) => a.produit_id);
+      // Map prix de vente max par produit (sur tous les dépôts) + prix/kg.
+      const prixParProduit = new Map<string, number>();
+      const kgParProduit = new Map<string, number | null>();
+      const sb = supabase();
+      if (sb) {
+        const { data: stockRows } = await sb
+          .from("stock_par_depot")
+          .select("produit_id, prix_vente")
+          .in("produit_id", produitIds)
+          .not("prix_vente", "is", null);
+        for (const r of (stockRows ?? []) as Array<{
+          produit_id: string;
+          prix_vente: number | null;
+        }>) {
+          const p = Number(r.prix_vente ?? 0);
+          if (p <= 0) continue;
+          const prev = prixParProduit.get(r.produit_id) ?? 0;
+          if (p > prev) prixParProduit.set(r.produit_id, p);
+        }
+        const { data: prods } = await sb
+          .from("produits")
+          .select("id, price_per_kg")
+          .in("id", produitIds);
+        for (const p of (prods ?? []) as Array<{
+          id: string;
+          price_per_kg: number | null;
+        }>) {
+          kgParProduit.set(p.id, (p.price_per_kg as number | null) ?? null);
+        }
+      }
+
+      const inputs = lignes
+        .map((a) => {
+          const prixTtc = prixParProduit.get(a.produit_id) ?? 0;
+          if (prixTtc <= 0) return null;
+          return {
+            produitNom: a.produit_nom,
+            prixTtc,
+            prixKg: kgParProduit.get(a.produit_id) ?? null,
+            dlc: a.dlc,
+            lot: a.lot_id,
+            remisePct: a.remise_suggeree_pct,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+
+      if (inputs.length === 0) {
+        toast.error(
+          "Aucun prix de vente renseigné sur les lots éligibles — impossible de générer la planche.",
+        );
+        return;
+      }
+
+      const { buildPromoDlcBatchPdf } = await import("@/lib/labels/gondole");
+      const blob = await buildPromoDlcBatchPdf(inputs);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `planche-promo-dlc-${new Date().toISOString().slice(0, 10)}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      const ignores = lignes.length - inputs.length;
+      toast.success(
+        `Planche promo générée — ${inputs.length} étiquette${inputs.length > 1 ? "s" : ""}${ignores > 0 ? ` · ${ignores} sans prix ignoré${ignores > 1 ? "s" : ""}` : ""}`,
+        { duration: 3000 },
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Erreur génération de la planche promo");
+    } finally {
+      setActing(null);
+    }
+  }
+
   async function forceAllDemarque() {
     // Lots forcés ENCORE vendables (DLC non dépassée) : un périmé se retire,
     // il ne se solde pas.
@@ -386,6 +484,17 @@ export default function AlertesDlcPage() {
   ).length;
   const perimeCount = alerts.filter((a) => estPerime(a)).length;
 
+  // Étiquettes promo éligibles (produits distincts, non périmés, remise > 0) :
+  // alimente la « planche promo du jour » à imprimer en un seul PDF.
+  const plancheCount = useMemo(() => {
+    const ids = new Set<string>();
+    for (const a of alerts) {
+      if (estPerime(a) || a.remise_suggeree_pct <= 0) continue;
+      ids.add(a.produit_id);
+    }
+    return ids.size;
+  }, [alerts]);
+
   return (
     <V2Shell hideNav>
       <PageAccentStripe accent="bordeaux" />
@@ -437,13 +546,13 @@ export default function AlertesDlcPage() {
           On ne les solde pas, on les sort du rayon (PDF-P2/STK-19). */}
       {perimeCount > 0 && (
         <section className="px-4 sm:px-5 mt-5">
-          <div className="flex items-center gap-3 bg-[#FBE9E7] border-2 border-[#A8231A]/50 rounded-[16px] p-3.5">
-            <Trash2 className="w-5 h-5 text-[#8A1A12] shrink-0" />
+          <div className="flex items-center gap-3 bg-danger-soft border-2 border-[color:var(--danger-border)] rounded-[16px] p-3.5">
+            <Trash2 className="w-5 h-5 text-danger shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold text-[#8A1A12]">
+              <p className="text-[13px] font-extrabold text-danger">
                 {perimeCount} lot{perimeCount > 1 ? "s" : ""} à retirer du rayon
               </p>
-              <p className="text-[11.5px] text-[#8A1A12]/80">
+              <p className="text-[11.5px] text-danger/80">
                 DLC dépassée — ne pas vendre ni solder, retirer immédiatement.
               </p>
             </div>
@@ -451,21 +560,37 @@ export default function AlertesDlcPage() {
         </section>
       )}
 
-      {/* Bulk action — uniquement les forcés ENCORE vendables */}
-      {forceCount > 0 && (
-        <section className="px-4 sm:px-5 mt-3">
-          <button
-            onClick={() => void forceAllDemarque()}
-            disabled={acting === "__bulk__"}
-            className="w-full min-h-[48px] bg-[#A8231A] text-white rounded-[18px] py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
-          >
-            {acting === "__bulk__" ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <PackageX className="w-4 h-4" />
-            )}
-            Démarquer les forcés éligibles ({forceCount})
-          </button>
+      {/* Actions groupées — planche promo + démarque de masse des forcés */}
+      {(plancheCount > 0 || forceCount > 0) && (
+        <section className="px-4 sm:px-5 mt-3 space-y-2.5">
+          {plancheCount > 0 && (
+            <button
+              onClick={() => void printPlancheDuJour()}
+              disabled={acting === "__planche__"}
+              className="w-full min-h-[48px] bg-primary text-white rounded-[18px] py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+            >
+              {acting === "__planche__" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              Planche promo du jour ({plancheCount})
+            </button>
+          )}
+          {forceCount > 0 && (
+            <button
+              onClick={() => void forceAllDemarque()}
+              disabled={acting === "__bulk__"}
+              className="w-full min-h-[48px] bg-danger text-white rounded-[18px] py-3.5 text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+            >
+              {acting === "__bulk__" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <PackageX className="w-4 h-4" />
+              )}
+              Démarquer les forcés éligibles ({forceCount})
+            </button>
+          )}
         </section>
       )}
 
@@ -552,9 +677,9 @@ export default function AlertesDlcPage() {
                   {/* DLC dépassée → on retire, jamais de promo/remise sur un
                       produit périmé (PDF-P2-PROMO-DLC-PERIMEE). */}
                   {estPerime(a) ? (
-                    <div className="mt-3 flex items-center gap-2 bg-[#FBE9E7] border border-[#A8231A]/40 rounded-[14px] px-3 py-2.5">
-                      <Trash2 className="w-4 h-4 text-[#8A1A12] shrink-0" />
-                      <p className="text-[12.5px] font-bold text-[#8A1A12]">
+                    <div className="mt-3 flex items-center gap-2 bg-danger-soft border border-[color:var(--danger-border)] rounded-[14px] px-3 py-2.5">
+                      <Trash2 className="w-4 h-4 text-danger shrink-0" />
+                      <p className="text-[12.5px] font-bold text-danger">
                         À retirer du rayon — DLC dépassée, ni vente ni promo.
                       </p>
                     </div>
@@ -583,7 +708,7 @@ export default function AlertesDlcPage() {
                         <button
                           onClick={() => void printPromo(a)}
                           disabled={isApplying || isPrinting}
-                          className="min-h-[44px] bg-[#A8231A] text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
+                          className="min-h-[44px] bg-danger text-white rounded-[14px] py-3 text-[13.5px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99] disabled:opacity-60"
                         >
                           {isPrinting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -619,7 +744,7 @@ function KpiCard({
   label: string;
 }) {
   const palette: Record<typeof variant, string> = {
-    danger: "border-[#E5483D]/30 text-[#A8231A]",
+    danger: "border-[color:var(--danger-border)] text-danger",
     warn: "border-[#D97706]/30 text-[#92400E]",
     gold: "border-[color:var(--accent-gold)]/40 text-[color:var(--or-text)]",
     neutral: "border-rule text-text-primary",
@@ -657,7 +782,7 @@ function Stat({
       <p
         className={`text-[13px] tabular mt-0.5 ${
           strong
-            ? "font-extrabold text-[#A8231A]"
+            ? "font-extrabold text-danger"
             : "font-bold text-text-primary"
         }`}
       >

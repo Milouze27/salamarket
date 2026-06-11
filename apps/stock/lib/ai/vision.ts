@@ -106,6 +106,59 @@ export async function callClaudeVision(
 }
 
 /**
+ * Prompt vision pour lire les dates d'un carton/étiquette produit à la
+ * réception (DLC, date d'abattage, n° de lot fournisseur).
+ *
+ * Réutilise le même contrat fail-closed que les autres routes vision : si
+ * une date n'est pas LISIBLE avec certitude sur la photo, l'IA renvoie null
+ * (jamais une date inventée — une DLC fausse fait sortir un produit du
+ * catalogue à tort ou en garde un périmé). Les dates sont normalisées au
+ * format ISO `YYYY-MM-DD`.
+ */
+export const DLC_VISION_SYSTEM =
+  "Tu es un assistant de réception en épicerie halal. Tu lis les étiquettes " +
+  "et tampons imprimés sur un carton ou un emballage produit pour en extraire " +
+  "les dates et le numéro de lot. Tu retournes STRICTEMENT du JSON valide, " +
+  "sans préambule ni markdown. Règle absolue : tu ne DEVINES jamais une date. " +
+  "Si une information n'est pas lisible avec certitude sur la photo, tu mets " +
+  "null pour ce champ. Une date inventée est pire qu'une date absente.";
+
+/** Texte utilisateur du prompt DLC (champs attendus en sortie). */
+export const DLC_VISION_USER_TEXT = [
+  "Lis cette photo d'un carton / emballage / étiquette produit.",
+  "Extrais UNIQUEMENT ce qui est réellement imprimé. Réponds STRICTEMENT en JSON :",
+  "{",
+  '  "dlc": "<YYYY-MM-DD|null>",            // Date Limite de Consommation (à consommer jusqu\'au / DLC / use by)',
+  '  "ddm": "<YYYY-MM-DD|null>",            // Date de Durabilité Minimale (à consommer de préférence avant / DDM / DLUO / best before)',
+  '  "date_abattage": "<YYYY-MM-DD|null>",  // date d\'abattage si présente (viande halal)',
+  '  "supplier_lot": "<string|null>",       // numéro de lot fournisseur (LOT / L. / Batch)',
+  '  "lisible": <bool>,                     // true si AU MOINS une date a pu être lue',
+  '  "notes": "<analyse courte 1 phrase en français>"',
+  "}",
+  "",
+  "Règles :",
+  "- Convertis toute date au format ISO YYYY-MM-DD (ex: 03/06/2026 → 2026-06-03).",
+  "- Si le format est ambigu (JJ/MM vs MM/JJ), privilégie le format français JJ/MM/AAAA.",
+  "- Si une date n'est pas lisible avec certitude, mets null — n'invente jamais.",
+  "- Si la photo ne montre aucune étiquette de date exploitable → lisible=false, toutes les dates null.",
+].join("\n");
+
+/**
+ * Normalise une valeur de date renvoyée par l'IA en `YYYY-MM-DD` strict,
+ * ou null. Rejette toute chaîne qui n'est pas une date ISO plausible
+ * (garde-fou serveur : on n'écrit jamais une DLC mal formée en DB).
+ */
+export function normalizeIsoDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return null;
+  // Re-sérialise pour rejeter les dates impossibles (ex: 2026-02-31).
+  return d.toISOString().slice(0, 10) === v ? v : null;
+}
+
+/**
  * Extrait le premier objet JSON d'une réponse texte (tolère ```json …``` et
  * le préambule éventuel). Renvoie `{}` si rien d'exploitable.
  */

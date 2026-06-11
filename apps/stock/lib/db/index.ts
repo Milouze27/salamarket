@@ -1366,6 +1366,106 @@ export async function setCommandeStatut(
   if (row) row.statut = statut;
 }
 
+/* ────────────────── Lots halal (réception) ────────────────── */
+
+/**
+ * Métadonnées halal d'un LOT créé à la validation d'une réception.
+ * Tous les champs sont optionnels : un lot minimal (produit + dépôt +
+ * quantité) reste valide. La DLC / date d'abattage / certif alimentent
+ * ensuite FEFO, les alertes DLC et le passeport QR public.
+ */
+export interface NouveauLotHalal {
+  produit_id: string;
+  depot_id: string | null;
+  bdl_id?: string | null;
+  quantite_recue?: number | null;
+  unite?: string | null;
+  supplier_lot?: string | null;
+  fournisseur_id?: string | null;
+  certifier_id?: string | null;
+  certifier_name?: string | null;
+  certifier_valid_until?: string | null;
+  abattoir_nom?: string | null;
+  abattoir_pays?: string | null;
+  date_abattage?: string | null;
+  dlc?: string | null;
+  ddm?: string | null;
+  created_by?: string | null;
+  notes?: string | null;
+}
+
+/** Génère un id de lot lisible côté client (miroir de generate_lot_id SQL). */
+function genLotId(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const rand = Math.random().toString(16).slice(2, 8).toUpperCase();
+  return `L${yyyy}-${mm}-${rand}`;
+}
+
+/**
+ * Crée un LOT halal dans `produits_lots` lors de la validation d'une
+ * réception. Renvoie l'id du lot créé, ou `null` en mode démo / si la
+ * table (ou ses colonnes) n'est pas encore migrée (fallback gracieux :
+ * la réception ne doit jamais échouer parce que le lot n'a pas pu être
+ * tracé). On essaie d'abord l'insert complet ; si une colonne récente
+ * (depot_id, bdl_id, created_by) manque encore en prod, on retombe sur
+ * un insert minimal compatible avec le schéma 20260530000000.
+ */
+export async function createLotFromReception(
+  input: NouveauLotHalal,
+): Promise<string | null> {
+  const sb = supabase();
+  if (!sb) return null;
+
+  const id = genLotId();
+  const full: Record<string, unknown> = {
+    id,
+    produit_id: input.produit_id,
+    depot_id: input.depot_id ?? null,
+    bdl_id: input.bdl_id ?? null,
+    supplier_lot: input.supplier_lot ?? null,
+    fournisseur_id: input.fournisseur_id ?? null,
+    certifier_id: input.certifier_id ?? null,
+    certifier_name: input.certifier_name ?? null,
+    certifier_valid_until: input.certifier_valid_until ?? null,
+    abattoir_nom: input.abattoir_nom ?? null,
+    abattoir_pays: input.abattoir_pays ?? "FR",
+    date_abattage: input.date_abattage ?? null,
+    dlc: input.dlc ?? null,
+    ddm: input.ddm ?? null,
+    quantite_recue: input.quantite_recue ?? null,
+    unite: input.unite ?? "kg",
+    created_by: input.created_by ?? null,
+    notes: input.notes ?? null,
+  };
+
+  const { error } = await sb.from("produits_lots").insert(full);
+  if (!error) return id;
+
+  // Colonne récente absente (migration 20260612000040 pas encore jouée) :
+  // on retire les champs introduits par cette migration et on réessaie.
+  const isMissingColumn =
+    /column .* does not exist|could not find/i.test(error.message);
+  if (isMissingColumn) {
+    const {
+      depot_id: _d,
+      bdl_id: _b,
+      created_by: _c,
+      ...minimal
+    } = full;
+    void _d;
+    void _b;
+    void _c;
+    const { error: err2 } = await sb.from("produits_lots").insert(minimal);
+    if (!err2) return id;
+    console.warn("[createLotFromReception] insert minimal échoué:", err2.message);
+    return null;
+  }
+  console.warn("[createLotFromReception] insert lot échoué:", error.message);
+  return null;
+}
+
 /* ────────────────── Alertes DLC (badge count) ────────────────── */
 
 /**

@@ -9,6 +9,8 @@ import {
   formatSlotRange,
   formatSlotStartTime,
   groupSlotsByDay,
+  isIftarSlot,
+  isRamadanPeriod,
   isSlotSelectable,
   slotState,
   useSlots,
@@ -85,6 +87,20 @@ const Slots = () => {
             className="shrink-0 scale-[0.65] origin-right -my-3"
           />
         </div>
+
+        {/* Surcouche Ramadan : met en avant les créneaux iftar. */}
+        {isRamadanPeriod(now) && (
+          <div className="rounded-2xl border border-gold/30 bg-gradient-to-br from-[#0E3B2E] to-[#082A20] px-4 py-3 flex items-center gap-3">
+            <span className="text-lg leading-none shrink-0" aria-hidden>
+              🌙
+            </span>
+            <p className="text-[13px] leading-snug text-white/90">
+              Ramadan Moubarak — les créneaux{" "}
+              <span className="font-semibold text-gold">Iftar</span> (fin
+              d'après-midi) sont signalés pour préparer la rupture du jeûne.
+            </p>
+          </div>
+        )}
 
         {/* Tabs jours */}
         {loading ? (
@@ -195,13 +211,15 @@ const Slots = () => {
                 else if (state === "too-soon") sub = "Trop proche";
                 else if (state === "full") sub = "Complet";
 
+                const iftar = isIftarSlot(slot, now);
+
                 return (
                   <button
                     key={slot.id}
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    aria-label={`${formatSlotRange(slot)}, ${sub}`}
+                    aria-label={`${formatSlotRange(slot)}${iftar ? ", créneau iftar" : ""}, ${sub}`}
                     disabled={!selectable}
                     onClick={() => {
                       // Toggle off si on re-clique sur le slot déjà
@@ -213,14 +231,28 @@ const Slots = () => {
                       }
                     }}
                     className={cn(
-                      "min-h-[64px] rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all",
+                      "relative min-h-[64px] rounded-2xl border p-3 flex flex-col items-center justify-center text-center transition-all",
                       selectable
                         ? isSelected
                           ? "bg-[#0E3B2E] border-[#0E3B2E] text-white active:scale-[0.98]"
-                          : "bg-white border-[#0E3B2E]/15 text-[#0E3B2E] active:scale-[0.98] hover:border-[#0E3B2E]/30"
+                          : iftar
+                            ? "bg-white border-gold/40 text-[#0E3B2E] active:scale-[0.98] hover:border-gold/60"
+                            : "bg-white border-[#0E3B2E]/15 text-[#0E3B2E] active:scale-[0.98] hover:border-[#0E3B2E]/30"
                         : "bg-[#FAF7EE] border-[#0E3B2E]/10 text-[#0F1A14]/40 opacity-60 pointer-events-none",
                     )}
                   >
+                    {iftar && (
+                      <span
+                        className={cn(
+                          "absolute top-1.5 right-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide leading-none",
+                          isSelected
+                            ? "bg-white/20 text-gold"
+                            : "bg-gold/15 text-gold-text",
+                        )}
+                      >
+                        🌙 Iftar
+                      </span>
+                    )}
                     <span className="text-base font-bold leading-tight">
                       {formatSlotRange(slot)}
                     </span>

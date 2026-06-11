@@ -34,6 +34,7 @@ import {
   getBrackets,
 } from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
+import { TracabiliteFrise } from "@/components/TracabiliteFrise";
 import {
   DlcPriceTag,
   HalalBadgeLink,
@@ -812,6 +813,15 @@ const ProductDetail = () => {
                 Chaque lot a son QR code unique pour vérifier l&apos;origine et
                 la certification.
               </p>
+
+              {/* Frise traçabilité animée : ferme → abattoir certifié →
+                  rayon. Lit le dernier lot du produit ; fallback générique
+                  non cliquable si aucun lot. */}
+              <TracabiliteFrise
+                productId={product.id}
+                isCertifiable={showHalalBadge}
+                className="mt-1"
+              />
             </section>
           )}
 

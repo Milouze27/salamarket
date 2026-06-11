@@ -42,16 +42,25 @@ const normalizeReason = (raw: unknown): PromoReason => {
     case "ok":
     case "valid":
       return "ok";
+    // "min_non_atteint" = raison réelle renvoyée par la RPC déployée.
     case "min_not_reached":
     case "min":
     case "minimum":
+    case "min_non_atteint":
       return "min_not_reached";
+    // "expire" = variante FR côté RPC.
     case "expired":
+    case "expire":
       return "expired";
     case "unavailable":
       return "unavailable";
+    // "introuvable"/"epuise"/"pas_encore_actif" = raisons FR de la RPC
+    // (code inconnu / épuisé / pas encore actif) → traitées comme invalide.
     case "invalid":
     case "not_found":
+    case "introuvable":
+    case "epuise":
+    case "pas_encore_actif":
     case "":
       return "invalid";
     default:

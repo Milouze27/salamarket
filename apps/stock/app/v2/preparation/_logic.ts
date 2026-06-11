@@ -166,6 +166,22 @@ export function buildBatchCategories(
   return categories;
 }
 
+/**
+ * Référence d'affichage d'une commande, ALIGNÉE sur ce que le client voit
+ * dans Drive (OrderConfirmation/Orders affichent `order.id.slice(0,8)
+ * .toUpperCase()`). Source unique pour le staff : tout endroit qui doit
+ * matcher la commande avec le client (email, ticket, toasts, cartes kanban,
+ * détail) DOIT passer par ici, sinon la ref staff et la ref client divergent
+ * (ex. casse, présence/absence du toUpperCase) et le client↔staff ne se
+ * comprennent plus au comptoir.
+ */
+export function refCommande(cmd: {
+  numero_commande?: string | null;
+  id: string;
+}): string {
+  return cmd.numero_commande || cmd.id.slice(0, 8).toUpperCase();
+}
+
 export function clientTypeFromZone(
   z: ZonePreparationDrive | string,
 ): ClientType {
@@ -228,9 +244,7 @@ export function buildCommandePreteEmail(commande: {
   numero_commande?: string | null;
   client_nom?: string | null;
 }): string {
-  const ref = escapeHtml(
-    commande.numero_commande || commande.id.slice(0, 8).toUpperCase(),
-  );
+  const ref = escapeHtml(refCommande(commande));
   const greeting = commande.client_nom
     ? ` ${escapeHtml(commande.client_nom)}`
     : "";
@@ -247,7 +261,7 @@ export function buildCommandePreteEmail(commande: {
     <div style="background: white; border: 1px solid #E8E4D8; border-radius: 8px; padding: 16px; margin: 16px 0;">
       <p style="margin: 0; font-size: 13px; color: #6B7280;">📍 Retrait au</p>
       <p style="margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #0E3B2E;">8 av. Larrieu-Thibaud, 31100 Toulouse</p>
-      <p style="margin: 4px 0 0; font-size: 13px; color: #6B7280;">Lun-Sam 10h-19h30 · Dimanche 10h-18h</p>
+      <p style="margin: 4px 0 0; font-size: 13px; color: #6B7280;">Lun-Sam 10h-19h30 · Dimanche fermé</p>
     </div>
     <p style="color: #0F1A14; font-size: 14px;">À très vite !</p>
     <p style="color: #6B7280; font-size: 12px; margin-top: 24px;">L'équipe Salamarket</p>

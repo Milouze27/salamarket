@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { Leaderboard } from "@/components/v2/Leaderboard";
+import { HeatmapVentes } from "@/components/v2/HeatmapVentes";
 import {
   listDepots,
   listEmployes,
@@ -19,6 +21,7 @@ import {
   listSorties,
   listTransferts,
 } from "@/lib/db";
+import type { CockpitSnapshot } from "@/app/api/cockpit/snapshot/route";
 import type {
   Depot,
   Employe,
@@ -56,10 +59,24 @@ export default function ActivitePage() {
   const [transferts, setTransferts] = useState<TransfertInterDepot[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(true);
+  // V8 — agrégats activité (leaderboard préparateurs + heatmap ventes).
+  // Chargés via le snapshot cockpit ; résilients (échec → cartes masquées).
+  const [snap, setSnap] = useState<CockpitSnapshot | null>(null);
 
   useEffect(() => {
     void load();
+    void loadSnap();
   }, []);
+
+  async function loadSnap() {
+    try {
+      const { loadCockpitSnapshot } = await import("@/lib/actions/cockpit");
+      const r = await loadCockpitSnapshot();
+      if (r.ok && r.data) setSnap(r.data);
+    } catch {
+      /* le snapshot ne casse JAMAIS la page activité */
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -158,6 +175,16 @@ export default function ActivitePage() {
           />
         </div>
       </section>
+
+      {/* V8 — Performance staff : leaderboard préparateurs + heatmap ventes.
+          Affichés seulement si le snapshot expose des agrégats (fallback
+          gracieux : tables absentes → null → rien ne s'affiche). */}
+      {(snap?.leaderboard || snap?.heatmap) && (
+        <section className="px-4 sm:px-5 mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {snap?.leaderboard && <Leaderboard data={snap.leaderboard} />}
+          {snap?.heatmap && <HeatmapVentes data={snap.heatmap} />}
+        </section>
+      )}
 
       {loading ? (
         <div className="px-4 sm:px-5 py-10 text-center text-text-secondary">

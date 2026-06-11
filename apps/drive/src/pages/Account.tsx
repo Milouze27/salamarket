@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
 import {
+  Check,
   ChevronRight,
   Download,
   Loader2,
   LogOut,
   Package,
+  Pencil,
   ShieldCheck,
+  Sparkles,
   Trash2,
   User as UserIcon,
 } from "lucide-react";
@@ -14,9 +21,137 @@ import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Solde de fidélité « Baraka ». La vague V1 prévoit un hook `useLoyalty`
+ * dédié, mais il peut ne pas encore exister (cross-wave) et la table
+ * sous-jacente peut ne pas être migrée. On lit donc directement la table
+ * `loyalty_accounts` (clé user_id) avec un fallback 100% gracieux :
+ * - hook V1 absent → cette lecture autonome prend le relais ;
+ * - table absente / RLS / aucune ligne → `available: false`, la carte
+ *   Baraka est simplement masquée (jamais de crash).
+ */
+type BarakaState = {
+  available: boolean;
+  loading: boolean;
+  points: number;
+};
+
+function useBarakaSolde(userId: string | undefined): BarakaState {
+  const [state, setState] = useState<BarakaState>({
+    available: false,
+    loading: true,
+    points: 0,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!userId) {
+      setState({ available: false, loading: false, points: 0 });
+      return;
+    }
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("loyalty_accounts")
+          .select("points_balance")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (cancelled) return;
+        if (error) {
+          // Table absente / non lisible → on masque la carte.
+          setState({ available: false, loading: false, points: 0 });
+          return;
+        }
+        setState({
+          available: data != null,
+          loading: false,
+          points: Number(data?.points_balance ?? 0),
+        });
+      } catch {
+        if (!cancelled) {
+          setState({ available: false, loading: false, points: 0 });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  return state;
+}
+
+const PHONE_RE = /^(\+33|0)[1-9]\d{8}$/;
+
+const ProfilSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Nom trop court")
+    .max(80, "Nom trop long"),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || PHONE_RE.test(v.replace(/\s/g, "")), {
+      message: "Téléphone FR invalide (ex. 0612345678)",
+    }),
+});
+
+type ProfilValues = z.infer<typeof ProfilSchema>;
+
 export default function Account() {
   const { profile, user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const baraka = useBarakaSolde(user?.id);
+
+  // Édition profil. `localProfile` reflète la dernière valeur enregistrée
+  // pour un affichage optimiste : le AuthProvider ne ré-expose pas le
+  // profil à la demande, on garde donc une copie locale après UPDATE.
+  const [editing, setEditing] = useState(false);
+  const [localProfile, setLocalProfile] = useState<{
+    full_name: string | null;
+    phone: string | null;
+  } | null>(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ProfilValues>({
+    resolver: zodResolver(ProfilSchema),
+    defaultValues: { full_name: "", phone: "" },
+  });
+
+  useEffect(() => {
+    reset({
+      full_name: profile?.full_name ?? "",
+      phone: profile?.phone ?? "",
+    });
+  }, [profile, reset]);
+
+  const onSubmitProfil = async (values: ProfilValues) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: values.full_name.trim(),
+          phone: values.phone.replace(/\s/g, "") || null,
+        })
+        .eq("id", user.id);
+      if (error) throw error;
+      setLocalProfile({
+        full_name: values.full_name.trim(),
+        phone: values.phone.replace(/\s/g, "") || null,
+      });
+      toast.success("Profil mis à jour.");
+      setEditing(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Mise à jour impossible.",
+      );
+    }
+  };
 
   // RGPD action states
   const [exporting, setExporting] = useState(false);
@@ -40,9 +175,11 @@ export default function Account() {
     navigate("/", { replace: true });
   };
 
+  const effectiveName = localProfile?.full_name ?? profile?.full_name;
+  const effectivePhone = localProfile?.phone ?? profile?.phone;
   const displayEmail = profile?.email ?? user?.email ?? "·";
-  const displayName = profile?.full_name || "·";
-  const displayPhone = profile?.phone || "·";
+  const displayName = effectiveName || "·";
+  const displayPhone = effectivePhone || "·";
 
   /**
    * RGPD art. 20 — droit à la portabilité. On rassemble les données du compte
@@ -181,32 +318,167 @@ export default function Account() {
                 </span>
                 <h2
                   id="account-identity-heading"
-                  className="text-[11px] font-bold tracking-[0.18em] uppercase text-muted"
+                  className="text-[11px] font-bold tracking-[0.18em] uppercase text-muted flex-1"
                 >
                   Informations
                 </h2>
+                {!editing && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-border text-sapin text-xs font-semibold active:scale-[0.98] hover:border-sapin/40 transition-all shrink-0"
+                  >
+                    <Pencil size={13} aria-hidden />
+                    Modifier
+                  </button>
+                )}
               </div>
-              <dl className="flex flex-col gap-3">
-                <div>
-                  <dt className="text-xs text-muted">Nom</dt>
-                  <dd className="text-text font-semibold mt-0.5 break-words">
-                    {displayName}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">Email</dt>
-                  <dd className="text-text font-medium mt-0.5 break-all">
-                    {displayEmail}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted">Téléphone</dt>
-                  <dd className="text-text font-medium mt-0.5 break-all tabular-nums">
-                    {displayPhone}
-                  </dd>
-                </div>
-              </dl>
+
+              {editing ? (
+                <form
+                  onSubmit={handleSubmit(onSubmitProfil)}
+                  className="flex flex-col gap-4"
+                >
+                  <div>
+                    <label
+                      htmlFor="profil-nom"
+                      className="block text-xs text-muted mb-1.5"
+                    >
+                      Nom complet
+                    </label>
+                    <input
+                      id="profil-nom"
+                      type="text"
+                      autoComplete="name"
+                      {...register("full_name")}
+                      className="w-full min-h-[48px] rounded-xl border border-border bg-white px-4 text-[16px] text-text font-medium focus:outline-none focus:border-sapin focus:ring-2 focus:ring-sapin/15 transition-all"
+                    />
+                    {errors.full_name && (
+                      <p className="mt-1 text-[12px] text-red-600" role="alert">
+                        {errors.full_name.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className="block text-xs text-muted mb-1.5">Email</span>
+                    <p className="min-h-[48px] flex items-center rounded-xl border border-border bg-cream/60 px-4 text-[15px] text-ink/60 font-medium break-all">
+                      {displayEmail}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="profil-tel"
+                      className="block text-xs text-muted mb-1.5"
+                    >
+                      Téléphone
+                    </label>
+                    <input
+                      id="profil-tel"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="0612345678"
+                      {...register("phone")}
+                      className="w-full min-h-[48px] rounded-xl border border-border bg-white px-4 text-[16px] text-text font-medium tabular-nums focus:outline-none focus:border-sapin focus:ring-2 focus:ring-sapin/15 transition-all"
+                    />
+                    {errors.phone && (
+                      <p className="mt-1 text-[12px] text-red-600" role="alert">
+                        {errors.phone.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 min-h-[48px] rounded-xl bg-sapin text-white font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 transition-all"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 size={16} className="animate-spin" aria-hidden />
+                      ) : (
+                        <Check size={16} aria-hidden />
+                      )}
+                      Enregistrer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(false);
+                        reset({
+                          full_name: effectiveName ?? "",
+                          phone: effectivePhone ?? "",
+                        });
+                      }}
+                      disabled={isSubmitting}
+                      className="min-h-[48px] px-5 rounded-xl border border-border text-sapin font-semibold active:scale-[0.98] hover:bg-sapin/5 disabled:opacity-60 transition-all"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <dl className="flex flex-col gap-3">
+                  <div>
+                    <dt className="text-xs text-muted">Nom</dt>
+                    <dd className="text-text font-semibold mt-0.5 break-words">
+                      {displayName}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Email</dt>
+                    <dd className="text-text font-medium mt-0.5 break-all">
+                      {displayEmail}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Téléphone</dt>
+                    <dd className="text-text font-medium mt-0.5 break-all tabular-nums">
+                      {displayPhone}
+                    </dd>
+                  </div>
+                </dl>
+              )}
             </section>
+
+            {/* Solde Baraka (fidélité) — masqué si le programme n'est pas
+                disponible (hook V1 absent ou table non migrée). */}
+            {baraka.available && (
+              <section
+                className="rounded-2xl border border-gold/30 bg-gradient-to-br from-sapin to-sapin-deep p-5 flex items-center gap-4 shadow-sm"
+                aria-label="Solde de fidélité Baraka"
+              >
+                <span
+                  className="w-11 h-11 rounded-full bg-gold/20 text-gold flex items-center justify-center shrink-0"
+                  aria-hidden
+                >
+                  <Sparkles size={20} strokeWidth={2.25} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-bold tracking-[0.18em] uppercase text-gold">
+                    Cagnotte Baraka
+                  </p>
+                  <p className="text-white font-bold text-2xl tabular-nums mt-0.5 leading-none">
+                    {baraka.loading ? (
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-white/70"
+                        aria-hidden
+                      />
+                    ) : (
+                      <>
+                        {baraka.points}{" "}
+                        <span className="text-base font-semibold text-white/80">
+                          point{baraka.points > 1 ? "s" : ""}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </div>
+              </section>
+            )}
 
             {/* Primary action — see orders */}
             <button

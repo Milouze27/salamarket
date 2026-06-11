@@ -24,7 +24,7 @@ import {
   useState,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, Clock3 } from "lucide-react";
+import { ArrowDown, Clock3, PackageX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface CounterRow {
@@ -34,6 +34,22 @@ interface CounterRow {
   bay_label: string | null;
   pret_at: string | null;
   creneau_retrait: string;
+}
+
+/**
+ * Seuil de réassort comptoir. `stock_par_depot` n'a pas de colonne seuil
+ * métier (cf. SCHEMA.md) : on applique un plancher bas commun. Un produit
+ * « chaud » qui descend à ce niveau ou en dessous déclenche une alerte
+ * temps réel pour que le préparateur réapprovisionne le rayon.
+ */
+const SEUIL_RUPTURE = 3;
+
+interface RuptureAlert {
+  /** clé unique = produit_id du dépôt concerné. */
+  id: string;
+  nom: string;
+  quantite: number;
+  at: number;
 }
 
 /** Anonymise « Mohamed Belhaj » → « Mohamed B. » (RGPD écran public). */
@@ -103,12 +119,100 @@ export default function CounterPage() {
   // React #418/#425 sur l'écran comptoir.
   const [now, setNow] = useState<Date | null>(null);
 
+  // Alertes rupture comptoir temps réel (max 3 affichées, FIFO, auto-dismiss).
+  const [ruptures, setRuptures] = useState<RuptureAlert[]>([]);
+
   // Horloge en haut à droite — tick toutes les 30s (assez précis pour TV).
   useEffect(() => {
     setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
+
+  const pushRupture = useCallback(
+    async (produitId: string, quantite: number) => {
+      const sb = supabase();
+      if (!sb) return;
+      // Résolution du nom à la volée (pas de catalogue préchargé sur cet écran).
+      let nom = "Produit";
+      try {
+        const { data } = await sb
+          .from("produits")
+          .select("nom")
+          .eq("id", produitId)
+          .maybeSingle();
+        if (data?.nom) nom = String(data.nom);
+      } catch {
+        // Fallback gracieux : on alerte quand même sans le nom exact.
+      }
+      setRuptures((prev) => {
+        // Dédoublonne par produit : on remplace l'alerte existante (quantité à
+        // jour) plutôt que d'empiler des doublons pour le même article.
+        const withoutDup = prev.filter((r) => r.id !== produitId);
+        const next: RuptureAlert = {
+          id: produitId,
+          nom,
+          quantite,
+          at: Date.now(),
+        };
+        // Garde les 3 plus récentes pour ne pas noyer l'écran.
+        return [next, ...withoutDup].slice(0, 3);
+      });
+    },
+    [],
+  );
+
+  // Auto-dismiss : chaque alerte disparaît 8s après sa dernière mise à jour.
+  useEffect(() => {
+    if (ruptures.length === 0) return;
+    const t = setInterval(() => {
+      const cutoff = Date.now() - 8000;
+      setRuptures((prev) => prev.filter((r) => r.at > cutoff));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [ruptures.length]);
+
+  // Realtime sur stock_par_depot : alerte quand un produit chaud (en rayon,
+  // prix renseigné) franchit le seuil de rupture à la baisse. Fallback
+  // gracieux : si la table n'est pas publiée en realtime (avant migration
+  // 20260612000001), le channel reste muet, aucun crash.
+  useEffect(() => {
+    const sb = supabase();
+    if (!sb) return;
+    const channel = sb
+      .channel("counter-stock-rupture")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "stock_par_depot" },
+        (payload) => {
+          const next = payload.new as {
+            produit_id?: string;
+            quantite?: number | string | null;
+            prix_vente?: number | string | null;
+          } | null;
+          const old = payload.old as {
+            quantite?: number | string | null;
+          } | null;
+          if (!next?.produit_id) return;
+          // Produit « chaud » = réellement en rayon (prix de vente renseigné).
+          if (next.prix_vente == null) return;
+          const qNew = Number(next.quantite ?? 0);
+          if (!Number.isFinite(qNew) || qNew > SEUIL_RUPTURE) return;
+          // N'alerte qu'au FRANCHISSEMENT (ancienne qté au-dessus du seuil) si
+          // l'ancienne valeur est connue (REPLICA IDENTITY). Sinon on alerte
+          // quand même — mieux vaut un signal de trop qu'une rupture muette.
+          if (old?.quantite != null) {
+            const qOld = Number(old.quantite);
+            if (Number.isFinite(qOld) && qOld <= SEUIL_RUPTURE) return;
+          }
+          void pushRupture(next.produit_id, qNew);
+        },
+      )
+      .subscribe();
+    return () => {
+      void sb.removeChannel(channel);
+    };
+  }, [pushRupture]);
 
   const fetchRows = useCallback(async () => {
     const sb = supabase();
@@ -306,6 +410,11 @@ export default function CounterPage() {
           le scroll + un badge "+N en attente", on garantit que
           personne n'est invisible. */}
       <CounterGrid sorted={sorted} loaded={loaded} oldestId={oldestId} />
+
+      {/* Alertes rupture comptoir — overlay STAFF bas-gauche, hors de la zone
+          client centrale. Discret (l'écran reste lisible côté client) mais
+          visible du préparateur qui passe au comptoir. */}
+      <RuptureAlerts ruptures={ruptures} />
 
       {/* Footer hint */}
       <footer className="absolute bottom-4 inset-x-0 text-center text-[var(--text-tertiary)] text-[11px] tracking-[0.18em] uppercase font-semibold pointer-events-none">
@@ -518,6 +627,64 @@ function EmptyState() {
       >
         Préparation en cours en arrière-boutique. Patientez quelques instants.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Pile d'alertes rupture en bas-gauche (pour le préparateur, pas le client).
+ * Texte court, anti-overflow (truncate sur le nom), couleur danger du thème.
+ */
+function RuptureAlerts({ ruptures }: { ruptures: RuptureAlert[] }) {
+  return (
+    <div className="absolute bottom-12 left-8 lg:left-14 z-20 flex flex-col gap-2 max-w-[min(86vw,340px)] pointer-events-none">
+      <AnimatePresence initial={false}>
+        {ruptures.map((r) => (
+          <motion.div
+            key={r.id}
+            layout
+            initial={{ opacity: 0, x: -28, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -28, scale: 0.94 }}
+            transition={{ duration: 0.3, ease: [0.22, 0.61, 0.36, 1] }}
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 border"
+            style={{
+              background: "var(--surface-2)",
+              borderColor: "var(--danger)",
+              boxShadow: "var(--shadow-elevated)",
+            }}
+          >
+            <span
+              className="grid place-items-center w-9 h-9 rounded-full shrink-0"
+              style={{ background: "color-mix(in srgb, var(--danger) 22%, transparent)" }}
+            >
+              <PackageX className="w-5 h-5" style={{ color: "var(--danger)" }} />
+            </span>
+            <div className="min-w-0">
+              <p
+                className="font-bold uppercase tracking-wide leading-none"
+                style={{ fontSize: "11px", color: "var(--danger)" }}
+              >
+                Rupture rayon
+              </p>
+              <p
+                className="font-bold text-[var(--text-primary)] truncate mt-1"
+                style={{ fontSize: "clamp(13px, 1.1vw, 17px)" }}
+              >
+                {r.nom}
+              </p>
+              <p
+                className="text-[var(--text-secondary)] tabular mt-0.5"
+                style={{ fontSize: "clamp(11px, 0.9vw, 14px)" }}
+              >
+                {r.quantite <= 0
+                  ? "Stock épuisé — à réassortir"
+                  : `Plus que ${r.quantite} en rayon`}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

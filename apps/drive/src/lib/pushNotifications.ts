@@ -120,8 +120,12 @@ export const subscribePush = async (): Promise<{
 
   const keys = subscriptionKeys(subscription);
 
-  // Cast nécessaire : push_subscriptions n'est pas (encore) dans les
-  // types auto-générés. Lovable régénère après exécution de la migration.
+  // Schéma réel de push_subscriptions (migrations 0013/0014/0015) :
+  // colonnes keys_p256dh / keys_auth / enabled, user_id nullable,
+  // endpoint UNIQUE. On conflit sur `endpoint` (la contrainte unique
+  // réelle) — un même appareil ré-abonné met à jour sa ligne au lieu
+  // d'en créer une seconde. Le cast reste nécessaire : la table n'est
+  // pas dans les types auto-générés Drive.
   const { error } = await (
     supabase as unknown as {
       from: (table: string) => {
@@ -137,11 +141,12 @@ export const subscribePush = async (): Promise<{
       {
         user_id: user.id,
         endpoint: keys.endpoint,
-        p256dh: keys.p256dh,
-        auth: keys.auth,
+        keys_p256dh: keys.p256dh,
+        keys_auth: keys.auth,
+        enabled: true,
         user_agent: navigator.userAgent,
       },
-      { onConflict: "user_id,endpoint" },
+      { onConflict: "endpoint" },
     );
 
   if (error) {

@@ -20,6 +20,8 @@ import { ProShell } from "@/components/pro/ProShell";
 import { ProCompteActifGuard } from "@/components/pro/ProCompteActifGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -168,6 +170,11 @@ function PanierInner() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Métadonnées bon de commande Pro (facultatives).
+  const [refInterne, setRefInterne] = useState("");
+  const [dateLivraison, setDateLivraison] = useState("");
+  const [note, setNote] = useState("");
+
   const lignes = useMemo(() => computeLignes(items), [items]);
 
   // Totaux multi-TVA via computeCartTotal
@@ -222,14 +229,25 @@ function PanierInner() {
     }
     setSubmitting(true);
     try {
-      // 1. Crée la commande sans montants (calculés serveur par trigger)
+      // 1. Crée la commande sans montants (calculés serveur par trigger).
+      //    Les métadonnées bon de commande sont écrites ICI, à l'INSERT :
+      //    le délégué n'a plus de droit UPDATE sur commandes_pro (cf.
+      //    durcissement 20260608000004), donc on ne peut pas les poser
+      //    après coup. On n'envoie que les champs renseignés.
+      const refTrim = refInterne.trim();
+      const noteTrim = note.trim();
+      const insertPayload: Record<string, unknown> = {
+        compte_pro_id: compte.id,
+        statut: "a_valider",
+        type_recuperation: "retrait_pro",
+      };
+      if (refTrim) insertPayload.ref_interne = refTrim;
+      if (dateLivraison) insertPayload.date_livraison_souhaitee = dateLivraison;
+      if (noteTrim) insertPayload.notes_client = noteTrim;
+
       const { data: created, error: errCmd } = await supabase
         .from("commandes_pro")
-        .insert({
-          compte_pro_id: compte.id,
-          statut: "a_valider",
-          type_recuperation: "retrait_pro",
-        })
+        .insert(insertPayload)
         .select("id")
         .single();
       if (errCmd) throw errCmd;
@@ -331,6 +349,59 @@ function PanierInner() {
                   </span>
                 </div>
               )}
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="po-ref-interne"
+                    className="text-xs text-ink-soft"
+                  >
+                    Référence interne (bon de commande)
+                  </Label>
+                  <Input
+                    id="po-ref-interne"
+                    value={refInterne}
+                    onChange={(e) => setRefInterne(e.target.value)}
+                    maxLength={50}
+                    placeholder="Ex : BC-2026-014"
+                    className="h-10 text-base"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="po-date-livraison"
+                    className="text-xs text-ink-soft"
+                  >
+                    Date de livraison souhaitée
+                  </Label>
+                  <Input
+                    id="po-date-livraison"
+                    type="date"
+                    value={dateLivraison}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setDateLivraison(e.target.value)}
+                    className="h-10 text-base"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="po-note" className="text-xs text-ink-soft">
+                    Note
+                  </Label>
+                  <Textarea
+                    id="po-note"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Instructions de livraison, contact sur place…"
+                    className="text-base resize-none"
+                  />
+                </div>
+              </div>
+
+              <Separator />
 
               {totals.ttc > 500 && (
                 <p className="text-xs text-gold-text bg-gold-soft/40 border border-gold/30 rounded-md px-3 py-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,7 +36,9 @@ import {
   listCommandesDrive,
   listLignesPourCommandeAvecUnitType,
   setCommandeStatut,
+  type CommandeDriveLigneWithUnitType,
 } from "@/lib/db";
+import type { CommandeDriveLigne, ProduitUnitType } from "@/lib/types/db";
 import { supabase } from "@/lib/supabase";
 import {
   buildBatchCategories,
@@ -46,6 +48,7 @@ import {
   formatHeure,
   formatRelativeToCreneau,
   getUrgencyTier,
+  refCommande,
   SEGMENT_FILTERS,
   URGENCE_FILTERS,
   type BatchCategory,
@@ -131,6 +134,13 @@ export default function V2PreparationKanbanPage() {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(
     () => new Set(),
   );
+  // Dédup des reload() concurrents : les events Realtime peuvent arriver en
+  // rafale (changement statut + lignes quasi simultanés). On numérote chaque
+  // reload ; seul le plus récent applique son résultat (les réponses tardives
+  // d'un reload obsolète sont ignorées → pas d'écrasement désordonné de l'UI).
+  // `mountedRef` évite tout setState après démontage du composant.
+  const reloadSeqRef = useRef(0);
+  const mountedRef = useRef(true);
 
   // Restaure le mode de vue préféré au mount (guard SSR).
   useEffect(() => {
@@ -145,12 +155,63 @@ export default function V2PreparationKanbanPage() {
     window.localStorage.setItem("prep-viewmode", viewMode);
   }, [viewMode]);
 
-  async function reload() {
+  // Charge les lignes (avec unit_type/nom/catégorie) de TOUTES les commandes
+  // en UNE requête au lieu d'un N+1 (une requête par commande). Embed PostgREST
+  // sur la FK produit_id → produits, filtré par `commande_id IN (...)`, puis
+  // regroupement en mémoire. Fallback gracieux sur le chemin per-commande
+  // (mode local seed sans client Supabase, ou en cas d'erreur de la requête
+  // batch) pour ne jamais laisser le kanban vide.
+  async function loadLignesByCommande(
+    ids: string[],
+  ): Promise<Map<string, CommandeDriveLigneWithUnitType[]>> {
+    const map = new Map<string, CommandeDriveLigneWithUnitType[]>();
+    if (ids.length === 0) return map;
+    const sb = supabase();
+    if (sb) {
+      try {
+        const { data, error } = await sb
+          .from("commandes_drive_lignes")
+          .select("*, produits(unit_type, nom, categorie)")
+          .in("commande_id", ids);
+        if (error) throw error;
+        type Row = CommandeDriveLigne & {
+          produits?: {
+            unit_type?: ProduitUnitType | null;
+            nom?: string | null;
+            categorie?: string | null;
+          } | null;
+        };
+        for (const r of (data ?? []) as Row[]) {
+          const ligne: CommandeDriveLigneWithUnitType = {
+            ...r,
+            produit_unit_type: r.produits?.unit_type ?? null,
+            produit_nom: r.produits?.nom ?? null,
+            produit_categorie: r.produits?.categorie ?? null,
+          };
+          const list = map.get(ligne.commande_id) ?? [];
+          list.push(ligne);
+          map.set(ligne.commande_id, list);
+        }
+        return map;
+      } catch (e) {
+        // Repli sur le chemin per-commande (ne casse pas l'écran).
+        console.error("[preparation] batch lignes échoué, fallback N+1:", e);
+      }
+    }
+    const lists = await Promise.all(
+      ids.map((id) => listLignesPourCommandeAvecUnitType(id)),
+    );
+    ids.forEach((id, i) => map.set(id, lists[i]));
+    return map;
+  }
+
+  const reload = useCallback(async () => {
     // NOTE : /api/sync/drive-pull existe pour syncer les orders du
     // projet Supabase Drive vers Stock, mais nécessite la service-role
     // du projet Drive (RLS bloque l'anon). Tant que cette clé n'est pas
     // configurée en env Vercel (DRIVE_SUPABASE_SERVICE_ROLE_KEY), on ne
     // l'appelle pas — ça reviendrait à un round-trip réseau sans effet.
+    const seq = ++reloadSeqRef.current;
     if (process.env.NEXT_PUBLIC_HAS_DRIVE_SYNC === "1") {
       try {
         await fetch("/api/sync/drive-pull", { method: "POST" });
@@ -161,12 +222,14 @@ export default function V2PreparationKanbanPage() {
 
     try {
       const cmds = await listCommandesDrive();
-      const enriched = await Promise.all(
-        cmds.map(async (c) => ({
-          ...c,
-          lignes: await listLignesPourCommandeAvecUnitType(c.id),
-        })),
-      );
+      const lignesByCmd = await loadLignesByCommande(cmds.map((c) => c.id));
+      const enriched: CommandeWithLignes[] = cmds.map((c) => ({
+        ...c,
+        lignes: lignesByCmd.get(c.id) ?? [],
+      }));
+      // Reload obsolète (un reload plus récent a démarré entre-temps) ou
+      // composant démonté → on n'écrase pas l'UI avec un résultat périmé.
+      if (seq !== reloadSeqRef.current || !mountedRef.current) return;
       // Filtres :
       //  - statut != 'annule' (commande annulée par client ou admin)
       //  - statut_paiement != 'echec' (paiement Stripe a échoué — la
@@ -182,44 +245,68 @@ export default function V2PreparationKanbanPage() {
     } catch (e) {
       // Sans ce garde, une erreur Supabase laissait le kanban vide en silence.
       console.error("[preparation] chargement échoué:", e);
-      toast.error("Erreur de chargement des commandes · vérifie la connexion");
+      if (seq === reloadSeqRef.current && mountedRef.current) {
+        toast.error(
+          "Erreur de chargement des commandes · vérifie la connexion",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (seq === reloadSeqRef.current && mountedRef.current) {
+        setLoading(false);
+      }
     }
-  }
+    // loadLignesByCommande est une closure stable (ne dépend que des imports) ;
+    // pas de dépendance réactive ⇒ reload garde une identité stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     void reload();
     // Realtime : suivre les changements de statut/lignes en live.
     // Si Realtime indispo (mode local), fallback polling 12s.
     const sb = supabase();
     if (!sb) {
       const t = setInterval(() => void reload(), 12_000);
-      return () => clearInterval(t);
+      return () => {
+        mountedRef.current = false;
+        clearInterval(t);
+      };
     }
+    // Coalescing : un changement métier déclenche souvent PLUSIEURS events
+    // Realtime quasi simultanés (UPDATE commandes_drive + UPDATE/INSERT des
+    // lignes). On débounce 250ms pour ne lancer qu'UN reload par rafale, au
+    // lieu d'empiler des requêtes batch concurrentes. Le timer est annulé au
+    // démontage (pas de reload fantôme après unmount).
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        debounce = null;
+        if (mountedRef.current) void reload();
+      }, 250);
+    };
     const ch = sb
       .channel("kanban-drive")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commandes_drive" },
-        () => {
-          void reload();
-        },
+        scheduleReload,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "commandes_drive_lignes" },
-        () => {
-          void reload();
-        },
+        scheduleReload,
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") setIsLive(true);
+        if (status === "SUBSCRIBED" && mountedRef.current) setIsLive(true);
       });
     return () => {
+      mountedRef.current = false;
+      if (debounce) clearTimeout(debounce);
       ch.unsubscribe();
     };
-  }, []);
+  }, [reload]);
 
   // Commandes filtrées par segment client. Le filtre urgence ne s'applique
   // qu'aux commandes "à préparer" (seul statut où le tier a du sens), il est
@@ -372,7 +459,7 @@ export default function V2PreparationKanbanPage() {
           : target === "pret"
             ? "marquée prête"
             : "marquée retirée";
-      toast.success(`${cmd.numero_commande} ${label}`, { duration: 1800 });
+      toast.success(`${refCommande(cmd)} ${label}`, { duration: 1800 });
       setActionFor(null);
       void reload();
     } catch (e) {
@@ -706,7 +793,7 @@ export default function V2PreparationKanbanPage() {
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-[14px] font-extrabold text-text-primary">
-                                  {cmd.numero_commande}
+                                  {refCommande(cmd)}
                                 </p>
                                 <p className="text-[11.5px] text-text-secondary truncate">
                                   {cmd.client_nom}
@@ -1106,7 +1193,7 @@ export default function V2PreparationKanbanPage() {
                 <div>
                   <p className="label-caps text-text-tertiary">Commande</p>
                   <h2 className="text-[18px] font-extrabold text-text-primary mt-0.5">
-                    {actionFor.numero_commande}
+                    {refCommande(actionFor)}
                   </h2>
                   <p className="text-[12px] text-text-secondary mt-0.5">
                     {actionFor.client_nom}

@@ -15,11 +15,24 @@ export type ComptesProInsert =
 export type ComptesProUpdate =
   Database["public"]["Tables"]["comptes_pro"]["Update"];
 
-export type CommandePro = Database["public"]["Tables"]["commandes_pro"]["Row"];
+// `ref_interne` (référence/bon de commande interne du client Pro) est
+// ajoutée par la migration 20260612000030. Les types DB générés ne
+// l'embarquent qu'après régénération : on l'expose ici en optionnel pour
+// que le front compile et reste gracieux si la colonne n'est pas encore
+// présente. `date_livraison_souhaitee` et `notes_client` existent déjà
+// dans les types générés.
+export type CommandePro =
+  Database["public"]["Tables"]["commandes_pro"]["Row"] & {
+    ref_interne?: string | null;
+  };
 export type CommandesProInsert =
-  Database["public"]["Tables"]["commandes_pro"]["Insert"];
+  Database["public"]["Tables"]["commandes_pro"]["Insert"] & {
+    ref_interne?: string | null;
+  };
 export type CommandesProUpdate =
-  Database["public"]["Tables"]["commandes_pro"]["Update"];
+  Database["public"]["Tables"]["commandes_pro"]["Update"] & {
+    ref_interne?: string | null;
+  };
 
 export type CommandeProLigne =
   Database["public"]["Tables"]["commandes_pro_lignes"]["Row"];

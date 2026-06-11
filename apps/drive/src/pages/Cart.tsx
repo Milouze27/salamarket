@@ -32,6 +32,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { formatPrice, productUnitLabel } from "@/lib/format";
 import { MIN_ORDER_CENTS } from "@/lib/constants";
 import { validatePromo, promoMessage, type PromoResult } from "@/lib/promo";
+import { useLoyalty } from "@/hooks/useLoyalty";
+import { BarakaGauge } from "@/components/BarakaGauge";
+import { RecetteSuggestion } from "@/components/RecetteSuggestion";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrixEstime, formatKg, getBrackets } from "@salamarket/shared";
 import { cdnImage } from "@/lib/imageUrl";
@@ -101,10 +104,15 @@ const Cart = () => {
   const updateBracket = useCartStore((s) => s.updateBracket);
   const clear = useCartStore((s) => s.clear);
 
+  // ─────── Cagnotte Baraka (solde fidélité, dégrade en 0) ───────
+  const loyalty = useLoyalty(user?.email);
+
   // ─────── Code promo (state local, dégrade proprement) ───────
-  // Désactivé tant que le backend n'applique pas réellement la remise au
-  // paiement (RPC validate_promo_code absente + remise non transmise à Stripe).
-  const PROMO_ENABLED = false;
+  // Activé : la RPC validate_promo_code est déployée (migration
+  // 20260605000001) et la remise (discount_cents) est propagée au panier.
+  // ⚠️ La transmission de la remise à Stripe (create-checkout-session) est
+  // gérée par la vague V10 sur l'edge function — voir cross_wave_deps.
+  const PROMO_ENABLED = true;
   const [promoInput, setPromoInput] = useState("");
   const [promoApplying, setPromoApplying] = useState(false);
   const [promo, setPromo] = useState<PromoResult | null>(null);
@@ -548,7 +556,7 @@ const Cart = () => {
                             </span>
                             <button
                               onClick={() => increment(item.lineId)}
-                              disabled={item.quantity >= 99}
+                              disabled={item.quantity >= 50}
                               aria-label={`Augmenter ${item.product.name}`}
                               className="w-9 h-9 rounded-full bg-[#0E3B2E] text-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 shadow-sm"
                             >
@@ -562,6 +570,20 @@ const Cart = () => {
                 );
               })}
             </ul>
+
+            {/* Suggestion recette liée au panier — ajout des ingrédients
+                manquants en un tap. Ne rend rien si aucune recette pertinente. */}
+            <RecetteSuggestion cartItems={items} />
+
+            {/* Cagnotte Baraka — affichée uniquement pour un client connecté
+                ayant au moins 1 point (sinon section inutile). */}
+            {user && loyalty.points > 0 && (
+              <BarakaGauge
+                points={loyalty.points}
+                nextPalier={loyalty.nextPalier}
+                progress={loyalty.progress}
+              />
+            )}
 
             {/* Récap éditorial */}
             <section className="mt-5 px-1 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 [animation-fill-mode:backwards]">

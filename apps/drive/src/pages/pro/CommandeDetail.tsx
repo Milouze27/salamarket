@@ -46,10 +46,16 @@ function statutLabel(statut: string): string {
 // vit dans cette factory async → Vite émet un chunk séparé, chargé
 // uniquement au 1er rendu du lien (clic "Bon de commande").
 //
-// NOTE tokens : les valeurs hex ci-dessous ne sont PAS du thème UI mais
-// du contenu PDF — @react-pdf/renderer ne lit pas le CSS du DOM, donc on
-// reprend les mêmes constantes de marque que InvoicePDF (vert #0E3B2E).
+// NOTE tokens : @react-pdf/renderer ne lit pas le CSS du DOM (ni brand.ts
+// ni Tailwind) → on duplique ici les tokens de marque Salam Market plutôt
+// que des gris génériques hors palette, comme InvoicePDF.
+//   sapin #0E3B2E · encre #0F1A14 · gris texte #5A6470 · bordure #E8E4D8
 // ─────────────────────────────────────────────────────────────────────
+
+const PDF_INK = "#0F1A14";
+const PDF_GRAY = "#5A6470";
+const PDF_BORDER = "#E8E4D8";
+const PDF_SAPIN = "#0E3B2E";
 
 interface BonCommandeProps {
   commande: CommandePro;
@@ -88,17 +94,17 @@ async function loadBonCommandeModule() {
       padding: 40,
       fontSize: 10,
       fontFamily: "Helvetica",
-      color: "#111111",
+      color: PDF_INK,
     },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
       marginBottom: 24,
-      borderBottom: "1pt solid #111111",
+      borderBottom: `1pt solid ${PDF_INK}`,
       paddingBottom: 12,
     },
-    brand: { fontSize: 18, fontWeight: "bold", color: "#0E3B2E" },
-    brandSub: { fontSize: 9, color: "#444444", marginTop: 2 },
+    brand: { fontSize: 18, fontWeight: "bold", color: PDF_SAPIN },
+    brandSub: { fontSize: 9, color: PDF_GRAY, marginTop: 2 },
     docMeta: { textAlign: "right" },
     docTitle: { fontSize: 14, fontWeight: "bold" },
     docMetaLine: { fontSize: 9, marginTop: 2 },
@@ -111,13 +117,13 @@ async function loadBonCommandeModule() {
     block: {
       flex: 1,
       padding: 10,
-      border: "1pt solid #DDDDDD",
+      border: `1pt solid ${PDF_BORDER}`,
       borderRadius: 4,
     },
     blockTitle: {
       fontSize: 9,
       textTransform: "uppercase",
-      color: "#666666",
+      color: PDF_GRAY,
       marginBottom: 4,
       letterSpacing: 0.5,
     },
@@ -125,7 +131,7 @@ async function loadBonCommandeModule() {
     table: { width: "100%", marginTop: 8, marginBottom: 12 },
     tableHeader: {
       flexDirection: "row",
-      backgroundColor: "#0E3B2E",
+      backgroundColor: PDF_SAPIN,
       color: "#FFFFFF",
       paddingVertical: 6,
       paddingHorizontal: 6,
@@ -136,7 +142,7 @@ async function loadBonCommandeModule() {
       flexDirection: "row",
       paddingVertical: 5,
       paddingHorizontal: 6,
-      borderBottom: "1pt solid #EEEEEE",
+      borderBottom: `1pt solid ${PDF_BORDER}`,
       fontSize: 9,
     },
     colProduit: { width: "52%" },
@@ -147,7 +153,7 @@ async function loadBonCommandeModule() {
       marginTop: 12,
       marginLeft: "auto",
       width: "50%",
-      border: "1pt solid #DDDDDD",
+      border: `1pt solid ${PDF_BORDER}`,
       borderRadius: 4,
       padding: 8,
     },
@@ -161,7 +167,7 @@ async function loadBonCommandeModule() {
       justifyContent: "space-between",
       paddingVertical: 4,
       marginTop: 4,
-      borderTop: "1pt solid #111111",
+      borderTop: `1pt solid ${PDF_INK}`,
       fontWeight: "bold",
       fontSize: 12,
     },
@@ -171,8 +177,8 @@ async function loadBonCommandeModule() {
       left: 40,
       right: 40,
       fontSize: 8,
-      color: "#555555",
-      borderTop: "1pt solid #DDDDDD",
+      color: PDF_GRAY,
+      borderTop: `1pt solid ${PDF_BORDER}`,
       paddingTop: 8,
     },
   });
@@ -197,6 +203,11 @@ async function loadBonCommandeModule() {
             <Text style={styles.docMetaLine}>
               Date : {pdfDate(commande.date_commande)}
             </Text>
+            {commande.ref_interne ? (
+              <Text style={styles.docMetaLine}>
+                Votre réf. : {commande.ref_interne}
+              </Text>
+            ) : null}
             {commande.date_livraison_souhaitee ? (
               <Text style={styles.docMetaLine}>
                 Livraison souhaitée :{" "}
@@ -234,6 +245,11 @@ async function loadBonCommandeModule() {
             {commande.date_echeance ? (
               <Text style={styles.blockLine}>
                 Échéance : {pdfDate(commande.date_echeance)}
+              </Text>
+            ) : null}
+            {commande.notes_client ? (
+              <Text style={styles.blockLine}>
+                Note : {commande.notes_client}
               </Text>
             ) : null}
           </View>

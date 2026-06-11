@@ -5,6 +5,7 @@ import {
   AlertCircle,
   ArrowRight,
   Banknote,
+  Bell,
   CheckCircle2,
   ChefHat,
   Clock,
@@ -13,6 +14,7 @@ import {
   Package,
   RotateCcw,
   ShoppingBag,
+  TriangleAlert,
   XCircle,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -22,10 +24,16 @@ import { toast } from "sonner";
 
 import { AppHeader } from "@/components/AppHeader";
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
+import { SignalerProbleme } from "@/components/SignalerProbleme";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserOrders, type UserOrder } from "@/hooks/useUserOrders";
 import { supabase } from "@/integrations/supabase/client";
 import { useCartStore } from "@/stores/cartStore";
+import {
+  getNotificationPermission,
+  isPushSupported,
+  subscribePush,
+} from "@/lib/pushNotifications";
 import type { Product, ProductUnit, ProductUnitType } from "@/types/product";
 
 const PARIS_TZ = "Europe/Paris";
@@ -164,7 +172,15 @@ const ACTIVE_STATUSES = new Set([
   "pret",
 ]);
 
-const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
+const OrderCard = ({
+  order,
+  idx,
+  onSignaler,
+}: {
+  order: UserOrder;
+  idx: number;
+  onSignaler: (order: UserOrder) => void;
+}) => {
   const items = Array.isArray(order.items) ? order.items : [];
   const itemCount = items.reduce((n, i) => n + i.quantity, 0);
   const shortId = order.id.slice(0, 8).toUpperCase();
@@ -348,6 +364,22 @@ const OrderCard = ({ order, idx }: { order: UserOrder; idx: number }) => {
           />
         </span>
       </div>
+
+      {/* SAV : signaler un problème (hors commande annulée) */}
+      {order.status !== "cancelled" && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSignaler(order);
+          }}
+          className="mt-2 w-full inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl text-muted text-xs font-semibold hover:text-amber-700 hover:bg-amber-50 active:scale-[0.98] transition-all"
+        >
+          <TriangleAlert size={14} aria-hidden />
+          Signaler un problème
+        </button>
+      )}
     </Link>
   );
 };
@@ -372,6 +404,42 @@ export default function Orders() {
     isError,
     refetch,
   } = useUserOrders(userId, email);
+
+  // SAV — commande sélectionnée pour le signalement de problème.
+  const [savOrder, setSavOrder] = useState<UserOrder | null>(null);
+
+  // Push CLIENT "commande prête" — opt-in. On propose la bannière
+  // uniquement si le navigateur supporte le push et que la permission
+  // n'a pas encore été demandée (ni accordée, ni refusée).
+  const [pushPromptVisible, setPushPromptVisible] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (!isPushSupported()) return;
+    if (getNotificationPermission() !== "default") return;
+    setPushPromptVisible(true);
+  }, [userId]);
+
+  const handleEnablePush = async () => {
+    setPushBusy(true);
+    try {
+      const res = await subscribePush();
+      if (res.ok) {
+        toast.success("Notifications activées", {
+          description: "Vous serez prévenu dès que votre commande est prête.",
+        });
+        setPushPromptVisible(false);
+      } else if (res.reason === "permission-denied") {
+        toast.error("Notifications refusées dans le navigateur.");
+        setPushPromptVisible(false);
+      } else {
+        toast.error("Activation impossible pour le moment.");
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   // Suivi temps-réel : on écoute les changements de statut côté
   // commandes_drive (filtré sur l'email du client) ET côté orders (filtré
@@ -493,6 +561,46 @@ export default function Orders() {
           </div>
         ) : (
           <>
+            {pushPromptVisible && (
+              <div className="mb-3 rounded-2xl border border-[#0E3B2E]/15 bg-white p-4 shadow-sm flex items-start gap-3">
+                <span
+                  className="w-9 h-9 rounded-full bg-[#0E3B2E]/10 text-[#0E3B2E] flex items-center justify-center shrink-0"
+                  aria-hidden
+                >
+                  <Bell size={17} strokeWidth={2.25} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-text">
+                    Être prévenu quand c'est prêt
+                  </p>
+                  <p className="text-xs text-muted mt-0.5 leading-snug">
+                    Recevez une notification dès que votre commande est prête à
+                    retirer.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleEnablePush}
+                      disabled={pushBusy}
+                      className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#0E3B2E] text-white text-xs font-semibold active:scale-[0.98] disabled:opacity-60 transition-all"
+                    >
+                      {pushBusy && (
+                        <Loader2 size={13} className="animate-spin" aria-hidden />
+                      )}
+                      Activer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPushPromptVisible(false)}
+                      disabled={pushBusy}
+                      className="h-9 px-3 rounded-full text-muted text-xs font-semibold hover:bg-cream-200 disabled:opacity-60 transition-all"
+                    >
+                      Plus tard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex items-baseline justify-between mb-3 px-1">
               <p className="text-xs text-muted font-medium">
                 {orders.length} commande{orders.length > 1 ? "s" : ""}
@@ -501,13 +609,23 @@ export default function Orders() {
             <ul className="flex flex-col gap-3">
               {orders.map((order, idx) => (
                 <li key={order.id}>
-                  <OrderCard order={order} idx={idx} />
+                  <OrderCard order={order} idx={idx} onSignaler={setSavOrder} />
                 </li>
               ))}
             </ul>
           </>
         )}
       </main>
+
+      <SignalerProbleme
+        open={savOrder !== null}
+        onClose={() => setSavOrder(null)}
+        commandeId={savOrder?.id ?? ""}
+        lignes={(savOrder?.items ?? []).map((it) => ({
+          product_id: it.product_id,
+          name: it.name,
+        }))}
+      />
     </div>
   );
 }

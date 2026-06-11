@@ -10,11 +10,12 @@
  * URL (Drive, dropbox, mail).
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
   Calendar,
+  CheckCircle2,
   ExternalLink,
   FileText,
   Loader2,
@@ -23,6 +24,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Upload,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -47,6 +49,11 @@ const ORGANISMES: CertifOrganisme[] = [
   "MOSQUEE_PARIS",
   "AUTRE",
 ];
+
+/** Bucket Storage public partagé (créé côté Drive pour les photos de
+ *  production). On y range aussi les PDF de certificats halal fournisseur
+ *  sous le préfixe `certifs-halal/`. */
+const CERTIFS_BUCKET = "productions";
 
 /** Ordre de tri : urgence d'abord. */
 const ALERTE_ORDER = {
@@ -319,10 +326,61 @@ function EditDrawer({
 }) {
   const [form, setForm] = useState<Partial<FournisseurFull>>({});
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setForm(fournisseur ?? {});
   }, [fournisseur]);
+
+  /** Upload le PDF du certificat halal dans Supabase Storage et stocke
+   *  l'URL publique dans le formulaire (remplace l'URL collée à la main).
+   *  Fallback gracieux : si le bucket n'existe pas ou l'upload échoue, on
+   *  l'indique sans crasher — l'admin peut toujours coller une URL. */
+  async function handleCertifUpload(file: File) {
+    if (!fournisseur) return;
+    if (file.type !== "application/pdf") {
+      toast.error("Le certificat doit être un PDF.");
+      return;
+    }
+    // Garde-fou poids : un certif scanné dépasse rarement quelques Mo.
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("PDF trop lourd (max 10 Mo).");
+      return;
+    }
+    const sb = supabase();
+    if (!sb) {
+      toast.error("Supabase indisponible — colle une URL à la place.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const path = `certifs-halal/${fournisseur.id}-${Date.now()}.pdf`;
+      const { error: upErr } = await sb.storage
+        .from(CERTIFS_BUCKET)
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: "application/pdf",
+        });
+      if (upErr) {
+        console.error("[certif upload]", upErr);
+        toast.error(
+          `Upload impossible (${upErr.message}). Colle une URL à la place.`,
+        );
+        return;
+      }
+      const { data } = sb.storage.from(CERTIFS_BUCKET).getPublicUrl(path);
+      setForm((f) => ({ ...f, certif_pdf_url: data.publicUrl }));
+      toast.success("Certificat PDF importé. N'oublie pas d'enregistrer.");
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Upload échoué — colle une URL.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     if (!fournisseur) return;
@@ -546,11 +604,81 @@ function EditDrawer({
               </Field>
             </div>
 
-            <Field label="URL PDF certif" icon={<FileText size={14} />}>
+            <Field label="Certificat PDF" icon={<FileText size={14} />}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void handleCertifUpload(file);
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-xl flex items-center gap-2.5 text-left"
+                style={{
+                  padding: 12,
+                  minHeight: 48,
+                  background: "var(--bg-card)",
+                  border: form.certif_pdf_url
+                    ? "1px solid var(--success)"
+                    : "1px dashed var(--border-medium)",
+                }}
+              >
+                {uploading ? (
+                  <Loader2
+                    size={18}
+                    className="animate-spin shrink-0"
+                    color="var(--text-secondary)"
+                  />
+                ) : form.certif_pdf_url ? (
+                  <CheckCircle2
+                    size={18}
+                    className="shrink-0"
+                    color="var(--success)"
+                  />
+                ) : (
+                  <Upload
+                    size={18}
+                    className="shrink-0"
+                    color="var(--text-secondary)"
+                  />
+                )}
+                <span
+                  className="min-w-0 truncate text-[14px] font-medium"
+                  style={{
+                    color: form.certif_pdf_url
+                      ? "var(--text-primary)"
+                      : "var(--text-secondary)",
+                  }}
+                >
+                  {uploading
+                    ? "Import en cours…"
+                    : form.certif_pdf_url
+                      ? "Certificat PDF importé"
+                      : "Importer le PDF du certificat"}
+                </span>
+              </button>
+              {form.certif_pdf_url && (
+                <a
+                  href={form.certif_pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold"
+                  style={{ color: "var(--primary-green)" }}
+                >
+                  <ExternalLink size={12} /> Ouvrir le PDF
+                </a>
+              )}
               <input
                 type="url"
-                className="input-field"
-                placeholder="https://drive.google.com/…"
+                className="input-field mt-2"
+                placeholder="…ou colle une URL (Drive, mail)"
                 value={form.certif_pdf_url ?? ""}
                 onChange={(e) =>
                   setForm({ ...form, certif_pdf_url: e.target.value || null })

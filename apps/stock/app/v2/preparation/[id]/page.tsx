@@ -58,6 +58,7 @@ import {
   markLineWeighed,
 } from "@/lib/staff/preparation-actions";
 import { getEmployeUuid, getUserUuid } from "@/lib/staff/auth-fallback";
+import { buildCommandePreteEmail, refCommande } from "../_logic";
 
 interface EnrichedLigne extends CommandeDriveLigne {
   produit?: Produit;
@@ -77,19 +78,24 @@ const COLD_CATEGORIES = new Set([
   "Charcuterie",
 ]);
 
-const ZONE_LABEL: Record<"particulier" | "professionnel" | "traiteur", string> =
-  {
-    particulier: "Zone Particulier",
-    professionnel: "Zone Professionnel",
-    traiteur: "Zone Traiteur",
-  };
+// "autre" = bucket de secours pour toute zone inattendue (donnée corrompue
+// ou nouvelle valeur non câblée). Sans lui, une ligne dont la zone n'est pas
+// l'une des trois connues serait silencieusement invisible au préparateur.
+type ZoneKey = "particulier" | "professionnel" | "traiteur" | "autre";
 
-const ZONE_EMOJI: Record<"particulier" | "professionnel" | "traiteur", string> =
-  {
-    particulier: "🛒",
-    professionnel: "🏢",
-    traiteur: "🍽️",
-  };
+const ZONE_LABEL: Record<ZoneKey, string> = {
+  particulier: "Zone Particulier",
+  professionnel: "Zone Professionnel",
+  traiteur: "Zone Traiteur",
+  autre: "Autres produits",
+};
+
+const ZONE_EMOJI: Record<ZoneKey, string> = {
+  particulier: "🛒",
+  professionnel: "🏢",
+  traiteur: "🍽️",
+  autre: "📦",
+};
 
 /**
  * Parse un poids saisi au clavier FR. CRITIQUE : les balances/employés
@@ -203,14 +209,23 @@ export default function V2PreparationDetailPage() {
   /** Group by zone_preparation (particulier / professionnel / traiteur),
    *  cold-chain products first within each zone. */
   const groupedByZone = useMemo(() => {
-    const order: Array<"particulier" | "professionnel" | "traiteur"> = [
+    const known = new Set<ZoneKey>([
       "particulier",
       "professionnel",
       "traiteur",
+    ]);
+    const order: ZoneKey[] = [
+      "particulier",
+      "professionnel",
+      "traiteur",
+      "autre",
     ];
-    const buckets = new Map<string, EnrichedLigne[]>();
+    const buckets = new Map<ZoneKey, EnrichedLigne[]>();
     for (const l of lignes) {
-      const zone = l.zone_preparation ?? "particulier";
+      const raw = (l.zone_preparation as ZoneKey) ?? "particulier";
+      // Toute zone hors des trois connues retombe dans "autre" — garantit
+      // qu'aucune ligne n'est invisible au préparateur (bucket de secours).
+      const zone: ZoneKey = known.has(raw) ? raw : "autre";
       const list = buckets.get(zone) ?? [];
       list.push(l);
       buckets.set(zone, list);
@@ -361,6 +376,26 @@ export default function V2PreparationDetailPage() {
     return null;
   }
 
+  /**
+   * Montant TTC sûr d'une ligne pour la capture Stripe, à partir d'une valeur
+   * candidate (réel/estimé déjà connu) éventuellement nulle.
+   *
+   * FIX capture : pour une ligne AU POIDS, `prix_unitaire` est un €/kg et
+   * `quantite` un nombre de pièces — `prix_unitaire * quantite` donne donc un
+   * montant aberrant (€/kg × pièces) qu'il ne faut JAMAIS capturer. On ne
+   * tombe sur ce produit que pour les lignes À L'UNITÉ. Pour une ligne weight
+   * sans montant connu (cas théorique, la garde notDone l'empêche), on retombe
+   * sur 0 plutôt que sur un montant faux, pour ne jamais sur-débiter le client.
+   */
+  function safeMontantLigne(
+    l: EnrichedLigne,
+    candidate: number | null | undefined,
+  ): number {
+    if (candidate != null && Number.isFinite(candidate)) return candidate;
+    if (isWeightLine(l)) return 0;
+    return l.prix_unitaire * l.quantite;
+  }
+
   async function saveWeightLigne(l: EnrichedLigne) {
     const montant = computeMontantReel(l);
     if (montant == null) {
@@ -428,13 +463,11 @@ export default function V2PreparationDetailPage() {
         user_id: getUserUuid(employe?.id ?? null),
         lignes: lignes.map((l) => ({
           id: l.id,
-          montant_estime_ttc:
-            l.montant_estime_ttc ?? l.prix_unitaire * l.quantite,
-          montant_reel_ttc:
-            l.montant_reel_ttc ??
-            computeMontantReel(l) ??
-            l.montant_estime_ttc ??
-            l.prix_unitaire * l.quantite,
+          montant_estime_ttc: safeMontantLigne(l, l.montant_estime_ttc),
+          montant_reel_ttc: safeMontantLigne(
+            l,
+            l.montant_reel_ttc ?? computeMontantReel(l) ?? l.montant_estime_ttc,
+          ),
         })),
       });
       if (!res.ok) {
@@ -442,10 +475,11 @@ export default function V2PreparationDetailPage() {
         return;
       }
       const captured = res.montantCaptureTtc;
+      const refCmd = refCommande(commande);
       toast.success(
         captured != null
-          ? `${commande.numero_commande} : ${captured.toFixed(2)} € capturés via Stripe`
-          : `${commande.numero_commande} : finalisée (capture Stripe non confirmée — vérifier dashboard)`,
+          ? `${refCmd} : ${captured.toFixed(2)} € capturés via Stripe`
+          : `${refCmd} : finalisée (capture Stripe non confirmée — vérifier dashboard)`,
       );
       router.replace("/v2/preparation");
       return;
@@ -505,9 +539,7 @@ export default function V2PreparationDetailPage() {
         }),
       }).catch(() => {});
     }
-    toast.success(
-      `Commande ${commande.numero_commande} prête. Client notifié.`,
-    );
+    toast.success(`Commande ${refCommande(commande)} prête. Client notifié.`);
     router.replace("/v2/preparation");
   }
 
@@ -524,10 +556,10 @@ export default function V2PreparationDetailPage() {
   const isStripeFlow = commande?.statut_paiement === "autorise";
   const sumReelEur = lignes.reduce((s, l) => {
     if (isWeightLine(l)) {
+      // Avant pesée, on affiche l'ESTIMÉ (jamais prix_unitaire*quantite, qui
+      // pour une ligne au poids serait €/kg × pièces — un montant aberrant).
       const m =
-        l.montant_reel_ttc ??
-        computeMontantReel(l) ??
-        l.prix_unitaire * l.quantite;
+        l.montant_reel_ttc ?? computeMontantReel(l) ?? l.montant_estime_ttc ?? 0;
       return s + m;
     }
     return s + l.prix_unitaire * l.quantite;
@@ -548,9 +580,7 @@ export default function V2PreparationDetailPage() {
       <header className="px-5 pt-7">
         <BackButton />
         <p className="label-caps text-primary mt-3">Préparation</p>
-        <h1 className="h1 text-text-primary mt-1">
-          {commande.numero_commande}
-        </h1>
+        <h1 className="h1 text-text-primary mt-1">{refCommande(commande)}</h1>
         <p className="body-md text-text-secondary mt-1">
           {commande.client_nom} · retrait à{" "}
           {formatHeure(commande.creneau_retrait)}
@@ -1061,30 +1091,3 @@ function formatHeure(iso: string) {
   });
 }
 
-function buildCommandePreteEmail(commande: {
-  id: string;
-  numero_commande?: string | null;
-  client_nom?: string | null;
-}): string {
-  const ref = commande.numero_commande || commande.id.slice(0, 8).toUpperCase();
-  const greeting = commande.client_nom ? ` ${commande.client_nom}` : "";
-  return `<div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; max-width: 480px; margin: 0 auto;">
-  <div style="background: linear-gradient(180deg, #0E3B2E 0%, #082A20 100%); padding: 24px; text-align: center; border-radius: 12px 12px 0 0;">
-    <h1 style="color: #C9A227; font-size: 20px; margin: 0;">Salamarket Drive</h1>
-  </div>
-  <div style="background: #FAF7EE; padding: 24px; border-radius: 0 0 12px 12px;">
-    <h2 style="color: #0E3B2E; font-size: 18px;">Votre commande est prête !</h2>
-    <p style="color: #0F1A14; font-size: 14px; line-height: 1.6;">
-      Bonjour${greeting},<br><br>
-      Votre commande <strong>${ref}</strong> est prête à être retirée.
-    </p>
-    <div style="background: white; border: 1px solid #E8E4D8; border-radius: 8px; padding: 16px; margin: 16px 0;">
-      <p style="margin: 0; font-size: 13px; color: #6B7280;">📍 Retrait au</p>
-      <p style="margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #0E3B2E;">8 av. Larrieu-Thibaud, 31100 Toulouse</p>
-      <p style="margin: 4px 0 0; font-size: 13px; color: #6B7280;">Lun-Sam 10h-19h30 · Dimanche 10h-18h</p>
-    </div>
-    <p style="color: #0F1A14; font-size: 14px;">À très vite !</p>
-    <p style="color: #6B7280; font-size: 12px; margin-top: 24px;">L'équipe Salamarket</p>
-  </div>
-</div>`;
-}

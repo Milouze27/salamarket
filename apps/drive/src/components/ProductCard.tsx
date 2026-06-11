@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
-import { Plus, Scale } from "lucide-react";
+import { Plus, Scale, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
 import { formatPrice, productUnitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
+import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { formatPriceWithUnit } from "@salamarket/shared";
 import {
@@ -50,6 +51,10 @@ function startTransition(fn: () => void) {
 export const ProductCard = ({ product }: Props) => {
   const navigate = useNavigate();
   const addItem = useCartStore((s) => s.addItem);
+  // Favori : on lit l'appartenance via le set persistant (selecteur cible →
+  // re-render uniquement quand CE produit change de statut favori).
+  const isFavorite = useFavoritesStore((s) => s.ids.includes(product.id));
+  const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const { triggerFly } = useFlyingChip();
   const addBtnRef = useRef<HTMLButtonElement>(null);
   // Throttle anti-spam (BUG-011) : un tap iOS peut générer deux events
@@ -109,6 +114,18 @@ export const ProductCard = ({ product }: Props) => {
     // on the image enables a smooth morph to ProductDetail hero.
     startTransition(() => {
       navigate(`/produit/${product.id}`);
+    });
+  };
+
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    // stopPropagation : le cœur est posé sur la card cliquable (handleOpen).
+    e.stopPropagation();
+    toggleFavorite(product.id);
+    setAnnounce({
+      key: Date.now(),
+      msg: isFavorite
+        ? `${product.name} retiré des favoris`
+        : `${product.name} ajouté aux favoris`,
     });
   };
 
@@ -214,6 +231,32 @@ export const ProductCard = ({ product }: Props) => {
             />
           </>
         )}
+
+        {/* Cœur favori — bottom-left (le "+" est bottom-right, le badge
+            halal/au-poids en haut : aucun chevauchement). 44×44 tap target.
+            aria-pressed pour les lecteurs d'écran. */}
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          aria-pressed={isFavorite}
+          aria-label={
+            isFavorite
+              ? `Retirer ${product.name} des favoris`
+              : `Ajouter ${product.name} aux favoris`
+          }
+          className="absolute bottom-2.5 left-2.5 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-md ring-1 ring-black/5 hover:bg-white active:scale-90 transition-all"
+        >
+          <Heart
+            size={18}
+            strokeWidth={2.2}
+            aria-hidden
+            className={
+              isFavorite
+                ? "fill-[#E5483D] text-[#E5483D]"
+                : "fill-transparent text-[#0E3B2E]/55"
+            }
+          />
+        </button>
 
         <button
           ref={addBtnRef}

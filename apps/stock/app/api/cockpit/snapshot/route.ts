@@ -82,6 +82,42 @@ export interface CockpitCompetitorRow {
   delta_pct: number | null; // (releve - salam) / salam * 100 (positif = concurrent + cher)
 }
 
+// ─── Activité staff : leaderboard préparateurs + heatmap ventes ───
+// V8 — agrégats pour /v2/admin/activite (Leaderboard + HeatmapVentes).
+// Calculés sans migration à partir de :
+//   - commandes_drive_lignes (prepare_par_employe_id, prepare_at, pese_at)
+//     joints aux commandes (creneau_retrait) pour la ponctualité ;
+//   - ventes_cashmag_import (date_vente, heure_vente) pour la heatmap.
+export interface CockpitPreparateurRow {
+  employe_id: string;
+  prenom: string;
+  nom: string;
+  lignes_preparees: number; // cadence brute sur la fenêtre
+  ponctuel: number; // lignes préparées AVANT le créneau de retrait
+  en_retard: number; // lignes préparées APRÈS le créneau
+  ponctualite_pct: number | null; // ponctuel / (ponctuel + retard) * 100
+}
+
+export interface CockpitLeaderboard {
+  fenetre_jours: number; // profondeur d'analyse (ex. 14)
+  total_lignes: number;
+  top: CockpitPreparateurRow[];
+}
+
+export interface CockpitHeatmapCell {
+  jour_semaine: number; // 0 = lundi … 6 = dimanche (ISO décalé)
+  heure: number; // 0..23
+  ca_eur: number;
+  nb_lignes: number;
+}
+
+export interface CockpitHeatmap {
+  fenetre_jours: number;
+  ca_total_eur: number;
+  pic_heure: number | null; // heure de CA max (tous jours confondus)
+  cells: CockpitHeatmapCell[]; // uniquement les cellules non vides
+}
+
 export interface CockpitSnapshot {
   generated_at: string;
   salutation: string;
@@ -108,6 +144,8 @@ export interface CockpitSnapshot {
   };
   casse_24h: CockpitCasseSoiree | null;
   competitor: CockpitCompetitorRow[];
+  leaderboard: CockpitLeaderboard | null;
+  heatmap: CockpitHeatmap | null;
   warnings: string[]; // ex: ["MV pas rafraîchie", "Pas de target défini"]
 }
 
@@ -175,6 +213,8 @@ export async function GET(req: Request) {
       stockout: { count_total: 0, count_out: 0, top: [] },
       casse_24h: null,
       competitor: [],
+      leaderboard: null,
+      heatmap: null,
       warnings: [
         "Supabase non configuré — snapshot dégradé. " +
           (e instanceof Error ? e.message : ""),
@@ -188,6 +228,16 @@ export async function GET(req: Request) {
   const jourHier = yesterdayIsoParis();
   const jourN1 = sameDayLastWeekIso();
 
+  // V8 — fenêtre d'analyse activité staff (leaderboard + heatmap).
+  const ACTIVITE_FENETRE_JOURS = 14;
+  const activiteDepuis = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - ACTIVITE_FENETRE_JOURS);
+    return d;
+  })();
+  const activiteDepuisIso = activiteDepuis.toISOString();
+  const activiteDepuisDate = activiteDepuisIso.slice(0, 10);
+
   // Run all queries in parallel — c'est la promesse "30s morning brief".
   const [
     ventesHierRes,
@@ -198,6 +248,9 @@ export async function GET(req: Request) {
     casseRes,
     casseBaselineRes,
     competitorRes,
+    prepLignesRes,
+    employesRes,
+    heatmapRes,
   ] = await Promise.allSettled([
     // 1. CA hier — mv_ventes_quotidiennes est CONSOLIDÉE (pas de colonne
     //    depot_id : le breakdown par dépôt est un TODO côté MV). Filtrer par
@@ -293,6 +346,25 @@ export async function GET(req: Request) {
       )
       .order("releve_le", { ascending: false })
       .limit(5),
+    // 9. V8 — lignes Drive préparées sur la fenêtre (leaderboard préparateurs).
+    //    On JOIN la commande pour récupérer creneau_retrait (ponctualité).
+    sb
+      .from("commandes_drive_lignes")
+      .select(
+        "id, prepare_par_employe_id, prepare_at, pese_at, commande:commandes_drive(creneau_retrait)",
+      )
+      .not("prepare_par_employe_id", "is", null)
+      .not("prepare_at", "is", null)
+      .gte("prepare_at", activiteDepuisIso)
+      .limit(5000),
+    // 10. V8 — annuaire employés (pour afficher prénom/nom dans le leaderboard).
+    sb.from("employes").select("id, prenom, nom"),
+    // 11. V8 — ventes magasin sur la fenêtre (heatmap horaire jour×heure).
+    sb
+      .from("ventes_cashmag_import")
+      .select("date_vente, heure_vente, prix_ttc, quantite")
+      .gte("date_vente", activiteDepuisDate)
+      .limit(20000),
   ]);
 
   // ─── Process ventes_hier ────────────────────────────────────────
@@ -591,6 +663,154 @@ export async function GET(req: Request) {
     });
   }
 
+  // ─── V8 : Leaderboard préparateurs ─────────────────────────────
+  // Cadence = nb de lignes préparées sur la fenêtre. Ponctualité =
+  // part de lignes préparées AVANT le créneau de retrait de la commande.
+  // Une ligne sans créneau (legacy) compte en cadence mais pas en
+  // ponctualité (ni ponctuel ni retard). Fallback gracieux : si la table
+  // ou le JOIN est absent, on renvoie null → la page masque la carte.
+  let leaderboard: CockpitLeaderboard | null = null;
+  if (prepLignesRes.status === "fulfilled" && !prepLignesRes.value.error) {
+    type PrepRow = {
+      id: string;
+      prepare_par_employe_id: string | null;
+      prepare_at: string | null;
+      pese_at: string | null;
+      commande:
+        | { creneau_retrait: string | null }
+        | { creneau_retrait: string | null }[]
+        | null;
+    };
+    type EmpRow = { id: string; prenom: string | null; nom: string | null };
+    const empMap = new Map<string, EmpRow>();
+    if (employesRes.status === "fulfilled" && !employesRes.value.error) {
+      for (const e of (employesRes.value.data ?? []) as EmpRow[]) {
+        empMap.set(e.id, e);
+      }
+    }
+    const rows = (prepLignesRes.value.data ?? []) as unknown as PrepRow[];
+    const agg = new Map<
+      string,
+      { lignes: number; ponctuel: number; retard: number }
+    >();
+    for (const r of rows) {
+      const empId = r.prepare_par_employe_id;
+      if (!empId || !r.prepare_at) continue;
+      const cur = agg.get(empId) ?? { lignes: 0, ponctuel: 0, retard: 0 };
+      cur.lignes += 1;
+      const cmd = Array.isArray(r.commande)
+        ? (r.commande[0] ?? null)
+        : r.commande;
+      const creneau = cmd?.creneau_retrait ?? null;
+      if (creneau) {
+        const prepMs = new Date(r.prepare_at).getTime();
+        const creneauMs = new Date(creneau).getTime();
+        if (Number.isFinite(prepMs) && Number.isFinite(creneauMs)) {
+          if (prepMs <= creneauMs) cur.ponctuel += 1;
+          else cur.retard += 1;
+        }
+      }
+      agg.set(empId, cur);
+    }
+    const top: CockpitPreparateurRow[] = [...agg.entries()]
+      .map(([employe_id, v]) => {
+        const denom = v.ponctuel + v.retard;
+        const emp = empMap.get(employe_id);
+        return {
+          employe_id,
+          prenom: emp?.prenom ?? "",
+          nom: emp?.nom ?? "Préparateur",
+          lignes_preparees: v.lignes,
+          ponctuel: v.ponctuel,
+          en_retard: v.retard,
+          ponctualite_pct:
+            denom > 0 ? Math.round((v.ponctuel / denom) * 1000) / 10 : null,
+        };
+      })
+      .sort((a, b) => b.lignes_preparees - a.lignes_preparees)
+      .slice(0, 12);
+    leaderboard = {
+      fenetre_jours: ACTIVITE_FENETRE_JOURS,
+      total_lignes: rows.length,
+      top,
+    };
+  } else if (
+    prepLignesRes.status === "rejected" ||
+    prepLignesRes.value?.error
+  ) {
+    warnings.push(
+      "Leaderboard préparateurs indisponible (commandes_drive_lignes)",
+    );
+  }
+
+  // ─── V8 : Heatmap horaire des ventes magasin ───────────────────
+  // Grille jour-de-semaine × heure. On agrège le CA (prix_ttc * quantite)
+  // par (jour ISO lundi=0, heure de heure_vente). On ne renvoie que les
+  // cellules non vides (la grille pleine est reconstruite côté client).
+  let heatmap: CockpitHeatmap | null = null;
+  if (heatmapRes.status === "fulfilled" && !heatmapRes.value.error) {
+    type VenteRow = {
+      date_vente: string;
+      heure_vente: string | null;
+      prix_ttc: number | string | null;
+      quantite: number | string | null;
+    };
+    const rows = (heatmapRes.value.data ?? []) as VenteRow[];
+    const cellMap = new Map<string, { ca: number; nb: number }>();
+    const caParHeure = new Array<number>(24).fill(0);
+    let caTotal = 0;
+    for (const r of rows) {
+      // jour de semaine : getDay() → 0=dimanche. On décale en lundi=0.
+      const d = new Date(`${r.date_vente}T00:00:00`);
+      if (Number.isNaN(d.getTime())) continue;
+      const js = (d.getDay() + 6) % 7; // lundi=0 … dimanche=6
+      // heure_vente = "HH:MM:SS" ; si absent on ne place pas la vente.
+      const hStr = r.heure_vente;
+      let heure = -1;
+      if (hStr && hStr.length >= 2) {
+        const parsed = parseInt(hStr.slice(0, 2), 10);
+        if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 23)
+          heure = parsed;
+      }
+      if (heure < 0) continue;
+      const ca = Number(r.quantite ?? 0) * Number(r.prix_ttc ?? 0);
+      const key = `${js}-${heure}`;
+      const cur = cellMap.get(key) ?? { ca: 0, nb: 0 };
+      cur.ca += ca;
+      cur.nb += 1;
+      cellMap.set(key, cur);
+      caParHeure[heure] += ca;
+      caTotal += ca;
+    }
+    let picHeure: number | null = null;
+    let picVal = 0;
+    for (let h = 0; h < 24; h++) {
+      if (caParHeure[h] > picVal) {
+        picVal = caParHeure[h];
+        picHeure = h;
+      }
+    }
+    const cells: CockpitHeatmapCell[] = [...cellMap.entries()].map(
+      ([key, v]) => {
+        const [js, h] = key.split("-").map((x) => parseInt(x, 10));
+        return {
+          jour_semaine: js,
+          heure: h,
+          ca_eur: Math.round(v.ca * 100) / 100,
+          nb_lignes: v.nb,
+        };
+      },
+    );
+    heatmap = {
+      fenetre_jours: ACTIVITE_FENETRE_JOURS,
+      ca_total_eur: Math.round(caTotal * 100) / 100,
+      pic_heure: picHeure,
+      cells,
+    };
+  } else if (heatmapRes.status === "rejected" || heatmapRes.value?.error) {
+    warnings.push("Heatmap ventes indisponible (ventes_cashmag_import)");
+  }
+
   // ─── Hijri context ─────────────────────────────────────────────
   const hijri = getHijriContext();
 
@@ -625,6 +845,8 @@ export async function GET(req: Request) {
     },
     casse_24h: casse24h,
     competitor,
+    leaderboard,
+    heatmap,
     warnings,
   };
 

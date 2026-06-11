@@ -118,6 +118,17 @@ interface InvoicePDFDownloadLinkProps extends InvoicePDFProps {
 // cette factory async. C'est elle qui crée la frontière de code-split.
 // ─────────────────────────────────────────────────────────────────────
 
+// Couleurs de marque pour le PDF. @react-pdf/renderer ne lit PAS le CSS du
+// DOM (donc ni brand.ts ni les variables Tailwind) : on duplique ici les
+// tokens Salam Market au lieu de gris génériques hors palette.
+//   sapin   #0E3B2E  · or AA-safe #8B6F0E
+//   encre   #0F1A14 (quasi-noir tinté sapin) · gris texte #5A6470
+//   bordure #E8E4D8 · crème #FAF7EE
+const PDF_INK = "#0F1A14";
+const PDF_GRAY = "#5A6470";
+const PDF_BORDER = "#E8E4D8";
+const PDF_SAPIN = "#0E3B2E";
+
 async function loadPdfModule() {
   const { Document, Page, StyleSheet, Text, View, PDFDownloadLink } =
     await import("@react-pdf/renderer");
@@ -127,23 +138,23 @@ async function loadPdfModule() {
       padding: 40,
       fontSize: 10,
       fontFamily: "Helvetica",
-      color: "#111111",
+      color: PDF_INK,
     },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
       marginBottom: 24,
-      borderBottom: "1pt solid #111111",
+      borderBottom: `1pt solid ${PDF_INK}`,
       paddingBottom: 12,
     },
     brand: {
       fontSize: 18,
       fontWeight: "bold",
-      color: "#0E3B2E",
+      color: PDF_SAPIN,
     },
     brandSub: {
       fontSize: 9,
-      color: "#444444",
+      color: PDF_GRAY,
       marginTop: 2,
     },
     invoiceMeta: {
@@ -166,13 +177,13 @@ async function loadPdfModule() {
     block: {
       flex: 1,
       padding: 10,
-      border: "1pt solid #DDDDDD",
+      border: `1pt solid ${PDF_BORDER}`,
       borderRadius: 4,
     },
     blockTitle: {
       fontSize: 9,
       textTransform: "uppercase",
-      color: "#666666",
+      color: PDF_GRAY,
       marginBottom: 4,
       letterSpacing: 0.5,
     },
@@ -187,7 +198,7 @@ async function loadPdfModule() {
     },
     tableHeader: {
       flexDirection: "row",
-      backgroundColor: "#0E3B2E",
+      backgroundColor: PDF_SAPIN,
       color: "#FFFFFF",
       paddingVertical: 6,
       paddingHorizontal: 6,
@@ -198,7 +209,7 @@ async function loadPdfModule() {
       flexDirection: "row",
       paddingVertical: 5,
       paddingHorizontal: 6,
-      borderBottom: "1pt solid #EEEEEE",
+      borderBottom: `1pt solid ${PDF_BORDER}`,
       fontSize: 9,
     },
     colProduit: { width: "44%" },
@@ -210,7 +221,7 @@ async function loadPdfModule() {
       marginTop: 12,
       marginLeft: "auto",
       width: "50%",
-      border: "1pt solid #DDDDDD",
+      border: `1pt solid ${PDF_BORDER}`,
       borderRadius: 4,
       padding: 8,
     },
@@ -224,7 +235,7 @@ async function loadPdfModule() {
       justifyContent: "space-between",
       paddingVertical: 4,
       marginTop: 4,
-      borderTop: "1pt solid #111111",
+      borderTop: `1pt solid ${PDF_INK}`,
       fontWeight: "bold",
       fontSize: 12,
     },
@@ -234,8 +245,8 @@ async function loadPdfModule() {
       left: 40,
       right: 40,
       fontSize: 8,
-      color: "#555555",
-      borderTop: "1pt solid #DDDDDD",
+      color: PDF_GRAY,
+      borderTop: `1pt solid ${PDF_BORDER}`,
       paddingTop: 8,
     },
     footerLine: {
@@ -298,6 +309,11 @@ async function loadPdfModule() {
             </View>
             <View style={styles.block}>
               <Text style={styles.blockTitle}>Conditions</Text>
+              {commande.ref_interne && (
+                <Text style={styles.blockLine}>
+                  Votre réf. : {commande.ref_interne}
+                </Text>
+              )}
               <Text style={styles.blockLine}>
                 Paiement : {LABEL_CONDITIONS_PAIEMENT[conditions]}
               </Text>

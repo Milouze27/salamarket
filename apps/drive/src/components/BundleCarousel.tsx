@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useProducts } from "@/hooks/useProducts";
 import { useCartStore } from "@/stores/cartStore";
 import { cdnImage } from "@/lib/imageUrl";
+import { getDriveHijriContext } from "@/lib/hijri";
 import type { Product } from "@/types/product";
 
 // ─────────────────────────────────────────────────────────────────
@@ -15,9 +16,12 @@ import type { Product } from "@/types/product";
 //   - requete try/catch → [] en cas d'erreur (table absente, RLS, reseau)
 //   - 0 ligne → le composant return null (jamais de crash ni d'empty-state)
 //
-// Pas d'util hijri cote drive pour le moment : on affiche donc tous les
-// bundles actifs. Le filtrage par occasion courante sera branche le jour
-// ou un util hijri existera (voir TODO plus bas).
+// Filtrage occasion : on lit getDriveHijriContext() (calcul local) pour
+// ne montrer, en periode Ramadan/Aid, que les bundles de l'occasion en
+// cours + les bundles 'general' (toujours visibles). Hors periode hijri,
+// on n'affiche que les 'general'. Si ce filtre ne laisse rien, on retombe
+// sur tous les bundles actifs (jamais de section vide alors qu'on a des
+// donnees) — voir resolveVisibleBundles plus bas.
 // ─────────────────────────────────────────────────────────────────
 
 interface OccasionBundle {
@@ -153,11 +157,19 @@ export const BundleCarousel = () => {
     return map;
   }, [products]);
 
-  // Filtrage occasion : pas d'util hijri dispo cote drive → on affiche tous
-  // les bundles actifs. Le jour ou un util hijri existe, filtrer ici sur
-  // bundle.occasion === occasionCourante (en gardant les bundles sans
-  // occasion comme "toujours visibles").
-  const visibleBundles = bundles;
+  // Filtrage occasion via l'util hijri Drive (calcul local, zero reseau).
+  // En periode Ramadan/Aid : occasion courante + 'general'. Hors periode :
+  // 'general' seulement. Fallback : si le filtre vide la liste alors qu'on a
+  // des bundles, on les montre tous (jamais de section vide a tort).
+  const visibleBundles = useMemo(() => {
+    if (bundles.length === 0) return bundles;
+    const occasion = getDriveHijriContext().occasion;
+    const filtered = bundles.filter((b) => {
+      if (b.occasion === "general" || b.occasion == null) return true;
+      return occasion != null && b.occasion === occasion;
+    });
+    return filtered.length > 0 ? filtered : bundles;
+  }, [bundles]);
 
   const handleAddBundle = (bundle: OccasionBundle) => {
     const resolved = bundle.product_ids

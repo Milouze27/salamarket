@@ -53,6 +53,38 @@ export function isStoreOpenDay(slot: Slot): boolean {
   return d.getDay() !== 0; // 0 = dimanche
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Surcouche d'affichage Ramadan / Iftar (purement cosmétique).
+//
+// Pendant le Ramadan, les clients préparent le repas de rupture du jeûne
+// (iftar). On met en avant les créneaux de fin d'après-midi / début de
+// soirée avec un libellé « Iftar » et on les remonte en tête de leur
+// journée. Aucune logique de capacité/sélection n'est touchée : on ne
+// fait qu'enrichir l'affichage et l'ordre. Si on est hors Ramadan, la
+// fonction n'altère rien.
+//
+// Fenêtre grégorienne du Ramadan 1447 H (≈ 18 fév → 19 mar 2026), bornes
+// larges d'un jour pour absorber l'incertitude d'observation lunaire.
+// ─────────────────────────────────────────────────────────────────
+const RAMADAN_START = new Date("2026-02-17T00:00:00Z").getTime();
+const RAMADAN_END = new Date("2026-03-21T00:00:00Z").getTime();
+
+export function isRamadanPeriod(ref: Date = new Date()): boolean {
+  const t = ref.getTime();
+  return t >= RAMADAN_START && t <= RAMADAN_END;
+}
+
+/**
+ * Un créneau est « iftar » s'il démarre en fin d'après-midi / soirée
+ * (≥ 17h heure de Paris) pendant la période du Ramadan — l'horaire idéal
+ * pour récupérer ses courses avant la rupture du jeûne.
+ */
+export function isIftarSlot(slot: Slot, ref: Date = new Date()): boolean {
+  if (!isRamadanPeriod(ref)) return false;
+  const start = toZonedTime(new Date(slot.slot_start), PARIS_TZ);
+  return start.getHours() >= 17;
+}
+
 export function groupSlotsByDay(slots: Slot[]): DayGroup[] {
   const map = new Map<string, Slot[]>();
   for (const s of slots) {
@@ -63,12 +95,22 @@ export function groupSlotsByDay(slots: Slot[]): DayGroup[] {
     map.get(key)!.push(s);
   }
 
+  const ramadan = isRamadanPeriod();
   const groups: DayGroup[] = [];
   for (const [dayKey, daySlots] of map.entries()) {
-    daySlots.sort(
-      (a, b) =>
-        new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime(),
-    );
+    daySlots.sort((a, b) => {
+      // Pendant le Ramadan, on remonte les créneaux iftar en tête de la
+      // journée (priorité métier), puis ordre chronologique à l'intérieur
+      // de chaque bloc. Hors Ramadan, tri chronologique strict.
+      if (ramadan) {
+        const ai = isIftarSlot(a) ? 0 : 1;
+        const bi = isIftarSlot(b) ? 0 : 1;
+        if (ai !== bi) return ai - bi;
+      }
+      return (
+        new Date(a.slot_start).getTime() - new Date(b.slot_start).getTime()
+      );
+    });
     const first = toZonedTime(new Date(daySlots[0].slot_start), PARIS_TZ);
     let dayLabel: string;
     if (isToday(first)) dayLabel = "Auj.";

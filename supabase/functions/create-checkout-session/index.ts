@@ -67,7 +67,7 @@ serve(async (req) => {
     if (!["online", "in_store"].includes(body.payment_method))
       return json({ error: "Mode de paiement invalide" }, 400);
 
-    // 3. Re-vérifie les prix produits côté serveur (avec colonnes weight)
+    // 3. Re-vérifie les prix produits côté serveur (avec colonnes weight).
     const productIds = body.items.map((i) => i.product_id);
     const { data: products, error: prodErr } = await supabaseAdmin
       .from("products")
@@ -78,6 +78,24 @@ serve(async (req) => {
     if (prodErr) throw prodErr;
 
     const productMap = new Map(products!.map((p) => [p.id, p]));
+
+    // 3bis. Récupère l'EAN depuis `produits` (la table `products` n'a pas
+    //   de colonne ean ; produits.id == products.id, mêmes UUID). L'EAN
+    //   alimente orders.items pour que le trigger sync_drive_order_to_stock
+    //   matche par EAN si le match UUID échoue (chemin robuste — cf.
+    //   migration 20260531000004). Fallback gracieux : si la requête échoue
+    //   ou qu'un produit n'a pas d'EAN, on continue sans (le trigger
+    //   retombe sur le match UUID puis nom).
+    const eanMap = new Map<string, string>();
+    const { data: produitsRows } = await supabaseAdmin
+      .from("produits")
+      .select("id, ean")
+      .in("id", productIds);
+    if (produitsRows) {
+      for (const r of produitsRows as { id: string; ean: string | null }[]) {
+        if (r.ean) eanMap.set(r.id, r.ean);
+      }
+    }
     let subtotal = 0;
     // Détection panier au poids : si AU MOINS une ligne weight/bracket,
     // tout le panier bascule en flow manual capture (cf. ARCHITECTURE
@@ -114,10 +132,17 @@ serve(async (req) => {
       let quantiteEstimee = item.quantity; // en pièces par défaut
       if (unitType === "weight") {
         const qtyKg = Math.max(0, item.quantite_kg ?? 0);
-        if (qtyKg <= 0) throw new Error(`Poids manquant: ${p.name}`);
+        if (qtyKg <= 0)
+          throw new Error(`Poids manquant pour « ${p.name} »`);
+        // price_per_kg null OU 0 → produit mal configuré côté Stock. On
+        // lève une erreur CIBLÉE sur la ligne fautive (nom du produit),
+        // pas une 500 générique : le client comprend QUEL article retirer
+        // de son panier, et l'équipe sait quel produit corriger en DB.
         const pricePerKg = p.price_per_kg ?? 0;
-        if (pricePerKg <= 0)
-          throw new Error(`Prix au kg manquant en DB: ${p.name}`);
+        if (!(pricePerKg > 0))
+          throw new Error(
+            `Prix au kilo non configuré pour « ${p.name} ». Retirez cet article ou contactez le magasin.`,
+          );
         // qtyKg × price_per_kg en EUR → cents (Math.round pour éviter
         // les flottants type 17.999999)
         lineCents = Math.round(pricePerKg * qtyKg * 100 * item.quantity);
@@ -136,7 +161,12 @@ serve(async (req) => {
       subtotal += lineCents;
 
       return {
+        // produit_id + ean : champs lus par le trigger
+        // sync_drive_order_to_stock (match UUID → EAN → nom). On garde
+        // product_id pour rétro-compat des consommateurs existants.
+        produit_id: p.id,
         product_id: p.id,
+        ean: eanMap.get(p.id) ?? null,
         name: p.name,
         unit_price_cents: p.price_cents,
         quantity: item.quantity,

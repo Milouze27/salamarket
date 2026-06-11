@@ -36,7 +36,9 @@ export interface CartItem {
   dlcUnitPriceCents?: number;
 }
 
-const MAX_QTY = 99;
+// Plafond quantité aligné sur ProductDetail + edge function + Cart.tsx
+// (cohérence COH : un même produit ne peut pas dépasser 50 unités/brackets).
+const MAX_QTY = 50;
 const MAX_KG = 5;
 const MIN_KG = 0.1;
 
@@ -215,11 +217,19 @@ export const useCartStore = create<CartState>()(
         }),
 
       updateQuantiteKg: (lineId, kg) =>
-        set((state) => ({
-          items: state.items.map((i) =>
-            i.lineId === lineId ? { ...i, quantiteKg: clampKg(kg) } : i,
-          ),
-        })),
+        set((state) => {
+          // Refuse 0 / négatif / non-fini : on conserve le poids précédent
+          // au lieu de forcer une valeur fantôme (un "0" saisi ne doit pas
+          // créer une ligne à 0,1 kg en douce ni un prix nul trompeur).
+          const parsed =
+            typeof kg === "string" ? parseFloat(kg.replace(",", ".")) : kg;
+          if (!Number.isFinite(parsed) || parsed <= 0) return state;
+          return {
+            items: state.items.map((i) =>
+              i.lineId === lineId ? { ...i, quantiteKg: clampKg(kg) } : i,
+            ),
+          };
+        }),
 
       updateBracket: (lineId, bracketIndex) =>
         set((state) => ({

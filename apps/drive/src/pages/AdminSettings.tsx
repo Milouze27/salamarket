@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -31,6 +31,22 @@ const STORAGE_ENABLED = "sound_enabled";
 const STORAGE_VOLUME = "sound_volume";
 const DEFAULT_VOLUME = 0.7;
 const APP_VERSION = "1.0.0";
+
+// Tokens sapin dérivés de BRAND.colors (aucun hex en dur) — partagés par
+// les ronds-icônes (fond sapin 10 %) et les CTA.
+const PRIMARY = BRAND.colors.primary;
+const PRIMARY_DARK = BRAND.colors.primaryDark;
+const PRIMARY_SOFT_BG = `${PRIMARY}1A`; // sapin à 10 % d'opacité (1A = 0x1A/0xFF ≈ 10 %)
+
+// Petit badge rond sapin réutilisé dans chaque section.
+const IconBadge = ({ children }: { children: ReactNode }) => (
+  <div
+    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+    style={{ backgroundColor: PRIMARY_SOFT_BG, color: PRIMARY }}
+  >
+    {children}
+  </div>
+);
 
 const readSoundEnabled = (): boolean => {
   try {
@@ -146,8 +162,11 @@ const AdminSettings = () => {
 
   return (
     <div
-      className="min-h-dvh bg-[#FAFAFA]"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
+      className="min-h-dvh"
+      style={{
+        backgroundColor: BRAND.colors.bg,
+        paddingTop: "env(safe-area-inset-top)",
+      }}
     >
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Header */}
@@ -168,9 +187,9 @@ const AdminSettings = () => {
         {/* Section 1 — Notifications sonores */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#0E3B2E]/10 flex items-center justify-center shrink-0">
-              <Bell size={20} className="text-[#0E3B2E]" />
-            </div>
+            <IconBadge>
+              <Bell size={20} />
+            </IconBadge>
             <div className="flex-1">
               <h2 className="text-base font-semibold text-gray-900">
                 Notifications sonores
@@ -218,7 +237,14 @@ const AdminSettings = () => {
                 type="button"
                 onClick={testSound}
                 disabled={!soundEnabled}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#0E3B2E] text-white text-sm font-medium rounded-lg hover:bg-[#082A20] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{ backgroundColor: PRIMARY }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = PRIMARY_DARK;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = PRIMARY;
+                }}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-medium rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Volume2 size={16} />
                 Tester le son
@@ -230,9 +256,9 @@ const AdminSettings = () => {
         {/* Section 1bis — Notifications push */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#0E3B2E]/10 flex items-center justify-center shrink-0">
-              <BellRing size={20} className="text-[#0E3B2E]" />
-            </div>
+            <IconBadge>
+              <BellRing size={20} />
+            </IconBadge>
             <div className="flex-1">
               <h2 className="text-base font-semibold text-gray-900">
                 Notifications push
@@ -291,12 +317,13 @@ const AdminSettings = () => {
         {/* Lien Vue préparation */}
         <Link
           to="/employe"
+          style={{ ["--sapin" as string]: PRIMARY }}
           className="block bg-white rounded-xl shadow-sm p-4 mb-4 hover:bg-gray-50 transition-colors group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#0E3B2E]/10 flex items-center justify-center shrink-0">
-              <ClipboardList size={20} className="text-[#0E3B2E]" />
-            </div>
+            <IconBadge>
+              <ClipboardList size={20} />
+            </IconBadge>
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-900">Vue préparation</p>
               <p className="text-xs text-gray-500">
@@ -305,7 +332,7 @@ const AdminSettings = () => {
             </div>
             <ArrowRight
               size={18}
-              className="text-gray-400 group-hover:text-[#0E3B2E] transition-colors"
+              className="text-gray-400 group-hover:[color:var(--sapin)] transition-colors"
             />
           </div>
         </Link>
@@ -313,9 +340,9 @@ const AdminSettings = () => {
         {/* Section 2 — Informations magasin */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#0E3B2E]/10 flex items-center justify-center shrink-0">
-              <Store size={20} className="text-[#0E3B2E]" />
-            </div>
+            <IconBadge>
+              <Store size={20} />
+            </IconBadge>
             <div className="flex-1">
               <h2 className="text-base font-semibold text-gray-900">
                 Informations du magasin
@@ -372,9 +399,9 @@ const AdminSettings = () => {
         {/* Section 3 — À propos */}
         <section className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-[#0E3B2E]/10 flex items-center justify-center shrink-0">
-              <Info size={20} className="text-[#0E3B2E]" />
-            </div>
+            <IconBadge>
+              <Info size={20} />
+            </IconBadge>
             <div className="flex-1">
               <h2 className="text-base font-semibold text-gray-900">
                 À propos

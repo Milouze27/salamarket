@@ -45,3 +45,7 @@ supabase/.temp/
 *.tsbuildinfo
 .cache/
 coverage/
+.playwright-cli/
+.claude/
+*.sbkeys.txt
+sbkeys.txt

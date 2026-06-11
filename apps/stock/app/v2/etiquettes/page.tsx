@@ -8,6 +8,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { GlossaryTerm } from "@/components/v2/GlossaryTerm";
+import { EmptyState } from "@/components/v2/EmptyState";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot } from "@/lib/db";
 import type { ProduitInDepot } from "@/lib/types/db";
@@ -188,8 +189,9 @@ export default function V2EtiquettesPage() {
         <p className="label-caps text-primary mt-3">Étiquettes</p>
         <h1 className="h1 text-text-primary mt-1">Imprimer les étiquettes</h1>
         <p className="body-md text-text-secondary mt-1">
-          Brother QL-820 (62×29 mm) ou gondole rayon (100×70 mm) · prix produit,
-          code-barres et picto halal.
+          {format === "brother"
+            ? "Brother QL-820 (62×29 mm) · prix produit, code-barres et picto halal."
+            : "Gondole rayon (100×70 mm) · prix géant, prix/kg et picto halal."}
         </p>
       </header>
 
@@ -215,9 +217,12 @@ export default function V2EtiquettesPage() {
 
       <section className="px-5 mt-5">
         {items.length === 0 ? (
-          <div className="bg-cream border border-rule rounded-2xl p-6 text-center text-sm text-text-secondary">
-            Aucun produit nécessitant une étiquette dans ce dépôt.
-          </div>
+          <EmptyState
+            icon={Tag}
+            title="Aucune étiquette à imprimer"
+            description="Aucun produit de ce dépôt ne nécessite d'étiquette interne pour le moment."
+            compact
+          />
         ) : (
           <div className="space-y-2">
             {items.map((p) => {

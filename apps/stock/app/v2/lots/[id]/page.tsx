@@ -279,9 +279,9 @@ export default function V2LotDetailPage() {
               Lot introuvable
             </p>
             <p className="text-[13px] text-text-secondary">
-              Le lot <code className="tabular-nums">{lotId}</code> n&apos;est
-              pas dans <code>produits_lots</code>. Vérifie la migration 0031 et
-              le seed.
+              Aucun lot ne correspond au code{" "}
+              <span className="tabular-nums font-semibold">{lotId}</span>.
+              Vérifie le code scanné ou saisi.
             </p>
           </div>
         </div>
@@ -476,10 +476,7 @@ export default function V2LotDetailPage() {
                 value={`${lot.quantite_recue} ${lot.unite ?? ""}`.trim()}
               />
             )}
-            {/* TODO : quantité restante — requiert jointure
-                commandes_drive_lignes + sorties_stock par lot_id
-                (Phase 1 post-démo). */}
-            <DataRow label="Quantité restante" value="— (Phase 1)" />
+            <DataRow label="Quantité restante" value="Non suivi" />
           </Section>
 
           {/* Réception magasin */}

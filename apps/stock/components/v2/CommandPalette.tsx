@@ -260,7 +260,7 @@ const PILOTER: PaletteItem[] = [
     label: "Prévisions ruptures",
     href: "/v2/forecast",
     icon: LineChart,
-    hint: "Stockouts prévus (hijri-aware)",
+    hint: "Ruptures à venir (calendrier hijri)",
     keywords:
       "forecast prevision rupture stockout commander aid ramadan pic demande",
   },

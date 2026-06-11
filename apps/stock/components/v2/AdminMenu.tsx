@@ -11,6 +11,8 @@ import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 interface AdminMenuProps {
   /** Le rôle de l'employé (affiché en sous-titre). */
   role: string | undefined;
+  /** Prénom de l'employé connecté — repris du header pour cohérence. */
+  name?: string;
   /** Déconnexion — migrée du header (ARCH-11). */
   onLogout?: () => void;
 }
@@ -32,7 +34,7 @@ const ROLE_LABEL: Record<string, string> = {
   caisse: "Caisse",
 };
 
-export function AdminMenu({ role, onLogout }: AdminMenuProps) {
+export function AdminMenu({ role, name, onLogout }: AdminMenuProps) {
   const [open, setOpen] = useState(false);
   const { resolved, toggle: toggleTheme } = useTheme();
   const { density, toggle: toggleDensity } = useDensity();
@@ -108,10 +110,10 @@ export function AdminMenu({ role, onLogout }: AdminMenuProps) {
                     className="text-[10px] font-bold uppercase tracking-[0.14em]"
                     style={{ color: "var(--accent-gold-dim)" }}
                   >
-                    Compte
+                    {role ? (ROLE_LABEL[role] ?? role) : "Compte"}
                   </p>
                   <p className="text-sm font-bold text-text-primary leading-tight">
-                    {role ? (ROLE_LABEL[role] ?? role) : "Réglages"}
+                    {name ?? "Réglages"}
                   </p>
                 </div>
               </div>

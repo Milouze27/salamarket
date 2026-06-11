@@ -21,6 +21,10 @@ export default function V2InventaireHistoriquePage() {
   const [employes, setEmployes] = useState<Employe[]>([]);
   const [scope, setScope] = useState<"depot" | "all">("depot");
   const [loading, setLoading] = useState(true);
+  // Plafond de remontée : au-delà, on affiche « 80+ » pour ne pas laisser
+  // croire que « Ce dépôt » et « Tous les dépôts » ont le même total quand les
+  // deux saturent la même limite.
+  const LIMIT = 80;
 
   useEffect(() => {
     void Promise.all([listDepots(), listEmployes()]).then(([d, e]) => {
@@ -34,7 +38,7 @@ export default function V2InventaireHistoriquePage() {
     setLoading(true);
     void listInventairesHistorique({
       depotId: scope === "depot" ? depot.id : undefined,
-      limit: 80,
+      limit: LIMIT,
     })
       .then(setRows)
       .finally(() => setLoading(false));
@@ -56,7 +60,8 @@ export default function V2InventaireHistoriquePage() {
         <BackButton />
         <p className="label-caps text-primary mt-3">Historique inventaires</p>
         <h1 className="h1 text-text-primary mt-1">
-          {rows.length} inventaire{rows.length > 1 ? "s" : ""}
+          {rows.length >= LIMIT ? `${LIMIT}+` : rows.length} inventaire
+          {rows.length > 1 ? "s" : ""}
         </h1>
         <p className="body-md text-text-secondary mt-1">
           {scope === "depot"

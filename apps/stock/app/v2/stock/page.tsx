@@ -46,9 +46,13 @@ export default function V2StockPage() {
   const [cat, setCat] = useState<string>("Tout");
   const [windows, setWindows] = useState<StockEditWindow[]>([]);
   const [editing, setEditing] = useState<ProduitInDepot | null>(null);
+  // Évite le faux « Aucun produit » pendant le fetch initial : tant que la
+  // requête stock n'est pas résolue, on rend un skeleton, jamais l'état vide.
+  const [loading, setLoading] = useState(true);
 
   async function reload() {
     if (!depot) return;
+    setLoading(true);
     try {
       const [stock, win, deps] = await Promise.all([
         listProduitsInDepot(depot.id),
@@ -61,6 +65,8 @@ export default function V2StockPage() {
     } catch (e) {
       console.error("[stock] chargement échoué:", e);
       toast.error("Erreur de chargement du stock · vérifie la connexion");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -105,6 +111,11 @@ export default function V2StockPage() {
   const editAllowed = depot
     ? canEditStock(employe?.role, depot.id, windows)
     : false;
+  // Coût d'achat & marge = donnée commerciale sensible : réservée aux rôles
+  // de pilotage (admin / manager). Masquée pour la prépa, la caisse, la
+  // réception qui n'ont pas à voir les marges sur le terrain.
+  const canSeeMargin =
+    employe?.role === "admin" || employe?.role === "manager";
   const windowOpen = depot
     ? Boolean(windows.find((w) => w.depot_id === depot.id)?.is_open)
     : false;
@@ -220,7 +231,9 @@ export default function V2StockPage() {
         <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
           {view === "regroupe"
             ? `Vue regroupée · ${aggregated.length} produit${aggregated.length > 1 ? "s" : ""} sur les 3 dépôts.`
-            : `${items.length} produit${items.length > 1 ? "s" : ""} référencé${items.length > 1 ? "s" : ""} dans ce dépôt.`}
+            : loading
+              ? "Chargement du stock du dépôt…"
+              : `${items.length} produit${items.length > 1 ? "s" : ""} référencé${items.length > 1 ? "s" : ""} dans ce dépôt.`}
         </p>
 
         {/* Toggle vue dépôt unique / regroupée */}
@@ -320,7 +333,29 @@ export default function V2StockPage() {
         </div>
       </div>
 
-      {view === "depot" ? (
+      {view === "depot" && loading ? (
+        // Skeleton de chargement : grille de cartes neutres tant que le stock
+        // n'est pas résolu — évite le flash trompeur « Aucun produit ».
+        <section
+          className="px-5 mt-4 grid grid-cols-2 gap-3"
+          aria-busy="true"
+          aria-label="Chargement du stock"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white border border-rule rounded-2xl overflow-hidden animate-pulse"
+            >
+              <div className="aspect-square bg-cream" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 rounded bg-cream w-4/5" />
+                <div className="h-2.5 rounded bg-cream w-2/5" />
+                <div className="h-3.5 rounded bg-cream w-1/3 mt-1" />
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : view === "depot" ? (
         <>
           <section className="px-5 mt-4 grid grid-cols-2 gap-3">
             {filtered.map((p) => (
@@ -335,10 +370,23 @@ export default function V2StockPage() {
                     rounded="lg"
                     className="absolute inset-0 w-full h-full text-3xl"
                   />
-                  <span className="absolute top-2 right-2 bg-white/95 rounded-full px-2 py-0.5 text-[11px] font-bold text-primary inline-flex items-center gap-1 shadow-sm">
-                    <Package className="w-3 h-3" />
-                    {p.quantite}
-                  </span>
+                  {p.quantite === 0 ? (
+                    <span
+                      className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-bold inline-flex items-center gap-1 shadow-sm"
+                      style={{
+                        background: "var(--danger)",
+                        color: "var(--text-on-danger, #fff)",
+                      }}
+                    >
+                      <Package className="w-3 h-3" />
+                      Rupture
+                    </span>
+                  ) : (
+                    <span className="absolute top-2 right-2 bg-white/95 rounded-full px-2 py-0.5 text-[11px] font-bold text-primary inline-flex items-center gap-1 shadow-sm">
+                      <Package className="w-3 h-3" />
+                      {p.quantite}
+                    </span>
+                  )}
                   {editAllowed && (
                     <button
                       onClick={() => setEditing(p)}
@@ -360,7 +408,8 @@ export default function V2StockPage() {
                     amount={p.prix_vente}
                     className="text-base font-extrabold text-primary mt-1 block"
                   />
-                  {p.cout_achat_ht != null &&
+                  {canSeeMargin &&
+                    p.cout_achat_ht != null &&
                     p.prix_vente != null &&
                     p.prix_vente > 0 && (
                       <p
@@ -391,9 +440,19 @@ export default function V2StockPage() {
                 cta={{ label: "Nouvelle réception", href: "/v2/reception" }}
               />
             ) : (
-              <div className="px-5 py-10 text-center text-text-secondary">
-                Aucun produit ne correspond à la recherche.
-              </div>
+              <EmptyState
+                icon={Search}
+                title="Aucun résultat"
+                description="Aucun produit ne correspond à ta recherche ou à ce filtre."
+                cta={{
+                  label: "Réinitialiser",
+                  onClick: () => {
+                    setQuery("");
+                    setCat("Tout");
+                  },
+                }}
+                compact
+              />
             ))}
         </>
       ) : (
@@ -443,13 +502,26 @@ export default function V2StockPage() {
               </div>
             ))}
           </section>
-          {filteredAggregated.length === 0 && (
-            <div className="px-5 py-10 text-center text-text-secondary">
-              {allStocks.size === 0
-                ? "Chargement des 3 dépôts…"
-                : "Aucun produit ne correspond à la recherche."}
-            </div>
-          )}
+          {filteredAggregated.length === 0 &&
+            (allStocks.size === 0 ? (
+              <div className="px-5 py-10 text-center text-text-secondary">
+                Chargement des 3 dépôts…
+              </div>
+            ) : (
+              <EmptyState
+                icon={Search}
+                title="Aucun résultat"
+                description="Aucun produit ne correspond à ta recherche ou à ce filtre."
+                cta={{
+                  label: "Réinitialiser",
+                  onClick: () => {
+                    setQuery("");
+                    setCat("Tout");
+                  },
+                }}
+                compact
+              />
+            ))}
         </>
       )}
 

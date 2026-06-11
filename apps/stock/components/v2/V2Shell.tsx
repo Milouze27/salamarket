@@ -122,10 +122,9 @@ const ITEMS: Record<string, NavItem> = {
     icon: LayoutDashboard,
     desc: "Vue 3 dépôts + alertes IA",
   },
-  // Nouveaux hubs sprint démo Otmane
   cockpit: {
     label: "Cockpit",
-    fullLabel: "Cockpit Otmane",
+    fullLabel: "Cockpit du matin",
     href: "/v2/cockpit",
     icon: Gauge,
     desc: "Vue 30 sec : ventes, alertes, staff",
@@ -135,7 +134,7 @@ const ITEMS: Record<string, NavItem> = {
     fullLabel: "Prévisions ruptures",
     href: "/v2/forecast",
     icon: LineChart,
-    desc: "Stockouts prévus (hijri-aware)",
+    desc: "Ruptures à venir (calendrier hijri)",
   },
   po: {
     label: "Cmd. fourn.",
@@ -328,10 +327,10 @@ interface SheetGroup {
 
 /**
  * Le Plus-sheet range tout sous 3 plans mentaux (même modèle que ⌘K) :
- *   OPÉRER     — les gestes terrain (sortie, réception, transfert, étiq, stock, prépa)
+ *   OPÉRER     — les gestes terrain (sortie, réception, transfert, étiq, stock,
+ *                prépa, inventaire, traçabilité lots)
  *   PILOTER    — décider / surveiller (cockpit, forecast, alertes DLC, comptoir)
- *   ADMINISTRER— back-office (admin hub, fournisseurs, PO, lots, inventaire,
- *                alertes, activité, fiscal, rapports, import, assistant IA)
+ *   ADMINISTRER— back-office (surveillance, ventes pro, achats, fiscal, outils)
  *
  * L99 / ARCH — on applique le MÊME filtrage par rôle que la palette ⌘K
  * (filterItemsForRole, source unique `@/lib/nav-roles`) : un `caisse` ne voit
@@ -341,6 +340,8 @@ interface SheetGroup {
  * et on retire les groupes vides.
  */
 function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
+  // Opérer = tous les gestes terrain, inventaire et traçabilité lots inclus
+  // (ce sont des opérations quotidiennes, pas des achats ni des réglages).
   const operer = [
     ITEMS.sortie,
     ITEMS.reception,
@@ -349,6 +350,9 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.stock,
     ITEMS.stockSansEan,
     ITEMS.preparation,
+    ITEMS.inventaire,
+    ITEMS.inventaireHisto,
+    ITEMS.lots,
   ];
   const piloter = [
     ITEMS.accueil,
@@ -367,25 +371,15 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.pointage,
   ];
   const ventesPro = [ITEMS.commandesPro, ITEMS.facturesPro, ITEMS.comptesPro];
-  const achats = [
-    ITEMS.fournisseurs,
-    ITEMS.po,
-    ITEMS.bonsReception,
-    ITEMS.lots,
-  ];
+  const achats = [ITEMS.fournisseurs, ITEMS.po, ITEMS.bonsReception];
   const fiscal = [
     ITEMS.recapFiscal,
     ITEMS.rapportMensuel,
     ITEMS.importCashmag,
     ITEMS.importStock,
   ];
-  const reglages = [
-    ITEMS.admin,
-    ITEMS.assistantIa,
-    ITEMS.inventaire,
-    ITEMS.inventaireHisto,
-    ITEMS.labo,
-  ];
+  // Outils & analyses = écrans métier d'aide à la décision (pas des réglages).
+  const outils = [ITEMS.admin, ITEMS.assistantIa, ITEMS.labo];
 
   // 1) périmètre par rôle (cohérent ⌘K) puis 2) dédup avec la bottom-bar.
   const prepare = (items: NavItem[]) =>
@@ -398,7 +392,7 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     { heading: "Ventes & Pro", items: prepare(ventesPro) },
     { heading: "Achats & fournisseurs", items: prepare(achats) },
     { heading: "Fiscal & rapports", items: prepare(fiscal) },
-    { heading: "Réglages", items: prepare(reglages) },
+    { heading: "Outils & analyses", items: prepare(outils) },
   ].filter((g) => g.items.length > 0);
 }
 
@@ -617,7 +611,11 @@ export function V2Shell({
 
               {/* Menu / répertoire unique — toutes les pages groupées + compte&réglages.
                 Disponible pour tous les rôles (logout vit dedans). */}
-              <AdminMenu role={employe.role} onLogout={logout} />
+              <AdminMenu
+                role={employe.role}
+                name={employe.prenom ?? undefined}
+                onLogout={logout}
+              />
             </div>
             {mode === "local" && process.env.NODE_ENV === "development" && (
               <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">

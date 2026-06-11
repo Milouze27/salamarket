@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Plus, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
-import { formatPrice, unitLabel } from "@/lib/format";
+import { formatPrice, productUnitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { formatPriceWithUnit } from "@salamarket/shared";
@@ -126,14 +126,11 @@ export const ProductCard = ({ product }: Props) => {
   );
   const showDlcPrice = dlcDiscount != null && unitType !== "weight";
 
-  // Texte affiché sous le prix : "au kg" / "à la pièce" pour unit,
-  // "Vente au poids" pour weight, "3 tailles" pour bracket.
-  const unitMeta =
-    unitType === "weight"
-      ? "vente au poids"
-      : unitType === "weight_bracket"
-        ? "vente au poids · tailles au choix"
-        : unitLabel(product.unit);
+  // Texte affiché sous le prix. Dérive du unitType via le helper partagé
+  // productUnitLabel (corrige COH-12/B1-10 : un produit unit_type='unit'
+  // avec unit='kg' affiche "à la pièce", plus jamais "au kg" — cohérent
+  // avec la PDP). Centralisé dans format.ts.
+  const unitMeta = productUnitLabel(product);
 
   return (
     <article

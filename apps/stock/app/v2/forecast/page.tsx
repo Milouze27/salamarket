@@ -38,6 +38,7 @@ import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
 import { resolveHijriContext, formatHijri } from "@/lib/forecast/hijri";
+import { triggerRecompute } from "@/lib/actions/forecast";
 import type { StockoutTier } from "@/lib/forecast/holt";
 
 type HijriPhase =
@@ -208,19 +209,15 @@ export default function ForecastPage() {
   async function handleRecompute() {
     setRecomputing(true);
     try {
-      const res = await fetch("/api/forecast/recompute", { method: "POST" });
-      const json = (await res.json()) as {
-        ok?: boolean;
-        couples_total?: number;
-        forecast_upserted?: number;
-        duration_ms?: number;
-        error?: string;
-      };
-      if (!res.ok || !json.ok) {
-        toast.error(`Recompute échoué : ${json.error ?? "erreur inconnue"}`);
+      // Server action : injecte le client service-role côté serveur. La route
+      // HTTP /api/forecast/recompute reste verrouillée par CRON_SECRET (crons),
+      // mais le bouton staff n'a pas ce secret → on passe par l'action.
+      const res = await triggerRecompute();
+      if (!res.ok || !res.data) {
+        toast.error(`Recompute échoué : ${res.error ?? "erreur inconnue"}`);
       } else {
         toast.success(
-          `Recompute OK · ${json.forecast_upserted ?? 0} couples · ${json.duration_ms ?? 0} ms`,
+          `Recompute OK · ${res.data.forecast_upserted ?? 0} couples`,
           { duration: 3000 },
         );
         await load();

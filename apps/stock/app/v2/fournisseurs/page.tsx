@@ -78,7 +78,7 @@ export default function FournisseursPage() {
       .from("fournisseurs")
       .select(
         `
-        id, nom, email, email_commandes, lead_time_jours, min_commande_euros,
+        id, nom, email_commandes, lead_time_jours, min_commande_euros,
         franco_de_port, jours_livraison, certif_organisme, certif_numero,
         certif_expire_le, certif_pdf_url, actif, adresse, siret
       `,
@@ -209,7 +209,7 @@ export default function FournisseursPage() {
                       </h3>
                       <p className="body-sm mt-0.5 flex items-center gap-1.5">
                         <Mail size={12} />
-                        {f.email_commandes ?? f.email ?? "Email non renseigné"}
+                        {f.email_commandes ?? "Email non renseigné"}
                       </p>
                     </div>
                     <button

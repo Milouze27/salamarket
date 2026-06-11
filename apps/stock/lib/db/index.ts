@@ -790,8 +790,13 @@ export async function assignInventairesPourDepot(
     };
     const sb = supabase();
     if (sb) {
-      const { id: _localId, ...payload } = row;
+      // `ecart` est une colonne GENERATED ALWAYS côté DB : l'envoyer dans le
+      // payload déclenche un 400 "cannot insert a non-DEFAULT value into
+      // column ecart". On la retire de l'insert (elle reste calculée par la
+      // DB). On retire aussi l'id local (clé serveur générée).
+      const { id: _localId, ecart: _ecart, ...payload } = row;
       void _localId;
+      void _ecart;
       const { data, error } = await sb
         .from("inventaires_tournants")
         .insert(payload)

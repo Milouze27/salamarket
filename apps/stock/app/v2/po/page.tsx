@@ -194,7 +194,7 @@ export default function PoDashboardPage() {
   return (
     <V2Shell>
       <PageAccentStripe accent="sapin-or" />
-      <div className="px-5 pt-4 pb-nav-stack">
+      <div className="px-5 pt-4 pb-fab-stack">
         <BackButton href="/v2/admin" />
 
         {/* Hero */}
@@ -328,8 +328,10 @@ export default function PoDashboardPage() {
                             className="inline mr-1"
                             style={{ verticalAlign: -2 }}
                           />
-                          {po.depots?.nom ?? "—"} · livraison{" "}
-                          {dateFr(po.date_livraison_prevue)}
+                          {po.depots?.nom ?? "—"} ·{" "}
+                          {po.date_livraison_prevue
+                            ? `livraison ${dateFr(po.date_livraison_prevue)}`
+                            : "livraison non planifiée"}
                         </p>
                       </div>
                       <p

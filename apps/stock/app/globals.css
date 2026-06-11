@@ -737,6 +737,14 @@ button,
       var(--nav-height) + var(--safe-bottom) + var(--nav-breathing)
     );
   }
+  /* Comme pb-nav-stack, mais réserve EN PLUS la hauteur du FAB Assistant
+     (56px) + son offset au-dessus de la nav (36px) pour qu'aucun montant ni
+     CTA du dernier item ne passe sous le bouton flottant (règle UX FAB). */
+  .pb-fab-stack {
+    padding-bottom: calc(
+      var(--nav-height) + var(--safe-bottom) + var(--nav-breathing) + 92px
+    );
+  }
   /* Float a CTA strip above the bottom nav (or above safe-area when no nav). */
   .cta-above-nav {
     bottom: calc(var(--nav-height) + var(--safe-bottom));

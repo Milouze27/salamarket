@@ -202,6 +202,18 @@ async function seedPo(refs) {
     return;
   }
 
+  // Cohérence démo : le PO, son email (bigard.fr), son certif (AVS-BIG) et ses
+  // SKU (BIG-*) sont tous "Bigard". On aligne donc le NOM du fournisseur sur
+  // "Bigard Castres" pour qu'aucun écran ne montre un nom (Barakat…) qui
+  // contredit l'email/certif/SKU affichés (finding démo MGR2-03).
+  if (!DRY && refs.fournBigard.nom !== 'Bigard Castres') {
+    await sb.from('fournisseurs')
+      .update({ nom: 'Bigard Castres' })
+      .eq('id', refs.fournBigard.id);
+    track('fournisseurs', 'update', 1);
+    refs.fournBigard.nom = 'Bigard Castres';
+  }
+
   // Bigard a-t-il un certif halal ? Si non, on patch le fournisseur pour
   // qu'on puisse envoyer le PO (la démo va montrer la transition draft→sent).
   if (!refs.fournBigard.certif_organisme || !refs.fournBigard.certif_expire_le ||
@@ -257,6 +269,11 @@ async function seedPo(refs) {
   const totalHt = lignes.reduce((s, l) => s + l.qte * l.prix, 0);
   const totalTtc = +(totalHt * 1.055).toFixed(2);
 
+  // Date de livraison prévue = today + 2 j (sinon la carte PO affiche
+  // "livraison non planifiée" — crédibilité démo, finding MGR2-09).
+  const dLiv = new Date();
+  dLiv.setDate(dLiv.getDate() + 2);
+
   const poInsert = await safeOp('purchase_orders', 'insert', () =>
     sb.from('purchase_orders').insert({
       fournisseur_id: refs.fournBigard.id,
@@ -264,6 +281,7 @@ async function seedPo(refs) {
       statut: 'brouillon',
       total_ht: +totalHt.toFixed(2),
       total_ttc: totalTtc,
+      date_livraison_prevue: dLiv.toISOString().slice(0, 10),
       notes: 'Suggestion auto-PO (algorithme de réassort). Ramadan J-28.',
     }).select('id, numero_po').single());
 

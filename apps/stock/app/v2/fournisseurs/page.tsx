@@ -401,6 +401,7 @@ function EditDrawer({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Fermer"
             className="absolute right-4 top-3 p-2 rounded-full"
             style={{
               background: "var(--bg-card)",

@@ -46,7 +46,12 @@ export function isSafeRedirect(path: string | null | undefined): path is string 
 }
 
 export function buildLoginUrl(currentPathWithSearch: string): string {
-  return `/connexion?redirect=${encodeURIComponent(currentPathWithSearch)}`;
+  // Un deep-link Pro (/pro/*) non authentifié doit renvoyer vers le
+  // formulaire Pro (/pro/login, DA sapin/or) et non vers la connexion
+  // Particulier (/connexion). On préserve le redirect dans les deux cas.
+  const pathOnly = currentPathWithSearch.split("?")[0].split("#")[0];
+  const loginPath = pathOnly.startsWith("/pro/") ? "/pro/login" : "/connexion";
+  return `${loginPath}?redirect=${encodeURIComponent(currentPathWithSearch)}`;
 }
 
 export function getRedirectFromSearch(search: string): string {

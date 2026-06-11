@@ -157,10 +157,10 @@ export default function AdminComptesPro() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="bg-slate-900 text-white border-b border-amber-500/30">
+    <div className="min-h-dvh bg-cream">
+      <header className="bg-sapin text-white border-b border-gold/30">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-xs uppercase tracking-widest text-gold-bright font-semibold">
             Admin Pro
           </span>
           <h1 className="text-2xl font-bold mt-1">Comptes Pro</h1>
@@ -176,7 +176,7 @@ export default function AdminComptesPro() {
             <div className="relative flex-1">
               <Search
                 size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint"
                 aria-hidden
               />
               <Input
@@ -224,7 +224,7 @@ export default function AdminComptesPro() {
                 Erreur lors du chargement.
               </div>
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
+              <div className="p-12 text-center text-ink-soft">
                 Aucun compte ne correspond.
               </div>
             ) : (
@@ -245,10 +245,10 @@ export default function AdminComptesPro() {
                       <TableRow key={c.id}>
                         <TableCell className="font-medium">
                           <div>{c.raison_sociale}</div>
-                          <div className="text-xs text-slate-500 sm:hidden">
+                          <div className="text-xs text-ink-soft sm:hidden">
                             SIRET {c.siret}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-ink-soft">
                             Inscrit le {formatDate(c.created_at)}
                           </div>
                         </TableCell>
@@ -257,7 +257,7 @@ export default function AdminComptesPro() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="text-sm">{c.delegue_nom}</div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-ink-soft">
                             {c.delegue_email}
                           </div>
                         </TableCell>

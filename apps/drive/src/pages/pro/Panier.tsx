@@ -82,7 +82,7 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
   const { item, remisePct, prixHtUnit, totalHt, totalTtc } = ligne;
   return (
     <div className="flex gap-3 py-3">
-      <div className="w-16 h-16 rounded-md overflow-hidden bg-slate-100 shrink-0">
+      <div className="w-16 h-16 rounded-md overflow-hidden bg-cream-200 shrink-0">
         {item.product_image_url ? (
           <img
             src={item.product_image_url}
@@ -90,7 +90,7 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-300">
+          <div className="w-full h-full flex items-center justify-center text-ink-faint">
             <ShoppingBag size={24} aria-hidden />
           </div>
         )}
@@ -98,10 +98,10 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="font-medium text-slate-900 text-sm truncate">
+            <h3 className="font-medium text-ink text-sm truncate">
               {item.product_name}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-ink-soft">
               {item.conditionnement_pro ??
                 `${item.quantite_par_conditionnement} × ${item.product_unit}`}
             </p>
@@ -110,7 +110,7 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
             type="button"
             onClick={onRemove}
             aria-label="Supprimer"
-            className="text-slate-400 hover:text-red-600 transition-colors p-1 -mr-1"
+            className="text-ink-faint hover:text-red-600 transition-colors p-1 -mr-1"
           >
             <Trash2 size={16} aria-hidden />
           </button>
@@ -131,20 +131,20 @@ const LineRow = ({ ligne, onChangeQty, onRemove }: LineRowProps) => {
               className="w-16 h-8 text-center text-sm"
               aria-label="Quantité"
             />
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-ink-soft">
               × {formatEur(prixHtUnit)} HT
               {remisePct > 0 && (
-                <span className="text-amber-700 font-medium ml-1">
+                <span className="text-gold-text font-medium ml-1">
                   (−{remisePct}%)
                 </span>
               )}
             </span>
           </div>
           <div className="text-right">
-            <div className="font-semibold text-slate-900 text-sm">
+            <div className="font-semibold text-ink text-sm">
               {formatEur(totalHt)} HT
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-ink-soft">
               {formatEur(totalTtc)} TTC
             </div>
           </div>
@@ -270,17 +270,17 @@ function PanierInner() {
           <CardContent className="py-16 text-center">
             <ShoppingBag
               size={48}
-              className="mx-auto text-slate-300 mb-3"
+              className="mx-auto text-ink-faint mb-3"
               aria-hidden
             />
-            <h2 className="text-lg font-semibold text-slate-900 mb-1">
+            <h2 className="text-lg font-semibold text-ink mb-1">
               Votre panier est vide
             </h2>
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-ink-soft mb-4">
               Ajoutez des produits depuis le catalogue.
             </p>
             <Link to="/pro/catalogue">
-              <Button className="bg-slate-900 hover:bg-slate-800">
+              <Button className="bg-sapin hover:bg-sapin-deep">
                 Voir le catalogue
               </Button>
             </Link>
@@ -289,7 +289,7 @@ function PanierInner() {
       ) : (
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
           <Card>
-            <CardContent className="p-4 divide-y divide-slate-100">
+            <CardContent className="p-4 divide-y divide-line">
               {lignes.map((l) => (
                 <LineRow
                   key={l.item.prix_id}
@@ -303,28 +303,28 @@ function PanierInner() {
 
           <Card className="h-fit lg:sticky lg:top-28">
             <CardContent className="p-4 space-y-3">
-              <h2 className="font-semibold text-slate-900">Récapitulatif</h2>
-              <div className="flex justify-between text-sm text-slate-700">
+              <h2 className="font-semibold text-ink">Récapitulatif</h2>
+              <div className="flex justify-between text-sm text-ink-soft">
                 <span>Total HT</span>
                 <span className="font-medium">{formatEur(totals.ht)}</span>
               </div>
               {tvaParTaux.map((t) => (
                 <div
                   key={t.taux}
-                  className="flex justify-between text-sm text-slate-700"
+                  className="flex justify-between text-sm text-ink-soft"
                 >
                   <span>TVA {t.taux.toString().replace(".", ",")}%</span>
                   <span>{formatEur(t.montant)}</span>
                 </div>
               ))}
               <Separator />
-              <div className="flex justify-between text-base font-bold text-slate-900">
+              <div className="flex justify-between text-base font-bold text-ink">
                 <span>Total TTC</span>
                 <span>{formatEur(totals.ttc)}</span>
               </div>
 
               {creditActif && (
-                <div className="flex justify-between text-sm text-slate-700">
+                <div className="flex justify-between text-sm text-ink-soft">
                   <span>Crédit disponible</span>
                   <span className="font-medium">
                     {formatEur(creditDisponible)}
@@ -333,7 +333,7 @@ function PanierInner() {
               )}
 
               {totals.ttc > 500 && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <p className="text-xs text-gold-text bg-gold-soft/40 border border-gold/30 rounded-md px-3 py-2">
                   Commande &gt; 500 € TTC : validation manager requise après
                   envoi.
                 </p>
@@ -352,7 +352,7 @@ function PanierInner() {
                 type="button"
                 onClick={onValider}
                 disabled={submitting || creditDepasse}
-                className="w-full bg-amber-500 text-slate-900 hover:bg-amber-400 h-11"
+                className="w-full bg-gold text-sapin-deep hover:bg-gold-bright h-11"
               >
                 {submitting ? "Envoi…" : "Valider la commande"}
               </Button>
@@ -360,7 +360,7 @@ function PanierInner() {
                 type="button"
                 onClick={clear}
                 variant="ghost"
-                className="w-full text-slate-500"
+                className="w-full text-ink-soft"
                 disabled={submitting}
               >
                 Vider le panier

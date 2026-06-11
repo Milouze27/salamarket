@@ -50,11 +50,15 @@ export function RouteChrome() {
   const isAuth = AUTH_ROUTES.has(path);
   const isLegal = LEGAL_ROUTES.has(path);
   const isFunnel = FUNNEL_ROUTES.has(path);
+  // L'espace Pro (/pro/*) a sa propre nav d'onglets dans ProShell : on ne
+  // superpose jamais la nav/CTA panier B2C (Accueil/Panier/Commandes/Compte
+  // renvoient vers le tunnel Particulier — nav contradictoire pour un Pro).
+  const isPro = path === '/pro' || path.startsWith('/pro/');
 
-  // Bottom nav + sticky cart never appear on auth/legal.
-  const showBottomNav = !isAuth && !isLegal;
+  // Bottom nav + sticky cart never appear on auth/legal/pro.
+  const showBottomNav = !isAuth && !isLegal && !isPro;
   // Sticky cart also hidden on funnel routes (local CTA owns the bottom).
-  const showStickyCart = !isAuth && !isLegal && !isFunnel;
+  const showStickyCart = !isAuth && !isLegal && !isPro && !isFunnel;
   // Cookie banner hidden only on the full-bleed auth screens.
   const showCookieBanner = !isAuth;
 

@@ -119,10 +119,10 @@ export default function AdminFacturesPro() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="bg-slate-900 text-white border-b border-amber-500/30">
+    <div className="min-h-dvh bg-cream">
+      <header className="bg-sapin text-white border-b border-gold/30">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-xs uppercase tracking-widest text-gold-bright font-semibold">
             Admin Pro
           </span>
           <h1 className="text-2xl font-bold mt-1">Factures Pro</h1>
@@ -171,7 +171,7 @@ export default function AdminFacturesPro() {
                 Erreur lors du chargement.
               </div>
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
+              <div className="p-12 text-center text-ink-soft">
                 Aucune facture ne correspond.
               </div>
             ) : (
@@ -198,14 +198,14 @@ export default function AdminFacturesPro() {
                       const isPayee = f.statut === "payee" || !!f.date_paiement;
                       return (
                         <TableRow key={f.id}>
-                          <TableCell className="font-mono text-xs text-amber-700 font-semibold">
+                          <TableCell className="font-mono text-xs text-gold-text font-semibold">
                             {f.facture_numero}
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
                               {f.comptes_pro?.raison_sociale ?? "—"}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-ink-soft">
                               {f.comptes_pro?.siret}
                             </div>
                           </TableCell>

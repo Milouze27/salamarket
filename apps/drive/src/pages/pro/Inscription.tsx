@@ -59,7 +59,14 @@ import type { ConditionsPaiement, FormeJuridique } from "@/types/pro";
 // ─────────────────────────────────────────────────────────────────────
 
 const SIRET_RE = /^\d{14}$/;
-const PHONE_RE = /^(\+33|0)[1-9]\d{8}$/;
+// Aligné sur Signup B2C (FR legacy + E.164) : la clientèle halal est
+// souvent maghrébine, un délégué avec un mobile étranger (+212…) ne doit
+// pas être bloqué en étape 2.
+const PHONE_FR_RE = /^(\+33|0)[1-9]\d{8}$/;
+const PHONE_E164_RE = /^\+[1-9]\d{6,14}$/;
+const PHONE_RE = {
+  test: (v: string) => PHONE_FR_RE.test(v) || PHONE_E164_RE.test(v),
+};
 
 const InscriptionSchema = z.object({
   // Étape 1
@@ -74,7 +81,7 @@ const InscriptionSchema = z.object({
   delegue_telephone: z
     .string()
     .refine((v) => PHONE_RE.test(v.replace(/\s/g, "")), {
-      message: "Numéro invalide (ex : 0612345678)",
+      message: "Numéro invalide (ex : 0612345678 ou +212612345678)",
     }),
   delegue_email: z.string().email("Email invalide"),
   delegue_password: z.string().min(8, "Min. 8 caractères"),
@@ -115,10 +122,10 @@ const Stepper = ({ current }: StepperProps) => (
           <div
             className={`flex items-center justify-center w-9 h-9 rounded-full border-2 shrink-0 transition-colors ${
               done
-                ? "bg-amber-500 border-amber-500 text-slate-900"
+                ? "bg-gold border-gold text-sapin-deep"
                 : active
-                  ? "bg-slate-900 border-slate-900 text-amber-300"
-                  : "bg-white border-slate-300 text-slate-400"
+                  ? "bg-sapin border-sapin text-gold-bright"
+                  : "bg-white border-line-medium text-ink-faint"
             }`}
             aria-current={active ? "step" : undefined}
           >
@@ -126,7 +133,7 @@ const Stepper = ({ current }: StepperProps) => (
           </div>
           <span
             className={`text-xs sm:text-sm font-medium ${
-              active ? "text-slate-900" : "text-slate-500"
+              active ? "text-ink" : "text-ink-soft"
             }`}
           >
             {step.label}
@@ -134,7 +141,7 @@ const Stepper = ({ current }: StepperProps) => (
           {idx < STEPS.length - 1 && (
             <div
               className={`flex-1 h-px mx-2 ${
-                done ? "bg-amber-500" : "bg-slate-200"
+                done ? "bg-gold" : "bg-cream-300"
               }`}
               aria-hidden
             />
@@ -311,10 +318,10 @@ export default function ProInscription() {
   const values = form.watch();
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="bg-[#0E3B2E] text-white border-b border-amber-500/30">
+    <div className="min-h-dvh bg-cream">
+      <header className="bg-sapin text-white border-b border-gold/30">
         <div className="max-w-3xl mx-auto px-4 py-4">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-xs uppercase tracking-widest text-gold-bright font-semibold">
             Drive Pro
           </span>
           <h1 className="text-2xl font-bold mt-1">
@@ -493,7 +500,7 @@ export default function ProInscription() {
                               <Input
                                 type="tel"
                                 autoComplete="tel"
-                                placeholder="0612345678"
+                                placeholder="0612345678 ou +212612345678"
                                 {...field}
                               />
                             </FormControl>
@@ -561,7 +568,7 @@ export default function ProInscription() {
                                 <Label
                                   key={c.value}
                                   htmlFor={`cond-${c.value}`}
-                                  className="flex items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50 cursor-pointer has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50"
+                                  className="flex items-start gap-3 rounded-lg border border-line p-3 hover:bg-cream cursor-pointer has-[:checked]:border-gold has-[:checked]:bg-gold-soft/40"
                                 >
                                   <RadioGroupItem
                                     id={`cond-${c.value}`}
@@ -569,10 +576,10 @@ export default function ProInscription() {
                                     className="mt-0.5"
                                   />
                                   <div className="flex-1">
-                                    <div className="font-medium text-slate-900">
+                                    <div className="font-medium text-ink">
                                       {c.label}
                                     </div>
-                                    <div className="text-xs text-slate-500">
+                                    <div className="text-xs text-ink-soft">
                                       {c.sub}
                                     </div>
                                   </div>
@@ -594,7 +601,7 @@ export default function ProInscription() {
                 {/* ─── Étape 3 : Validation ───────────────────────── */}
                 {step === 2 && (
                   <>
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="text-lg font-semibold text-ink">
                       Récapitulatif
                     </h2>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -641,7 +648,7 @@ export default function ProInscription() {
                       control={form.control}
                       name="accept_cgv"
                       render={({ field }) => (
-                        <FormItem className="rounded-lg border border-slate-200 p-4 bg-slate-50">
+                        <FormItem className="rounded-lg border border-line p-4 bg-cream">
                           <div className="flex items-start gap-3">
                             <FormControl>
                               <Checkbox
@@ -652,7 +659,7 @@ export default function ProInscription() {
                                 className="mt-0.5"
                               />
                             </FormControl>
-                            <div className="text-sm text-slate-700">
+                            <div className="text-sm text-ink-soft">
                               J'accepte les{" "}
                               <a
                                 href="/cgv"
@@ -693,7 +700,7 @@ export default function ProInscription() {
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-amber-500 text-slate-900 hover:bg-amber-400"
+                  className="bg-gold text-sapin-deep hover:bg-gold-bright"
                 >
                   {submitting ? "Envoi…" : "Envoyer ma demande"}
                 </Button>
@@ -713,7 +720,7 @@ interface SummaryRowProps {
 }
 const SummaryRow = ({ label, value, wide }: SummaryRowProps) => (
   <div className={wide ? "sm:col-span-2" : ""}>
-    <dt className="text-xs uppercase text-slate-500">{label}</dt>
-    <dd className="text-sm text-slate-900 font-medium">{value}</dd>
+    <dt className="text-xs uppercase text-ink-soft">{label}</dt>
+    <dd className="text-sm text-ink font-medium">{value}</dd>
   </div>
 );

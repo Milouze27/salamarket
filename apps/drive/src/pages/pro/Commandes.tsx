@@ -37,20 +37,20 @@ import {
 // ─────────────────────────────────────────────────────────────────────
 
 const STATUT_BADGE_CLASS: Record<StatutCommandePro, string> = {
-  a_valider: "bg-amber-100 text-amber-900 border-amber-200",
+  a_valider: "bg-gold-soft text-gold-text border-gold/30",
   validee: "bg-emerald-100 text-emerald-900 border-emerald-200",
   en_preparation: "bg-sky-100 text-sky-900 border-sky-200",
   expediee: "bg-indigo-100 text-indigo-900 border-indigo-200",
   livree: "bg-teal-100 text-teal-900 border-teal-200",
   facturee: "bg-violet-100 text-violet-900 border-violet-200",
   payee: "bg-emerald-600 text-white border-emerald-600",
-  annulee: "bg-slate-200 text-slate-600 border-slate-300",
+  annulee: "bg-cream-300 text-ink-soft border-line-medium",
 };
 
 function StatutBadge({ statut }: { statut: string }) {
   const key = statut as StatutCommandePro;
   const cls =
-    STATUT_BADGE_CLASS[key] ?? "bg-slate-100 text-slate-700 border-slate-200";
+    STATUT_BADGE_CLASS[key] ?? "bg-cream-200 text-ink-soft border-line";
   const label = LABEL_STATUT_COMMANDE[key] ?? statut;
   return (
     <Badge variant="outline" className={`${cls} whitespace-nowrap`}>
@@ -84,21 +84,21 @@ function CommandeRow({ commande, onRecommander, recommanding }: RowProps) {
         aria-label={`Voir la commande ${commande.numero_commande ?? ""}`}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-semibold text-[#0E3B2E] group-hover:underline truncate">
+          <span className="font-semibold text-sapin group-hover:underline truncate">
             {commande.numero_commande ?? "Sans numéro"}
           </span>
           <StatutBadge statut={commande.statut} />
         </div>
-        <div className="text-xs text-slate-500 mt-0.5">
+        <div className="text-xs text-ink-soft mt-0.5">
           {formatDate(commande.date_commande)}
         </div>
       </Link>
 
       <div className="text-right">
-        <div className="font-semibold text-slate-900">
+        <div className="font-semibold text-ink">
           {formatEur(commande.montant_ttc)}
         </div>
-        <div className="text-xs text-slate-500">TTC</div>
+        <div className="text-xs text-ink-soft">TTC</div>
       </div>
 
       <Button
@@ -239,7 +239,7 @@ function CommandesInner() {
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint"
               aria-hidden
             />
             <Input
@@ -261,7 +261,7 @@ function CommandesInner() {
               onClick={() => setStatut(null)}
               className={
                 statut === null
-                  ? "bg-[#0E3B2E] hover:bg-[#0E3B2E]/90 text-white shrink-0"
+                  ? "bg-sapin hover:bg-sapin/90 text-white shrink-0"
                   : "shrink-0"
               }
             >
@@ -276,7 +276,7 @@ function CommandesInner() {
                 onClick={() => setStatut(s)}
                 className={
                   statut === s
-                    ? "bg-[#0E3B2E] hover:bg-[#0E3B2E]/90 text-white shrink-0"
+                    ? "bg-sapin hover:bg-sapin/90 text-white shrink-0"
                     : "shrink-0"
                 }
               >
@@ -308,7 +308,7 @@ function CommandesInner() {
               hint="Essayez un autre statut ou un autre numéro."
             />
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-line">
               {filtered.map((c) => (
                 <CommandeRow
                   key={c.id}
@@ -328,13 +328,13 @@ function CommandesInner() {
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="px-6 py-16 text-center">
-      <div className="mx-auto w-12 h-12 rounded-full bg-[#0E3B2E]/5 flex items-center justify-center mb-3">
-        <ClipboardList size={24} className="text-[#0E3B2E]/40" aria-hidden />
+      <div className="mx-auto w-12 h-12 rounded-full bg-sapin/5 flex items-center justify-center mb-3">
+        <ClipboardList size={24} className="text-sapin/40" aria-hidden />
       </div>
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-      <p className="text-sm text-slate-500 mt-1">{hint}</p>
+      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <p className="text-sm text-ink-soft mt-1">{hint}</p>
       <Link to="/pro/catalogue" className="inline-block mt-4">
-        <Button className="bg-amber-500 text-slate-900 hover:bg-amber-400 h-11">
+        <Button className="bg-gold text-sapin-deep hover:bg-gold-bright h-11">
           Voir le catalogue
         </Button>
       </Link>

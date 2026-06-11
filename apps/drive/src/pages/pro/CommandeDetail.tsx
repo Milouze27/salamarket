@@ -363,10 +363,10 @@ function CommandeDetailInner() {
           <CardHeader className="pb-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <CardTitle className="text-lg text-slate-900">
+                <CardTitle className="text-lg text-ink">
                   {commande.numero_commande ?? "Commande sans numéro"}
                 </CardTitle>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-ink-soft mt-1">
                   Passée le {formatDateTime(commande.date_commande)}
                 </p>
               </div>
@@ -397,7 +397,7 @@ function CommandeDetailInner() {
               )}
             </div>
             {commande.notes_client && (
-              <div className="text-sm rounded-md bg-slate-50 border border-slate-200 px-3 py-2 text-slate-700">
+              <div className="text-sm rounded-md bg-cream border border-line px-3 py-2 text-ink-soft">
                 <span className="font-medium">Notes :</span>{" "}
                 {commande.notes_client}
               </div>
@@ -409,7 +409,7 @@ function CommandeDetailInner() {
                     commande={commande}
                     lignes={lignes}
                     compte={compte}
-                    className="inline-flex min-h-[44px] items-center gap-2 px-4 rounded-md bg-amber-500 text-slate-900 font-medium hover:bg-amber-400 transition-colors"
+                    className="inline-flex min-h-[44px] items-center gap-2 px-4 rounded-md bg-gold text-sapin-deep font-medium hover:bg-gold-bright transition-colors"
                   >
                     <FileText size={16} aria-hidden />
                     Télécharger la facture (PDF)
@@ -420,7 +420,7 @@ function CommandeDetailInner() {
                     commande={commande}
                     lignes={lignes}
                     compte={compte}
-                    className="inline-flex min-h-[44px] items-center gap-2 px-4 rounded-md border border-slate-300 bg-white text-slate-900 font-medium hover:bg-slate-50 transition-colors"
+                    className="inline-flex min-h-[44px] items-center gap-2 px-4 rounded-md border border-line-medium bg-white text-ink font-medium hover:bg-cream transition-colors"
                   >
                     <FileText size={16} aria-hidden />
                     Télécharger le bon de commande
@@ -437,10 +437,10 @@ function CommandeDetailInner() {
             <CardTitle className="text-base">Lignes de commande</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-line">
               {lignes.map((l) => (
                 <div key={l.id} className="px-4 py-3 flex items-start gap-3">
-                  <div className="w-12 h-12 rounded bg-slate-100 overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded bg-cream-200 overflow-hidden shrink-0">
                     {l.products?.image_url && (
                       <img
                         src={l.products.image_url}
@@ -450,26 +450,26 @@ function CommandeDetailInner() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-slate-900 text-sm">
+                    <div className="font-medium text-ink text-sm">
                       {l.products?.name ?? "Produit supprimé"}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-ink-soft">
                       {l.quantite_conditionnements} ×{" "}
                       {l.quantite_par_conditionnement} {l.products?.unit ?? ""}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-semibold text-slate-900">
+                    <div className="text-sm font-semibold text-ink">
                       {formatEur(l.prix_ht_total)} HT
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-ink-soft">
                       {formatEur(l.prix_ht_unitaire)} / cond.
                     </div>
                   </div>
                 </div>
               ))}
               {lignes.length === 0 && (
-                <div className="px-4 py-6 text-center text-sm text-slate-500">
+                <div className="px-4 py-6 text-center text-sm text-ink-soft">
                   Aucune ligne sur cette commande.
                 </div>
               )}
@@ -480,18 +480,18 @@ function CommandeDetailInner() {
         {/* Récap montants */}
         <Card>
           <CardContent className="p-4 space-y-2">
-            <div className="flex justify-between text-sm text-slate-700">
+            <div className="flex justify-between text-sm text-ink-soft">
               <span>Total HT</span>
               <span className="font-medium">
                 {formatEur(commande.montant_ht)}
               </span>
             </div>
-            <div className="flex justify-between text-sm text-slate-700">
+            <div className="flex justify-between text-sm text-ink-soft">
               <span>TVA</span>
               <span>{formatEur(commande.montant_tva)}</span>
             </div>
             <Separator />
-            <div className="flex justify-between text-base font-bold text-slate-900">
+            <div className="flex justify-between text-base font-bold text-ink">
               <span>Total TTC</span>
               <span>{formatEur(commande.montant_ttc)}</span>
             </div>
@@ -504,8 +504,8 @@ function CommandeDetailInner() {
 
 const Info = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <dt className="text-xs uppercase text-slate-500 tracking-wide">{label}</dt>
-    <dd className="text-sm font-medium text-slate-900 mt-0.5">{value}</dd>
+    <dt className="text-xs uppercase text-ink-soft tracking-wide">{label}</dt>
+    <dd className="text-sm font-medium text-ink mt-0.5">{value}</dd>
   </div>
 );
 

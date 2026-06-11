@@ -45,6 +45,20 @@ export default {
         sapin: BRAND.colors.primary,
         "sapin-deep": BRAND.colors.primaryDark,
         gold: BRAND.colors.accent,
+        // Tokens marque additionnels pour le module Pro (recoloration DA :
+        // remplacent amber/slate off-brand par l'or laiton + les neutres
+        // crème/sapin de brand.ts — source de vérité).
+        "gold-bright": BRAND.colors.accentBright,
+        "gold-soft": BRAND.colors.accentSoft,
+        "gold-text": BRAND.colors.accentText, // or AA-safe pour texte sur clair
+        cream: BRAND.colors.bg,
+        "cream-200": "#F1ECDD", // STATUS.neutralBg — fonds neutres chauds
+        "cream-300": BRAND.colors.border,
+        ink: BRAND.colors.text, // quasi-noir tinté sapin (titres)
+        "ink-soft": BRAND.colors.textSecondary, // textes secondaires AA
+        "ink-faint": BRAND.colors.textTertiary, // textes tertiaires AA
+        line: BRAND.colors.border,
+        "line-medium": BRAND.colors.borderMedium,
         muted: {
           DEFAULT: BRAND.colors.muted,
           foreground: "hsl(var(--muted-foreground))",

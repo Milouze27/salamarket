@@ -42,12 +42,12 @@ const PaliersBadges = ({ item }: { item: ProduitProAvecProduit }) => {
   return (
     <div className="flex flex-wrap gap-1.5 mt-2">
       {palier1 && (
-        <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-amber-200">
+        <Badge variant="secondary" className="bg-gold-soft text-gold-text border-gold/30">
           {palier1}
         </Badge>
       )}
       {palier2 && (
-        <Badge variant="secondary" className="bg-amber-200 text-amber-900 border-amber-300">
+        <Badge variant="secondary" className="bg-gold-soft text-gold-text border-gold/40">
           {palier2}
         </Badge>
       )}
@@ -87,7 +87,7 @@ const ProductCardPro = ({ item }: CardProps) => {
 
   return (
     <Card className="overflow-hidden flex flex-col">
-      <div className="aspect-square bg-slate-100 overflow-hidden">
+      <div className="aspect-square bg-cream-200 overflow-hidden">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -96,27 +96,27 @@ const ProductCardPro = ({ item }: CardProps) => {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-300">
+          <div className="w-full h-full flex items-center justify-center text-ink-faint">
             <ShoppingBag size={48} aria-hidden />
           </div>
         )}
       </div>
       <CardContent className="flex flex-col flex-1 p-4">
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h3 className="font-semibold text-slate-900 text-sm leading-tight line-clamp-2">
+          <h3 className="font-semibold text-ink text-sm leading-tight line-clamp-2">
             {product.name}
           </h3>
         </div>
-        <p className="text-xs text-slate-500 mb-2">
+        <p className="text-xs text-ink-soft mb-2">
           {item.conditionnement_pro ??
             `${item.quantite_par_conditionnement} × ${product.unit}`}
         </p>
         <div className="mt-auto">
           <div className="flex items-baseline gap-1 mb-1">
-            <span className="text-lg font-bold text-slate-900">
+            <span className="text-lg font-bold text-ink">
               {formatEur(item.prix_ht_unitaire)}
             </span>
-            <span className="text-xs text-slate-500">HT / cond.</span>
+            <span className="text-xs text-ink-soft">HT / cond.</span>
           </div>
           <PaliersBadges item={item} />
           <div className="flex gap-2 mt-3">
@@ -137,7 +137,7 @@ const ProductCardPro = ({ item }: CardProps) => {
             <Button
               type="button"
               onClick={onAdd}
-              className="flex-1 bg-slate-900 hover:bg-slate-800 text-white"
+              className="flex-1 bg-sapin hover:bg-sapin-deep text-white"
             >
               + Ajouter
             </Button>
@@ -192,7 +192,7 @@ function CataloguePageInner() {
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint"
             aria-hidden
           />
           <Input
@@ -213,7 +213,7 @@ function CataloguePageInner() {
               onClick={() => setCategory(null)}
               className={
                 category === null
-                  ? "bg-slate-900 hover:bg-slate-800 text-white"
+                  ? "bg-sapin hover:bg-sapin-deep text-white"
                   : ""
               }
             >
@@ -228,7 +228,7 @@ function CataloguePageInner() {
                 onClick={() => setCategory(c)}
                 className={
                   category === c
-                    ? "bg-slate-900 hover:bg-slate-800 text-white"
+                    ? "bg-sapin hover:bg-sapin-deep text-white"
                     : ""
                 }
               >
@@ -252,7 +252,7 @@ function CataloguePageInner() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">
+        <div className="text-center py-12 text-ink-soft">
           <p>Aucun produit ne correspond à votre recherche.</p>
         </div>
       ) : (

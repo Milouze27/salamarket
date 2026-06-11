@@ -100,7 +100,7 @@ function CompteInner() {
   if (isLoading || !compte) {
     return (
       <ProShell title="Mon compte">
-        <div className="flex items-center justify-center py-12 text-slate-400">
+        <div className="flex items-center justify-center py-12 text-ink-faint">
           <Loader2 className="animate-spin" aria-hidden />
         </div>
       </ProShell>
@@ -129,7 +129,7 @@ function CompteInner() {
               <Info label="TVA intracom" value={compte.tva_intracom} />
             )}
             <Info label="Adresse facturation" value={compte.adresse_facturation} />
-            <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
+            <div className="rounded-md bg-cream border border-line p-3 text-xs text-ink-soft">
               Pour modifier la raison sociale, le SIRET ou l'adresse de
               facturation, contactez notre service commercial.
             </div>
@@ -145,20 +145,20 @@ function CompteInner() {
             <Info label="Conditions paiement" value={conditions} />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <dt className="text-xs uppercase text-slate-500">Encours actuel</dt>
-                <dd className="text-lg font-bold text-slate-900">
+                <dt className="text-xs uppercase text-ink-soft">Encours actuel</dt>
+                <dd className="text-lg font-bold text-ink">
                   {formatEur(compte.encours_actuel)}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase text-slate-500">Encours max</dt>
-                <dd className="text-lg font-bold text-slate-900">
+                <dt className="text-xs uppercase text-ink-soft">Encours max</dt>
+                <dd className="text-lg font-bold text-ink">
                   {formatEur(compte.encours_max)}
                 </dd>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Statut compte :</span>
+              <span className="text-xs text-ink-soft">Statut compte :</span>
               <Badge className="bg-emerald-600 hover:bg-emerald-600">
                 Actif
               </Badge>
@@ -254,7 +254,7 @@ function CompteInner() {
                   <Button
                     type="submit"
                     disabled={form.formState.isSubmitting || !form.formState.isDirty}
-                    className="bg-slate-900 hover:bg-slate-800"
+                    className="bg-sapin hover:bg-sapin-deep"
                   >
                     {form.formState.isSubmitting
                       ? "Enregistrement…"
@@ -272,8 +272,8 @@ function CompteInner() {
 
 const Info = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <dt className="text-xs uppercase text-slate-500 tracking-wide">{label}</dt>
-    <dd className="text-sm font-medium text-slate-900 mt-0.5 whitespace-pre-line">
+    <dt className="text-xs uppercase text-ink-soft tracking-wide">{label}</dt>
+    <dd className="text-sm font-medium text-ink mt-0.5 whitespace-pre-line">
       {value}
     </dd>
   </div>

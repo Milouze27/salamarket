@@ -124,10 +124,10 @@ export default function AdminCommandesPro() {
   };
 
   return (
-    <div className="min-h-dvh bg-slate-50">
-      <header className="bg-slate-900 text-white border-b border-amber-500/30">
+    <div className="min-h-dvh bg-cream">
+      <header className="bg-sapin text-white border-b border-gold/30">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-xs uppercase tracking-widest text-gold-bright font-semibold">
             Admin Pro
           </span>
           <h1 className="text-2xl font-bold mt-1">Commandes Pro</h1>
@@ -196,7 +196,7 @@ export default function AdminCommandesPro() {
                 Erreur lors du chargement des commandes.
               </div>
             ) : filtered.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
+              <div className="p-12 text-center text-ink-soft">
                 Aucune commande ne correspond.
               </div>
             ) : (
@@ -218,7 +218,7 @@ export default function AdminCommandesPro() {
                         <TableCell className="font-mono text-xs">
                           {c.numero_commande ?? c.id.slice(0, 8)}
                           {c.facture_numero && (
-                            <div className="text-amber-700 font-semibold">
+                            <div className="text-gold-text font-semibold">
                               {c.facture_numero}
                             </div>
                           )}
@@ -227,7 +227,7 @@ export default function AdminCommandesPro() {
                           <div className="font-medium">
                             {c.comptes_pro?.raison_sociale ?? "—"}
                           </div>
-                          <div className="text-xs text-slate-500">
+                          <div className="text-xs text-ink-soft">
                             {c.comptes_pro?.siret}
                           </div>
                         </TableCell>
@@ -240,7 +240,7 @@ export default function AdminCommandesPro() {
                           </div>
                           {c.statut === "a_valider" &&
                             c.montant_ttc > SEUIL_VALIDATION_MANAGER && (
-                              <div className="flex items-center justify-end gap-1 text-[10px] text-amber-700 mt-1">
+                              <div className="flex items-center justify-end gap-1 text-[10px] text-gold-text mt-1">
                                 <AlertCircle size={11} aria-hidden />
                                 Manager
                               </div>
@@ -332,7 +332,7 @@ const CommandeActions = ({
         <Button
           size="sm"
           onClick={() => onPasserStatut(commande, NEXT_STATUS[statut]!)}
-          className="bg-slate-900 hover:bg-slate-800 text-white"
+          className="bg-sapin hover:bg-sapin-deep text-white"
         >
           {LABEL_NEXT[statut]}
         </Button>

@@ -227,7 +227,7 @@ const FactureRow = ({ facture, compte, statut }: RowProps) => {
               size="sm"
               onClick={loadLignes}
               disabled={loading}
-              className="min-h-[44px] bg-slate-900 hover:bg-slate-800"
+              className="min-h-[44px] bg-sapin hover:bg-sapin-deep"
             >
               {loading ? (
                 <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -241,7 +241,7 @@ const FactureRow = ({ facture, compte, statut }: RowProps) => {
               commande={facture}
               lignes={lignes}
               compte={compte}
-              className="inline-flex min-h-[44px] items-center gap-1 px-3 rounded-md bg-amber-500 text-slate-900 text-sm font-medium hover:bg-amber-400 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1 px-3 rounded-md bg-gold text-sapin-deep text-sm font-medium hover:bg-gold-bright transition-colors"
             >
               <Download size={14} aria-hidden />
               <span className="hidden sm:inline">PDF</span>

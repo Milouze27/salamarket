@@ -68,7 +68,15 @@ export default function ProLogin() {
       return;
     }
     if (compte.statut === "actif") {
-      navigate("/pro/catalogue", { replace: true });
+      // Honore un deep-link Pro (?redirect=/pro/...) après connexion,
+      // sinon catalogue par défaut. On reste dans l'espace Pro.
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get("redirect");
+      const dest =
+        redirect && redirect.startsWith("/pro/") && !redirect.startsWith("//")
+          ? redirect
+          : "/pro/catalogue";
+      navigate(dest, { replace: true });
       return;
     }
     if (compte.statut === "en_validation") {
@@ -83,7 +91,7 @@ export default function ProLogin() {
       setNotice({ kind: "archive" });
       return;
     }
-  }, [authLoading, compteLoading, user, compte, navigate]);
+  }, [authLoading, compteLoading, user, compte, navigate, location.search]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -111,10 +119,10 @@ export default function ProLogin() {
   const isBusy = authLoading || (user && compteLoading);
 
   return (
-    <div className="min-h-dvh bg-slate-50 flex flex-col">
-      <header className="bg-[#0E3B2E] text-white border-b border-amber-500/30">
+    <div className="min-h-dvh bg-cream flex flex-col">
+      <header className="bg-sapin text-white border-b border-gold/30">
         <div className="max-w-md mx-auto px-4 py-4">
-          <span className="text-xs uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-xs uppercase tracking-widest text-gold-bright font-semibold">
             Drive Pro
           </span>
           <h1 className="text-2xl font-bold mt-1">Espace professionnel</h1>
@@ -123,7 +131,7 @@ export default function ProLogin() {
 
       <main className="flex-1 max-w-md mx-auto w-full px-4 py-6">
         {isBusy ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
+          <div className="flex items-center justify-center py-12 text-ink-soft">
             <Loader2 className="animate-spin" aria-hidden />
           </div>
         ) : notice ? (
@@ -135,7 +143,7 @@ export default function ProLogin() {
             <div className="flex gap-3">
               {notice.kind === "missing" && (
                 <Link to="/pro/inscription" className="flex-1">
-                  <Button className="w-full bg-amber-500 text-slate-900 hover:bg-amber-400">
+                  <Button className="w-full bg-gold text-sapin-deep hover:bg-gold-bright">
                     Créer un compte Pro
                   </Button>
                 </Link>
@@ -158,6 +166,7 @@ export default function ProLogin() {
                 id="email"
                 type="email"
                 autoComplete="email"
+                aria-label="Email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -170,6 +179,7 @@ export default function ProLogin() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
+                aria-label="Mot de passe"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -185,7 +195,7 @@ export default function ProLogin() {
             <Button
               type="submit"
               disabled={loading || !email || !password}
-              className="bg-amber-500 text-slate-900 hover:bg-amber-400 disabled:opacity-50 h-11"
+              className="bg-gold text-sapin-deep hover:bg-gold-bright disabled:opacity-50 h-11"
             >
               {loading ? "Connexion…" : "Se connecter"}
             </Button>
@@ -194,13 +204,13 @@ export default function ProLogin() {
               <Link
                 to="/pro/inscription"
                 state={{ from: location }}
-                className="text-slate-700 underline underline-offset-4 hover:text-slate-900"
+                className="text-ink-soft underline underline-offset-4 hover:text-ink"
               >
                 Créer un compte Pro
               </Link>
               <Link
                 to="/connexion"
-                className="text-slate-500 text-xs hover:text-slate-700"
+                className="text-ink-soft text-xs hover:text-ink-soft"
               >
                 Particulier ?
               </Link>

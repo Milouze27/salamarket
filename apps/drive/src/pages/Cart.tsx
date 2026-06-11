@@ -29,12 +29,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/providers/AuthProvider";
-import { formatPrice, unitLabel } from "@/lib/format";
+import { formatPrice, productUnitLabel } from "@/lib/format";
 import { MIN_ORDER_CENTS } from "@/lib/constants";
 import { validatePromo, promoMessage, type PromoResult } from "@/lib/promo";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrixEstime, formatKg, getBrackets } from "@salamarket/shared";
 import { cdnImage } from "@/lib/imageUrl";
+import {
+  ProductImageFallback,
+  isPlaceholderUrl,
+} from "@/components/ProductImageFallback";
 
 /**
  * Hash stable (djb2) du contenu du panier — sert de clé d'idempotence
@@ -48,6 +52,42 @@ const cartHash = (input: string): string => {
   }
   // >>> 0 pour rester sur un entier non signé 32 bits.
   return (h >>> 0).toString(36);
+};
+
+// Vignette ligne panier — même pattern onError que ProductCard / WeeklyPicks :
+// bascule sur le fallback illustré par catégorie si l'URL est un placeholder
+// ou si le chargement échoue (CDN mort, hors-ligne, image non cachée par le
+// SW). Sans ça, le panier affichait l'icône "image cassée" brute du navigateur
+// alors que le catalogue, lui, montrait un fallback riche (DRV-04).
+const CartLineImage = ({
+  imageUrl,
+  name,
+  category,
+}: {
+  imageUrl?: string | null;
+  name: string;
+  category?: string | null;
+}) => {
+  const [failed, setFailed] = useState(() => isPlaceholderUrl(imageUrl));
+  if (failed) {
+    return (
+      <div className="w-20 h-20 rounded-xl overflow-hidden">
+        <ProductImageFallback category={category} size="sm" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={cdnImage(imageUrl, { width: 160 })}
+      alt={name}
+      width={80}
+      height={80}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className="w-20 h-20 rounded-xl object-cover bg-bg"
+    />
+  );
 };
 
 const Cart = () => {
@@ -346,14 +386,10 @@ const Cart = () => {
                       className="shrink-0"
                       aria-label={`Voir ${item.product.name}`}
                     >
-                      <img
-                        src={cdnImage(item.product.imageUrl, { width: 160 })}
-                        alt={item.product.name}
-                        width={80}
-                        height={80}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-20 h-20 rounded-xl object-cover bg-bg"
+                      <CartLineImage
+                        imageUrl={item.product.imageUrl}
+                        name={item.product.name}
+                        category={item.product.category}
                       />
                     </Link>
                     <div className="flex-1 min-w-0">
@@ -367,7 +403,7 @@ const Cart = () => {
                       {/* Ligne unité — comportement historique */}
                       {!isWeight && !isBracket && (
                         <p className="text-xs text-muted mt-0.5">
-                          {unitLabel(item.product.unit)}
+                          {productUnitLabel(item.product)}
                         </p>
                       )}
 

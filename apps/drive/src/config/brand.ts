@@ -7,10 +7,10 @@ export const BRAND = {
     address: "8 avenue Larrieu-Thibaud",
     postalCode: "31100",
     pickupOnly: true,
-    hours: [
-      { days: "Lun – Sam", time: "10h00 – 19h30" },
-      { days: "Dimanche", time: "10h00 – 18h00" },
-    ],
+    // Fermé le dimanche — cohérence hero/footer/créneaux (DRV-05). La
+    // génération de slots (supabase/functions/ensure-slots) et l'affichage
+    // EditorialIntro doivent rester alignés sur cette plage.
+    hours: [{ days: "Lun – Sam", time: "10h00 – 19h30" }],
   },
   // Palette unifiée Salam Market (alignée Salam Stock V2)
   colors: {

@@ -132,6 +132,15 @@ export const ProductCard = ({ product }: Props) => {
   // avec la PDP). Centralisé dans format.ts.
   const unitMeta = productUnitLabel(product);
 
+  // Libellé prix pour l'arbre d'accessibilité. Quand une remise DLC est
+  // affichée, on annonce le prix RÉEL remisé (et non le plein tarif renvoyé
+  // par formatPriceWithUnit) — sinon le lecteur d'écran annonçait un prix
+  // différent de celui affiché/facturé (DRV-08).
+  const priceAria =
+    showDlcPrice && dlcDiscount
+      ? `${formatPrice(dlcDiscount.discountedCents)} ${unitMeta} (remise DLC)`
+      : `${formatPriceWithUnit(product)} ${unitMeta}`;
+
   return (
     <article
       onClick={handleOpen}
@@ -140,7 +149,7 @@ export const ProductCard = ({ product }: Props) => {
       onKeyDown={(e) => {
         if (e.key === "Enter") handleOpen();
       }}
-      aria-label={`${product.name} — ${formatPriceWithUnit(product)}`}
+      aria-label={`${product.name} — ${priceAria}`}
       className="group flex flex-col cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7EE] rounded-3xl"
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_28px_-16px_rgba(8,42,32,0.18)]">

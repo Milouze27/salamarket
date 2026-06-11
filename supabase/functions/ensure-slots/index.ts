@@ -21,12 +21,8 @@ const WEEKDAY_SLOTS: Array<[string, string]> = [
   ["19:00", "19:30"],
 ];
 
-// Dimanche : magasin ferme à 18h, pas de créneau 19h
-const SUNDAY_SLOTS: Array<[string, string]> = [
-  ["10:00", "10:30"],
-  ["12:00", "12:30"],
-  ["17:00", "17:30"],
-];
+// Magasin fermé le dimanche (cohérence hero/footer/horaires brand.ts) :
+// aucun créneau ce jour-là (DRV-05).
 
 function parisDateToUtc(parisYmd: string, hhmm: string): Date {
   // parisYmd = "2026-04-28", hhmm = "10:00"
@@ -59,10 +55,10 @@ Deno.serve(async (req) => {
       const dayParisYmd = format(new Date(baseUtc), "yyyy-MM-dd", { timeZone: TZ });
       // jour ISO 1..7 (lun=1, dim=7) en heure Paris
       const isoDay = Number(format(new Date(baseUtc), "i", { timeZone: TZ }));
-      const isSunday = isoDay === 7;
-      const list = isSunday ? SUNDAY_SLOTS : WEEKDAY_SLOTS;
+      // Dimanche fermé : on saute la génération de créneaux ce jour-là.
+      if (isoDay === 7) continue;
 
-      for (const [start, end] of list) {
+      for (const [start, end] of WEEKDAY_SLOTS) {
         rows.push({
           slot_start: parisDateToUtc(dayParisYmd, start).toISOString(),
           slot_end: parisDateToUtc(dayParisYmd, end).toISOString(),

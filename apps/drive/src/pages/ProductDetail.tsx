@@ -469,8 +469,13 @@ const ProductDetail = () => {
               </span>
               {product.inStock && (
                 <>
-                  <span className="opacity-50 shrink-0">·</span>
-                  <span className="tabular-nums shrink-0">
+                  {/* Prix + séparateur masqués sous 640px : sur iPhone SE
+                      (320px) avec le stepper d'unités visible, "Ajouter au
+                      panier · X,XX €" se tronquait en "Aj…" (DRV-02). Le prix
+                      reste affiché en grand en haut de fiche → pas de perte
+                      d'info. Dès sm il revient dans le CTA. */}
+                  <span className="opacity-50 shrink-0 hidden sm:inline">·</span>
+                  <span className="tabular-nums shrink-0 hidden sm:inline">
                     {formatPrice(totalCents)}
                   </span>
                   <ArrowRight
@@ -595,12 +600,10 @@ const ProductDetail = () => {
         >
           <ArrowLeft size={22} strokeWidth={2.2} aria-hidden />
         </button>
-        {showHalalBadge && (
-          <div className="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/95 backdrop-blur-md text-[#0E3B2E] text-xs font-bold shadow-lg">
-            <BadgeCheck size={14} className="text-[#C9A227]" aria-hidden />
-            Halal certifié
-          </div>
-        )}
+        {/* DRV-10 — le pill "Halal certifié" du header chevauchait le
+            médaillon rond "Certifié" posé sur l'image (même coin haut-droite),
+            doublonnant l'info. On garde le seul médaillon-estampille sur le
+            hero et on retire le pill redondant du header. */}
       </header>
 
       <div className="md:max-w-6xl md:mx-auto md:px-8 md:pt-24 md:grid md:grid-cols-[1.05fr_1fr] md:gap-12 lg:gap-16">
@@ -679,8 +682,12 @@ const ProductDetail = () => {
                 </span>
               )}
               {unitType === "unit" && (
-                <span className="text-sm text-[#6B7280]">
-                  · {productUnitLabel(product)}
+                // Uppercase tracké pour aligner la casse sur les cards
+                // catalogue/suggestions (ProductCard), qui rendent le même
+                // libellé en majuscules — sinon "à la pièce" (ici) côtoyait
+                // "À LA PIÈCE" (cards) sur la même PDP (DRV-12).
+                <span className="text-[11px] uppercase tracking-[0.12em] text-[#0F1A14]/70 font-semibold">
+                  {productUnitLabel(product)}
                 </span>
               )}
             </div>

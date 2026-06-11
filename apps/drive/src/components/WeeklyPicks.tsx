@@ -2,7 +2,7 @@ import { ArrowRight, Plus } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "@/types/product";
-import { formatPrice, unitLabel } from "@/lib/format";
+import { formatPrice, productUnitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
 import {
   ProductImageFallback,
@@ -210,9 +210,7 @@ export const WeeklyPicks = ({ products }: Props) => {
                         : formatPrice(product.priceCents)}
                     </span>
                     <span className="text-[11px] text-[#0F1A14]/55">
-                      · {(product.unitType ?? "unit") === "weight"
-                        ? "vente au poids"
-                        : unitLabel(product.unit)}
+                      · {productUnitLabel(product)}
                     </span>
                   </div>
                 </div>

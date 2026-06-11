@@ -62,7 +62,7 @@ export const ProductImageFallback = ({ category, size = "md" }: Props) => {
         aria-hidden
       />
       <span
-        className={`relative ${labelSize} uppercase tracking-[0.22em] font-bold`}
+        className={`relative ${labelSize} uppercase tracking-[0.22em] font-bold max-w-[80%] truncate text-center`}
         style={{ color: fb.accent, opacity: 0.85 }}
       >
         {fb.label}

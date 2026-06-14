@@ -650,6 +650,7 @@ function EditDrawer({
   onClose: () => void;
   onSaved: () => void | Promise<void>;
 }) {
+  const acteur = useV2((s) => s.currentEmploye);
   const [arrivee, setArrivee] = useState("");
   const [depart, setDepart] = useState("");
   const [saving, setSaving] = useState(false);
@@ -673,10 +674,14 @@ function EditDrawer({
   async function save() {
     if (!pointage) return;
     setSaving(true);
-    const res = await updatePointage(pointage.id, {
-      arrivee: arrivee ? timeToISO(jour, arrivee) : null,
-      depart: depart ? timeToISO(jour, depart) : null,
-    });
+    const res = await updatePointage(
+      pointage.id,
+      {
+        arrivee: arrivee ? timeToISO(jour, arrivee) : null,
+        depart: depart ? timeToISO(jour, depart) : null,
+      },
+      acteur?.id ?? "",
+    );
     setSaving(false);
     if (!res.ok) {
       toast.error(

@@ -209,18 +209,22 @@ export async function clockOut(employeId: string): Promise<MutationResult> {
 export async function updatePointage(
   id: string,
   patch: { arrivee?: string | null; depart?: string | null },
+  acteurId: string,
 ): Promise<MutationResult> {
   const sb = supabase();
   if (!sb) {
     return { ok: false, error: "Supabase indisponible (mode hors-ligne)." };
   }
-  const update: Record<string, string | null> = {
-    updated_at: new Date().toISOString(),
-  };
-  if ("arrivee" in patch) update.check_in = patch.arrivee ?? null;
-  if ("depart" in patch) update.check_out = patch.depart ?? null;
-
-  const { error } = await sb.from("pointages").update(update).eq("id", id);
+  // L'écriture anon directe sur `pointages` est fermée (sécu #3) : la
+  // correction passe par le RPC SECURITY DEFINER `pointage_corriger`, qui
+  // vérifie que l'acteur est admin/manager. Le form fournit toujours les
+  // deux horaires (arrivée + départ), on les transmet tels quels.
+  const { error } = await sb.rpc("pointage_corriger", {
+    p_acteur_id: acteurId,
+    p_id: id,
+    p_check_in: patch.arrivee ?? null,
+    p_check_out: patch.depart ?? null,
+  });
   if (error) {
     console.error("[pointage] updatePointage error:", error);
     return { ok: false, error: error.message };

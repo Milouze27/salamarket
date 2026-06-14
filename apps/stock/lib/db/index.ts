@@ -508,53 +508,25 @@ export async function createSortie(input: {
     created_at: new Date().toISOString(),
   };
   if (sb) {
-    // FEFO : décrémente d'abord le lot le plus proche de la DLC et
-    // récupère son id pour tracer la sortie. Non bloquant : un produit
-    // sans lots suivis renvoie simplement null (sortie quand même valide).
-    let lotId: string | null = null;
-    try {
-      const { data: lot } = await sb.rpc("consume_lot_fefo", {
-        p_produit_id: input.produit_id,
-        p_quantite: input.quantite,
-        p_depot_id: input.depot_id,
-      });
-      lotId = typeof lot === "string" ? lot : null;
-    } catch (lotErr) {
-      console.warn("[createSortie] consume_lot_fefo non-fatal:", lotErr);
-    }
-
-    const { id: _localId, ...rest } = row;
-    void _localId;
-    const payload = { ...rest, lot_id: lotId };
-    const { data, error } = await sb
-      .from("sorties_stock")
-      .insert(payload)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    // Décrément stock ATOMIQUE via RPC (verrou ligne + ledger). Plus de
-    // read-then-write : deux sorties concurrentes ne s'écrasent plus.
-    const sortieId = (data as SortieStock).id;
     const isCasse =
       input.type !== "demarque_inconnue" && input.type !== "autre";
-    try {
-      await adjustStock(
-        input.produit_id,
-        input.depot_id,
-        -input.quantite,
-        isCasse ? "casse" : "sortie",
-        { lotId, referenceId: sortieId, actorId: input.employe_id },
-      );
-    } catch (stockErr) {
-      // Compensation : le décrément stock a échoué → on annule la sortie déjà
-      // insérée pour ne pas laisser une ligne orpheline (sortie sans impact stock).
-      console.error(
-        `[createSortie] adjust_stock a échoué pour sortie ${sortieId}, rollback de la sortie :`,
-        stockErr,
-      );
-      await sb.from("sorties_stock").delete().eq("id", sortieId);
-      throw new Error("Stock non décrémenté — sortie annulée. Réessaie.");
-    }
+    // Écriture anon directe fermée (sécu #14) : FEFO + insert + décrément
+    // stock atomique sont désormais regroupés dans le RPC SECURITY DEFINER
+    // `creer_sortie`. Si le décrément échoue, toute la transaction (insert +
+    // consume_lot) est annulée — plus de compensation DELETE manuelle.
+    const { data, error } = await sb.rpc("creer_sortie", {
+      p_depot_id: input.depot_id,
+      p_employe_id: input.employe_id,
+      p_produit_id: input.produit_id,
+      p_type: input.type,
+      p_quantite: input.quantite,
+      p_photo_url: input.photo_url,
+      p_type_mouvement: isCasse ? "casse" : "sortie",
+      p_motif_libre: input.motif_libre ?? null,
+      p_ia_score: input.ia_coherence_score ?? null,
+      p_ia_notes: input.ia_coherence_notes ?? null,
+    });
+    if (error) throw new Error(error.message);
     return data as SortieStock;
   }
   localSorties.push(row);

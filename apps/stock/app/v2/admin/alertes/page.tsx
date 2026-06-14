@@ -129,13 +129,14 @@ export default function AlertesPage() {
     const sb = supabase();
     if (!sb) return;
     const note = `[✓ Accepté par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;
-    const { error } = await sb
-      .from("sorties_stock")
-      .update({
-        ia_coherence_score: 1.0,
-        ia_coherence_notes: note.slice(0, 500),
-      })
-      .eq("id", d.id);
+    // Écriture anon directe fermée (sécu #14) : modération via RPC SECURITY
+    // DEFINER `moderer_sortie`, qui revérifie le rôle admin/manager côté SQL.
+    const { error } = await sb.rpc("moderer_sortie", {
+      p_acteur_id: employe?.id ?? "",
+      p_sortie_id: d.id,
+      p_action: "accept",
+      p_note: note,
+    });
     if (error) {
       toast.error("Erreur : " + error.message);
       return;
@@ -173,10 +174,12 @@ export default function AlertesPage() {
       return;
     }
     const note = `[⚠ Clarification demandée par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;
-    const { error: noteErr } = await sb
-      .from("sorties_stock")
-      .update({ ia_coherence_notes: note.slice(0, 500) })
-      .eq("id", d.id);
+    const { error: noteErr } = await sb.rpc("moderer_sortie", {
+      p_acteur_id: employe?.id ?? "",
+      p_sortie_id: d.id,
+      p_action: "clarifier",
+      p_note: note,
+    });
     if (noteErr) {
       // Ne pas notifier une clarification qui n'a pas été enregistrée.
       console.error("[alertes] enregistrement clarification échoué:", noteErr);
@@ -215,13 +218,12 @@ export default function AlertesPage() {
     const sb = supabase();
     if (!sb) return;
     const note = `[✗ REJETÉ par ${employe?.prenom ?? "admin"} le ${new Date().toLocaleString("fr-FR")}] ${d.ia_coherence_notes ?? ""}`;
-    const { error } = await sb
-      .from("sorties_stock")
-      .update({
-        ia_coherence_score: 0.99,
-        ia_coherence_notes: note.slice(0, 500),
-      })
-      .eq("id", d.id);
+    const { error } = await sb.rpc("moderer_sortie", {
+      p_acteur_id: employe?.id ?? "",
+      p_sortie_id: d.id,
+      p_action: "reject",
+      p_note: note,
+    });
     if (error) {
       toast.error("Erreur : " + error.message);
       return;

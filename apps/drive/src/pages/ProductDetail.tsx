@@ -281,7 +281,7 @@ const ProductDetail = () => {
               className={`aspect-square w-full max-w-2xl mx-auto md:max-w-none md:rounded-[36px] ${shimmer}`}
             />
           </div>
-          <div className="max-w-2xl mx-auto px-4 -mt-4 md:mt-0 md:px-0 pb-cta-only md:!pb-8">
+          <div className="max-w-2xl mx-auto px-4 mt-4 md:mt-0 md:px-0 pb-cta-only md:!pb-8">
             <div className="px-1 pt-2 space-y-3">
               <div className={`h-3 w-24 rounded ${shimmer}`} />
               <div className={`h-9 w-2/3 rounded ${shimmer}`} />
@@ -662,7 +662,7 @@ const ProductDetail = () => {
             safe-area + respiration, pour que le dernier contenu (suggestions)
             ne soit jamais masqué par la barre "Ajouter au panier". Sur
             desktop le CTA est inline → md:pb-8 suffit, on neutralise le token. */}
-        <div className="max-w-2xl mx-auto px-4 -mt-4 md:mt-0 md:px-0 relative pb-cta-only md:!pb-8">
+        <div className="max-w-2xl mx-auto px-4 mt-4 md:mt-0 md:px-0 relative pb-cta-only md:!pb-8">
           <section className="px-1 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Link
               to={`/?category=${product.category}`}

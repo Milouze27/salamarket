@@ -232,7 +232,7 @@ export const BundleCarousel = () => {
         <ul
           className="
             flex md:grid md:grid-cols-3 gap-5 md:gap-8
-            -mx-6 md:mx-0 px-6 md:px-0
+            -mx-6 md:mx-0 px-6 md:px-0 scroll-pl-6 md:scroll-pl-0
             overflow-x-auto md:overflow-visible scrollbar-none
             snap-x snap-mandatory md:snap-none
           "

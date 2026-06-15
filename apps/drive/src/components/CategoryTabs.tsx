@@ -107,7 +107,7 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
 
           <div
             ref={trackRef}
-            className="flex items-stretch gap-5 md:gap-7 overflow-x-auto scrollbar-none px-6 md:px-2 py-2 snap-x snap-mandatory"
+            className="flex items-stretch gap-5 md:gap-7 overflow-x-auto scrollbar-none px-6 md:px-2 py-2 scroll-pl-6 md:scroll-pl-2 snap-x snap-mandatory"
             style={{ scrollbarWidth: "none" }}
           >
             {ITEMS.map((item, idx) => {

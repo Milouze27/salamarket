@@ -38,6 +38,8 @@ import { BarakaGauge } from "@/components/BarakaGauge";
 import { RecetteSuggestion } from "@/components/RecetteSuggestion";
 import { EconomiesPanier } from "@/components/cart/EconomiesPanier";
 import { PanierBreakdown } from "@/components/cart/PanierBreakdown";
+import { PanierFraisBadge } from "@/components/cart/PanierFraisBadge";
+import { RecompenseProgress } from "@/components/cart/RecompenseProgress";
 import { MinOrderGauge } from "@/components/cart/MinOrderGauge";
 import { RecapTicket } from "@/components/cart/RecapTicket";
 import { ShoppingMemo } from "@/components/cart/ShoppingMemo";
@@ -350,6 +352,10 @@ const Cart = () => {
                 le panier est d'un seul type. */}
             <PanierBreakdown items={items} />
 
+            {/* Badge ludique "Panier 100% frais" — dérivé des catégories des
+                lignes, ne rend rien si le frais n'est pas majoritaire. */}
+            <PanierFraisBadge items={items} />
+
             {/* Bandeau d'économies réalisées (remises DLC anti-gaspi) — en
                 tête de panier, ne rend rien si aucune économie. */}
             <EconomiesPanier items={items} />
@@ -599,6 +605,10 @@ const Cart = () => {
             {/* Suggestion recette liée au panier — ajout des ingrédients
                 manquants en un tap. Ne rend rien si aucune recette pertinente. */}
             <RecetteSuggestion cartItems={items} />
+
+            {/* Progression vers une récompense au retrait — jauge calme
+                dérivée du sous-total panier (additif, aucun écrit serveur). */}
+            <RecompenseProgress totalCents={subtotal} />
 
             {/* Cagnotte Baraka — affichée uniquement pour un client connecté
                 ayant au moins 1 point (sinon section inutile). */}

@@ -18,8 +18,10 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { RayonsPreferes } from "@/components/RayonsPreferes";
 import { useAuth } from "@/hooks/useAuth";
 import { useLoyalty } from "@/hooks/useLoyalty";
+import { useUserOrders } from "@/hooks/useUserOrders";
 import { supabase } from "@/integrations/supabase/client";
 
 const PHONE_RE = /^(\+33|0)[1-9]\d{8}$/;
@@ -48,6 +50,11 @@ export default function Account() {
   // commandes via client_email). useLoyalty dégrade en 0 sans jamais throw.
   const loyaltyEmail = user?.email ?? profile?.email ?? null;
   const baraka = useLoyalty(loyaltyEmail);
+
+  // Historique de commandes — lecture seule (cache React Query partagé avec
+  // la page "Mes commandes"). Alimente la carte "Vos rayons préférés", qui
+  // dégrade en null tant qu'il n'y a pas d'historique exploitable.
+  const { data: orders } = useUserOrders(user?.id, loyaltyEmail ?? undefined);
 
   // Édition profil. `localProfile` reflète la dernière valeur enregistrée
   // pour un affichage optimiste : le AuthProvider ne ré-expose pas le
@@ -434,6 +441,10 @@ export default function Account() {
                 aria-hidden
               />
             </button>
+
+            {/* Vos rayons préférés — top 3 dérivé de l'historique, raccourci
+                vers chaque rayon. Ne rend rien sans historique exploitable. */}
+            <RayonsPreferes orders={orders ?? []} />
 
             {/* RGPD — privacy controls */}
             <section

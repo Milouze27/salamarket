@@ -23,6 +23,8 @@ import { toast } from "sonner";
 
 import { AppHeader } from "@/components/AppHeader";
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
+import { OrdersTimelineDecor } from "@/components/OrdersTimelineDecor";
+import { FideliteStreak } from "@/components/FideliteStreak";
 import { SignalerProbleme } from "@/components/SignalerProbleme";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserOrders, type UserOrder } from "@/hooks/useUserOrders";
@@ -602,6 +604,15 @@ export default function Orders() {
                 </div>
               </div>
             )}
+            {/* Streak fidélité — palier sobre dérivé du nombre de commandes. */}
+            <div className="mb-3">
+              <FideliteStreak orders={orders} />
+            </div>
+
+            {/* Frise éditoriale des commandes par mois — présentation pure,
+                ne rend rien tant qu'il n'y a pas au moins deux mois. */}
+            <OrdersTimelineDecor orders={orders} />
+
             <div className="flex items-baseline justify-between mb-3 px-1">
               <p className="text-xs text-muted font-medium">
                 {orders.length} commande{orders.length > 1 ? "s" : ""}

@@ -6,6 +6,7 @@ import { formatPrice, productUnitLabel } from "@/lib/format";
 import { useCartStore } from "@/stores/cartStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
+import { useHaptic } from "@/hooks/useHaptic";
 import { formatPriceWithUnit } from "@salamarket/shared";
 import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
 import {
@@ -57,6 +58,7 @@ export const ProductCard = ({ product }: Props) => {
   const isFavorite = useFavoritesStore((s) => s.ids.includes(product.id));
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const { triggerFly } = useFlyingChip();
+  const haptic = useHaptic();
   const addBtnRef = useRef<HTMLButtonElement>(null);
   // Throttle anti-spam (BUG-011) : un tap iOS peut générer deux events
   // (touchend + click synthétique) à <50ms d'écart, ce qui empilait
@@ -121,6 +123,8 @@ export const ProductCard = ({ product }: Props) => {
   const handleToggleFavorite = (e: React.MouseEvent) => {
     // stopPropagation : le cœur est posé sur la card cliquable (handleOpen).
     e.stopPropagation();
+    // Haptique discrète (10ms) — no-op sous reduced-motion / sans support.
+    haptic(10);
     toggleFavorite(product.id);
     setAnnounce({
       key: Date.now(),

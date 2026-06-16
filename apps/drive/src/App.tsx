@@ -14,6 +14,8 @@ import { RoutedErrorBoundary } from "@/components/RoutedErrorBoundary";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { OnboardingGate } from "@/components/OnboardingGate";
 import { SkipLink } from "@/components/SkipLink";
+import { ScrollToTop } from "@/components/ScrollToTop";
+import { PageFade } from "@/components/PageFade";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
 // pénaliser le 1st paint sur l'écran d'accueil et la connexion. Le
@@ -133,8 +135,15 @@ const App = () => (
             <SkipLink />
             <OnboardingGate />
             <InstallPrompt />
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
+            {/* Bouton « Retour en haut » flottant, global (cf. ScrollToTop) :
+                s'efface tout seul quand le StickyCartCTA est à l'écran. */}
+            <ScrollToTop />
+            {/* PageFade : fondu d'entrée court (opacité only) à chaque
+                changement de route. N'interfère pas avec les View Transitions
+                de la PDP, neutralisé sous prefers-reduced-motion. */}
+            <PageFade>
+              <Suspense fallback={<RouteFallback />}>
+                <Routes>
                 <Route path="/" element={<Index />} />
                 {/* /catalogue : alias SEO-friendly de la home. Référencé
                     depuis l'empty state du panier B2C, anciens emails et
@@ -358,6 +367,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </PageFade>
             <RouteChrome />
           </AuthProvider>
         </RoutedErrorBoundary>

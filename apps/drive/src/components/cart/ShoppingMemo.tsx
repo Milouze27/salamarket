@@ -1,5 +1,6 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { SHOPPING_MEMO_MAX, useShoppingMemo } from "@/hooks/useShoppingMemo";
+import { Stepper } from "@/components/Stepper";
 
 /**
  * Mémo "liste de courses" — champ texte libre sauvegardé automatiquement en
@@ -14,6 +15,10 @@ export const ShoppingMemo = () => {
   const id = useId();
   const note = useShoppingMemo((s) => s.note);
   const setNote = useShoppingMemo((s) => s.setNote);
+  // Aide-mémoire "portions" — repère visuel purement local (non persisté, ni
+  // envoyé au serveur, ni lié au panier). Sert surtout de premier usage du
+  // Stepper réutilisable (composant +/- « satisfaisant »).
+  const [portions, setPortions] = useState(2);
 
   return (
     <section className="rounded-2xl border border-line bg-white px-4 py-4">
@@ -41,6 +46,22 @@ export const ShoppingMemo = () => {
       >
         {note.length} / {SHOPPING_MEMO_MAX}
       </p>
+
+      {/* Repère portions — aide visuelle locale pour calibrer ses quantités.
+          Premier point d'usage du Stepper réutilisable. */}
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+        <span className="text-[13px] font-semibold text-ink-soft">
+          Pour combien de personnes ?
+        </span>
+        <Stepper
+          value={portions}
+          onChange={setPortions}
+          min={1}
+          max={20}
+          label="Nombre de personnes"
+          unitLabel="pers."
+        />
+      </div>
     </section>
   );
 };

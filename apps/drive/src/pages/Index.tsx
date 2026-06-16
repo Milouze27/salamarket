@@ -16,6 +16,8 @@ import { CourteDateBanner } from "@/components/CourteDateBanner";
 import { useDlcProductIds } from "@/components/HalalBadgeLink";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useProducts } from "@/hooks/useProducts";
 import { useCartCount } from "@/hooks/useCartSummary";
 import { useFavoritesStore } from "@/stores/favoritesStore";
@@ -78,6 +80,11 @@ const Index = () => {
     error,
     refetch,
   } = useProducts();
+
+  // Pull-to-refresh maison (mobile uniquement) — au relâchement passé le
+  // seuil, on rejoue le refetch du catalogue déjà exposé par useProducts.
+  // No-op sur desktop / prefers-reduced-motion (le hook ne s'arme pas).
+  const pull = usePullToRefresh(refetch);
 
   // Setter qui pousse dans l'URL. "all" = nettoie le param pour
   // basculer en mode vitrine (URL propre /).
@@ -213,6 +220,11 @@ const Index = () => {
   // scroll horizontal parasite (qui décale tout et casse les sticky).
   return (
     <div className={`min-h-dvh bg-[#FAF7EE] overflow-x-hidden ${bottomPad}`}>
+      <PullToRefreshIndicator
+        pull={pull.pull}
+        armed={pull.armed}
+        refreshing={pull.refreshing}
+      />
       <Header searchValue={searchInput} onSearchChange={setSearchInput} />
 
       {showVitrine && <EditorialIntro />}

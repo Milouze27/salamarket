@@ -43,6 +43,7 @@ export const StickyCartCTA = () => {
   // catégories peut visuellement chevaucher le CTA quand ils se touchent.
   return (
     <div
+      data-sticky-cart
       className="fixed left-0 right-0 z-[45] px-3 pointer-events-none md:hidden"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 56px + 8px)" }}
     >

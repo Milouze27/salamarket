@@ -36,6 +36,11 @@ import { validatePromo, promoMessage, type PromoResult } from "@/lib/promo";
 import { useLoyalty } from "@/hooks/useLoyalty";
 import { BarakaGauge } from "@/components/BarakaGauge";
 import { RecetteSuggestion } from "@/components/RecetteSuggestion";
+import { EconomiesPanier } from "@/components/cart/EconomiesPanier";
+import { PanierBreakdown } from "@/components/cart/PanierBreakdown";
+import { MinOrderGauge } from "@/components/cart/MinOrderGauge";
+import { RecapTicket } from "@/components/cart/RecapTicket";
+import { ShoppingMemo } from "@/components/cart/ShoppingMemo";
 import { supabase } from "@/integrations/supabase/client";
 import { computePrixEstime, formatKg, getBrackets } from "@salamarket/shared";
 import { cdnImage } from "@/lib/imageUrl";
@@ -340,6 +345,14 @@ const Cart = () => {
                 Vider le panier
               </button>
             </div>
+
+            {/* Synthèse discrète "X au poids · Y à l'unité" — ne rend rien si
+                le panier est d'un seul type. */}
+            <PanierBreakdown items={items} />
+
+            {/* Bandeau d'économies réalisées (remises DLC anti-gaspi) — en
+                tête de panier, ne rend rien si aucune économie. */}
+            <EconomiesPanier items={items} />
 
             {/* Bandeau pré-autorisation Drive au poids — affiché ssi
                 au moins une ligne au poids RÉEL (pas un forfait bracket à
@@ -648,6 +661,11 @@ const Cart = () => {
                   {formatPrice(total)}
                 </span>
               </div>
+
+              {/* Jauge minimum de commande — rappel sous le total (en plus de
+                  la barre d'action fixe), bascule en "Minimum atteint". */}
+              <MinOrderGauge />
+
               {hasRealWeightLine && (
                 <p className="mt-3 text-[12px] text-[#0F1A14]/60 inline-flex items-start gap-1.5">
                   <Info size={12} className="mt-0.5 shrink-0" aria-hidden />
@@ -756,6 +774,17 @@ const Cart = () => {
                   )}
                 </div>
               )}
+
+              {/* Récap "ticket" groupé par rayon — détail dérivé, ne rend
+                  rien si le panier ne couvre qu'un seul rayon. */}
+              <div className="mt-5">
+                <RecapTicket items={items} />
+              </div>
+
+              {/* Mémo liste de courses — 100 % local, jamais envoyé au serveur. */}
+              <div className="mt-4">
+                <ShoppingMemo />
+              </div>
 
               <div className="mt-5">
                 <TrustBar />

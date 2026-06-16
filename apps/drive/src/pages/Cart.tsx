@@ -7,7 +7,6 @@ import {
   Minus,
   Plus,
   Scale,
-  ShoppingBag,
   Store,
   Tag,
   Trash2,
@@ -36,6 +35,7 @@ import { validatePromo, promoMessage, type PromoResult } from "@/lib/promo";
 import { useLoyalty } from "@/hooks/useLoyalty";
 import { BarakaGauge } from "@/components/BarakaGauge";
 import { RecetteSuggestion } from "@/components/RecetteSuggestion";
+import { CartEmptyInspire } from "@/components/CartEmptyInspire";
 import { EconomiesPanier } from "@/components/cart/EconomiesPanier";
 import { PanierBreakdown } from "@/components/cart/PanierBreakdown";
 import { PanierFraisBadge } from "@/components/cart/PanierFraisBadge";
@@ -306,32 +306,9 @@ const Cart = () => {
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 9rem)" }}
       >
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center py-20 px-6 gap-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-[#0E3B2E]/10 to-[#C9A227]/10 flex items-center justify-center">
-              <div className="absolute inset-3 rounded-full bg-white shadow-sm" />
-              <ShoppingBag
-                className="relative text-[#0E3B2E]"
-                size={44}
-                strokeWidth={1.5}
-                aria-hidden
-              />
-            </div>
-            <div className="space-y-1.5">
-              <h2 className="text-xl font-bold text-text">
-                Votre panier est vide
-              </h2>
-              <p className="text-sm text-muted max-w-xs">
-                Découvrez notre sélection de produits halal frais et préparés
-                avec soin.
-              </p>
-            </div>
-            <button
-              onClick={() => navigate("/")}
-              className="mt-2 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#0E3B2E] text-white text-sm font-semibold shadow-md shadow-[#0E3B2E]/20 hover:bg-[#082A20] active:scale-[0.98] transition-all"
-            >
-              Découvrir le catalogue
-            </button>
-          </div>
+          // État vide inspirant — message éditorial + CTA + 3 produits
+          // populaires (déterministes). Additif, aucune logique panier touchée.
+          <CartEmptyInspire />
         ) : (
           <>
             {/* Compteur articles avec lien vider — secondary action */}

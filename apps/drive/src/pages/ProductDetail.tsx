@@ -51,6 +51,7 @@ import { PrixAuKiloNote } from "@/components/weight/PrixAuKiloNote";
 import { FacturationAuPoidsNote } from "@/components/weight/FacturationAuPoidsNote";
 import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
 import { RatingStatic } from "@/components/RatingStatic";
+import { ImageZoom } from "@/components/ImageZoom";
 import { FraicheurBadge } from "@/components/FraicheurBadge";
 import { ProvenanceNote } from "@/components/ProvenanceNote";
 import { GarantieFraicheur } from "@/components/GarantieFraicheur";
@@ -650,6 +651,17 @@ const ProductDetail = () => {
               aria-hidden
               className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[#FAF7EE]/80 md:hidden"
             />
+
+            {/* Loupe → lightbox plein écran (overlay Radix séparé, n'altère
+                ni l'image hero ni sa View Transition). Affichée seulement si
+                une vraie photo est chargée — pas sur le fallback illustré. */}
+            {!isPlaceholderUrl(product.imageUrl) && !heroFailed && (
+              <ImageZoom
+                src={product.imageUrl as string}
+                alt={product.name}
+                className="absolute bottom-3 right-3 z-10"
+              />
+            )}
 
             {/* Mini-sceau Halal Certifié overlay top-right.
                 Boucherie/charcuterie uniquement. Réutilise le ring or

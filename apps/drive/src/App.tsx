@@ -16,6 +16,7 @@ import { OnboardingGate } from "@/components/OnboardingGate";
 import { SkipLink } from "@/components/SkipLink";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { PageFade } from "@/components/PageFade";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 // Routes critiques (chemin chaud client) — chargées eager pour pas
 // pénaliser le 1st paint sur l'écran d'accueil et la connexion. Le
@@ -138,6 +139,9 @@ const App = () => (
             {/* Bouton « Retour en haut » flottant, global (cf. ScrollToTop) :
                 s'efface tout seul quand le StickyCartCTA est à l'écran. */}
             <ScrollToTop />
+            {/* Bandeau hors-ligne global (navigator.onLine, sans SW) :
+                rassure sur la persistance localStorage du panier. */}
+            <OfflineBanner />
             {/* PageFade : fondu d'entrée court (opacité only) à chaque
                 changement de route. N'interfère pas avec les View Transitions
                 de la PDP, neutralisé sous prefers-reduced-motion. */}

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { ProductCard } from "@/components/ProductCard";
+import { SectionSkeleton } from "@/components/SectionSkeleton";
 import type { Product } from "@/types/product";
 
 // ─────────────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ const MAX_ITEMS = 8;
 
 export const RecentlyViewed = () => {
   const recentIds = useRecentlyViewed();
-  const { data: products } = useProducts();
+  const { data: products, isLoading } = useProducts();
 
   const recent = useMemo<Product[]>(() => {
     if (recentIds.length === 0 || !products) return [];
@@ -32,6 +33,19 @@ export const RecentlyViewed = () => {
       .filter((p): p is Product => p != null)
       .slice(0, MAX_ITEMS);
   }, [recentIds, products]);
+
+  // Skeleton pendant le chargement du catalogue UNIQUEMENT si on a déjà
+  // assez d'ids consultés (localStorage, dispo au 1er render) : le contenu
+  // est alors quasi certain → placeholder soigné plutôt qu'un vide, sans
+  // risque de flash vers null. Sans ids on ne spécule pas.
+  if (isLoading && recentIds.length >= MIN_ITEMS) {
+    return (
+      <SectionSkeleton
+        count={Math.min(recentIds.length, MAX_ITEMS)}
+        className="mt-8 md:mt-10"
+      />
+    );
+  }
 
   if (recent.length < MIN_ITEMS) return null;
 

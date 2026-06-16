@@ -7,6 +7,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { useHaptic } from "@/hooks/useHaptic";
+import { useAddToast } from "@/hooks/useAddToast";
 import { formatPriceWithUnit } from "@salamarket/shared";
 import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
 import {
@@ -60,6 +61,9 @@ export const ProductCard = ({ product }: Props) => {
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const { triggerFly } = useFlyingChip();
   const haptic = useHaptic();
+  // Toast récap enrichi (vignette + « Voir le panier ») — complément du
+  // flying chip et de l'aria-live, n'altère ni l'un ni l'autre.
+  const addToast = useAddToast();
   const addBtnRef = useRef<HTMLButtonElement>(null);
   // Throttle anti-spam (BUG-011) : un tap iOS peut générer deux events
   // (touchend + click synthétique) à <50ms d'écart, ce qui empilait
@@ -110,6 +114,7 @@ export const ProductCard = ({ product }: Props) => {
       dlcUnitPriceCents:
         showDlcPrice && dlcDiscount ? dlcDiscount.discountedCents : undefined,
     });
+    addToast(product);
     setAnnounce({ key: Date.now(), msg: `${product.name} ajouté au panier` });
   };
 

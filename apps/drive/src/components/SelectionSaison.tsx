@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductCard } from "@/components/ProductCard";
+import { SectionSkeleton } from "@/components/SectionSkeleton";
 import {
   matchProductsByKeywords,
   moisLabel,
@@ -21,7 +22,7 @@ import type { Product } from "@/types/product";
 const MAX_ITEMS = 8;
 
 export const SelectionSaison = () => {
-  const { data: products } = useProducts();
+  const { data: products, isLoading } = useProducts();
 
   // Mois figé au mount (affichage éditorial, pas besoin de re-render au
   // changement d'heure). getMonth() est 0-indexé.
@@ -35,6 +36,14 @@ export const SelectionSaison = () => {
       MAX_ITEMS,
     );
   }, [products, monthIndex]);
+
+  // Skeleton pendant le chargement du catalogue : placeholder soigné plutôt
+  // qu'un vide. Si aucun produit de saison n'est finalement au catalogue le
+  // skeleton cède la place à null (le carrousel disparaît), comportement
+  // attendu d'un skeleton de section conditionnelle.
+  if (isLoading) {
+    return <SectionSkeleton count={6} className="mt-10 md:mt-14" />;
+  }
 
   // Pas de plancher artificiel : on dégrade dès qu'on n'a rien à montrer
   // de saison, mais on évite un carrousel famélique d'un seul produit.

@@ -41,6 +41,16 @@ export function isPopulaire(id: string): boolean {
 }
 
 /**
+ * Score de popularité déterministe dans [0, 1) — pour classer des produits
+ * de façon STABLE entre les renders (sans backend ni Math.random) et en
+ * mettre quelques-uns en avant. Sel distinct de isPopulaire pour ne pas
+ * corréler les deux signaux.
+ */
+export function popularityScore(id: string): number {
+  return unitFromId(id, "popscore");
+}
+
+/**
  * Note indicative déterministe dans [4,4 ; 4,9] par pas de 0,1.
  * Borne basse volontairement haute (≥ 4,4) : signal « confiance » de démo,
  * jamais présenté comme un vrai avis temps réel (cf. libellé « note indicative »

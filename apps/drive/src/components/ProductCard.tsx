@@ -178,7 +178,7 @@ export const ProductCard = ({ product }: Props) => {
         if (e.key === "Enter") handleOpen();
       }}
       aria-label={`${product.name} — ${priceAria}`}
-      className="group flex flex-col cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7EE] rounded-3xl"
+      className="group relative flex flex-col cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7EE] rounded-3xl"
     >
       <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white shadow-[0_12px_28px_-16px_rgba(8,42,32,0.18)]">
         {imgFailed ? (

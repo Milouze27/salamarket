@@ -19,6 +19,7 @@ import {
   HalalBadgeLink,
   useDlcDiscount,
 } from "@/components/HalalBadgeLink";
+import { PopulaireNote } from "@/components/PopulaireNote";
 
 interface Props {
   product: Product;
@@ -235,6 +236,14 @@ export const ProductCard = ({ product }: Props) => {
               className="absolute inset-0 bg-white/45 pointer-events-none"
             />
           </>
+        )}
+
+        {/* Signal social calme « Souvent commandé » — top-right, partagé avec
+            les pills "Au poids"/"Rupture" (mutuellement exclusifs). On ne
+            l'affiche donc que si ce slot est libre, pour zéro chevauchement.
+            Sélection déterministe (~20% des cartes) via le hash de l'id. */}
+        {!isVariable && !isOutOfStock && (
+          <PopulaireNote productId={product.id} className="absolute top-2 right-2 z-10" />
         )}
 
         {/* Cœur favori — bottom-left (le "+" est bottom-right, le badge

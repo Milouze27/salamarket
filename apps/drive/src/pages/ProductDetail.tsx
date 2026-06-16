@@ -50,6 +50,10 @@ import { PrixEstimeLive } from "@/components/weight/PrixEstimeLive";
 import { PrixAuKiloNote } from "@/components/weight/PrixAuKiloNote";
 import { FacturationAuPoidsNote } from "@/components/weight/FacturationAuPoidsNote";
 import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
+import { RatingStatic } from "@/components/RatingStatic";
+import { FraicheurBadge } from "@/components/FraicheurBadge";
+import { ProvenanceNote } from "@/components/ProvenanceNote";
+import { GarantieFraicheur } from "@/components/GarantieFraicheur";
 
 const MAX_QTY = 50;
 
@@ -717,6 +721,10 @@ const ProductDetail = () => {
                 {hint}
               </p>
             )}
+            {/* Note indicative statique (dérivée déterministe de l'id) — petit
+                signal de confiance sous le prix, jamais présenté comme un avis
+                temps réel (libellé + aria « note indicative »). */}
+            <RatingStatic productId={product.id} className="mt-2.5" />
           </section>
 
           {/* Pills caractéristiques */}
@@ -749,6 +757,11 @@ const ProductDetail = () => {
               tone="brand"
             />
           </section>
+
+          {/* « Préparé ce matin » — rayons frais uniquement (dérivé catégorie).
+              Sous les pills, en typo sobre sapin (self-guard : null hors rayons
+              frais). */}
+          <FraicheurBadge category={product.category} className="mt-3 px-1" />
 
           {/* Sélecteur weight / weight_bracket — desktop & mobile (inline). */}
           {unitType === "weight" && (
@@ -855,10 +868,22 @@ const ProductDetail = () => {
             </section>
           )}
 
+          {/* Provenance / origine — note éditoriale sobre (mapping statique par
+              catégorie : fruits-légumes & boucherie/charcuterie). Complète la
+              frise halal ci-dessus sans la dupliquer. Self-guard par catégorie. */}
+          <ProvenanceNote
+            category={product.category}
+            className="mt-5 px-1 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:360ms] [animation-fill-mode:backwards]"
+          />
+
           {/* CTA inline desktop */}
           <section className="hidden md:flex flex-col gap-3 mt-7 pt-6 border-t border-[#0E3B2E]/15 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:350ms] [animation-fill-mode:backwards]">
             <CtaCluster />
           </section>
+
+          {/* Réassurance fraîcheur — promesse forte au moment de l'ajout panier.
+              Statique, additive (mobile + desktop). */}
+          <GarantieFraicheur className="mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-delay:380ms] [animation-fill-mode:backwards]" />
 
           {/* Suggestions */}
           {suggestions.length > 0 && (

@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertCircle, QrCode, SearchX, Heart, ArrowUpDown } from "lucide-react";
+import { AlertCircle, QrCode, Heart, ArrowUpDown } from "lucide-react";
 import { Header } from "@/components/Header";
 import { EditorialIntro } from "@/components/EditorialIntro";
 import { WeeklyPicks } from "@/components/WeeklyPicks";
 import { BundleCarousel } from "@/components/BundleCarousel";
 import { RamadanBanner } from "@/components/RamadanBanner";
 import { MesEssentiels } from "@/components/MesEssentiels";
+import { RecentlyViewed } from "@/components/RecentlyViewed";
+import { RayonsRaccourcis } from "@/components/RayonsRaccourcis";
+import { NouveautesStrip } from "@/components/NouveautesStrip";
+import { SearchEmptyState } from "@/components/SearchEmptyState";
 import { CategoryTabs } from "@/components/CategoryTabs";
 import { CourteDateBanner } from "@/components/CourteDateBanner";
 import { useDlcProductIds } from "@/components/HalalBadgeLink";
@@ -218,6 +222,14 @@ const Index = () => {
       {/* "Mes essentiels" — produits récurrents de l'historique (return
           null si non connecté / aucun récurrent). En haut d'accueil. */}
       {showVitrine && <MesEssentiels />}
+      {/* "Reprendre où vous en étiez" — derniers produits consultés
+          (localStorage). return null sous 2 produits encore au catalogue. */}
+      {showVitrine && <RecentlyViewed />}
+      {/* Accès rapide aux rayons — pousse ?category= via setCategory.
+          return null si catalogue vide. */}
+      {showVitrine && allProducts && allProducts.length > 0 && (
+        <RayonsRaccourcis products={allProducts} onSelect={setCategory} />
+      )}
       {showVitrine && (
         <div className="max-w-7xl mx-auto px-6 md:px-8 mt-6">
           <CourteDateBanner />
@@ -327,6 +339,13 @@ const Index = () => {
           </div>
         )}
 
+        {/* "Arrivages récents" — bande des produits au createdAt < 30j en
+            tête de grille catalogue (mode filtré uniquement). Purement
+            additif : return null si aucun produit récent dans le rayon. */}
+        {!showVitrine && !isError && !isLoading && products.length > 0 && (
+          <NouveautesStrip products={products} />
+        )}
+
         {isError ? (
           <div className="flex flex-col items-center justify-center text-center py-20 px-4 gap-4">
             <AlertCircle size={40} className="text-destructive" />
@@ -383,21 +402,14 @@ const Index = () => {
             </button>
           </div>
         ) : (
-          <div className="text-center py-20 flex flex-col items-center gap-4">
-            <SearchX size={48} className="text-[#0F1A14]/30" />
-            <p className="text-[18px] font-bold text-[#0E3B2E]">
-              Aucun produit trouvé
-            </p>
-            <p className="text-[14px] text-[#0F1A14]/60">
-              Essayez une autre recherche ou catégorie
-            </p>
-            <button
-              onClick={resetFilters}
-              className="mt-2 px-6 h-11 rounded-full bg-[#0E3B2E] text-white text-[14px] font-semibold hover:bg-[#082A20] active:scale-[0.98] transition-all"
-            >
-              Voir tous les produits
-            </button>
-          </div>
+          // État vide soigné : rebond vers les 3 rayons les plus fournis +
+          // reset, plutôt qu'un cul-de-sac générique.
+          <SearchEmptyState
+            allProducts={allProducts ?? []}
+            query={debouncedSearch}
+            onSelectRayon={setCategory}
+            onReset={resetFilters}
+          />
         )}
       </main>
 

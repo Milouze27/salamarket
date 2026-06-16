@@ -34,6 +34,8 @@ import {
   getBrackets,
 } from "@salamarket/shared";
 import { ProductCard } from "@/components/ProductCard";
+import { SouventEnsemble } from "@/components/SouventEnsemble";
+import { pushRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { TracabiliteFrise } from "@/components/TracabiliteFrise";
 import {
   DlcPriceTag,
@@ -119,6 +121,12 @@ const ProductDetail = () => {
       }
     };
   }, []);
+
+  // "Reprendre où vous en étiez" — mémorise l'ouverture de cette PDP côté
+  // client (localStorage). Alimente le carrousel "Vus récemment" de l'accueil.
+  useEffect(() => {
+    if (product?.id) pushRecentlyViewed(product.id);
+  }, [product?.id]);
 
   const goBack = () => {
     const run = () => {
@@ -865,6 +873,13 @@ const ProductDetail = () => {
               </div>
             </section>
           )}
+
+          {/* "Souvent pris ensemble" — catégories complémentaires, distinct
+              de "Vous aimerez aussi" (on exclut les ids déjà montrés). */}
+          <SouventEnsemble
+            product={product}
+            excludeIds={suggestions.map((p) => p.id)}
+          />
         </div>
       </div>
 

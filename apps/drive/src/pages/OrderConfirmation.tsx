@@ -13,6 +13,10 @@ import { fr } from "date-fns/locale";
 import { format } from "date-fns-tz";
 
 import { Button } from "@/components/ui/button";
+import { RetraitPass } from "@/components/RetraitPass";
+import { AjoutCalendrier } from "@/components/AjoutCalendrier";
+import { ConfirmationActions } from "@/components/ConfirmationActions";
+import { useConfetti } from "@/hooks/useConfetti";
 import {
   supabase,
   functionsUrl,
@@ -125,6 +129,12 @@ const OrderConfirmation = () => {
   const clearCart = useCartStore((s) => s.clear);
   const clearSlot = useCheckoutStore((s) => s.clearSlot);
   const clearPromoCode = useCheckoutStore((s) => s.clearPromoCode);
+
+  // Confetti SOBRE : une seule salve quand la commande est confirmée à
+  // l'écran (no-op sous prefers-reduced-motion). Ref anti-rejeu pour ne pas
+  // relancer au re-render (polling, maj de statut).
+  const { fire: fireConfetti } = useConfetti();
+  const confettiFiredRef = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -311,6 +321,15 @@ const OrderConfirmation = () => {
     };
   }, [orderId, paymentMethod, paymentStatus, clearCart, clearSlot]);
 
+  // Salve de confetti au montage réussi : dès que la commande est chargée
+  // (plus de loader, pas d'erreur), une seule fois.
+  useEffect(() => {
+    if (confettiFiredRef.current) return;
+    if (loading || error || !order) return;
+    confettiFiredRef.current = true;
+    fireConfetti();
+  }, [loading, error, order, fireConfetti]);
+
   if (loading) {
     return (
       <div
@@ -426,6 +445,23 @@ const OrderConfirmation = () => {
           <p className="mt-2 text-xs text-[#6B7280]">
             8 av. Larrieu&#8209;Thibaud · 31100 Toulouse
           </p>
+
+          {/* Carte d'embarquement de retrait + ajout agenda + compte à
+              rebours. Affiché seulement quand le créneau est connu. */}
+          {order.pickup_slot && (
+            <div className="mt-6 space-y-4">
+              <RetraitPass
+                orderShortId={orderShortId}
+                slotStart={order.pickup_slot.slot_start}
+                slotEnd={order.pickup_slot.slot_end}
+              />
+              <AjoutCalendrier
+                slotStart={order.pickup_slot.slot_start}
+                slotEnd={order.pickup_slot.slot_end}
+                orderShortId={orderShortId}
+              />
+            </div>
+          )}
         </section>
 
         {/* Articles — liste éditoriale, pas tableau */}
@@ -604,9 +640,18 @@ const OrderConfirmation = () => {
 
         {/* CTAs bas — primary plein sapin, secondary souligné éditorial */}
         <div className="pt-4 pb-10 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-1000 [animation-fill-mode:backwards]">
+          {/* Refaire des courses (accueil) + partage de l'app */}
+          <ConfirmationActions
+            onRefaire={() => {
+              clearCart();
+              clearSlot();
+              clearPromoCode();
+              navigate("/");
+            }}
+          />
           <button
             type="button"
-            className="w-full h-12 rounded-full bg-sapin text-white text-[15px] font-semibold shadow-md shadow-sapin/20 hover:bg-sapin-deep hover:shadow-lg active:scale-[0.98] transition-all"
+            className="w-full h-11 text-[14px] font-semibold text-sapin underline underline-offset-[6px] decoration-gold/60 decoration-[1.5px] hover:decoration-gold transition-colors"
             onClick={() => {
               clearCart();
               clearSlot();
@@ -615,18 +660,6 @@ const OrderConfirmation = () => {
             }}
           >
             Voir mes commandes
-          </button>
-          <button
-            type="button"
-            className="w-full h-11 text-[14px] font-semibold text-sapin underline underline-offset-[6px] decoration-gold/60 decoration-[1.5px] hover:decoration-gold transition-colors"
-            onClick={() => {
-              clearCart();
-              clearSlot();
-              clearPromoCode();
-              navigate("/");
-            }}
-          >
-            Retour à l'accueil
           </button>
         </div>
       </div>

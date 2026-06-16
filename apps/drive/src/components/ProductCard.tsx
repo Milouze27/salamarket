@@ -7,6 +7,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { useFlyingChip } from "@/hooks/useFlyingChip";
 import { formatPriceWithUnit } from "@salamarket/shared";
+import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
 import {
   ProductImageFallback,
   isPlaceholderUrl,
@@ -299,6 +300,14 @@ export const ProductCard = ({ product }: Props) => {
           <span className="text-[11px] uppercase tracking-[0.12em] text-[#0F1A14]/70 font-semibold truncate">
             {unitMeta}
           </span>
+          {/* Fourchette de poids pour les forfaits taille — le prix card
+              affiche un prix unique + "PRIX FORFAIT · TAILLE AU CHOIX" sans
+              la plage de poids ; WeightRangeBadge l'ajoute en lecture pure.
+              Limité à weight_bracket : pour 'weight' le €/kg est déjà le prix
+              principal (badge redondant), pour 'unit' rien à dire. */}
+          {unitType === "weight_bracket" && (
+            <WeightRangeBadge product={product} className="mt-0.5" />
+          )}
         </div>
       </div>
 

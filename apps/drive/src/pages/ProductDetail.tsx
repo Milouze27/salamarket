@@ -43,6 +43,11 @@ import {
 import { cn } from "@/lib/utils";
 import { cdnImage } from "@/lib/imageUrl";
 import { usePoidsInput } from "@/hooks/usePoidsInput";
+import { WeightPresets } from "@/components/weight/WeightPresets";
+import { PrixEstimeLive } from "@/components/weight/PrixEstimeLive";
+import { PrixAuKiloNote } from "@/components/weight/PrixAuKiloNote";
+import { FacturationAuPoidsNote } from "@/components/weight/FacturationAuPoidsNote";
+import { WeightRangeBadge } from "@/components/weight/WeightRangeBadge";
 
 const MAX_QTY = 50;
 
@@ -692,6 +697,12 @@ const ProductDetail = () => {
                 </span>
               )}
             </div>
+            {/* Comparateur €/kg pédagogique (unit en pack/pièce avec poids) —
+                self-guard : null si pas un 'unit' avec poids exploitable. */}
+            <PrixAuKiloNote product={product} />
+            {/* Fourchette / €/kg sobre sous le titre (weight & bracket) —
+                self-guard : null pour 'unit' ou champs poids manquants. */}
+            <WeightRangeBadge product={product} className="mt-1.5" />
             {hint && (
               <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] font-bold text-[#C9A227]">
                 <Scale size={11} aria-hidden />
@@ -737,7 +748,16 @@ const ProductDetail = () => {
               <p className="text-[10px] uppercase tracking-[0.22em] text-[#C9A227] font-bold mb-3">
                 Choisissez votre poids estimé
               </p>
+              {/* Presets — raccourcis qui pilotent l'input usePoidsInput via
+                  poids.onChange (zéro modif du store / du calcul). onChange
+                  parse la chaîne (virgule ou point tolérés). */}
+              <WeightPresets
+                currentKg={kg}
+                onSelectKg={(v) => poids.onChange(String(v))}
+              />
               <KgStepper />
+              {/* Estimation prix live, lecture seule (dérive computePrixEstime). */}
+              <PrixEstimeLive product={product} kg={kg} />
               <p className="mt-2 text-[12px] text-[#0F1A14]/60">
                 Saisissez le poids que vous souhaitez recevoir. Notre équipe
                 pèsera et préparera au plus proche.{" "}
@@ -748,6 +768,8 @@ const ProductDetail = () => {
                   Comment ça marche
                 </Link>
               </p>
+              {/* Encart dépliable : pré-autorisation / pesée / ajustement. */}
+              <FacturationAuPoidsNote />
             </section>
           )}
 

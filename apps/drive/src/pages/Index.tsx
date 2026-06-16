@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertCircle, QrCode, Heart, ArrowUpDown } from "lucide-react";
 import { Header } from "@/components/Header";
+import { SalutationHero } from "@/components/SalutationHero";
 import { EditorialIntro } from "@/components/EditorialIntro";
+import { SelectionSaison } from "@/components/SelectionSaison";
+import { RayonDuJour } from "@/components/RayonDuJour";
+import { CreneauTeaser } from "@/components/CreneauTeaser";
+import { SuggestionMeteo } from "@/components/SuggestionMeteo";
 import { WeeklyPicks } from "@/components/WeeklyPicks";
 import { BundleCarousel } from "@/components/BundleCarousel";
 import { RamadanBanner } from "@/components/RamadanBanner";
@@ -227,6 +232,9 @@ const Index = () => {
       />
       <Header searchValue={searchInput} onSearchChange={setSearchInput} />
 
+      {/* Salutation contextuelle (heure locale + prénom si connecté).
+          Logique date pure côté client, additive au-dessus du hero. */}
+      {showVitrine && <SalutationHero />}
       {showVitrine && <EditorialIntro />}
       {/* Mode Ramadan/Aïd — bandeau contextuel (return null hors période
           hijri). Util hijri local, aucun appel réseau. */}
@@ -242,6 +250,10 @@ const Index = () => {
       {showVitrine && allProducts && allProducts.length > 0 && (
         <RayonsRaccourcis products={allProducts} onSelect={setCategory} />
       )}
+      {/* Rayon du jour — rotation déterministe par jour de la semaine,
+          encart éditorial vers ?category=. Lecture catalogue (visuel),
+          dégrade en null si le rayon du jour est vide. */}
+      {showVitrine && <RayonDuJour />}
       {showVitrine && (
         <div className="max-w-7xl mx-auto px-6 md:px-8 mt-6">
           <CourteDateBanner />
@@ -250,10 +262,19 @@ const Index = () => {
       {showVitrine && allProducts && allProducts.length > 0 && (
         <WeeklyPicks products={allProducts} />
       )}
+      {/* Sélection de saison — carrousel filtré sur les mots-clés du mois
+          courant (data file). Lecture catalogue seule, null si < 2 matchs. */}
+      {showVitrine && <SelectionSaison />}
+      {/* Angle météo-gourmand saisonnier (soupes l'hiver, salades l'été)
+          + 2-3 produits matchés. Lecture catalogue, null si aucun match. */}
+      {showVitrine && <SuggestionMeteo />}
       {/* Paniers-type par occasion. Le composant gere lui-meme son absence
           de donnees (table occasion_bundles absente en prod / 0 ligne →
           return null) : aucun risque de casser la home en mode vitrine. */}
       {showVitrine && <BundleCarousel />}
+      {/* Teaser créneaux — message date-pur « Retrait dès demain » vers
+          /creneaux. Aucune lecture de la table slots, purement éditorial. */}
+      {showVitrine && <CreneauTeaser />}
 
       <CategoryTabs active={category} onChange={setCategory} />
 

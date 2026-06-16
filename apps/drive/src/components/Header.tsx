@@ -5,6 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCartCount } from "@/hooks/useCartSummary";
 import { HeaderUserMenu } from "@/components/HeaderUserMenu";
 import { BrandLogo } from "@/components/BrandLogo";
+import { SearchSuggestions } from "@/components/SearchSuggestions";
+import { pushRecentSearch } from "@/hooks/useRecentSearches";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -38,6 +40,14 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [showCompact, setShowCompact] = useState(false);
   const [compactSearchOpen, setCompactSearchOpen] = useState(false);
+  // Overlay de suggestions sous la barre hero : ouvert quand le champ a le
+  // focus. preventDefault sur les options (mousedown) garde la sélection
+  // possible avant la fermeture déclenchée par le blur.
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Mémorise la saisie courante (recherches récentes) — appelé quand le
+  // champ perd le focus ou que l'utilisateur valide. No-op sous 2 lettres.
+  const rememberSearch = () => pushRecentSearch(searchValue);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -55,16 +65,22 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
 
   return (
     <>
-      {/* HERO — gradient sapin sombre, logo doré pleine valeur */}
+      {/* HERO — gradient sapin sombre, logo doré pleine valeur.
+          Pas d'overflow-hidden sur la section : l'overlay de suggestions
+          (enfant) doit pouvoir déborder sous la barre de recherche. Le
+          halo décoratif est clippé par son propre wrapper ci-dessous. */}
       <section
-        className="relative bg-gradient-to-b from-[#0E3B2E] via-[#082A20] to-[#082A20] text-white px-6 pb-6 overflow-hidden"
+        className="relative bg-gradient-to-b from-[#0E3B2E] via-[#082A20] to-[#082A20] text-white px-6 pb-6"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
-        {/* Halo doré décoratif blur */}
+        {/* Halo doré décoratif blur — confiné à la section via ce wrapper
+            overflow-hidden (sinon le blur déborderait hors du hero). */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 rounded-full bg-[#C9A227]/15 blur-2xl"
-        />
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-[#C9A227]/15 blur-2xl" />
+        </div>
 
         {/* Top row : logo + (cart desktop/tablette only) + account */}
         <div className="relative flex items-center justify-between mb-6">
@@ -123,8 +139,26 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
             type="text"
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            // Délai court : laisse le mousedown d'une option de l'overlay
+            // s'exécuter avant la fermeture (sécurité même avec preventDefault).
+            onBlur={() => {
+              rememberSearch();
+              window.setTimeout(() => setSearchFocused(false), 120);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setSearchFocused(false);
+                e.currentTarget.blur();
+              } else if (e.key === "Enter") {
+                rememberSearch();
+              }
+            }}
             placeholder="Rechercher viandes, épices, riz..."
             aria-label="Rechercher un produit"
+            role="combobox"
+            aria-expanded={searchFocused}
+            aria-autocomplete="list"
             className="w-full h-14 rounded-2xl bg-white border-2 border-transparent pl-12 pr-12 text-base placeholder:text-muted/65 text-text focus:outline-none focus:border-[#C9A227] focus:ring-4 focus:ring-[#C9A227]/25 transition-all shadow-lg shadow-[#082A20]/30"
             inputMode="search"
             enterKeyHint="search"
@@ -139,6 +173,19 @@ export const Header = ({ searchValue, onSearchChange }: Props) => {
               <X size={18} aria-hidden />
             </button>
           )}
+
+          {/* Suggestions instantanées (produits si saisie, sinon récentes
+              + rayons). Overlay positionné sous le champ, fermé au blur /
+              Escape. Composant autonome : lecture pure du catalogue. */}
+          <SearchSuggestions
+            query={searchValue}
+            open={searchFocused}
+            onClose={() => setSearchFocused(false)}
+            onSelectTerm={(t) => {
+              onSearchChange(t);
+              pushRecentSearch(t);
+            }}
+          />
         </div>
 
         {/* Magasin info — petit texte blanc semi-transparent */}

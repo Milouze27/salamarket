@@ -20,10 +20,18 @@ import { CategoryTabs } from "@/components/CategoryTabs";
 import { CourteDateBanner } from "@/components/CourteDateBanner";
 import { useDlcProductIds } from "@/components/HalalBadgeLink";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductRowCompact } from "@/components/ProductRowCompact";
+import { ViewModeToggle } from "@/components/ViewModeToggle";
+import {
+  FiltresDietetiques,
+  type ProductPredicate,
+} from "@/components/FiltresDietetiques";
+import { StickySearchBar } from "@/components/StickySearchBar";
 import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useProducts } from "@/hooks/useProducts";
+import { useViewMode } from "@/hooks/useViewMode";
 import { useCartCount } from "@/hooks/useCartSummary";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { BRAND, formatStoreLocation } from "@/config/brand";
@@ -78,6 +86,13 @@ const Index = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   // Tri catalogue B2C — état local (les produits sont déjà en mémoire).
   const [sort, setSort] = useState<SortKey>("pertinence");
+  // Filtre diététique en mémoire (puces FiltresDietetiques) — additif,
+  // n'altère pas l'URL ?category=. null = aucune puce active.
+  const [dietPredicate, setDietPredicate] = useState<ProductPredicate | null>(
+    null,
+  );
+  // Densité d'affichage du catalogue (grille de cartes vs liste compacte).
+  const viewMode = useViewMode();
   const {
     data: allProducts,
     isLoading,
@@ -148,6 +163,8 @@ const Index = () => {
       // Rayon favoris : ne garde que les produits du set persistant.
       if (favoritesMode && !favoriteSet.has(p.id)) return false;
       if (category !== "all" && p.category !== category) return false;
+      // Filtre diététique client (puces) — additif, par-dessus le reste.
+      if (dietPredicate && !dietPredicate(p)) return false;
       if (!term) return true;
       const haystack = normalizeSearch(`${p.name} ${p.description ?? ""}`);
       return haystack.includes(term);
@@ -186,12 +203,21 @@ const Index = () => {
     favoritesMode,
     favoriteSet,
     sort,
+    dietPredicate,
   ]);
 
   const resetFilters = useCallback(() => {
     setCategory("all"); // nettoie l'URL
     setSearchInput("");
   }, [setCategory]);
+
+  // Stocke le prédicat diététique. IMPORTANT : on l'encapsule dans le
+  // setter fonctionnel (`() => pred`) — sinon React useState interprète un
+  // argument fonction comme un *updater* et l'appelle avec l'état précédent
+  // au lieu de le stocker, ce qui casserait le filtre.
+  const handleDietFilter = useCallback((pred: ProductPredicate | null) => {
+    setDietPredicate(() => pred);
+  }, []);
 
   // Affiche EditorialIntro + WeeklyPicks uniquement en mode "all" sans
   // recherche : mode "vitrine". Dès qu'on filtre/cherche, on entre en
@@ -231,6 +257,11 @@ const Index = () => {
         refreshing={pull.refreshing}
       />
       <Header searchValue={searchInput} onSearchChange={setSearchInput} />
+
+      {/* Barre de recherche d'appoint mobile — apparaît au scroll vers le
+          haut, réutilise le même état de recherche. Complément du Header,
+          ne le remplace pas (cf. StickySearchBar pour la coexistence). */}
+      <StickySearchBar value={searchInput} onSearchChange={setSearchInput} />
 
       {/* Salutation contextuelle (heure locale + prénom si connecté).
           Logique date pure côté client, additive au-dessus du hero. */}
@@ -340,36 +371,51 @@ const Index = () => {
 
         {/* Barre de tri B2C — visible dès qu'une grille de produits est
             affichée (pas en chargement/erreur/vide). Scroll horizontal des
-            puces sur petit écran, pas de wrap qui casse l'alignement. */}
+            puces sur petit écran, pas de wrap qui casse l'alignement. Le
+            ViewModeToggle reste épinglé à droite, hors du scroll des puces. */}
         {!isError && !isLoading && products.length > 0 && (
-          <div className="mb-6 md:mb-8 flex items-center gap-2 -mx-6 md:mx-0 px-6 md:px-0 overflow-x-auto scrollbar-none">
-            <span
-              className="shrink-0 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-bold text-[#0F1A14]/55"
-              aria-hidden
-            >
-              <ArrowUpDown size={13} className="text-[#C9A227]" />
-              Trier
-            </span>
-            {SORT_OPTIONS.map((opt) => {
-              const active = sort === opt.key;
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setSort(opt.key)}
-                  aria-pressed={active}
-                  className={
-                    "shrink-0 h-9 px-3.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97] " +
-                    (active
-                      ? "bg-[#0E3B2E] text-[#FAF7EE] shadow-sm"
-                      : "bg-white text-[#0E3B2E] border border-[#0E3B2E]/15 hover:border-[#0E3B2E]/40")
-                  }
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
+          <div className="mb-6 md:mb-8 flex items-center gap-3">
+            <div className="flex-1 min-w-0 flex items-center gap-2 -ml-6 md:ml-0 pl-6 md:pl-0 overflow-x-auto scrollbar-none">
+              <span
+                className="shrink-0 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-bold text-[#0F1A14]/55"
+                aria-hidden
+              >
+                <ArrowUpDown size={13} className="text-[#C9A227]" />
+                Trier
+              </span>
+              {SORT_OPTIONS.map((opt) => {
+                const active = sort === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSort(opt.key)}
+                    aria-pressed={active}
+                    className={
+                      "shrink-0 h-9 px-3.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97] " +
+                      (active
+                        ? "bg-[#0E3B2E] text-[#FAF7EE] shadow-sm"
+                        : "bg-white text-[#0E3B2E] border border-[#0E3B2E]/15 hover:border-[#0E3B2E]/40")
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <ViewModeToggle />
           </div>
+        )}
+
+        {/* Filtres rapides (Halal / Sans surgelé / Fait maison) — puces
+            dérivées des produits, filtre client additif au-dessus de la
+            grille. Le composant gère sa propre absence (return null si
+            aucune puce pertinente pour le catalogue chargé). */}
+        {!isError && !isLoading && allProducts && allProducts.length > 0 && (
+          <FiltresDietetiques
+            products={allProducts}
+            onFilterChange={handleDietFilter}
+          />
         )}
 
         {/* "Arrivages récents" — bande des produits au createdAt < 30j en
@@ -404,17 +450,29 @@ const Index = () => {
             ))}
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
-            {products.map((p, idx) => (
-              <div
-                key={p.id}
-                className="animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-fill-mode:backwards]"
-                style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}
-              >
-                <ProductCard product={p} />
-              </div>
-            ))}
-          </div>
+          viewMode === "compact" ? (
+            // Mode liste compacte : lignes denses séparées par un hairline.
+            // divide-y évite une bordure sur la première ligne.
+            <ul className="divide-y divide-[#0E3B2E]/8">
+              {products.map((p) => (
+                <li key={p.id}>
+                  <ProductRowCompact product={p} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+              {products.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-500 [animation-fill-mode:backwards]"
+                  style={{ animationDelay: `${Math.min(idx, 8) * 40}ms` }}
+                >
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </div>
+          )
         ) : favoritesMode ? (
           // État vide dédié au rayon favoris : pas une "recherche infructueuse"
           // mais une invitation à ajouter des cœurs.

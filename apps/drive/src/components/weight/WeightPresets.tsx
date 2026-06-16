@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 // ────────────────────────────────────────────────────────────────────
-// WeightPresets — rangée de puces de poids (250 g / 500 g / 1 kg / 2 kg)
+// WeightPresets — rangée de puces de poids (500 g / 1 kg / 1,5 kg)
 // posée AU-DESSUS du KgStepper sur la PDP weight.
 //
 // Rôle strict : un raccourci de saisie. Chaque puce appelle
@@ -21,11 +21,13 @@ import { cn } from "@/lib/utils";
 
 const SAPIN = "#0E3B2E";
 
+// Tous multiples du pas de 100 g (POIDS_STEP_KG) pour que le poids appliqué
+// corresponde EXACTEMENT au libellé. L'ancien "250 g" était trompeur : le
+// clamp au dixième (usePoidsInput) arrondissait 0,25 → 0,3 kg (300 g).
 const PRESETS: { kg: number; label: string }[] = [
-  { kg: 0.25, label: "250 g" },
   { kg: 0.5, label: "500 g" },
   { kg: 1, label: "1 kg" },
-  { kg: 2, label: "2 kg" },
+  { kg: 1.5, label: "1,5 kg" },
 ];
 
 interface Props {
@@ -43,9 +45,9 @@ export const WeightPresets = ({ currentKg, onSelectKg }: Props) => {
       className="flex flex-wrap gap-2 mb-3"
     >
       {PRESETS.map(({ kg, label }) => {
-        // Tolérance flottante : usePoidsInput arrondit au dixième, donc une
-        // comparaison stricte suffit en pratique, mais on garde une marge
-        // pour rester robuste aux arrondis (0.25 → 0.3 après clamp au pas).
+        // Tolérance flottante : usePoidsInput arrondit au dixième. Les presets
+        // tombant pile sur le pas, une marge de 0,05 suffit à matcher la puce
+        // active sans risque de faux positif entre deux presets.
         const active = Math.abs(currentKg - kg) < 0.05;
         return (
           <button

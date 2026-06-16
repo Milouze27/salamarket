@@ -61,6 +61,12 @@ export const ImageZoom = ({ src, alt, className }: Props) => {
           <DialogPrimitive.Title className="sr-only">
             {alt}
           </DialogPrimitive.Title>
+          {/* Requis par Radix (sinon warning "Missing Description or
+              aria-describedby for DialogContent"). sr-only : invisible mais
+              annoncé aux lecteurs d'écran. */}
+          <DialogPrimitive.Description className="sr-only">
+            Photo agrandie. Pincez pour zoomer, touchez le fond pour fermer.
+          </DialogPrimitive.Description>
 
           <img
             src={cdnImage(src, { width: 1600 })}

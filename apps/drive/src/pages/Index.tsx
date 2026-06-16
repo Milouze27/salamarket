@@ -392,7 +392,8 @@ const Index = () => {
                     onClick={() => setSort(opt.key)}
                     aria-pressed={active}
                     className={
-                      "shrink-0 h-9 px-3.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97] " +
+                      // h-11 (44px) = tap target Apple HIG (avant : h-9/36px).
+                      "shrink-0 h-11 px-3.5 rounded-full text-[12.5px] font-semibold transition-all active:scale-[0.97] " +
                       (active
                         ? "bg-[#0E3B2E] text-[#FAF7EE] shadow-sm"
                         : "bg-white text-[#0E3B2E] border border-[#0E3B2E]/15 hover:border-[#0E3B2E]/40")

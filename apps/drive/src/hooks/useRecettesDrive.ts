@@ -8,10 +8,14 @@ import {
   type RecetteIngredientDrive,
 } from "@/data/recettes-drive";
 
-/** Normalise pour un match robuste : minuscule, sans accent. */
+/** Normalise pour un match robuste : minuscule, ligatures dépliées, sans accent. */
 const normalize = (s: string): string =>
   s
     .toLowerCase()
+    // NFD ne décompose pas œ/æ → "bœuf" ne matchait jamais le keyword "boeuf".
+    // On déplie les ligatures avant de retirer les diacritiques.
+    .replace(/œ/g, "oe")
+    .replace(/æ/g, "ae")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
 

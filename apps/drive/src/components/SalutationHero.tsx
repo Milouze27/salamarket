@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { greetingForHour } from "@/lib/greeting";
 
 // ─────────────────────────────────────────────────────────────────
 // SalutationHero — salutation contextuelle en tête de vitrine.
@@ -11,14 +12,6 @@ import { useAuth } from "@/hooks/useAuth";
 // pas de picto décoratif). Bornée à max-w-7xl pour s'aligner sur le
 // hero qui suit.
 // ─────────────────────────────────────────────────────────────────
-
-// Découpage volontairement simple : matin < 12h, après-midi < 18h,
-// sinon soir. Pas de gestion fuseau : Date locale = celle du client.
-const salutationForHour = (hour: number): string => {
-  if (hour < 12) return "Bonjour";
-  if (hour < 18) return "Bon après-midi";
-  return "Bonsoir";
-};
 
 // Premier mot du nom complet, capitalisé proprement. Renvoie null si on
 // n'a pas de nom exploitable (on affiche alors la salutation seule).
@@ -34,7 +27,7 @@ export const SalutationHero = () => {
 
   // Recalcule à chaque rendu de la home (mount) — suffisant pour un
   // affichage éditorial : pas de timer, on ne veut pas re-render au tic.
-  const salutation = useMemo(() => salutationForHour(new Date().getHours()), []);
+  const salutation = useMemo(() => greetingForHour(new Date().getHours()), []);
 
   // Prénom : profil chargé en priorité, sinon les métadonnées d'auth
   // (full_name posé à l'inscription) avant que le profil ne soit résolu.

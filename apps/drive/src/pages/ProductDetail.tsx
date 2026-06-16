@@ -687,11 +687,14 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* pb-cta-only (token charte) sur mobile = clearance CTA sticky +
-            safe-area + respiration, pour que le dernier contenu (suggestions)
-            ne soit jamais masqué par la barre "Ajouter au panier". Sur
-            desktop le CTA est inline → md:pb-8 suffit, on neutralise le token. */}
-        <div className="max-w-2xl mx-auto px-4 mt-4 md:mt-0 md:px-0 relative pb-cta-only md:!pb-8">
+        {/* Clearance bas mobile pour que la dernière rangée de "Souvent pris
+            ensemble" reste entièrement visible au scroll max. Le token
+            pb-cta-only (72px) ne couvrait que le bouton seul : après ajout, le
+            sticky empile bouton (56) + gap (12) + "Voir le panier" (48) +
+            paddings (24) ≈ 140px, masquant la dernière rangée. On vise ≥160px
+            (+ safe-area) pour couvrir ce cas MAX avec respiration. Desktop : CTA
+            inline → md:pb-8. */}
+        <div className="max-w-2xl mx-auto px-4 mt-4 md:mt-0 md:px-0 relative pb-[calc(160px+env(safe-area-inset-bottom))] md:!pb-8">
           <section className="px-1 pt-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <Link
               to={`/?category=${product.category}`}

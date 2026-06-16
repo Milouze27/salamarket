@@ -20,26 +20,17 @@ function prefersReducedMotion() {
   );
 }
 
-// Helper — preference for View Transitions if browser supports it. Wraps a
-// state update so the underline glides FLIP-style. Graceful degradation =
-// the underline just snaps (still works, no error). Honoré reduced-motion :
-// on saute le glide FLIP et on applique l'état directement.
-function withViewTransition(fn: () => void) {
-  if (prefersReducedMotion()) {
-    fn();
-    return;
-  }
-  if (typeof document !== "undefined" && document.startViewTransition) {
-    document.startViewTransition(fn);
-  } else {
-    fn();
-  }
-}
-
 // Nav rayons — rail éditorial typographique. Numérotation tabulaire or +
 // label uppercase tracking large. Pas de fond pill (transparent), seul
-// l'item actif porte une bordure or qui glisse FLIP via View Transitions.
-// Scroll horizontal snap, fade gradient sur les bords.
+// l'item actif porte une bordure or. Scroll horizontal snap, fade gradient
+// sur les bords.
+//
+// IMPORTANT : le changement de rayon n'utilise PAS document.startViewTransition.
+// La grille vitrine et le catalogue filtré partagent les mêmes produits (donc
+// les mêmes view-transition-name product-{id}) pendant le snapshot, ce qui
+// déclenchait "Unexpected duplicate view-transition-name" + "Transition was
+// aborted". Les View Transitions restent réservées à la navigation vers la PDP
+// (cf. ProductCard). Le filtre applique l'état directement.
 export const CategoryTabs = ({ active, onChange }: Props) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const activeBtnRef = useRef<HTMLButtonElement>(null);
@@ -62,7 +53,7 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
   }, [active]);
 
   const handleSelect = (slug: string) => {
-    withViewTransition(() => onChange(slug));
+    onChange(slug);
   };
 
   return (
@@ -129,11 +120,6 @@ export const CategoryTabs = ({ active, onChange }: Props) => {
                       ? "border-[#C9A227]"
                       : "border-transparent hover:border-[#C9A227]/40",
                   )}
-                  style={
-                    isActive
-                      ? { viewTransitionName: "category-underline" }
-                      : undefined
-                  }
                 >
                   <span
                     className={cn(

@@ -7,6 +7,7 @@ import { HeaderUserMenu } from "@/components/HeaderUserMenu";
 import { BrandLogo } from "@/components/BrandLogo";
 import { SearchSuggestions } from "@/components/SearchSuggestions";
 import { pushRecentSearch } from "@/hooks/useRecentSearches";
+import { greetingForHour } from "@/lib/greeting";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -19,12 +20,6 @@ const firstNameOf = (full?: string | null): string | null => {
   const trimmed = full.trim();
   if (!trimmed) return null;
   return trimmed.split(/\s+/)[0];
-};
-
-const greetingForHour = (h: number): string => {
-  if (h < 5) return "Bonsoir";
-  if (h < 18) return "Bonjour";
-  return "Bonsoir";
 };
 
 // Pattern iOS Large Title : hero gradient sapin scrollable + compact

@@ -5,18 +5,13 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
-  ArrowDownToLine,
-  ArrowUpRight,
   Bell,
   Boxes,
   Building2,
   CalendarClock,
-  ClipboardCheck,
   FileText,
   MonitorSmartphone,
-  Repeat2,
   Sparkles,
-  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,17 +20,11 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
-import { CounterPreview } from "@/components/v2/CounterPreview";
 import { DlcBanner } from "@/components/v2/DlcBanner";
-import {
-  RevenueChart,
-  type RevenueDataPoint,
-} from "@/components/v2/RevenueChart";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
 import { PilotageStrip } from "@/components/v2/PilotageStrip";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
 import { StockEditWindowCard } from "@/components/v2/StockEditWindowCard";
-import { Sparkline } from "@/components/v2/Sparkline";
 import { useV2 } from "@/lib/v2-store";
 import {
   listDepots,
@@ -43,7 +32,6 @@ import {
   listInventairesDuJour,
   listProduitsInDepot,
   listReceptions,
-  listRevenueByDay,
   listSorties,
   listTransferts,
 } from "@/lib/db";
@@ -53,19 +41,8 @@ import type {
   InventaireTournant,
   Reception,
   SortieStock,
-  SortieType,
   TransfertInterDepot,
 } from "@/lib/types/db";
-
-const SORTIE_LABEL: Record<SortieType, string> = {
-  casse_manipulation: "Casse manip.",
-  casse_client: "Casse client",
-  perime_dlc: "Périmé DLC",
-  perime_ddm: "Périmé DDM",
-  defaut_fournisseur: "Défaut fourn.",
-  demarque_inconnue: "Démarque inconnue",
-  autre: "Autre motif",
-};
 
 interface DepotStats {
   depot: Depot;
@@ -96,7 +73,6 @@ export default function V2AdminDashboardPage() {
     InventaireTournant[]
   >([]);
   const [employes, setEmployes] = useState<Employe[]>([]);
-  const [revenue, setRevenue] = useState<RevenueDataPoint[]>([]);
   const [view, setView] = useState<"stock" | "drive">("stock");
   const [loading, setLoading] = useState(true);
   const [showAllDepots, setShowAllDepots] = useState(false);
@@ -112,10 +88,6 @@ export default function V2AdminDashboardPage() {
       const today = new Date().toISOString().slice(0, 10);
       const allEmployes = await listEmployes();
       setEmployes(allEmployes);
-      // CA par jour Particulier / Pro (90j max, le chart limite à 7/30/90)
-      void listRevenueByDay({ days: 90 })
-        .then(setRevenue)
-        .catch(() => setRevenue([]));
 
       const computed: DepotStats[] = await Promise.all(
         ds.map(async (d) => {
@@ -206,6 +178,20 @@ export default function V2AdminDashboardPage() {
   const emptyReceptions = useMemo(
     () => recentReceptions.filter((r) => r.reception_vide === true),
     [recentReceptions],
+  );
+
+  const activityCount = useMemo(
+    () =>
+      recentReceptions.length + recentSorties.length + recentTransferts.length,
+    [recentReceptions, recentSorties, recentTransferts],
+  );
+
+  const invEcartsCount = useMemo(
+    () =>
+      recentInventaires.filter(
+        (i) => i.quantite_comptee !== null && i.ecart !== 0,
+      ).length,
+    [recentInventaires],
   );
 
   return (
@@ -309,11 +295,6 @@ export default function V2AdminDashboardPage() {
             <DlcBanner />
           </div>
 
-          {/* Counter screen preview */}
-          <div className="px-4 sm:px-5 mt-4">
-            <CounterPreview />
-          </div>
-
           {/* Raccourcis terrain — destinations absentes du menu admin (drawer) */}
           <section className="px-4 sm:px-5 mt-4 flex flex-wrap gap-2">
             <OpChip
@@ -343,28 +324,6 @@ export default function V2AdminDashboardPage() {
             label="Piloter"
             className="px-4 sm:px-5 mt-8"
           />
-
-          {/* ┌─ ACTIVITÉ — CA Drive temps réel ─┐ */}
-          {/* Périmètre explicite : ce graphe = commandes Drive (particulier +
-              pro), PAS le CA magasin Cashmag. Sans ce libellé, le total Drive
-              (qq centaines d'€) était lu comme le CA total du magasin et
-              paraissait incohérent avec le « CA hier » magasin du cockpit. */}
-          <p className="px-4 sm:px-5 mt-3 section-eyebrow flex items-center gap-1.5">
-            <TrendingUp className="w-3 h-3" />
-            CA Drive (hors magasin)
-            <span
-              aria-hidden
-              title="Données live"
-              className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse ml-1"
-            />
-          </p>
-          <section className="px-4 sm:px-5 mt-2">
-            <RevenueChart
-              data={revenue}
-              initialSeries="global"
-              initialPeriod={30}
-            />
-          </section>
 
           {/* ┌─ DÉPÔTS — état multi-dépôts ─┐ */}
           <p className="px-4 sm:px-5 mt-7 section-eyebrow">
@@ -438,9 +397,7 @@ export default function V2AdminDashboardPage() {
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-4 gap-2 mt-4 text-left">
-                      <Stat label="Produits" value={s.productCount} />
-                      <Stat label="Unités" value={s.totalUnits} />
+                    <div className="grid grid-cols-2 gap-2 mt-4 text-left">
                       <Stat
                         label="Valeur stock"
                         value={`${Math.round(s.totalCost).toLocaleString("fr-FR")} €`}
@@ -568,172 +525,52 @@ export default function V2AdminDashboardPage() {
             </section>
           )}
 
-          {/* RECENT — top 4, le reste sur /v2/admin/activite */}
-          <section className="px-4 sm:px-5 mt-7">
-            {(() => {
-              const merged = [
-                ...recentReceptions.map((r) => ({
-                  type: "rec" as const,
-                  date: r.created_at,
-                  item: r,
-                })),
-                ...recentSorties.map((s) => ({
-                  type: "sor" as const,
-                  date: s.created_at,
-                  item: s,
-                })),
-                ...recentTransferts.map((t) => ({
-                  type: "trf" as const,
-                  date: t.created_at,
-                  item: t,
-                })),
-              ].sort((a, b) => b.date.localeCompare(a.date));
-              const visible = merged.slice(0, 4);
-              const hidden = merged.length - 4;
-              return (
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="label-caps text-primary inline-flex items-center gap-1.5">
-                      Activité 24h
-                      <span
-                        aria-hidden
-                        title="Données live"
-                        className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse"
-                      />
-                    </p>
-                    {hidden > 0 && (
-                      <a
-                        href="/v2/admin/activite"
-                        className="text-[11px] font-bold text-primary inline-flex items-center gap-0.5"
-                      >
-                        Voir tout ({merged.length}) →
-                      </a>
-                    )}
-                  </div>
-                  {merged.length === 0 ? (
-                    <div className="bg-card-bg border border-rule rounded-2xl p-6 text-center shadow-card">
-                      <Sparkles className="w-6 h-6 text-text-tertiary mx-auto mb-2" />
-                      <p className="text-sm font-bold text-text-primary">
-                        Aucun mouvement sur les dernières 24h
-                      </p>
-                      <p className="text-xs text-text-secondary mt-1">
-                        Réceptions, sorties et transferts apparaîtront ici dès
-                        qu&apos;ils seront validés.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-card-bg border border-rule rounded-2xl divide-y divide-rule overflow-hidden shadow-card">
-                      {visible.map((row, i) => (
-                        <a
-                          key={i}
-                          href="/v2/admin/activite"
-                          className="block active:bg-[color:var(--surface-2)] transition-colors cursor-pointer"
-                          aria-label="Voir le détail dans l'activité complète"
-                        >
-                          <ActivityRow
-                            row={row}
-                            depots={depots}
-                            employes={employes}
-                          />
-                        </a>
-                      ))}
-                      {hidden > 0 && (
-                        <a
-                          href="/v2/admin/activite"
-                          className="block bg-[color:var(--surface-2)] p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
-                        >
-                          +{hidden} autre{hidden > 1 ? "s" : ""} mouvement
-                          {hidden > 1 ? "s" : ""} — Tout consulter →
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </section>
-
-          {/* INVENTAIRES TOURNANTS — top 4, le reste sur historique */}
-          {recentInventaires.length > 0 && (
-            <section className="px-4 sm:px-5 mt-7">
-              <div className="flex items-center justify-between mb-3">
-                <p className="label-caps text-primary inline-flex items-center gap-1">
-                  <ClipboardCheck className="w-3 h-3" />
-                  Inventaires du jour
+          {/* RECENT + INVENTAIRES — repliés en cartes-liens compactes vers
+              leurs pages dédiées (allège l'empilement du cockpit). */}
+          <section className="px-4 sm:px-5 mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a
+              href="/v2/admin/activite"
+              className="bg-card-bg border border-rule rounded-2xl p-4 shadow-card active:scale-[0.99] transition-transform flex items-center gap-3"
+              aria-label="Voir l'activité complète"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="label-caps text-primary inline-flex items-center gap-1.5">
+                  Activité 24h
+                  <span
+                    aria-hidden
+                    title="Données live"
+                    className="inline-block w-1.5 h-1.5 rounded-full bg-success animate-pulse"
+                  />
                 </p>
-                {recentInventaires.length > 4 ? (
-                  <a
-                    href="/v2/inventaire/historique"
-                    className="text-[12px] font-bold text-primary inline-flex items-center gap-0.5 min-h-[44px] md:min-h-0 px-2 -mr-2"
-                  >
-                    Voir tout ({recentInventaires.length}) →
-                  </a>
-                ) : (
-                  <a
-                    href="/v2/inventaire/historique"
-                    className="text-[12px] font-bold text-primary inline-flex items-center gap-0.5 min-h-[44px] md:min-h-0 px-2 -mr-2"
-                  >
-                    Historique →
-                  </a>
-                )}
+                <p className="text-[12px] text-text-secondary mt-1">
+                  {activityCount > 0
+                    ? `${activityCount} mouvement${activityCount > 1 ? "s" : ""} · réceptions, sorties, transferts`
+                    : "Aucun mouvement sur les dernières 24h"}
+                </p>
               </div>
-              <div className="bg-card-bg border border-rule rounded-2xl divide-y divide-rule overflow-hidden shadow-card">
-                {recentInventaires.slice(0, 4).map((inv) => {
-                  const d = depots.find((x) => x.id === inv.depot_id);
-                  const e = employes.find(
-                    (x) => x.id === inv.employe_assigne_id,
-                  );
-                  return (
-                    <a
-                      key={inv.id}
-                      href="/v2/inventaire"
-                      className="p-3 flex items-center gap-3 active:bg-[color:var(--surface-2)] transition-colors"
-                      aria-label={`Ouvrir l'inventaire ${d?.nom ?? ""}`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-text-primary truncate">
-                          {d?.nom} · {e?.prenom} {e?.nom}
-                        </p>
-                        <p className="text-[11px] text-text-tertiary">
-                          Théorique {inv.quantite_attendue ?? "—"} · Compté{" "}
-                          {inv.quantite_comptee ?? "—"}
-                        </p>
-                      </div>
-                      <span
-                        className={`badge text-[10px] ${
-                          inv.statut === "valide"
-                            ? "badge-success"
-                            : inv.statut === "compte"
-                              ? Math.abs(inv.ecart) > 2
-                                ? "badge-warning"
-                                : "badge-success"
-                              : "badge-neutral"
-                        }`}
-                      >
-                        {inv.statut === "assigne"
-                          ? "À compter"
-                          : inv.ecart === 0
-                            ? "Conforme"
-                            : `Écart ${inv.ecart > 0 ? "+" : ""}${inv.ecart}`}
-                      </span>
-                      <span className="text-text-tertiary text-xs ml-1">→</span>
-                    </a>
-                  );
-                })}
-                {recentInventaires.length > 4 && (
-                  <a
-                    href="/v2/inventaire/historique"
-                    className="block bg-[color:var(--surface-2)] p-3 text-center text-[12px] font-bold text-primary active:scale-[0.99] transition-transform"
-                  >
-                    +{recentInventaires.length - 4} autre
-                    {recentInventaires.length - 4 > 1 ? "s" : ""} inventaire
-                    {recentInventaires.length - 4 > 1 ? "s" : ""} — Tout
-                    consulter →
-                  </a>
-                )}
-              </div>
-            </section>
-          )}
+              <span className="text-primary text-sm font-bold">→</span>
+            </a>
+
+            {recentInventaires.length > 0 && (
+              <a
+                href="/v2/inventaire/historique"
+                className="bg-card-bg border border-rule rounded-2xl p-4 shadow-card active:scale-[0.99] transition-transform flex items-center gap-3"
+                aria-label="Voir les inventaires"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="label-caps text-primary">Inventaires du jour</p>
+                  <p className="text-[12px] text-text-secondary mt-1">
+                    {recentInventaires.length} comptage
+                    {recentInventaires.length > 1 ? "s" : ""}
+                    {invEcartsCount > 0
+                      ? ` · ${invEcartsCount} écart${invEcartsCount > 1 ? "s" : ""}`
+                      : " · conformes"}
+                  </p>
+                </div>
+                <span className="text-primary text-sm font-bold">→</span>
+              </a>
+            )}
+          </section>
 
           {/* ═══ PLAN 04 — ADMINISTRER : notifs, emails, accès édition ═══ */}
           <EditorialEyebrow
@@ -808,14 +645,11 @@ function Stat({
   value,
   hint,
   gold,
-  spark,
 }: {
   label: string;
   value: string | number;
   hint?: string;
   gold?: boolean;
-  /** Optional sparkline series (8 points recommended) shown below value. */
-  spark?: number[];
 }) {
   return (
     <div>
@@ -833,122 +667,7 @@ function Stat({
       >
         {value}
       </p>
-      {spark && spark.length > 1 && (
-        <div className="mt-1 -ml-0.5">
-          <Sparkline
-            data={spark}
-            width={64}
-            height={16}
-            color={gold ? "var(--accent-gold-bright)" : "var(--primary-green)"}
-            fillColor={
-              gold ? "var(--accent-gold-soft)" : "var(--primary-green-soft)"
-            }
-          />
-        </div>
-      )}
     </div>
   );
 }
 
-function ActivityRow({
-  row,
-  depots,
-  employes,
-}: {
-  row:
-    | { type: "rec"; date: string; item: Reception }
-    | { type: "sor"; date: string; item: SortieStock }
-    | { type: "trf"; date: string; item: TransfertInterDepot };
-  depots: Depot[];
-  employes: Employe[];
-}) {
-  if (row.type === "rec") {
-    const d = depots.find((x) => x.id === row.item.depot_id);
-    const e = employes.find((x) => x.id === row.item.employe_id);
-    return (
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        <span className="w-8 h-8 rounded-lg bg-success-soft text-success flex items-center justify-center">
-          <ArrowDownToLine className="w-4 h-4" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-text-primary">
-            Réception {row.item.fournisseur ?? "fournisseur"} → {d?.nom}
-          </p>
-          <p className="text-[10px] text-text-tertiary">
-            {e?.prenom} {e?.nom} · {timeAgo(row.date)}
-          </p>
-        </div>
-      </div>
-    );
-  }
-  if (row.type === "sor") {
-    const d = depots.find((x) => x.id === row.item.depot_id);
-    const e = employes.find((x) => x.id === row.item.employe_id);
-    const lowScore =
-      row.item.ia_coherence_score !== null && row.item.ia_coherence_score < 0.6;
-    return (
-      <div className="flex items-center gap-3 px-3 py-2.5">
-        <span
-          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-            lowScore
-              ? "bg-danger-soft text-danger"
-              : "bg-warning-soft text-warning"
-          }`}
-        >
-          <ArrowUpRight className="w-4 h-4" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-text-primary">
-            Sortie {SORTIE_LABEL[row.item.type] ?? row.item.type} · qté{" "}
-            {formatQty(row.item.quantite)} · {d?.nom}
-          </p>
-          <p className="text-[10px] text-text-tertiary">
-            {e?.prenom} {e?.nom} · {timeAgo(row.date)}
-            {row.item.ia_coherence_score != null &&
-              row.item.ia_coherence_score > 0 && (
-                <> · IA {Math.round(row.item.ia_coherence_score * 100)}%</>
-              )}
-          </p>
-        </div>
-      </div>
-    );
-  }
-  // transfert
-  const ds = depots.find((x) => x.id === row.item.depot_source_id);
-  const dd = depots.find((x) => x.id === row.item.depot_destination_id);
-  const e = employes.find((x) => x.id === row.item.employe_id);
-  return (
-    <div className="flex items-center gap-3 px-3 py-2.5">
-      <span className="w-8 h-8 rounded-lg bg-gold-soft text-primary-dark flex items-center justify-center">
-        <Repeat2 className="w-4 h-4" />
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-text-primary">
-          Transfert {ds?.nom} → {dd?.nom} · qté {formatQty(row.item.quantite)}
-        </p>
-        <p className="text-[10px] text-text-tertiary">
-          {e?.prenom} {e?.nom} · {timeAgo(row.date)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** Quantité lisible : entier sans décimale, poids avec virgule FR (kg). */
-function formatQty(q: number): string {
-  return Number.isInteger(q)
-    ? String(q)
-    : q.toLocaleString("fr-FR", { maximumFractionDigits: 3 });
-}
-
-function timeAgo(iso: string): string {
-  const d = new Date(iso).getTime();
-  const diff = Math.max(0, Date.now() - d);
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "à l'instant";
-  if (m < 60) return `${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} h`;
-  const j = Math.floor(h / 24);
-  return `${j} j`;
-}

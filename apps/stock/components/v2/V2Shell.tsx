@@ -203,10 +203,10 @@ const ITEMS: Record<string, NavItem> = {
   },
   importCashmag: {
     label: "Import",
-    fullLabel: "Import Cashmag",
-    href: "/v2/admin/import-cashmag",
+    fullLabel: "Imports (ventes + catalogue)",
+    href: "/v2/admin/import",
     icon: FileSpreadsheet,
-    desc: "Sync caisse / ventes",
+    desc: "Cashmag (ventes) + catalogue stock",
   },
   importStock: {
     label: "Import stock",
@@ -308,7 +308,8 @@ function primaryFor(role: string): NavItem[] {
       return [ITEMS.accueil, ITEMS.preparation, ITEMS.sortie, ITEMS.stock];
     case "caisse":
       // La caisse gère le retrait au comptoir ; pas de réception/sortie.
-      return [ITEMS.accueil, ITEMS.stock, ITEMS.preparation, ITEMS.counter];
+      // Écran comptoir /v2/counter masqué de la nav (accès URL si écran dédié).
+      return [ITEMS.accueil, ITEMS.stock, ITEMS.preparation, ITEMS.etiquettes];
     case "manager":
     case "admin":
       // Préparation épinglée = suivi drive en 1 tap, même pour l'admin.
@@ -343,44 +344,45 @@ interface SheetGroup {
 function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   // Opérer = tous les gestes terrain, inventaire et traçabilité lots inclus
   // (ce sont des opérations quotidiennes, pas des achats ni des réglages).
+  // (stock/sans-ean masqué : replié en filtre dans /v2/stock.)
   const operer = [
     ITEMS.sortie,
     ITEMS.reception,
     ITEMS.transfert,
     ITEMS.etiquettes,
     ITEMS.stock,
-    ITEMS.stockSansEan,
     ITEMS.preparation,
     ITEMS.inventaire,
     ITEMS.inventaireHisto,
     ITEMS.lots,
   ];
+  // (counter masqué : écran comptoir public, accès par URL.)
   const piloter = [
     ITEMS.accueil,
     ITEMS.cockpit,
     ITEMS.forecast,
     ITEMS.alertesDlc,
     ITEMS.casseAnomalies,
-    ITEMS.counter,
   ];
   // Back-office éclaté en sous-groupes scannables (au lieu d'un seul « Administrer »
   // de ~19 entrées). Le filtrage par rôle masque ce qui dépasse le périmètre.
+  // (alertes-surplus fusionné dans l'onglet Surplus de /v2/admin/alertes.)
   const surveillance = [
     ITEMS.alertes,
-    ITEMS.alertesSurplus,
     ITEMS.activite,
     ITEMS.pointage,
   ];
   const ventesPro = [ITEMS.commandesPro, ITEMS.facturesPro, ITEMS.comptesPro];
   const achats = [ITEMS.fournisseurs, ITEMS.po, ITEMS.bonsReception];
+  // recap-fiscal fusionné dans rapport-mensuel (?vue=recap) ; import-cashmag +
+  // import-stock fusionnés dans /v2/admin/import (entrée « Import »).
   const fiscal = [
-    ITEMS.recapFiscal,
     ITEMS.rapportMensuel,
     ITEMS.importCashmag,
-    ITEMS.importStock,
   ];
   // Outils & analyses = écrans métier d'aide à la décision (pas des réglages).
-  const outils = [ITEMS.admin, ITEMS.assistantIa, ITEMS.labo];
+  // (labo masqué : module non activé pour ce client.)
+  const outils = [ITEMS.admin, ITEMS.assistantIa];
 
   // 1) périmètre par rôle (cohérent ⌘K) puis 2) dédup avec la bottom-bar.
   const prepare = (items: NavItem[]) =>

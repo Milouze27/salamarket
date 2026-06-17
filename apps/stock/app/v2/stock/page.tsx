@@ -267,6 +267,14 @@ export default function V2StockPage() {
             Tous dépôts
           </button>
         </div>
+        {/* Accès produits sans code-barre (ancienne page repliée en lien) */}
+        <button
+          type="button"
+          onClick={() => router.push("/v2/stock/sans-ean")}
+          className="block mt-3 text-[12px] font-bold text-text-secondary underline underline-offset-4 decoration-rule hover:text-primary"
+        >
+          Produits sans code-barre →
+        </button>
         {/* Bandeau accès édition stock */}
         <div
           className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${

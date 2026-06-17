@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertCircle,
@@ -15,6 +15,7 @@ import {
   Loader2,
   PackageCheck,
   PackageX,
+  RotateCcw,
   ShieldAlert,
   Sparkles,
   TrendingDown,
@@ -46,15 +47,22 @@ interface SortieSuspecte {
 
 interface AlerteSurplus {
   id: string;
+  bdl_id: string | null;
   code_barre_scanne: string;
+  produit_id: string | null;
   quantite_surplus: number;
+  signale_par: string | null;
   signale_le: string;
   statut: "en_attente" | "accepte" | "refuse";
+  decideur: string | null;
+  decide_le: string | null;
+  photo_preuve_url: string | null;
   notes: string | null;
-  produits: { nom: string; ean: string | null } | null;
+  produits: { id: string; nom: string; ean: string | null } | null;
   bons_de_livraison: {
+    id: string;
     numero_bdl: string;
-    fournisseurs: { nom: string } | null;
+    fournisseurs: { id: string; nom: string } | null;
   } | null;
 }
 
@@ -102,15 +110,19 @@ function nameOf(p: { prenom: string | null; nom: string } | null) {
 }
 
 export default function AlertesPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const employe = useV2((s) => s.currentEmploye);
-  const [tab, setTab] = useState<Tab>("sorties");
+  const [tab, setTab] = useState<Tab>(
+    searchParams.get("tab") === "surplus" ? "surplus" : "sorties",
+  );
   const [sorties, setSorties] = useState<SortieSuspecte[]>([]);
   const [surplus, setSurplus] = useState<AlerteSurplus[]>([]);
   const [demarque, setDemarque] = useState<DemarqueRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortiesError, setSortiesError] = useState(false);
   const [detail, setDetail] = useState<SortieSuspecte | null>(null);
+  const [surplusDetail, setSurplusDetail] = useState<AlerteSurplus | null>(null);
+  const [surplusSubmitting, setSurplusSubmitting] = useState(false);
 
   // Garde rôle (defense-in-depth) : seuls admin/manager peuvent modérer une
   // sortie suspecte (altère le score d'audit IA + push collègue). La nav est
@@ -235,6 +247,40 @@ export default function AlertesPage() {
     void loadAll();
   }
 
+  /** Décision surplus fournisseur : accepter (facturer) ou refuser (retourner).
+   *  Persistance directe sur alertes_surplus (statut + décideur + horodatage). */
+  async function decideSurplus(
+    alerte: AlerteSurplus,
+    statut: "accepte" | "refuse",
+  ) {
+    const sb = supabase();
+    if (!sb) return;
+    setSurplusSubmitting(true);
+    try {
+      const { error } = await sb
+        .from("alertes_surplus")
+        .update({
+          statut,
+          decideur: employe?.id ?? null,
+          decide_le: new Date().toISOString(),
+        })
+        .eq("id", alerte.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(
+        statut === "accepte"
+          ? "Surplus accepté · facture fournisseur à émettre"
+          : "Surplus refusé · à retourner au fournisseur",
+      );
+      setSurplusDetail(null);
+      void loadAll();
+    } finally {
+      setSurplusSubmitting(false);
+    }
+  }
+
   async function loadAll() {
     setLoading(true);
     const sb = supabase();
@@ -301,12 +347,12 @@ export default function AlertesPage() {
     const { data: dsurplus, error: surplusErr } = await sb
       .from("alertes_surplus")
       .select(
-        `id, code_barre_scanne, quantite_surplus, signale_le, statut, notes,
-         produits (nom, ean),
-         bons_de_livraison (numero_bdl, fournisseurs (nom))`,
+        `id, bdl_id, code_barre_scanne, produit_id, quantite_surplus, signale_par, signale_le, statut,
+         decideur, decide_le, photo_preuve_url, notes,
+         produits (id, nom, ean),
+         bons_de_livraison (id, numero_bdl, fournisseurs (id, nom))`,
       )
-      .order("signale_le", { ascending: false })
-      .limit(20);
+      .order("signale_le", { ascending: false });
     if (surplusErr) {
       console.error("[alertes] chargement surplus échoué:", surplusErr);
       toast.error("Impossible de charger les surplus");
@@ -463,7 +509,7 @@ export default function AlertesPage() {
         ) : tab === "surplus" ? (
           <SurplusPanel
             items={surplus}
-            onOpenAdmin={() => router.push("/v2/admin/alertes-surplus")}
+            onDetail={(s) => setSurplusDetail(s)}
           />
         ) : (
           <HistoriquePanel
@@ -588,6 +634,140 @@ export default function AlertesPage() {
                   Rejeter la sortie
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail modal surplus */}
+      <AnimatePresence>
+        {surplusDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => setSurplusDetail(null)}
+          >
+            <motion.div
+              initial={{ y: 80 }}
+              animate={{ y: 0 }}
+              exit={{ y: 80 }}
+              transition={{ type: "spring", damping: 26, stiffness: 280 }}
+              className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-10 shadow-card-lg max-h-[88vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <p className="label-caps text-danger">Surplus signalé</p>
+                <button onClick={() => setSurplusDetail(null)}>
+                  <X className="w-5 h-5 text-text-tertiary" />
+                </button>
+              </div>
+              <h2 className="text-[20px] font-extrabold text-text-primary">
+                {surplusDetail.produits?.nom ?? "Produit inconnu"}
+              </h2>
+              <p className="text-[12px] font-mono bg-cream text-text-tertiary inline-block px-2 py-1 rounded-lg mt-2">
+                {surplusDetail.code_barre_scanne}
+              </p>
+
+              <dl className="mt-5 space-y-3 text-[13px]">
+                <Row
+                  label="Fournisseur"
+                  value={
+                    surplusDetail.bons_de_livraison?.fournisseurs?.nom ?? "—"
+                  }
+                />
+                <Row
+                  label="N° BDL"
+                  value={surplusDetail.bons_de_livraison?.numero_bdl ?? "—"}
+                />
+                <Row
+                  label="Quantité en surplus"
+                  value={`${surplusDetail.quantite_surplus} unité${surplusDetail.quantite_surplus > 1 ? "s" : ""}`}
+                />
+                <Row
+                  label="Signalé"
+                  value={timeAgoFr(surplusDetail.signale_le)}
+                />
+                <Row
+                  label="Statut"
+                  value={
+                    surplusDetail.statut === "en_attente"
+                      ? "En attente"
+                      : surplusDetail.statut === "accepte"
+                        ? "Accepté"
+                        : "Refusé"
+                  }
+                />
+              </dl>
+
+              {surplusDetail.notes && (
+                <div className="mt-4 bg-cream rounded-2xl p-3">
+                  <p className="label-caps text-text-tertiary mb-1">Note</p>
+                  <p className="text-[13px] text-text-primary leading-relaxed">
+                    {surplusDetail.notes}
+                  </p>
+                </div>
+              )}
+
+              {surplusDetail.photo_preuve_url && (
+                <div className="mt-4">
+                  <p className="label-caps text-text-tertiary mb-1.5">
+                    Photo preuve
+                  </p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={surplusDetail.photo_preuve_url}
+                    alt="Preuve"
+                    className="w-full aspect-[4/3] object-cover rounded-2xl border border-rule"
+                  />
+                </div>
+              )}
+
+              {surplusDetail.statut === "en_attente" && (
+                <div className="mt-6 space-y-2.5">
+                  <button
+                    onClick={() => void decideSurplus(surplusDetail, "accepte")}
+                    disabled={surplusSubmitting}
+                    className="w-full bg-success text-white rounded-[18px] py-4 px-5 flex items-center justify-between font-bold shadow-card-lg active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <span className="text-left">
+                      <span className="block label-caps text-white/80">
+                        ACCEPTER
+                      </span>
+                      <span className="block text-[14px] font-extrabold">
+                        Facturer au fournisseur
+                      </span>
+                    </span>
+                    {surplusSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <FileText className="w-5 h-5" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => void decideSurplus(surplusDetail, "refuse")}
+                    disabled={surplusSubmitting}
+                    className="w-full bg-white border border-rule text-text-primary rounded-[18px] py-3.5 px-5 flex items-center justify-between font-bold active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <span className="text-left">
+                      <span className="block label-caps text-text-tertiary">
+                        REFUSER
+                      </span>
+                      <span className="block text-[14px] font-extrabold">
+                        Retourner au fournisseur
+                      </span>
+                    </span>
+                    {surplusSubmitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -823,12 +1003,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function SurplusPanel({
   items,
-  onOpenAdmin,
+  onDetail,
 }: {
   items: AlerteSurplus[];
-  onOpenAdmin: () => void;
+  onDetail: (s: AlerteSurplus) => void;
 }) {
   const pending = items.filter((i) => i.statut === "en_attente");
+  const historique = items.filter((i) => i.statut !== "en_attente");
   return (
     <div className="space-y-3 mt-1">
       {pending.length === 0 ? (
@@ -837,46 +1018,96 @@ function SurplusPanel({
           <p className="font-bold text-text-primary">
             Aucun surplus en attente
           </p>
+          <p className="text-xs text-text-secondary mt-1">
+            Tous les surplus signalés ont été traités.
+          </p>
         </div>
       ) : (
-        pending.map((s) => (
-          <div
-            key={s.id}
-            className="bg-white border border-warning/30 rounded-2xl p-4 shadow-card"
-          >
-            <div className="flex items-start gap-3">
-              <span className="w-10 h-10 rounded-xl bg-warning-soft text-warning flex items-center justify-center shrink-0">
-                <Truck className="w-5 h-5" />
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-extrabold text-text-primary truncate">
-                  {s.produits?.nom ?? "Produit"}
-                </p>
-                <p className="text-[11.5px] text-text-secondary mt-0.5">
-                  {s.bons_de_livraison?.fournisseurs?.nom ?? "—"} ·{" "}
-                  {timeAgoFr(s.signale_le)}
-                </p>
-              </div>
-              <p className="text-[16px] font-extrabold tabular text-warning shrink-0">
-                +{s.quantite_surplus}
-              </p>
-            </div>
-            {s.notes && (
-              <p className="text-[11.5px] text-text-secondary mt-3 bg-cream rounded-xl p-2">
-                {s.notes}
-              </p>
-            )}
-          </div>
-        ))
+        <>
+          <p className="label-caps text-text-tertiary">
+            {pending.length} surplus en attente — accepter (facturer
+            fournisseur) ou refuser (retourner)
+          </p>
+          {pending.map((s) => (
+            <SurplusCard
+              key={s.id}
+              alerte={s}
+              onClick={() => onDetail(s)}
+            />
+          ))}
+        </>
       )}
-      <button
-        onClick={onOpenAdmin}
-        className="w-full mt-4 bg-primary text-white rounded-[18px] py-3.5 font-bold flex items-center justify-center gap-2 shadow-card active:scale-[0.99]"
-      >
-        <FileText className="w-4 h-4" />
-        Page complète surplus
-      </button>
+
+      {historique.length > 0 && (
+        <div className="mt-7">
+          <p className="label-caps text-text-tertiary mb-2">
+            Historique ({historique.length})
+          </p>
+          <div className="space-y-2 opacity-80">
+            {historique.slice(0, 10).map((s) => (
+              <SurplusCard
+                key={s.id}
+                alerte={s}
+                onClick={() => onDetail(s)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function SurplusCard({
+  alerte,
+  onClick,
+}: {
+  alerte: AlerteSurplus;
+  onClick: () => void;
+}) {
+  const isPending = alerte.statut === "en_attente";
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full bg-white border rounded-2xl p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform ${
+        isPending ? "border-danger/40 shadow-card" : "border-rule"
+      }`}
+    >
+      <span
+        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+          isPending
+            ? "bg-danger-soft text-danger"
+            : alerte.statut === "accepte"
+              ? "bg-success-soft text-success"
+              : "bg-cream text-text-tertiary"
+        }`}
+      >
+        {isPending ? (
+          <AlertTriangle className="w-5 h-5" />
+        ) : alerte.statut === "accepte" ? (
+          <CheckCircle2 className="w-5 h-5" />
+        ) : (
+          <X className="w-5 h-5" />
+        )}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13.5px] font-bold text-text-primary truncate">
+          {alerte.produits?.nom ?? "Produit inconnu"}
+        </p>
+        <p className="text-[11.5px] text-text-secondary mt-0.5 truncate">
+          {alerte.bons_de_livraison?.fournisseurs?.nom ?? "—"} · BDL{" "}
+          {alerte.bons_de_livraison?.numero_bdl ?? "—"}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-[15px] font-extrabold text-text-primary tabular">
+          +{alerte.quantite_surplus}
+        </p>
+        <p className="text-[10px] text-text-tertiary mt-0.5">
+          {timeAgoFr(alerte.signale_le)}
+        </p>
+      </div>
+    </button>
   );
 }
 

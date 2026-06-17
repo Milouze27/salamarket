@@ -18,17 +18,14 @@ import {
   CornerDownLeft,
   Fingerprint,
   FileSpreadsheet,
-  FlaskConical,
   Gauge,
   Home,
   LayoutDashboard,
   LineChart,
-  MonitorPlay,
   PackageSearch,
   Printer,
   Receipt,
   Repeat2,
-  ScanLine,
   Search,
   ShoppingBag,
   Sparkles,
@@ -221,14 +218,6 @@ const OPERER: PaletteItem[] = [
     keywords: "catalogue produits articles references inventaire quantite",
   },
   {
-    id: "nav-stock-sans-ean",
-    label: "Produits sans EAN",
-    href: "/v2/stock/sans-ean",
-    icon: ScanLine,
-    hint: "À étiqueter en interne",
-    keywords: "sans ean sans code barre non scanne vrac generer code manquant",
-  },
-  {
     id: "nav-preparation",
     label: "Préparation drive",
     href: "/v2/preparation",
@@ -281,14 +270,6 @@ const PILOTER: PaletteItem[] = [
     hint: "Surveillance casse & démarque",
     keywords:
       "casse anomalie demarque perte vol perime ecart surveillance suivi fuite manquant",
-  },
-  {
-    id: "nav-counter",
-    label: "Écran comptoir",
-    href: "/v2/counter",
-    icon: MonitorPlay,
-    hint: "TV/iPad — commandes prêtes",
-    keywords: "comptoir counter tv borne retrait pret client appel numero",
   },
 ];
 
@@ -354,15 +335,6 @@ const ADMINISTRER: PaletteItem[] = [
     keywords: "lot tracabilite qr code halal certif numero lot batch",
   },
   {
-    id: "nav-labo",
-    label: "Recettes & marges",
-    href: "/v2/labo",
-    icon: FlaskConical,
-    hint: "Recettes, coûts, marges",
-    keywords:
-      "labo laboratoire recette marge cout cuisine production fabrication transformation prix revient nomenclature",
-  },
-  {
     id: "nav-inventaire",
     label: "Inventaire tournant",
     href: "/v2/inventaire",
@@ -388,22 +360,13 @@ const ADMINISTRER: PaletteItem[] = [
       "pointage staff presence heures badge horaire planning employe equipe entree sortie temps travail",
   },
   {
-    id: "nav-recap",
-    label: "Récap fiscal du jour",
-    href: "/v2/admin/recap-fiscal",
-    icon: FileSpreadsheet,
-    hint: "TVA, ventes, ticket Z",
-    keywords:
-      "recap fiscal tva ventes ticket z cloture journee chiffre affaire comptable",
-  },
-  {
     id: "nav-rapport",
-    label: "Rapport mensuel",
+    label: "Rapport comptable",
     href: "/v2/admin/rapport-mensuel",
     icon: BarChart3,
-    hint: "Synthèse du mois",
+    hint: "Mensuel + récap fiscal (Z)",
     keywords:
-      "rapport mensuel mois synthese bilan ca chiffre affaire comptable export",
+      "rapport mensuel mois synthese bilan ca chiffre affaire comptable export recap fiscal tva ticket z cloture journee",
   },
   {
     id: "nav-activite",
@@ -423,15 +386,6 @@ const ADMINISTRER: PaletteItem[] = [
     keywords: "alertes centre notifications urgent stock seuil ia",
   },
   {
-    id: "nav-surplus",
-    label: "Alertes surplus",
-    href: "/v2/admin/alertes-surplus",
-    icon: Boxes,
-    hint: "Surstock à écouler",
-    keywords:
-      "surplus surstock trop stock dormant ecouler immobilisation overstock",
-  },
-  {
     id: "nav-bons",
     label: "Bons de réception",
     href: "/v2/admin/bons-reception",
@@ -441,20 +395,12 @@ const ADMINISTRER: PaletteItem[] = [
   },
   {
     id: "nav-import",
-    label: "Import Cashmag",
-    href: "/v2/admin/import-cashmag",
+    label: "Imports (ventes + catalogue)",
+    href: "/v2/admin/import",
     icon: FileSpreadsheet,
-    hint: "Sync caisse / ventes",
-    keywords: "import cashmag caisse ventes sync csv export pos integration",
-  },
-  {
-    id: "nav-import-stock",
-    label: "Import catalogue stock",
-    href: "/v2/admin/import-stock",
-    icon: FileSpreadsheet,
-    hint: "CSV produits → stock",
+    hint: "Cashmag (ventes) + catalogue stock",
     keywords:
-      "import stock catalogue produits ean csv onboarding initialiser prix",
+      "import cashmag caisse ventes sync csv export pos integration stock catalogue produits ean onboarding initialiser prix",
   },
   {
     id: "nav-assistant",

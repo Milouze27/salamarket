@@ -2,6 +2,7 @@
 
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -18,10 +19,12 @@ import {
   CornerDownLeft,
   Fingerprint,
   FileSpreadsheet,
+  FlaskConical,
   Gauge,
   Home,
   LayoutDashboard,
   LineChart,
+  Lock,
   PackageSearch,
   Printer,
   Receipt,
@@ -41,6 +44,10 @@ import { useV2 } from "@/lib/v2-store";
 import { listDepots, searchProduits } from "@/lib/db";
 import type { Depot, Produit } from "@/lib/types/db";
 import { filterItemsForRole } from "@/lib/nav-roles";
+import {
+  isLockedFeature,
+  LOCKED_UPSELL_MESSAGE,
+} from "@/lib/locked-features";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { useDialogA11y } from "@/lib/hooks/useDialogA11y";
 
@@ -335,6 +342,15 @@ const ADMINISTRER: PaletteItem[] = [
     keywords: "lot tracabilite qr code halal certif numero lot batch",
   },
   {
+    id: "nav-labo",
+    label: "Recettes & marges",
+    href: "/v2/labo",
+    icon: FlaskConical,
+    hint: "Recettes, coûts, marges",
+    keywords:
+      "labo laboratoire recette marge cout cuisine production fabrication transformation prix revient nomenclature",
+  },
+  {
     id: "nav-inventaire",
     label: "Inventaire tournant",
     href: "/v2/inventaire",
@@ -467,6 +483,7 @@ function NavRow({
   }) => void;
 }) {
   const Icon = item.icon;
+  const locked = isLockedFeature(item.href);
   return (
     <Command.Item
       value={`${prefix} ${item.label} ${item.hint} ${item.keywords ?? ""}`}
@@ -475,13 +492,24 @@ function NavRow({
       }
       className="cmdk-item"
     >
-      <Icon className="w-4 h-4 text-primary shrink-0" strokeWidth={2.2} />
+      <Icon
+        className="w-4 h-4 shrink-0"
+        strokeWidth={2.2}
+        style={{ color: locked ? "var(--accent-gold)" : "var(--primary-green)" }}
+      />
       <span className="flex-1 truncate font-semibold text-text-primary">
         {item.label}
       </span>
-      <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">
-        {item.hint}
-      </span>
+      {locked ? (
+        <Lock
+          className="w-3.5 h-3.5 shrink-0"
+          style={{ color: "var(--accent-gold)" }}
+        />
+      ) : (
+        <span className="text-[11px] text-text-tertiary truncate hidden sm:inline">
+          {item.hint}
+        </span>
+      )}
     </Command.Item>
   );
 }
@@ -590,6 +618,11 @@ export function CommandPalette() {
       href: string;
       type: RecentAction["type"];
     }) => {
+      // Fonctionnalité cadenassée (vendue, pas encore activée) : upsell, pas de nav.
+      if (isLockedFeature(action.href)) {
+        toast(LOCKED_UPSELL_MESSAGE, { icon: "🔒" });
+        return;
+      }
       pushRecent({
         id: action.id,
         label: action.label,

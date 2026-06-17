@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   LineChart,
   Loader2,
+  Lock,
   MonitorPlay,
   MoreHorizontal,
   PackageSearch,
@@ -40,9 +41,11 @@ import {
   Truck,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useV2 } from "@/lib/v2-store";
 import { dataMode, countDlcAlerts } from "@/lib/db";
 import { filterItemsForRole } from "@/lib/nav-roles";
+import { isLockedFeature, LOCKED_UPSELL_MESSAGE } from "@/lib/locked-features";
 import { roleLabel } from "@/lib/role-label";
 import { DepotSwitcher } from "./DepotSwitcher";
 import { V2Logo } from "./V2Logo";
@@ -381,8 +384,8 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.importCashmag,
   ];
   // Outils & analyses = écrans métier d'aide à la décision (pas des réglages).
-  // (labo masqué : module non activé pour ce client.)
-  const outils = [ITEMS.admin, ITEMS.assistantIa];
+  // labo (Marges & recettes) affiché mais CADENASSÉ (cf. lib/locked-features).
+  const outils = [ITEMS.admin, ITEMS.assistantIa, ITEMS.labo];
 
   // 1) périmètre par rôle (cohérent ⌘K) puis 2) dédup avec la bottom-bar.
   const prepare = (items: NavItem[]) =>
@@ -900,6 +903,48 @@ export function V2Shell({
                               const active = it.exact
                                 ? pathname === it.href
                                 : pathname.startsWith(it.href);
+                              const locked = isLockedFeature(it.href);
+
+                              // Entrée cadenassée : on la MONTRE (teaser) mais le
+                              // clic affiche un upsell au lieu de naviguer.
+                              if (locked) {
+                                return (
+                                  <button
+                                    key={it.href}
+                                    type="button"
+                                    onClick={() =>
+                                      toast(LOCKED_UPSELL_MESSAGE, {
+                                        icon: "🔒",
+                                      })
+                                    }
+                                    aria-disabled
+                                    className="feature-locked w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors"
+                                  >
+                                    <span
+                                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                                      style={{
+                                        background: "var(--accent-gold-soft)",
+                                        color: "var(--accent-gold)",
+                                      }}
+                                    >
+                                      <Icon className="w-5 h-5" strokeWidth={2.1} />
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-bold text-text-primary truncate">
+                                        {it.fullLabel ?? it.label}
+                                      </p>
+                                      <p className="text-[11px] font-semibold truncate" style={{ color: "var(--accent-gold)" }}>
+                                        Option à activer
+                                      </p>
+                                    </div>
+                                    <Lock
+                                      className="w-4 h-4 shrink-0"
+                                      style={{ color: "var(--accent-gold)" }}
+                                    />
+                                  </button>
+                                );
+                              }
+
                               return (
                                 <Link
                                   key={it.href}

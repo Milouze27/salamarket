@@ -18,6 +18,16 @@ interface V2State {
   currentEmploye: Employe | null;
   setCurrentEmploye: (e: Employe | null) => void;
   logoutEmploye: () => void;
+
+  /**
+   * Rôle de PRÉVISUALISATION ("Voir en tant que") : un admin/manager peut
+   * afficher l'app comme un rôle terrain pour repérer les bugs de cette
+   * interface, SANS changer ses droits réels (currentEmploye.role inchangé).
+   * UI-only : ne filtre que la navigation. Non persisté (reset au reload pour
+   * ne jamais piéger l'admin en vue réduite).
+   */
+  previewRole: EmployeRole | null;
+  setPreviewRole: (r: EmployeRole | null) => void;
 }
 
 export const useV2 = create<V2State>()(
@@ -31,7 +41,10 @@ export const useV2 = create<V2State>()(
 
       currentEmploye: null,
       setCurrentEmploye: (e) => set({ currentEmploye: e }),
-      logoutEmploye: () => set({ currentEmploye: null }),
+      logoutEmploye: () => set({ currentEmploye: null, previewRole: null }),
+
+      previewRole: null,
+      setPreviewRole: (r) => set({ previewRole: r }),
     }),
     {
       name: "salam-v2-store",

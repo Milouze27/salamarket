@@ -17,6 +17,7 @@ import {
   ClipboardList,
   Clock,
   Compass,
+  Eye,
   Fingerprint,
   FileSpreadsheet,
   FlaskConical,
@@ -421,6 +422,8 @@ export function V2Shell({
   const employe = useV2((s) => s.currentEmploye);
   const depot = useV2((s) => s.currentDepot);
   const logout = useV2((s) => s.logoutEmploye);
+  const previewRole = useV2((s) => s.previewRole);
+  const setPreviewRole = useV2((s) => s.setPreviewRole);
   const [mode, setMode] = useState<"supabase" | "local">("local");
   const [sheetOpen, setSheetOpen] = useState(false);
   // Sous-groupes du Plus-sheet repliés par défaut, sauf le terrain + pilotage.
@@ -530,9 +533,16 @@ export function V2Shell({
 
   if (!employe) return null;
 
-  const primary = primaryFor(employe.role);
+  // « Voir en tant que » : seuls admin/manager peuvent prévisualiser un rôle
+  // terrain. Le rôle EFFECTIF ne pilote que le filtrage de la nav ; les droits
+  // réels (employe.role) restent intacts pour les pages/actions.
+  const canPreview = employe.role === "admin" || employe.role === "manager";
+  const activePreview = canPreview ? previewRole : null;
+  const effectiveRole = activePreview ?? employe.role;
+
+  const primary = primaryFor(effectiveRole);
   const primaryHrefs = new Set(primary.map((it) => it.href));
-  const sheetGroups = sheetGroupsFor(employe.role, primaryHrefs);
+  const sheetGroups = sheetGroupsFor(effectiveRole, primaryHrefs);
 
   // BUG-006 : cockpit/admin doivent respirer sur desktop/iPad. En mode wide,
   // on étend à une largeur tablette confortable (820px) ≥md, harmonisée avec
@@ -628,6 +638,9 @@ export function V2Shell({
                   role={employe.role}
                   name={employe.prenom ?? undefined}
                   onLogout={logout}
+                  canPreview={canPreview}
+                  previewRole={activePreview}
+                  onPreviewRole={setPreviewRole}
                 />
               </span>
             </div>
@@ -635,6 +648,22 @@ export function V2Shell({
               <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">
                 MODE DÉMO LOCAL · Supabase non connecté
               </div>
+            )}
+            {/* Bandeau « Voir en tant que » — rappelle qu'on simule un rôle et
+                permet de revenir admin en 1 tap (l'admin garde ses droits réels). */}
+            {activePreview && (
+              <button
+                type="button"
+                onClick={() => setPreviewRole(null)}
+                className="w-full flex items-center justify-center gap-2 py-1.5 text-[11px] font-bold"
+                style={{
+                  background: "var(--accent-gold-soft)",
+                  color: "var(--accent-gold)",
+                }}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Vue {roleLabel(activePreview)} — revenir en {roleLabel(employe.role)}
+              </button>
             )}
           </header>
 

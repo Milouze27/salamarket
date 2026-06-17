@@ -525,7 +525,14 @@ export function CommandPalette() {
   const [recent, setRecent] = useState<RecentAction[]>([]);
   const currentDepot = useV2((s) => s.currentDepot);
   const setCurrentDepot = useV2((s) => s.setCurrentDepot);
-  const role = useV2((s) => s.currentEmploye?.role);
+  const realRole = useV2((s) => s.currentEmploye?.role);
+  const previewRole = useV2((s) => s.previewRole);
+  // Rôle effectif pour le filtrage : si l'admin/manager prévisualise un rôle
+  // terrain (« Voir en tant que »), la palette se filtre comme ce rôle.
+  const role =
+    (realRole === "admin" || realRole === "manager") && previewRole
+      ? previewRole
+      : realRole;
   const searchSeq = useRef(0);
 
   // Listes filtrées par rôle (caisse/reception masquent le hors-périmètre).

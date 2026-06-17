@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
+import { Eye, LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
 import { roleLabel } from "@/lib/role-label";
+import type { EmployeRole } from "@/lib/types/db";
+
+/** Rôles terrain prévisualisables (« Voir en tant que »). */
+const PREVIEW_ROLES: EmployeRole[] = ["caisse", "reception", "preparation"];
 
 interface AdminMenuProps {
   /** Le rôle de l'employé (affiché en sous-titre). */
@@ -16,6 +20,12 @@ interface AdminMenuProps {
   name?: string;
   /** Déconnexion — migrée du header (ARCH-11). */
   onLogout?: () => void;
+  /** L'employé réel peut-il prévisualiser un rôle (admin/manager) ? */
+  canPreview?: boolean;
+  /** Rôle de prévisualisation actif (null = vue réelle). */
+  previewRole?: EmployeRole | null;
+  /** Change le rôle de prévisualisation (null = revenir à la vue réelle). */
+  onPreviewRole?: (r: EmployeRole | null) => void;
 }
 
 /**
@@ -27,7 +37,14 @@ interface AdminMenuProps {
  * + le Plus-sheet (V2Shell) + ⌘K. Ce composant ne garde que ce qui lui était
  * propre : le thème jour/nuit, la densité d'affichage et la déconnexion.
  */
-export function AdminMenu({ role, name, onLogout }: AdminMenuProps) {
+export function AdminMenu({
+  role,
+  name,
+  onLogout,
+  canPreview = false,
+  previewRole = null,
+  onPreviewRole,
+}: AdminMenuProps) {
   const [open, setOpen] = useState(false);
   const { resolved, toggle: toggleTheme } = useTheme();
   const { density, toggle: toggleDensity } = useDensity();
@@ -120,8 +137,59 @@ export function AdminMenu({ role, name, onLogout }: AdminMenuProps) {
               </button>
             </div>
 
-            {/* RÉGLAGES */}
+            {/* VOIR EN TANT QUE — admin/manager : prévisualise l'interface
+                d'un rôle terrain pour repérer ses bugs, sans perdre ses droits. */}
             <nav className="flex-1 overflow-y-auto px-3 py-3">
+              {canPreview && onPreviewRole && (
+                <div className="mb-2">
+                  <p
+                    className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--accent-gold-dim)" }}
+                  >
+                    Voir en tant que
+                  </p>
+                  <p className="px-3 pb-2 text-[11px] text-text-secondary leading-snug">
+                    Affiche l'app comme la voit un rôle terrain (tes droits réels
+                    restent inchangés).
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 px-1">
+                    {([null, ...PREVIEW_ROLES] as (EmployeRole | null)[]).map(
+                      (r) => {
+                        const active = previewRole === r;
+                        const label =
+                          r === null ? `${roleLabel(role)} (réel)` : roleLabel(r);
+                        return (
+                          <button
+                            key={r ?? "real"}
+                            type="button"
+                            onClick={() => {
+                              onPreviewRole(r);
+                              setOpen(false);
+                            }}
+                            aria-pressed={active}
+                            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-[12.5px] font-bold transition-colors"
+                            style={
+                              active
+                                ? {
+                                    background: "var(--accent-gold)",
+                                    color: "var(--primary-green-dark)",
+                                  }
+                                : {
+                                    background: "var(--surface-1)",
+                                    color: "var(--text-secondary)",
+                                  }
+                            }
+                          >
+                            {r !== null && <Eye className="w-3.5 h-3.5" />}
+                            {label}
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
+                </div>
+              )}
+
               <p
                 className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
                 style={{ color: "var(--accent-gold-dim)" }}

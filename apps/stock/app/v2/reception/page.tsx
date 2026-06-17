@@ -446,42 +446,50 @@ export default function V2ReceptionPage() {
     return () => clearTimeout(t);
   }, [searchQuery, learnMode]);
 
-  function handleLearnUnitFor(produit: Produit) {
+  async function handleLearnUnitFor(produit: Produit) {
     if (!unknownEan) return;
     if (pendingProduitForCarton) {
       // We're in carton-unit-scan mode: link the carton to this product.
-      void learnCarton({
-        ean_carton: pendingProduitForCarton.ean ?? "",
-        produit_id: produit.id,
-        quantite_par_carton: cartonQty,
-        learned_by: employe?.id,
-        fournisseur: fournisseur || undefined,
-      })
-        .then(() =>
-          pushScan({
-            code: unknownEan,
-            produit,
-            quantite: cartonQty,
-            source: "carton",
-            cartonInfo: { ean: unknownEan, multiplier: cartonQty },
-          }),
-        )
-        .then(() => {
-          toast.success(`Carton appris : ${produit.nom} × ${cartonQty}`, {
-            duration: 2200,
-          });
-          closeLearn();
+      try {
+        await learnCarton({
+          ean_carton: pendingProduitForCarton.ean ?? "",
+          produit_id: produit.id,
+          quantite_par_carton: cartonQty,
+          learned_by: employe?.id,
+          fournisseur: fournisseur || undefined,
         });
+        await pushScan({
+          code: unknownEan,
+          produit,
+          quantite: cartonQty,
+          source: "carton",
+          cartonInfo: { ean: unknownEan, multiplier: cartonQty },
+        });
+        toast.success(`Carton appris : ${produit.nom} × ${cartonQty}`, {
+          duration: 2200,
+        });
+        closeLearn();
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          err instanceof Error ? err.message : "Apprentissage carton échoué",
+        );
+        // On laisse le modal ouvert pour réessayer.
+      }
     } else {
-      void pushScan({
-        code: unknownEan,
-        produit,
-        quantite: 1,
-        source: "unit",
-      }).then(() => {
+      try {
+        await pushScan({
+          code: unknownEan,
+          produit,
+          quantite: 1,
+          source: "unit",
+        });
         toast.success(`${produit.nom} · +1`);
         closeLearn();
-      });
+      } catch (err) {
+        console.error(err);
+        toast.error(err instanceof Error ? err.message : "Ajout échoué");
+      }
     }
   }
 

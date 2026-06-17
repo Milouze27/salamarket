@@ -119,6 +119,26 @@ export default function PoDetailPage() {
     setDirty(true);
   }
 
+  // Recalcule et persiste le total du PO depuis les lignes fournies (le
+  // trigger DB ne le fait pas, c'est notre app qui orchestre l'agrégation).
+  // Partagé par saveLignes et removeLigne pour ne pas désynchroniser le total.
+  async function persistTotal(
+    sb: NonNullable<ReturnType<typeof supabase>>,
+    lignesAJour: PurchaseOrderLigne[],
+  ) {
+    if (!poId) return;
+    const nouveauTotal = lignesAJour.reduce(
+      (s, l) =>
+        s +
+        (Number(l.prix_achat_ht) || 0) * (Number(l.quantite_commandee) || 0),
+      0,
+    );
+    await sb
+      .from("purchase_orders")
+      .update({ total_ht: nouveauTotal, total_ttc: nouveauTotal * 1.055 })
+      .eq("id", poId);
+  }
+
   async function removeLigne(id: string) {
     if (!confirm("Supprimer cette ligne du brouillon ?")) return;
     const sb = supabase();
@@ -131,7 +151,9 @@ export default function PoDetailPage() {
       toast.error("Suppression impossible");
       return;
     }
-    setLignes((prev) => prev.filter((l) => l.id !== id));
+    const restantes = lignes.filter((l) => l.id !== id);
+    setLignes(restantes);
+    await persistTotal(sb, restantes);
   }
 
   async function saveLignes() {
@@ -158,12 +180,7 @@ export default function PoDetailPage() {
       setSaving(false);
       return;
     }
-    // Recalcule le total HT côté PO (le trigger ne le fait pas, c'est
-    // notre app qui orchestre l'agrégation).
-    await sb
-      .from("purchase_orders")
-      .update({ total_ht: totalHt, total_ttc: totalHt * 1.055 })
-      .eq("id", poId);
+    await persistTotal(sb, lignes);
     setDirty(false);
     setSaving(false);
     toast.success("Brouillon mis à jour");

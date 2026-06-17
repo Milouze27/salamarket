@@ -71,3 +71,20 @@ export function filterItemsForRole<T extends { href: string }>(
   if (!allowed) return items; // manager / admin : tout
   return items.filter((it) => allowed.has(it.href));
 }
+
+/**
+ * Vrai si le rôle a le droit d'atteindre cet href (même périmètre que
+ * `filterItemsForRole`, version cible unique). Utile pour filtrer une cible
+ * dynamique — typiquement un item « Récent » de la palette ⌘K, dont le href
+ * a pu être poussé dans le localStorage partagé du poste par un manager/admin
+ * puis rester cliquable pour un employé caisse/reception/preparation.
+ */
+export function isHrefAllowed(
+  role: string | undefined,
+  href: string,
+): boolean {
+  if (!role) return true;
+  const allowed = ROLE_ALLOWED[role];
+  if (!allowed) return true; // manager / admin : tout
+  return allowed.has(href);
+}

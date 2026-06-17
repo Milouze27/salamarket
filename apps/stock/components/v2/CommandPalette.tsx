@@ -673,8 +673,11 @@ export function CommandPalette() {
 
   const recentResolved = useMemo(() => {
     if (query.trim().length > 0) return [];
-    return recent;
-  }, [recent, query]);
+    // Même périmètre rôle que les listes statiques : sans ça un item « Récent »
+    // poussé par un manager (localStorage partagé entre employés d'un poste)
+    // reste cliquable pour un caisse/réception/prépa et le mène hors périmètre.
+    return filterItemsForRole(role, recent);
+  }, [recent, query, role]);
 
   if (!open) return null;
 

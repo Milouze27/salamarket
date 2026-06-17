@@ -102,7 +102,7 @@ export default function V2EtiquettesPage() {
       }
     }
     setGenerating(true);
-    setProgress({ done: 0, total: totalCopies });
+    setProgress({ done: 0, total: 0 });
     try {
       if (format === "brother") {
         await generateBrother(selected);

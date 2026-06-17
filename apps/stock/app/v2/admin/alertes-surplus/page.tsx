@@ -65,6 +65,7 @@ export default function AlertesSurplusPage() {
   const [alertes, setAlertes] = useState<AlerteSurplus[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<AlerteSurplus | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function fetchAlertes() {
     setLoading(true);
@@ -97,25 +98,30 @@ export default function AlertesSurplusPage() {
   async function decide(alerte: AlerteSurplus, statut: "accepte" | "refuse") {
     const sb = supabase();
     if (!sb) return;
-    const { error } = await sb
-      .from("alertes_surplus")
-      .update({
-        statut,
-        decideur: employe?.id ?? null,
-        decide_le: new Date().toISOString(),
-      })
-      .eq("id", alerte.id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    setSubmitting(true);
+    try {
+      const { error } = await sb
+        .from("alertes_surplus")
+        .update({
+          statut,
+          decideur: employe?.id ?? null,
+          decide_le: new Date().toISOString(),
+        })
+        .eq("id", alerte.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(
+        statut === "accepte"
+          ? "Surplus accepté · facture fournisseur à émettre"
+          : "Surplus refusé · à retourner au fournisseur",
+      );
+      setDetail(null);
+      void fetchAlertes();
+    } finally {
+      setSubmitting(false);
     }
-    toast.success(
-      statut === "accepte"
-        ? "Surplus accepté · facture fournisseur à émettre"
-        : "Surplus refusé · à retourner au fournisseur",
-    );
-    setDetail(null);
-    void fetchAlertes();
   }
 
   const enAttente = alertes.filter((a) => a.statut === "en_attente");
@@ -267,7 +273,8 @@ export default function AlertesSurplusPage() {
                 <div className="mt-6 space-y-2.5">
                   <button
                     onClick={() => void decide(detail, "accepte")}
-                    className="w-full bg-success text-white rounded-[18px] py-4 px-5 flex items-center justify-between font-bold shadow-card-lg active:scale-[0.99]"
+                    disabled={submitting}
+                    className="w-full bg-success text-white rounded-[18px] py-4 px-5 flex items-center justify-between font-bold shadow-card-lg active:scale-[0.99] disabled:opacity-50"
                   >
                     <span className="text-left">
                       <span className="block label-caps text-white/80">
@@ -277,11 +284,16 @@ export default function AlertesSurplusPage() {
                         Facturer au fournisseur
                       </span>
                     </span>
-                    <FileText className="w-5 h-5" />
+                    {submitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <FileText className="w-5 h-5" />
+                    )}
                   </button>
                   <button
                     onClick={() => void decide(detail, "refuse")}
-                    className="w-full bg-white border border-rule text-text-primary rounded-[18px] py-3.5 px-5 flex items-center justify-between font-bold active:scale-[0.99]"
+                    disabled={submitting}
+                    className="w-full bg-white border border-rule text-text-primary rounded-[18px] py-3.5 px-5 flex items-center justify-between font-bold active:scale-[0.99] disabled:opacity-50"
                   >
                     <span className="text-left">
                       <span className="block label-caps text-text-tertiary">
@@ -291,7 +303,11 @@ export default function AlertesSurplusPage() {
                         Retourner au fournisseur
                       </span>
                     </span>
-                    <RotateCcw className="w-5 h-5" />
+                    {submitting ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               )}

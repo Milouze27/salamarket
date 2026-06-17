@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -60,7 +59,6 @@ function fmtDateTimeFr(iso: string | null) {
 }
 
 export default function BonsReceptionAdminPage() {
-  const router = useRouter();
   const [rows, setRows] = useState<BdlRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("7j");

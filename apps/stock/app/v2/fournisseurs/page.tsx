@@ -122,12 +122,13 @@ export default function FournisseursPage() {
   }, [list, search]);
 
   const counts = useMemo(() => {
-    const acc = { expiree: 0, expire_30j: 0, ok: 0, manquante: 0 };
+    const acc = { expiree: 0, expire_30j: 0, expire_60j: 0, ok: 0, manquante: 0 };
     for (const f of list) {
       const a = certifAlerte(f.certif_expire_le);
       if (a === "expiree") acc.expiree++;
       else if (a === "expire_30j") acc.expire_30j++;
       else if (a === "manquante") acc.manquante++;
+      else if (a === "expire_60j") acc.expire_60j++;
       else acc.ok++;
     }
     return acc;
@@ -154,10 +155,15 @@ export default function FournisseursPage() {
         </header>
 
         {/* Strip stats */}
-        <div className="grid grid-cols-4 gap-2 mb-5">
+        <div className="grid grid-cols-5 gap-2 mb-5">
           <StatPill value={counts.expiree} label="Expirés" tone="danger" />
           <StatPill value={counts.manquante} label="Manquants" tone="danger" />
           <StatPill value={counts.expire_30j} label="< 30 j" tone="warning" />
+          <StatPill
+            value={counts.expire_60j}
+            label="À renouveler"
+            tone="warning"
+          />
           <StatPill value={counts.ok} label="OK" tone="success" />
         </div>
 

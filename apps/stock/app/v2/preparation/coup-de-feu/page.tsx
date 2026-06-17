@@ -215,7 +215,7 @@ export default function CoupDeFeuPage() {
     <V2Shell wide>
       <PageAccentStripe accent="or-sapin" />
       <header className="px-5 pt-7">
-        <BackButton label="Préparation" />
+        <BackButton label="Préparation" href="/v2/preparation" />
         <div className="flex items-end justify-between gap-3 mt-3">
           <div className="min-w-0">
             <EditorialEyebrow num="01" label="Coup de feu" />

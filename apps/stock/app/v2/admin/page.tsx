@@ -439,16 +439,8 @@ export default function V2AdminDashboardPage() {
                       )}
                     </div>
                     <div className="grid grid-cols-4 gap-2 mt-4 text-left">
-                      <Stat
-                        label="Produits"
-                        value={s.productCount}
-                        spark={[12, 14, 13, 15, 18, 17, 21, 22]}
-                      />
-                      <Stat
-                        label="Unités"
-                        value={s.totalUnits}
-                        spark={[180, 196, 184, 220, 232, 245, 238, 256]}
-                      />
+                      <Stat label="Produits" value={s.productCount} />
+                      <Stat label="Unités" value={s.totalUnits} />
                       <Stat
                         label="Valeur stock"
                         value={`${Math.round(s.totalCost).toLocaleString("fr-FR")} €`}
@@ -458,13 +450,11 @@ export default function V2AdminDashboardPage() {
                             ? `marge +${Math.round(s.margePotentielle).toLocaleString("fr-FR")} €`
                             : "au coût d'achat"
                         }
-                        spark={[3200, 3450, 3380, 3620, 3890, 3760, 4120, 4280]}
                       />
                       <Stat
                         label="Mouvts"
                         value={`${s.receptionsToday}↓ ${s.sortiesToday}↑`}
                         hint="24h"
-                        spark={[4, 6, 3, 7, 9, 5, 8, 11]}
                       />
                     </div>
                   </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarDays, Check, ClipboardCheck } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
@@ -14,7 +13,6 @@ import {
 import type { Depot, Employe, InventaireTournant } from "@/lib/types/db";
 
 export default function V2InventaireHistoriquePage() {
-  const router = useRouter();
   const depot = useV2((s) => s.currentDepot);
   const [rows, setRows] = useState<InventaireTournant[]>([]);
   const [depots, setDepots] = useState<Depot[]>([]);
@@ -66,7 +64,7 @@ export default function V2InventaireHistoriquePage() {
         <p className="body-md text-text-secondary mt-1">
           {scope === "depot"
             ? `Tournants comptés sur ${depot?.nom ?? "ce dépôt"}.`
-            : "Tournants comptés sur les 3 dépôts."}
+            : `Tournants comptés sur les ${depots.length} dépôts.`}
         </p>
 
         <div className="flex gap-2 mt-4">

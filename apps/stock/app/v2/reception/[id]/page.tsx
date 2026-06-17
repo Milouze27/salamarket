@@ -78,7 +78,6 @@ export default function BdlReceptionPage() {
   // Surplus modal state — EAN connu du catalogue mais hors BDL
   const [surplusModal, setSurplusModal] = useState<SurplusState | null>(null);
   const [surplusQty, setSurplusQty] = useState<number | "">(1);
-  const [adminIds, setAdminIds] = useState<string[]>([]);
 
   // Create-product modal state — EAN totalement inconnu (pas en catalogue)
   const [createModal, setCreateModal] = useState<{ code: string } | null>(null);
@@ -136,32 +135,6 @@ export default function BdlReceptionPage() {
     void fetchBdl();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bdlId]);
-
-  // Récupère les IDs admins (Otmane + Ahmed) pour push surplus.
-  useEffect(() => {
-    void (async () => {
-      const sb = supabase();
-      if (!sb) return;
-      // SECURITY : vue publique anon-safe.
-      const { data } = await sb
-        .from("employes_public")
-        .select("id, role, prenom")
-        .eq("is_active", true);
-      const ids = (
-        (data ?? []) as Array<{
-          id: string;
-          role: string;
-          prenom: string | null;
-        }>
-      )
-        .filter(
-          (e) =>
-            e.role === "admin" || ["Otmane", "Ahmed"].includes(e.prenom ?? ""),
-        )
-        .map((e) => e.id);
-      setAdminIds(ids);
-    })().catch((e) => console.warn("[adminIds] fail:", e));
-  }, []);
 
   // Search produits dans modal carton learn step "pick"
   useEffect(() => {

@@ -181,7 +181,6 @@ export default function V2LotDetailPage() {
 
   // Verdict global du moat (priorité : certif expiré > DLC dépassée > OK).
   const certifExpired = certifValid === false;
-  const hasIssue = certifExpired || dlcPassed;
 
   function copyUrl() {
     if (!publicUrl) return;

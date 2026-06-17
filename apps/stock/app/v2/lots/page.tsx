@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
@@ -90,6 +91,7 @@ function certifState(
 }
 
 export default function V2LotsListPage() {
+  const router = useRouter();
   const [list, setList] = useState<LotRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -205,9 +207,14 @@ export default function V2LotsListPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: Math.min(i * 0.015, 0.3) }}
                 >
-                  <Link
-                    href={`/v2/lots/${lot.id}`}
-                    className="block card card-tappable hover:shadow-md"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/v2/lots/${lot.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") router.push(`/v2/lots/${lot.id}`);
+                    }}
+                    className="block card card-tappable hover:shadow-md cursor-pointer"
                     style={{ padding: 14 }}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -299,7 +306,7 @@ export default function V2LotsListPage() {
                         Détail staff →
                       </span>
                     </div>
-                  </Link>
+                  </div>
                 </motion.li>
               );
             })}

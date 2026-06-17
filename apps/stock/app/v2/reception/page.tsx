@@ -1134,7 +1134,7 @@ export default function V2ReceptionPage() {
                       </div>
                     </button>
                   ))}
-                  {searchQuery.length >= 2 && searchResults.length === 0 && (
+                  {searchQuery.trim().length > 0 && searchResults.length === 0 && (
                     <p className="text-xs text-text-tertiary text-center py-4">
                       Aucun résultat
                     </p>

@@ -348,6 +348,16 @@ export default function AlertesPage() {
     };
   }, [sorties, demarque, surplus]);
 
+  // La démarque reste vide tant que l'historique cashmag n'est pas consolidé
+  // (cf. setDemarque([]) plus haut). On masque l'onglet + le KPI tant qu'il n'y
+  // a aucune ligne pour ne pas afficher d'indicateur mort à 0 €.
+  const showDemarque = demarque.length > 0;
+
+  // Si l'onglet Démarque était sélectionné mais devient masqué, retomber sur Sorties.
+  useEffect(() => {
+    if (!showDemarque && tab === "demarque") setTab("sorties");
+  }, [showDemarque, tab]);
+
   return (
     <V2Shell hideNav>
       <PageAccentStripe accent="bordeaux" />
@@ -375,13 +385,15 @@ export default function AlertesPage() {
           value={`${kpi.urgentes}`}
           label="alertes à traiter"
         />
-        <KpiCard
-          variant="warn"
-          icon={<TrendingDown className="w-4 h-4" />}
-          eyebrow="DÉMARQUE 7J"
-          value={fr(kpi.demarqueValue)}
-          label="à enquêter"
-        />
+        {showDemarque && (
+          <KpiCard
+            variant="warn"
+            icon={<TrendingDown className="w-4 h-4" />}
+            eyebrow="DÉMARQUE 7J"
+            value={fr(kpi.demarqueValue)}
+            label="à enquêter"
+          />
+        )}
         <KpiCard
           variant="primary"
           icon={<Truck className="w-4 h-4" />}
@@ -406,14 +418,16 @@ export default function AlertesPage() {
             Sorties&nbsp;
             <Badge>{sorties.length}</Badge>
           </TabBtn>
-          <TabBtn
-            active={tab === "demarque"}
-            onClick={() => setTab("demarque")}
-          >
-            <TrendingDown className="w-3.5 h-3.5" />
-            Démarque&nbsp;
-            <Badge>{demarque.length}</Badge>
-          </TabBtn>
+          {showDemarque && (
+            <TabBtn
+              active={tab === "demarque"}
+              onClick={() => setTab("demarque")}
+            >
+              <TrendingDown className="w-3.5 h-3.5" />
+              Démarque&nbsp;
+              <Badge>{demarque.length}</Badge>
+            </TabBtn>
+          )}
           <TabBtn active={tab === "surplus"} onClick={() => setTab("surplus")}>
             <Truck className="w-3.5 h-3.5" />
             Surplus&nbsp;

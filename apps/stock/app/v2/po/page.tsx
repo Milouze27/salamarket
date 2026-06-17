@@ -155,7 +155,9 @@ export default function PoDashboardPage() {
         p.statut === "confirmee" ||
         p.statut === "partiellement_recue",
     ).length;
-    const recues = pos.filter((p) => p.statut === "recue").length;
+    const recues = pos.filter(
+      (p) => p.statut === "recue" || p.statut === "annulee",
+    ).length;
     return { a_valider, en_cours, recues };
   }, [pos]);
 

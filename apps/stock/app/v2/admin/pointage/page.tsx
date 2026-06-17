@@ -20,7 +20,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
-  Clock,
   Coffee,
   Download,
   Loader2,
@@ -236,18 +235,12 @@ export default function PointagePage() {
 
       {/* KPI strip */}
       <section className="px-4 sm:px-5 mt-4 grid grid-cols-3 gap-2.5">
+        <Kpi value={`${kpi.presents}`} label="présents" />
         <Kpi
-          icon={<Users className="w-4 h-4" />}
-          value={`${kpi.presents}`}
-          label="présents"
-        />
-        <Kpi
-          icon={<Clock className="w-4 h-4" />}
           value={formatHeures(kpi.totalMin || null)}
           label="cumul jour"
         />
         <Kpi
-          icon={<CheckCircle2 className="w-4 h-4" />}
           value={`${kpi.total}`}
           label="pointés"
           tone={kpi.anomalies > 0 ? "warn" : "neutral"}
@@ -554,13 +547,11 @@ function ClockCard({
 /* ───────────────────────────── KPI ───────────────────────────── */
 
 function Kpi({
-  icon,
   value,
   label,
   sub,
   tone = "neutral",
 }: {
-  icon: React.ReactNode;
   value: string;
   label: string;
   sub?: string;
@@ -578,19 +569,8 @@ function Kpi({
             : "1px solid var(--border-light)",
       }}
     >
-      <div
-        className="flex items-center gap-1.5"
-        style={{
-          color:
-            tone === "warn"
-              ? "var(--status-warning-text)"
-              : "var(--text-secondary)",
-        }}
-      >
-        {icon}
-      </div>
       <p
-        className="text-[20px] font-extrabold mt-1.5 tabular-nums leading-none"
+        className="text-[22px] font-extrabold tabular-nums leading-none"
         style={{
           color:
             tone === "warn"

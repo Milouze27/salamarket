@@ -170,7 +170,7 @@ function Indicateur({
           </p>
         ) : null}
       </div>
-      <ArrowRight className="w-3.5 h-3.5 text-[var(--text-on-dark-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+      <ArrowRight className="w-3.5 h-3.5 text-[var(--text-on-dark-muted)] opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
     </Link>
   );
 }

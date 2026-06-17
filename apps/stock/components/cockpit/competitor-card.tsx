@@ -9,7 +9,7 @@
  * comparer ("on est 12% plus cher sur le poulet").
  *
  * Affiche les 5 derniers relevés en thumbnail row scrollable horizontale.
- * Tap → preview photo full + bouton "ajuster mon prix".
+ * Vignettes d'affichage en lecture seule (pas d'interaction).
  */
 import { Eye, Camera } from "lucide-react";
 import type { CockpitCompetitorRow } from "@/app/api/cockpit/snapshot/route";

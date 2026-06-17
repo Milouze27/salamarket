@@ -148,11 +148,11 @@ const ITEMS: Record<string, NavItem> = {
     desc: "PO auto-générés + suivi",
   },
   fournisseurs: {
-    label: "Fourn.",
-    fullLabel: "Fournisseurs",
+    label: "Achats",
+    fullLabel: "Achats",
     href: "/v2/fournisseurs",
     icon: Truck,
-    desc: "Fiches + certif halal",
+    desc: "Fournisseurs, commandes, réceptions",
   },
   lots: {
     label: "Lots",
@@ -177,11 +177,11 @@ const ITEMS: Record<string, NavItem> = {
   },
   // Routes admin/back-office — alignées sur ⌘K (mêmes destinations).
   alertes: {
-    label: "Alertes",
-    fullLabel: "Centre d'alertes",
+    label: "Surveil.",
+    fullLabel: "Surveillance",
     href: "/v2/admin/alertes",
     icon: AlertTriangle,
-    desc: "Toutes les alertes stock + IA",
+    desc: "Alertes, DLC, casse, activité",
   },
   alertesSurplus: {
     label: "Surplus",
@@ -348,6 +348,7 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   // Opérer = tous les gestes terrain, inventaire et traçabilité lots inclus
   // (ce sont des opérations quotidiennes, pas des achats ni des réglages).
   // (stock/sans-ean masqué : replié en filtre dans /v2/stock.)
+  // (inventaire-historique fondu en onglet de /v2/inventaire.)
   const operer = [
     ITEMS.sortie,
     ITEMS.reception,
@@ -356,27 +357,27 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.stock,
     ITEMS.preparation,
     ITEMS.inventaire,
-    ITEMS.inventaireHisto,
     ITEMS.lots,
   ];
   // (counter masqué : écran comptoir public, accès par URL.)
+  // alertesDlc gardé = raccourci terrain (préparation) ; il redirige vers
+  // l'onglet DLC de Surveillance. casse-anomalies fondu en onglet Surveillance.
   const piloter = [
     ITEMS.accueil,
     ITEMS.cockpit,
     ITEMS.forecast,
     ITEMS.alertesDlc,
-    ITEMS.casseAnomalies,
   ];
-  // Back-office éclaté en sous-groupes scannables (au lieu d'un seul « Administrer »
-  // de ~19 entrées). Le filtrage par rôle masque ce qui dépasse le périmètre.
-  // (alertes-surplus fusionné dans l'onglet Surplus de /v2/admin/alertes.)
+  // Surveillance = un seul module à onglets (Alertes/DLC/Casse/Activité).
+  // surplus + casse + activité y sont fondus ; ITEMS.alertes = la page hôte.
   const surveillance = [
     ITEMS.alertes,
-    ITEMS.activite,
     ITEMS.pointage,
   ];
   const ventesPro = [ITEMS.commandesPro, ITEMS.facturesPro, ITEMS.comptesPro];
-  const achats = [ITEMS.fournisseurs, ITEMS.po, ITEMS.bonsReception];
+  // Achats = module à onglets (Fournisseurs/Commandes/Réceptions). po fondu ;
+  // bonsReception gardé = raccourci terrain (réception) → onglet Réceptions.
+  const achats = [ITEMS.fournisseurs, ITEMS.bonsReception];
   // recap-fiscal fusionné dans rapport-mensuel (?vue=recap) ; import-cashmag +
   // import-stock fusionnés dans /v2/admin/import (entrée « Import »).
   const fiscal = [

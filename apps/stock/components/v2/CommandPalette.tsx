@@ -291,11 +291,12 @@ const ADMINISTRER: PaletteItem[] = [
   },
   {
     id: "nav-fournisseurs",
-    label: "Fournisseurs",
+    label: "Achats",
     href: "/v2/fournisseurs",
     icon: Truck,
-    hint: "Fiches + certif halal",
-    keywords: "fournisseur supplier certificat halal avs argml contact fiche",
+    hint: "Fournisseurs, commandes, réceptions",
+    keywords:
+      "achats fournisseur supplier certificat halal avs argml contact fiche commande po purchase order bon reception bdl",
   },
   {
     id: "nav-po",
@@ -395,11 +396,12 @@ const ADMINISTRER: PaletteItem[] = [
   },
   {
     id: "nav-alertes",
-    label: "Centre d'alertes",
+    label: "Surveillance",
     href: "/v2/admin/alertes",
     icon: AlertTriangle,
-    hint: "Toutes les alertes stock",
-    keywords: "alertes centre notifications urgent stock seuil ia",
+    hint: "Alertes, DLC, casse, activité",
+    keywords:
+      "surveillance alertes centre notifications urgent stock seuil ia dlc casse demarque anomalie activite journal",
   },
   {
     id: "nav-bons",

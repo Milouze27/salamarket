@@ -11,6 +11,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -34,6 +36,45 @@ import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { CertHalalBadge } from "@/components/po/cert-halal-badge";
 import { supabase } from "@/lib/supabase";
+
+// Panneaux absorbés (ex-pages /v2/po et /v2/admin/bons-reception), chargés
+// en lazy : ils ne pèsent sur le bundle que si l'onglet est ouvert.
+const CommandesPanel = dynamic(
+  () =>
+    import("@/components/achats/CommandesPanel").then((m) => m.CommandesPanel),
+  { ssr: false, loading: () => <PanelLoader /> },
+);
+const ReceptionsPanel = dynamic(
+  () =>
+    import("@/components/achats/ReceptionsPanel").then((m) => m.ReceptionsPanel),
+  { ssr: false, loading: () => <PanelLoader /> },
+);
+
+type AchatsTab = "fournisseurs" | "commandes" | "receptions";
+
+const TAB_SOUS_LIBELLE: Record<AchatsTab, string> = {
+  fournisseurs:
+    "Tous tes fournisseurs, triés par urgence de renouvellement de certif. Une commande ne part jamais avec un certif KO.",
+  commandes:
+    "L'algo prépare les bons. Tu valides, le grossiste reçoit. Halal vérifié à chaque envoi.",
+  receptions:
+    "Historique des réceptions validées avec téléchargement du BR signé (à archiver avec la facture fournisseur).",
+};
+
+function PanelLoader() {
+  return (
+    <div
+      className="flex items-center gap-2 text-[14px]"
+      style={{ color: "var(--text-secondary)" }}
+    >
+      <Loader2 size={16} className="animate-spin" /> Chargement…
+    </div>
+  );
+}
+
+function isAchatsTab(v: string | null): v is AchatsTab {
+  return v === "fournisseurs" || v === "commandes" || v === "receptions";
+}
 import {
   certifAlerte,
   ORGANISME_LABELS,
@@ -64,7 +105,101 @@ const ALERTE_ORDER = {
   ok: 4,
 } as const;
 
-export default function FournisseursPage() {
+export default function AchatsPage() {
+  const searchParams = useSearchParams();
+  // Onglet actif : initialisé depuis ?tab=… au montage, piloté ensuite par state.
+  const [tab, setTab] = useState<AchatsTab>(() => {
+    const t = searchParams.get("tab");
+    return isAchatsTab(t) ? t : "fournisseurs";
+  });
+
+  function selectTab(next: AchatsTab) {
+    setTab(next);
+    // Reflète l'onglet dans l'URL sans recharger ni re-router (deep-link).
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", next);
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}?${params.toString()}`,
+    );
+  }
+
+  return (
+    <V2Shell>
+      <PageAccentStripe accent="or-sapin" />
+      <div className="px-5 pt-4 pb-nav-stack">
+        <BackButton href="/v2/admin" />
+
+        <header className="mt-4 mb-5">
+          <EditorialEyebrow num="02" label="Approvisionnement" />
+          <h1 className="h1-display mt-2">
+            <em className="gold">Achats</em>
+          </h1>
+          <p
+            className="body-md mt-2"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {TAB_SOUS_LIBELLE[tab]}
+          </p>
+        </header>
+
+        {/* Onglets de section */}
+        <div
+          className="flex gap-2 mb-5 scrollbar-none overflow-x-auto"
+          role="tablist"
+          aria-label="Sections Achats"
+        >
+          <SectionTab
+            label="Fournisseurs"
+            active={tab === "fournisseurs"}
+            onClick={() => selectTab("fournisseurs")}
+          />
+          <SectionTab
+            label="Commandes"
+            active={tab === "commandes"}
+            onClick={() => selectTab("commandes")}
+          />
+          <SectionTab
+            label="Réceptions"
+            active={tab === "receptions"}
+            onClick={() => selectTab("receptions")}
+          />
+        </div>
+
+        {tab === "fournisseurs" && <FournisseursPanel />}
+        {tab === "commandes" && <CommandesPanel />}
+        {tab === "receptions" && <ReceptionsPanel />}
+      </div>
+    </V2Shell>
+  );
+}
+
+function SectionTab({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className="pill-filter press-btn shrink-0"
+      data-active={active}
+      style={{ minHeight: 44 }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function FournisseursPanel() {
   const [list, setList] = useState<FournisseurFull[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -135,25 +270,7 @@ export default function FournisseursPage() {
   }, [list]);
 
   return (
-    <V2Shell>
-      <PageAccentStripe accent="or-sapin" />
-      <div className="px-5 pt-4 pb-nav-stack">
-        <BackButton href="/v2/po" />
-
-        <header className="mt-4 mb-5">
-          <EditorialEyebrow num="02" label="Cockpit certifs" />
-          <h1 className="h1-display mt-2">
-            <em className="gold">Fournisseurs</em> halal
-          </h1>
-          <p
-            className="body-md mt-2"
-            style={{ color: "var(--text-secondary)" }}
-          >
-            Tous tes fournisseurs, triés par urgence de renouvellement de
-            certif. Une commande ne part jamais avec un certif KO.
-          </p>
-        </header>
-
+    <>
         {/* Strip stats */}
         <div className="grid grid-cols-5 gap-2 mb-5">
           <StatPill value={counts.expiree} label="Expirés" tone="danger" />
@@ -260,7 +377,6 @@ export default function FournisseursPage() {
             ))}
           </ul>
         )}
-      </div>
 
       <EditDrawer
         fournisseur={editing}
@@ -270,7 +386,7 @@ export default function FournisseursPage() {
           await load();
         }}
       />
-    </V2Shell>
+    </>
   );
 }
 

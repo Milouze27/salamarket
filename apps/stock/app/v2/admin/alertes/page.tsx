@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   Bell,
+  CalendarClock,
   CheckCircle2,
   Eye,
   FileText,
@@ -28,6 +30,45 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
+
+// Onglets supérieurs DLC / Casse / Activité chargés en LAZY : ils ne se montent
+// (et ne déclenchent leurs fetchs) qu'une fois leur onglet activé. Bundle de la
+// page hôte allégé d'autant.
+const DlcPanel = dynamic(
+  () => import("@/components/surveillance/DlcPanel").then((m) => m.DlcPanel),
+  { loading: () => <PanelLoader /> },
+);
+const CassePanel = dynamic(
+  () => import("@/components/surveillance/CassePanel").then((m) => m.CassePanel),
+  { loading: () => <PanelLoader /> },
+);
+const ActivitePanel = dynamic(
+  () =>
+    import("@/components/surveillance/ActivitePanel").then(
+      (m) => m.ActivitePanel,
+    ),
+  { loading: () => <PanelLoader /> },
+);
+
+type Section = "alertes" | "dlc" | "casse" | "activite";
+
+const SECTION_SOUS_LIBELLE: Record<Section, string> = {
+  alertes: "Sorties suspectes, démarque détectée et surplus fournisseurs.",
+  dlc: "Lots qui approchent leur date limite et remises anti-gaspi suggérées.",
+  casse: "Z-score de la casse par catégorie vs baseline 28 jours.",
+  activite: "Réceptions, sorties et transferts horodatés sur tous les dépôts.",
+};
+
+function PanelLoader() {
+  return (
+    <div className="px-5 mt-6">
+      <div className="bg-white border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+        <p className="text-sm text-text-secondary">Chargement…</p>
+      </div>
+    </div>
+  );
+}
 
 type Tab = "sorties" | "demarque" | "surplus" | "historique";
 
@@ -109,7 +150,108 @@ function nameOf(p: { prenom: string | null; nom: string } | null) {
   return `${p.prenom ?? ""} ${p.nom}`.trim();
 }
 
-export default function AlertesPage() {
+export default function SurveillancePage() {
+  const searchParams = useSearchParams();
+  // Section active (onglet supérieur) pilotée par ?section=… au montage.
+  // COMPAT : l'ancien lien ?tab=surplus (et ?sortie=…) ouvre l'onglet
+  // « Alertes » avec son sous-onglet d'origine → si ?section absent mais qu'un
+  // de ces params est présent, on retombe sur « alertes ».
+  const initialSection: Section = (() => {
+    const s = searchParams.get("section");
+    if (s === "dlc" || s === "casse" || s === "activite" || s === "alertes") {
+      return s;
+    }
+    return "alertes";
+  })();
+  const [section, setSection] = useState<Section>(initialSection);
+  const [activiteCount, setActiviteCount] = useState<number | null>(null);
+
+  const sousLibelle =
+    section === "activite" && activiteCount !== null
+      ? `${activiteCount} mouvement${activiteCount > 1 ? "s" : ""} sur tous les dépôts.`
+      : SECTION_SOUS_LIBELLE[section];
+
+  return (
+    <V2Shell hideNav>
+      <PageAccentStripe accent="bordeaux" />
+      <header className="px-5 pt-7">
+        <BackButton />
+        <p className="section-eyebrow mt-3">
+          <ShieldAlert className="w-3 h-3" />
+          Centre de surveillance
+        </p>
+        <h1 className="h1 text-text-primary mt-1">Surveillance</h1>
+        <p className="body-md text-text-secondary mt-1">{sousLibelle}</p>
+      </header>
+
+      {/* Onglets de niveau supérieur */}
+      <nav className="px-5 mt-5 pt-1 pb-2" role="tablist" aria-label="Sections">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]">
+          <SectionBtn
+            active={section === "alertes"}
+            onClick={() => setSection("alertes")}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Alertes
+          </SectionBtn>
+          <SectionBtn
+            active={section === "dlc"}
+            onClick={() => setSection("dlc")}
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            DLC
+          </SectionBtn>
+          <SectionBtn
+            active={section === "casse"}
+            onClick={() => setSection("casse")}
+          >
+            <PackageX className="w-3.5 h-3.5" />
+            Casse
+          </SectionBtn>
+          <SectionBtn
+            active={section === "activite"}
+            onClick={() => setSection("activite")}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            Activité
+          </SectionBtn>
+        </div>
+      </nav>
+
+      {section === "alertes" && <AlertesPanel />}
+      {section === "dlc" && <DlcPanel />}
+      {section === "casse" && <CassePanel />}
+      {section === "activite" && <ActivitePanel onCount={setActiviteCount} />}
+    </V2Shell>
+  );
+}
+
+function SectionBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-bold shrink-0 transition-colors ${
+        active
+          ? "bg-primary text-white"
+          : "bg-white border border-rule text-text-secondary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function AlertesPanel() {
   const searchParams = useSearchParams();
   const employe = useV2((s) => s.currentEmploye);
   const [tab, setTab] = useState<Tab>(
@@ -405,23 +547,7 @@ export default function AlertesPage() {
   }, [showDemarque, tab]);
 
   return (
-    <V2Shell hideNav>
-      <PageAccentStripe accent="bordeaux" />
-      <header className="px-5 pt-7">
-        <BackButton />
-        <p className="section-eyebrow mt-3">
-          <ShieldAlert className="w-3 h-3" />
-          Centre d&apos;alertes IA
-        </p>
-        <h1 className="h1 text-text-primary mt-1">
-          Alertes &amp; surveillance
-        </h1>
-        <p className="body-md text-text-secondary mt-1">
-          Sorties suspectes, démarque détectée et surplus fournisseurs. Pour
-          décision Otmane / Ahmed.
-        </p>
-      </header>
-
+    <>
       {/* KPI top */}
       <section className="px-5 mt-5 grid grid-cols-2 gap-2.5">
         <KpiCard
@@ -772,7 +898,7 @@ export default function AlertesPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </V2Shell>
+    </>
   );
 }
 

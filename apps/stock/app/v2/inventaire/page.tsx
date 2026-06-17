@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   Check,
@@ -25,12 +26,39 @@ import {
 } from "@/lib/db";
 import type { InventaireTournant, ProduitInDepot } from "@/lib/types/db";
 
+const HistoriquePanel = dynamic(
+  () =>
+    import("@/components/inventaire/HistoriquePanel").then(
+      (m) => m.HistoriquePanel,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <p className="px-5 pt-10 text-center text-text-secondary">Chargement…</p>
+    ),
+  },
+);
+
+type Tab = "aujourdhui" | "historique";
+
 interface Row extends InventaireTournant {
   produit?: ProduitInDepot;
 }
 
 export default function V2InventairePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() =>
+    searchParams.get("tab") === "historique" ? "historique" : "aujourdhui",
+  );
+
+  function selectTab(next: Tab) {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", next);
+    router.replace(`/v2/inventaire?${params.toString()}`);
+  }
+
   const depot = useV2((s) => s.currentDepot);
   const employe = useV2((s) => s.currentEmploye);
 
@@ -230,19 +258,42 @@ export default function V2InventairePage() {
         <BackButton />
         <EditorialEyebrow
           num="01"
-          label="Inventaire tournant"
+          label="Inventaire"
           className="mt-3"
         />
-        <h1 className="h1-display mt-3">
-          <span className="gold">{rows.length}</span> produit
-          {rows.length > 1 ? "s" : ""} à compter.
-        </h1>
-        <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
-          Tirage automatique chaque matin à 7h dans le dépôt actif.
-        </p>
+        {tab === "aujourdhui" ? (
+          <>
+            <h1 className="h1-display mt-3">
+              <span className="gold">{rows.length}</span> produit
+              {rows.length > 1 ? "s" : ""} à compter.
+            </h1>
+            <p className="body-md text-text-secondary mt-3 max-w-[40ch]">
+              Tirage automatique chaque matin à 7h dans le dépôt actif.
+            </p>
+          </>
+        ) : null}
+
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => selectTab("aujourdhui")}
+            data-active={tab === "aujourdhui"}
+            className="pill-filter"
+          >
+            Aujourd&apos;hui
+          </button>
+          <button
+            onClick={() => selectTab("historique")}
+            data-active={tab === "historique"}
+            className="pill-filter"
+          >
+            Historique
+          </button>
+        </div>
       </header>
 
-      {loading ? (
+      {tab === "historique" ? (
+        <HistoriquePanel />
+      ) : loading ? (
         <div className="px-5 pt-10 text-center text-text-secondary">
           Chargement…
         </div>
@@ -356,6 +407,7 @@ export default function V2InventairePage() {
         </section>
       )}
 
+      {tab === "aujourdhui" && (
       <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
           {(() => {
@@ -406,6 +458,7 @@ export default function V2InventairePage() {
           })()}
         </div>
       </div>
+      )}
     </V2Shell>
   );
 }

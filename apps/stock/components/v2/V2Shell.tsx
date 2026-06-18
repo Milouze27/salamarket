@@ -615,8 +615,8 @@ export function V2Shell({
         <div className={`${containerClass} flex-1`}>
           {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
-          <header className="glass-bar sticky top-0 z-30">
-            <div className="flex items-center gap-2 px-4 pt-3 pb-3 safe-top">
+          <header className="sticky top-0 z-30 px-3 pt-3 safe-top">
+            <div className="glass-bar rounded-[22px] flex items-center gap-2 px-4 py-2.5 shadow-[0_14px_36px_-18px_rgba(0,0,0,0.55)]">
               {/* Bloc identité — clickable vers accueil, long-press → ⌘K (fallback mobile) */}
               <Link
                 href="/v2"
@@ -707,7 +707,7 @@ export function V2Shell({
               </span>
             </div>
             {mode === "local" && process.env.NODE_ENV === "development" && (
-              <div className="bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1">
+              <div className="mt-2 rounded-full bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1.5">
                 MODE DÉMO LOCAL · Supabase non connecté
               </div>
             )}
@@ -717,7 +717,7 @@ export function V2Shell({
               <button
                 type="button"
                 onClick={() => setPreviewRole(null)}
-                className="w-full flex items-center justify-center gap-2 py-1.5 text-[11px] font-bold"
+                className="mt-2 w-full rounded-full flex items-center justify-center gap-2 py-2 text-[11px] font-bold"
                 style={{
                   background: "var(--accent-gold-soft)",
                   color: "var(--accent-gold)",

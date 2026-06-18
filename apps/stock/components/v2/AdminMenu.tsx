@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, LogOut, Moon, Rows3, Rows4, Settings, Sun, X } from "lucide-react";
+import {
+  Eye,
+  LogOut,
+  Moon,
+  Rows3,
+  Rows4,
+  Settings,
+  Sun,
+  Users,
+  X,
+} from "lucide-react";
 import { useTheme } from "@/lib/hooks/useTheme";
 import { useDensity } from "@/lib/hooks/useDensity";
 import { useBodyScrollLock } from "@/lib/hooks/useBodyScrollLock";
@@ -46,6 +57,7 @@ export function AdminMenu({
   onPreviewRole,
 }: AdminMenuProps) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const { resolved, toggle: toggleTheme } = useTheme();
   const { density, toggle: toggleDensity } = useDensity();
   const isNight = resolved === "nuit";
@@ -188,6 +200,43 @@ export function AdminMenu({
                     )}
                   </div>
                 </div>
+              )}
+
+              {(role === "admin" || role === "manager") && (
+                <>
+                  <p
+                    className="px-3 pt-3 pb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em]"
+                    style={{ color: "var(--accent-gold-dim)" }}
+                  >
+                    Administration
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push("/v2/admin/equipe");
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                  >
+                    <span
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                      style={{
+                        background: "var(--surface-1)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      <Users className="w-5 h-5" strokeWidth={2.1} />
+                    </span>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-bold text-text-primary truncate">
+                        Gestion de l'équipe
+                      </p>
+                      <p className="text-[11px] text-text-secondary truncate">
+                        Employés, rôles et codes PIN
+                      </p>
+                    </div>
+                  </button>
+                </>
               )}
 
               <p

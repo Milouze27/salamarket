@@ -12,7 +12,6 @@ import {
   BarChart3,
   Boxes,
   Building2,
-  ClipboardCheck,
   ClipboardList,
   Clock,
   Compass,
@@ -27,7 +26,6 @@ import {
   Lock,
   PackageSearch,
   Printer,
-  Receipt,
   Repeat2,
   Search,
   ShoppingBag,
@@ -308,31 +306,13 @@ const ADMINISTRER: PaletteItem[] = [
       "po purchase order commande fournisseur achat reassort approvisionnement",
   },
   {
-    id: "nav-comptes-pro",
-    label: "Comptes pro",
-    href: "/v2/admin/comptes-pro",
+    id: "nav-pro",
+    label: "Espace Pro (B2B)",
+    href: "/v2/admin/pro",
     icon: Building2,
-    hint: "Clients B2B + conditions",
+    hint: "Comptes, commandes, factures B2B",
     keywords:
-      "compte pro client b2b professionnel entreprise restaurant grossiste delegue conditions tarif siret tva intracom",
-  },
-  {
-    id: "nav-commandes-pro",
-    label: "Commandes pro",
-    href: "/v2/admin/commandes-pro",
-    icon: ClipboardCheck,
-    hint: "Commandes B2B à traiter",
-    keywords:
-      "commande pro b2b professionnel client entreprise bon de commande preparer livrer grossiste vente comptoir",
-  },
-  {
-    id: "nav-factures-pro",
-    label: "Factures pro",
-    href: "/v2/admin/factures-pro",
-    icon: Receipt,
-    hint: "Facturation B2B + encours",
-    keywords:
-      "facture pro b2b professionnel facturation encours impaye paiement reglement avoir tva client entreprise comptable",
+      "pro b2b professionnel compte client entreprise restaurant grossiste commande bon facture facturation encours impaye tva siret comptable",
   },
   {
     id: "nav-lots",

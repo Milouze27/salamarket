@@ -22,7 +22,6 @@ import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { HeroActionCard } from "@/components/v2/HeroActionCard";
 import { DlcBanner } from "@/components/v2/DlcBanner";
 import { DriveDashboardSection } from "@/components/v2/DriveDashboardSection";
-import { PilotageStrip } from "@/components/v2/PilotageStrip";
 import { PushNotifCard } from "@/components/v2/PushNotifCard";
 import { StockEditWindowCard } from "@/components/v2/StockEditWindowCard";
 import { useV2 } from "@/lib/v2-store";
@@ -246,11 +245,8 @@ export default function V2AdminDashboardPage() {
         </div>
       </header>
 
-      {/* Pilotage du jour — coup d'œil consolidé (CA Drive+magasin, commandes
-          Drive en cours, ruptures, valeur stock). Brique partagée cockpit/admin. */}
-      <div className="px-4 sm:px-5 mt-5">
-        <PilotageStrip allDepots />
-      </div>
+      {/* Pilotage du jour : déplacé sur le Cockpit (dashboard unique) pour
+          éviter le doublon. /v2/cockpit porte désormais le PilotageStrip. */}
 
       {loading ? (
         <section className="px-4 sm:px-5 mt-5 space-y-3">

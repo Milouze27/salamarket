@@ -299,6 +299,14 @@ const ITEMS: Record<string, NavItem> = {
     icon: Receipt,
     desc: "Facturation B2B + encours",
   },
+  // Module Pro à onglets (comptes/commandes/factures fusionnés).
+  pro: {
+    label: "Pro",
+    fullLabel: "Espace Pro (B2B)",
+    href: "/v2/admin/pro",
+    icon: Building2,
+    desc: "Comptes, commandes, factures B2B",
+  },
 };
 
 /**
@@ -316,8 +324,9 @@ function primaryFor(role: string): NavItem[] {
       return [ITEMS.accueil, ITEMS.stock, ITEMS.preparation, ITEMS.etiquettes];
     case "manager":
     case "admin":
-      // Préparation épinglée = suivi drive en 1 tap, même pour l'admin.
-      return [ITEMS.accueil, ITEMS.preparation, ITEMS.stock, ITEMS.admin];
+      // Cockpit = LE dashboard de pilotage en 1 tap (un seul, plus de doublon
+      // avec /v2/admin qui reste joignable via le menu « Plus » → Outils).
+      return [ITEMS.accueil, ITEMS.preparation, ITEMS.cockpit, ITEMS.stock];
     case "reception":
     default:
       return [ITEMS.accueil, ITEMS.reception, ITEMS.sortie, ITEMS.stock];
@@ -375,7 +384,8 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
     ITEMS.alertes,
     ITEMS.pointage,
   ];
-  const ventesPro = [ITEMS.commandesPro, ITEMS.facturesPro, ITEMS.comptesPro];
+  // Espace Pro = un seul module à onglets (cadenassé tant que non payé).
+  const ventesPro = [ITEMS.pro];
   // Achats = module à onglets (Fournisseurs/Commandes/Réceptions). po fondu ;
   // bonsReception gardé = raccourci terrain (réception) → onglet Réceptions.
   const achats = [ITEMS.fournisseurs, ITEMS.bonsReception];

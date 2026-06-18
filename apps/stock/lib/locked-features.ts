@@ -8,9 +8,10 @@
 
 export const LOCKED_FEATURES: Record<string, string> = {
   "/v2/labo": "Marges & recettes",
-  "/v2/admin/comptes-pro": "Espace Pro (B2B)",
-  "/v2/admin/commandes-pro": "Espace Pro (B2B)",
-  "/v2/admin/factures-pro": "Espace Pro (B2B)",
+  // Espace Pro fusionné en un module à onglets (/v2/admin/pro). Les anciennes
+  // routes comptes/commandes/factures-pro redirigent vers lui ; on cadenasse
+  // donc l'entrée unique du module.
+  "/v2/admin/pro": "Espace Pro (B2B)",
 };
 
 export function isLockedFeature(href: string): boolean {

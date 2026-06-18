@@ -249,7 +249,7 @@ export default function V2AdminDashboardPage() {
           éviter le doublon. /v2/cockpit porte désormais le PilotageStrip. */}
 
       {loading ? (
-        <section className="px-4 sm:px-5 mt-5 space-y-3">
+        <section className="px-4 sm:px-5 mt-5 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
@@ -326,7 +326,7 @@ export default function V2AdminDashboardPage() {
             <Boxes className="w-3 h-3" />
             État des dépôts
           </p>
-          <section className="px-4 sm:px-5 mt-2 space-y-3">
+          <section className="px-4 sm:px-5 mt-2 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-3">
             {(showAllDepots ? stats : stats.slice(0, 3)).map((s, idx) => {
               const isEntrepot = s.depot.type === "entrepot";
               return (

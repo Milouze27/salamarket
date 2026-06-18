@@ -48,7 +48,7 @@ export function PilotageStrip({ allDepots = false }: { allDepots?: boolean }) {
 
   return (
     <section
-      className="rounded-[24px] border p-4 sm:p-5"
+      className="hero-surface rounded-[24px] border p-4 sm:p-5"
       style={{
         background: "var(--hero-gradient, var(--primary-green))",
         borderColor: "var(--accent-gold-hairline, rgba(201,162,39,0.24))",

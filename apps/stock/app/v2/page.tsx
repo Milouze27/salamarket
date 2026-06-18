@@ -122,6 +122,9 @@ export default function V2HomePage() {
         </motion.div>
       )}
 
+      {/* DESKTOP : Hero + Autres opérations côte à côte (2 colonnes ≥lg) ;
+          mobile : empilés. La bande KPI (PilotageStrip) reste pleine largeur au-dessus. */}
+      <div className="px-5 mt-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
       {/* HERO ACTION — sapin plein, promotion de l'action principale */}
       <motion.section
         initial={{ opacity: 0, y: 10 }}
@@ -131,7 +134,6 @@ export default function V2HomePage() {
           delay: 0.05,
           ease: [0.22, 0.61, 0.36, 1],
         }}
-        className="px-5 mt-6"
       >
         <HeroActionCard
           href={HERO_ACTION.href}
@@ -143,7 +145,7 @@ export default function V2HomePage() {
       </motion.section>
 
       {/* SECONDARY ACTIONS — surfaces blanches, eyebrow numéroté */}
-      <section className="px-5 mt-8">
+      <section className="mt-8 lg:mt-0">
         <EditorialEyebrow num="02" label="Autres opérations" />
         <div className="space-y-3 mt-3">
           {ACTIONS.map((a, i) => {
@@ -183,6 +185,7 @@ export default function V2HomePage() {
           })}
         </div>
       </section>
+      </div>
 
       {/* L99 / audit nav — la grille manager/admin (12 tuiles) a été retirée :
           elle dupliquait le Plus-sheet + le Menu admin + ⌘K. Le back-office et

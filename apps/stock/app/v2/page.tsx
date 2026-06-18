@@ -161,7 +161,7 @@ export default function V2HomePage() {
               >
                 <Link
                   href={a.href}
-                  className="bg-white rounded-[20px] shadow-card border border-rule p-4 flex items-center gap-4 card-tappable focus-visible:outline-2 focus-visible:outline-primary block"
+                  className="lg lg-hover tap rounded-[20px] p-4 flex items-center gap-4 card-tappable focus-visible:outline-2 focus-visible:outline-primary block"
                 >
                   <span
                     className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${accentClass[a.accent]}`}

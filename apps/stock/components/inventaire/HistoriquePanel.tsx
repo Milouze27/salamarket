@@ -85,7 +85,7 @@ export function HistoriquePanel() {
         {loading ? (
           <p className="text-center text-text-secondary py-8">Chargement…</p>
         ) : grouped.length === 0 ? (
-          <div className="bg-cream border border-rule rounded-2xl p-8 text-center">
+          <div className="lg rise-in p-8 text-center">
             <ClipboardCheck className="w-8 h-8 text-text-tertiary mx-auto mb-2" />
             <p className="text-sm font-bold text-text-primary">
               Pas encore d&apos;historique
@@ -95,7 +95,7 @@ export function HistoriquePanel() {
             </p>
           </div>
         ) : (
-          grouped.map(([date, items]) => {
+          grouped.map(([date, items], gi) => {
             const validated = items.filter(
               (i) => i.quantite_comptee !== null
             ).length;
@@ -103,7 +103,11 @@ export function HistoriquePanel() {
               (i) => i.quantite_comptee !== null && i.ecart !== 0
             ).length;
             return (
-              <div key={date} className="mb-5">
+              <div
+                key={date}
+                className="mb-5 rise-in"
+                style={{ ["--i" as string]: Math.min(gi, 8) }}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <p className="label-caps text-text-tertiary inline-flex items-center gap-1">
                     <CalendarDays className="w-3 h-3" />
@@ -118,7 +122,7 @@ export function HistoriquePanel() {
                     )}
                   </p>
                 </div>
-                <div className="bg-white border border-rule rounded-2xl divide-y divide-rule overflow-hidden">
+                <div className="lg divide-y divide-rule overflow-hidden">
                   {items.map((i) => {
                     const e = employes.find(
                       (x) => x.id === i.employe_assigne_id

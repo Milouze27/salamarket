@@ -165,14 +165,18 @@ export function FacturesPanel() {
       {/* KPI impayé + retard */}
       {!loading && factures.length > 0 && (
         <div className="px-5 mt-5 grid grid-cols-2 gap-2.5 lg:max-w-[640px]">
-          <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-3.5">
+          <div
+            className="lg rise-in p-3.5"
+            style={{ "--i": 0 } as React.CSSProperties}
+          >
             <p className="label-caps text-text-tertiary">Reste à encaisser</p>
             <p className="text-[20px] font-extrabold text-text-primary tabular-nums mt-0.5">
               {eur(totalImpaye)}
             </p>
           </div>
           <div
-            className={`rounded-2xl p-3.5 border ${nbRetard > 0 ? "bg-danger-soft border-danger/30" : "bg-[var(--surface-1)] border-rule"}`}
+            style={{ "--i": 1 } as React.CSSProperties}
+            className={`lg rise-in p-3.5 ${nbRetard > 0 ? "bg-danger-soft !border-danger/30" : ""}`}
           >
             <p className="label-caps text-text-tertiary">En retard</p>
             <p
@@ -215,12 +219,12 @@ export function FacturesPanel() {
 
       <section className="px-5 mt-5 pb-10">
         {loading ? (
-          <div className="bg-[var(--surface-1)] border border-rule rounded-[20px] p-10 flex items-center justify-center gap-3">
+          <div className="lg p-10 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
         ) : visibles.length === 0 ? (
-          <div className="bg-[var(--surface-1)] border border-rule rounded-[20px]">
+          <div className="lg">
             <EmptyState
               icon={FileText}
               title={
@@ -240,10 +244,11 @@ export function FacturesPanel() {
           </div>
         ) : (
           <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
-            {visibles.map((c) => (
+            {visibles.map((c, idx) => (
               <FactureCard
                 key={c.id}
                 facture={c}
+                index={idx}
                 today={today}
                 onClick={() => setDetail(c)}
               />
@@ -416,10 +421,12 @@ function FactureDetail({
 
 function FactureCard({
   facture,
+  index,
   today,
   onClick,
 }: {
   facture: CommandePro;
+  index: number;
   today: Date;
   onClick: () => void;
 }) {
@@ -429,8 +436,9 @@ function FactureCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full bg-[var(--surface-1)] border rounded-2xl p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform ${
-        retard ? "border-danger/40 shadow-card" : "border-rule"
+      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      className={`lg lg-hover tap rise-in w-full p-3.5 flex items-center gap-3 text-left ${
+        retard ? "!border-danger/40" : ""
       }`}
     >
       <span

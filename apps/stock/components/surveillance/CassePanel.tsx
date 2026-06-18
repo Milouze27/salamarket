@@ -236,6 +236,7 @@ export function CassePanel() {
       <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-7xl mx-auto w-full">
         <KpiCard
           variant="neutral"
+          riseIndex={0}
           icon={<PackageX className="w-4 h-4" />}
           eyebrow="CASSE 7 JOURS"
           value={fmtEur(casseTotale7j)}
@@ -243,6 +244,7 @@ export function CassePanel() {
         />
         <KpiCard
           variant="danger"
+          riseIndex={1}
           icon={<AlertOctagon className="w-4 h-4" />}
           eyebrow="ALERTES"
           value={`${nbAlerte}`}
@@ -250,6 +252,7 @@ export function CassePanel() {
         />
         <KpiCard
           variant="warn"
+          riseIndex={2}
           icon={<AlertTriangle className="w-4 h-4" />}
           eyebrow="VIGILANCE"
           value={`${nbWarning}`}
@@ -257,6 +260,7 @@ export function CassePanel() {
         />
         <KpiCard
           variant="gold"
+          riseIndex={3}
           icon={<Clock className="w-4 h-4" />}
           eyebrow="PIRE CRÉNEAU"
           value={
@@ -273,7 +277,7 @@ export function CassePanel() {
       {/* Graphe basculable */}
       {(dataCategorie.length > 0 || dataHoraire.some((d) => d.valeur > 0)) && (
         <section className="px-4 sm:px-5 mt-5 max-w-7xl mx-auto w-full">
-          <div className="bg-[var(--surface-1)] border border-rule rounded-[20px] p-4 shadow-card">
+          <div className="lg rise-in p-4">
             <div className="flex items-center justify-between gap-3 mb-1">
               <p className="section-eyebrow">
                 <BarChart3 className="w-3 h-3" />
@@ -420,8 +424,8 @@ export function CassePanel() {
               )}
             </div>
             <ul className="space-y-2.5">
-              {anomalies.map((a) => (
-                <AnomalieCard key={a.categorie} a={a} />
+              {anomalies.map((a, idx) => (
+                <AnomalieCard key={a.categorie} a={a} riseIndex={idx} />
               ))}
             </ul>
           </>
@@ -452,10 +456,11 @@ export function CassePanel() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {recentes.map((c) => (
+            {recentes.map((c, idx) => (
               <li
                 key={c.id}
-                className="bg-[var(--surface-1)] border border-rule rounded-2xl px-4 py-3 flex items-center gap-3"
+                className="lg rise-in px-4 py-3 flex items-center gap-3"
+                style={{ ["--i" as string]: Math.min(idx, 8) }}
               >
                 <span className="w-9 h-9 rounded-xl bg-cream flex items-center justify-center shrink-0">
                   <Clock className="w-4 h-4 text-text-tertiary" />
@@ -492,19 +497,31 @@ export function CassePanel() {
 
 // ── Carte catégorie ──────────────────────────────────────────────────────────
 
-function AnomalieCard({ a }: { a: CasseAnomalie }) {
+function AnomalieCard({
+  a,
+  riseIndex,
+}: {
+  a: CasseAnomalie;
+  riseIndex?: number;
+}) {
   const meta = NIVEAU_META[a.niveau];
   const ecartPositif = a.ecart_eur >= 0;
+  // Carte « normale » = surface neutre élevée → verre. Les niveaux alerte /
+  // vigilance gardent leur fond coloré sémantique (lisibilité + sens).
+  const isNeutral = a.niveau === "normal";
 
   return (
     <li
-      className={`rounded-2xl p-4 border border-rule ${meta.bg} ${
-        a.niveau === "alerte"
-          ? "border-[var(--status-danger)]/40"
-          : a.niveau === "warning"
-            ? "border-[var(--status-warning)]/40"
-            : ""
+      className={`rise-in p-4 ${
+        isNeutral
+          ? "lg"
+          : `rounded-2xl border border-rule ${meta.bg} ${
+              a.niveau === "alerte"
+                ? "border-[var(--status-danger)]/40"
+                : "border-[var(--status-warning)]/40"
+            }`
       }`}
+      style={riseIndex != null ? { ["--i" as string]: Math.min(riseIndex, 8) } : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -616,12 +633,14 @@ function GrapheToggle({
 
 function KpiCard({
   variant,
+  riseIndex,
   icon,
   eyebrow,
   value,
   label,
 }: {
   variant: "danger" | "warn" | "gold" | "neutral";
+  riseIndex?: number;
   icon: React.ReactNode;
   eyebrow: string;
   value: string;
@@ -629,29 +648,34 @@ function KpiCard({
 }) {
   const palette = {
     danger: {
-      bg: "bg-[var(--status-danger-bg)]",
+      bg: "bg-[var(--status-danger-bg)] rounded-2xl",
       chip: "bg-[var(--status-danger)] text-white",
       value: "text-[var(--status-danger-text)]",
     },
     warn: {
-      bg: "bg-[var(--status-warning-bg)]",
+      bg: "bg-[var(--status-warning-bg)] rounded-2xl",
       chip: "bg-[var(--status-warning)] text-[var(--text-on-gold)]",
       value: "text-[var(--status-warning-text)]",
     },
     gold: {
-      bg: "bg-[var(--accent-gold-soft)]",
+      bg: "bg-[var(--accent-gold-soft)] rounded-2xl",
       chip: "bg-[var(--accent-gold-bright)] text-[var(--text-on-gold)]",
       value: "text-[var(--or-text)]",
     },
+    // Seule KPI sur surface neutre élevée → verre. Les variantes colorées
+    // restent solides (couleur = sens, lisibilité préservée).
     neutral: {
-      bg: "bg-[var(--surface-1)] border border-rule",
+      bg: "lg lg-hover",
       chip: "bg-primary text-white",
       value: "text-text-primary",
     },
   }[variant];
 
   return (
-    <div className={`rounded-2xl p-3.5 ${palette.bg}`}>
+    <div
+      className={`rise-in p-3.5 ${palette.bg}`}
+      style={riseIndex != null ? { ["--i" as string]: riseIndex } : undefined}
+    >
       <div className="flex items-center gap-2">
         <span
           className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${palette.chip}`}

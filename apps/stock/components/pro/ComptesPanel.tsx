@@ -122,12 +122,12 @@ export function ComptesPanel() {
 
       <section className="px-5 mt-5 pb-10">
         {loading ? (
-          <div className="bg-[var(--surface-1)] border border-rule rounded-[20px] p-10 flex items-center justify-center gap-3">
+          <div className="lg p-10 flex items-center justify-center gap-3">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
         ) : visibles.length === 0 ? (
-          <div className="bg-[var(--surface-1)] border border-rule rounded-[20px]">
+          <div className="lg">
             <EmptyState
               icon={Building2}
               title={
@@ -145,8 +145,13 @@ export function ComptesPanel() {
           </div>
         ) : (
           <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
-            {visibles.map((c) => (
-              <CompteCard key={c.id} compte={c} onClick={() => setDetail(c)} />
+            {visibles.map((c, idx) => (
+              <CompteCard
+                key={c.id}
+                compte={c}
+                index={idx}
+                onClick={() => setDetail(c)}
+              />
             ))}
           </div>
         )}
@@ -291,19 +296,20 @@ export function ComptesPanel() {
 
 function CompteCard({
   compte,
+  index,
   onClick,
 }: {
   compte: ComptePro;
+  index: number;
   onClick: () => void;
 }) {
   const depasse = compte.encours_actuel > compte.encours_max;
   return (
     <button
       onClick={onClick}
-      className={`w-full bg-[var(--surface-1)] border rounded-2xl p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform ${
-        compte.statut === "en_validation"
-          ? "border-warning/40 shadow-card"
-          : "border-rule"
+      style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+      className={`lg lg-hover tap rise-in w-full p-3.5 flex items-center gap-3 text-left ${
+        compte.statut === "en_validation" ? "!border-warning/40" : ""
       }`}
     >
       <span

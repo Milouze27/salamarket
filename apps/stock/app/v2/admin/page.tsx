@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -253,7 +253,7 @@ export default function V2AdminDashboardPage() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="bg-card-bg border border-rule rounded-[20px] p-4 space-y-3 shadow-card"
+              className="lg rounded-[20px] p-4 space-y-3"
             >
               <div className="flex items-center gap-3">
                 <div className="skeleton w-10 h-10" />
@@ -339,7 +339,7 @@ export default function V2AdminDashboardPage() {
                     ease: [0.22, 0.61, 0.36, 1],
                     delay: idx * 0.05,
                   }}
-                  className="bg-card-bg border border-rule rounded-[20px] shadow-card overflow-hidden active:scale-[0.99] transition-transform cursor-pointer"
+                  className="lg lg-hover tap rounded-[20px] overflow-hidden cursor-pointer"
                   onClick={() => router.push(`/v2/stock?depot=${s.depot.id}`)}
                   role="link"
                   aria-label={`Voir le stock du dépôt ${s.depot.nom}`}
@@ -417,7 +417,7 @@ export default function V2AdminDashboardPage() {
             {!showAllDepots && stats.length > 3 && (
               <button
                 onClick={() => setShowAllDepots(true)}
-                className="w-full bg-card-bg border border-rule rounded-2xl py-3 text-sm font-bold text-primary inline-flex items-center justify-center gap-1.5 shadow-card active:scale-[0.99] transition-transform"
+                className="lg lg-hover tap w-full rounded-2xl py-3 text-sm font-bold text-primary inline-flex items-center justify-center gap-1.5"
               >
                 Voir les {stats.length - 3} autre
                 {stats.length - 3 > 1 ? "s" : ""} dépôt
@@ -509,7 +509,7 @@ export default function V2AdminDashboardPage() {
                 {flaggedSorties.length > 4 && (
                   <a
                     href="/v2/admin/alertes"
-                    className="block bg-card-bg border border-rule rounded-2xl p-3 text-center text-[12px] font-bold text-danger active:scale-[0.99] transition-transform"
+                    className="lg lg-hover tap block rounded-2xl p-3 text-center text-[12px] font-bold text-danger"
                   >
                     +{flaggedSorties.length - 4} autre
                     {flaggedSorties.length - 4 > 1 ? "s" : ""} alerte
@@ -526,7 +526,8 @@ export default function V2AdminDashboardPage() {
           <section className="px-4 sm:px-5 mt-7 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
               href="/v2/admin/activite"
-              className="bg-card-bg border border-rule rounded-2xl p-4 shadow-card active:scale-[0.99] transition-transform flex items-center gap-3"
+              style={{ "--i": 0 } as CSSProperties}
+              className="lg lg-hover tap rise-in rounded-2xl p-4 flex items-center gap-3"
               aria-label="Voir l'activité complète"
             >
               <div className="flex-1 min-w-0">
@@ -550,7 +551,8 @@ export default function V2AdminDashboardPage() {
             {recentInventaires.length > 0 && (
               <a
                 href="/v2/inventaire/historique"
-                className="bg-card-bg border border-rule rounded-2xl p-4 shadow-card active:scale-[0.99] transition-transform flex items-center gap-3"
+                style={{ "--i": 1 } as CSSProperties}
+                className="lg lg-hover tap rise-in rounded-2xl p-4 flex items-center gap-3"
                 aria-label="Voir les inventaires"
               >
                 <div className="flex-1 min-w-0">

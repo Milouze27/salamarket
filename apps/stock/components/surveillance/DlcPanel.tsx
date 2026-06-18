@@ -489,6 +489,7 @@ export function DlcPanel() {
       <section className="px-4 sm:px-5 mt-5 grid grid-cols-2 gap-2.5">
         <KpiCard
           variant="danger"
+          riseIndex={0}
           icon={<AlertOctagon className="w-4 h-4" />}
           eyebrow="FORCÉ + CRITIQUE"
           value={`${kpi.forcé + kpi.critique}`}
@@ -496,6 +497,7 @@ export function DlcPanel() {
         />
         <KpiCard
           variant="warn"
+          riseIndex={1}
           icon={<AlertTriangle className="w-4 h-4" />}
           eyebrow="ATTENTION"
           value={`${kpi.attention}`}
@@ -503,6 +505,7 @@ export function DlcPanel() {
         />
         <KpiCard
           variant="gold"
+          riseIndex={2}
           icon={<TrendingDown className="w-4 h-4" />}
           eyebrow="SURVEILLANCE"
           value={`${kpi.surveillance}`}
@@ -510,6 +513,7 @@ export function DlcPanel() {
         />
         <KpiCard
           variant="neutral"
+          riseIndex={3}
           icon={<Tag className="w-4 h-4" />}
           eyebrow="REMISE TOTALE"
           value={`-${Math.round(kpi.valeurRemise)} €`}
@@ -586,14 +590,15 @@ export function DlcPanel() {
           </div>
         ) : (
           <ul className="space-y-2.5">
-            {alerts.map((a) => {
+            {alerts.map((a, idx) => {
               const style = NIVEAU_STYLE[a.niveau_alerte];
               const isApplying = acting === `apply:${a.lot_id}`;
               const isPrinting = acting === `promo:${a.lot_id}`;
               return (
                 <li
                   key={a.lot_id}
-                  className={`bg-white border-2 rounded-2xl p-4 ${style.border}`}
+                  className={`lg rise-in border-2 p-4 ${style.border}`}
+                  style={{ ["--i" as string]: Math.min(idx, 8) }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -707,12 +712,14 @@ export function DlcPanel() {
 
 function KpiCard({
   variant,
+  riseIndex,
   icon,
   eyebrow,
   value,
   label,
 }: {
   variant: "danger" | "warn" | "gold" | "neutral";
+  riseIndex?: number;
   icon: React.ReactNode;
   eyebrow: string;
   value: string;
@@ -722,10 +729,13 @@ function KpiCard({
     danger: "border-[color:var(--danger-border)] text-danger",
     warn: "border-[#D97706]/30 text-[#92400E]",
     gold: "border-[color:var(--accent-gold)]/40 text-[color:var(--or-text)]",
-    neutral: "border-rule text-text-primary",
+    neutral: "text-text-primary",
   };
   return (
-    <div className={`bg-white border-2 rounded-2xl p-3.5 ${palette[variant]}`}>
+    <div
+      className={`lg lg-hover rise-in border-2 p-3.5 ${palette[variant]}`}
+      style={riseIndex != null ? { ["--i" as string]: riseIndex } : undefined}
+    >
       <div className="flex items-center gap-1.5">
         {icon}
         <p className="text-[10px] font-bold uppercase tracking-wide">

@@ -10,7 +10,6 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
   CheckCircle2,
   Download,
@@ -179,12 +178,12 @@ export function ReceptionsPanel() {
       </div>
 
       {loading ? (
-        <div className="bg-white border border-rule rounded-2xl p-8 flex items-center justify-center gap-2">
+        <div className="lg p-8 flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 text-primary animate-spin" />
           <p className="text-sm text-text-secondary">Chargement…</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-cream border border-rule rounded-2xl p-8 text-center">
+        <div className="lg p-8 text-center">
           <FileText className="w-7 h-7 text-text-tertiary mx-auto mb-2" />
           <p className="font-bold text-text-primary">
             Aucun BR sur cette période
@@ -208,12 +207,10 @@ export function ReceptionsPanel() {
             );
             const ecart = totalRecu - totalAttendu;
             return (
-              <motion.div
+              <div
                 key={r.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18, delay: idx * 0.03 }}
-                className="bg-white border border-rule rounded-2xl p-4 shadow-card"
+                className="lg lg-hover rise-in p-4"
+                style={{ "--i": Math.min(idx, 8) } as React.CSSProperties}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -313,7 +310,7 @@ export function ReceptionsPanel() {
                     </span>
                   </div>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -324,7 +321,7 @@ export function ReceptionsPanel() {
 
 function Kpi({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-white border border-rule rounded-2xl p-3">
+    <div className="lg p-3">
       <p className="text-[9.5px] font-bold uppercase tracking-wide text-text-tertiary">
         {label}
       </p>

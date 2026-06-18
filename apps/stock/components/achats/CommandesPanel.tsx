@@ -11,7 +11,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   Building2,
   ChevronRight,
@@ -261,20 +260,19 @@ export function CommandesPanel() {
         <EmptyState tab={tab} />
       ) : (
         <ul className="space-y-3">
-          {filtered.map((po) => {
+          {filtered.map((po, idx) => {
             const alerte = certifAlerte(po.fournisseurs?.certif_expire_le);
             const blocked = alerte === "expiree" || alerte === "manquante";
             return (
-              <motion.li
+              <li
                 key={po.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18 }}
+                className="rise-in"
+                style={{ "--i": Math.min(idx, 8) } as React.CSSProperties}
               >
                 <button
                   type="button"
                   onClick={() => setDrawer(po)}
-                  className="card card-tappable w-full text-left flex flex-col gap-3"
+                  className="lg lg-hover tap w-full text-left flex flex-col gap-3"
                   style={{ padding: 16 }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -341,7 +339,7 @@ export function CommandesPanel() {
                     </span>
                   </div>
                 </button>
-              </motion.li>
+              </li>
             );
           })}
         </ul>
@@ -375,7 +373,7 @@ function KpiCard({
     neutral: "var(--text-secondary)",
   }[accent];
   return (
-    <div className="card" style={{ padding: 14 }}>
+    <div className="lg" style={{ padding: 14 }}>
       <p
         className="label-caps mb-1.5"
         style={{ color: "var(--text-secondary)", fontSize: 10 }}
@@ -436,7 +434,7 @@ function SkeletonList() {
   return (
     <ul className="space-y-3">
       {[0, 1, 2].map((i) => (
-        <li key={i} className="card" style={{ padding: 16 }}>
+        <li key={i} className="lg" style={{ padding: 16 }}>
           <div className="skeleton h-4 w-1/3 mb-2" />
           <div className="skeleton h-6 w-2/3 mb-3" />
           <div className="skeleton h-4 w-24" />
@@ -465,7 +463,7 @@ function EmptyState({ tab }: { tab: Tab }) {
     },
   }[tab];
   return (
-    <div className="card" style={{ padding: 8 }}>
+    <div className="lg" style={{ padding: 8 }}>
       <SharedEmptyState
         icon={map.Icon}
         title={map.title}

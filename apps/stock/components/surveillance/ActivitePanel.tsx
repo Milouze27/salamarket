@@ -193,12 +193,16 @@ export function ActivitePanel({
         </div>
       ) : (
         <section className="px-4 sm:px-5 mt-5 pb-nav-stack space-y-5">
-          {grouped.map(([day, rows]) => (
-            <div key={day}>
+          {grouped.map(([day, rows], gi) => (
+            <div
+              key={day}
+              className="rise-in"
+              style={{ ["--i" as string]: Math.min(gi, 8) }}
+            >
               <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-text-tertiary mb-2 sticky top-[var(--header-height,56px)] bg-cream py-1">
                 {formatDay(day)} · {rows.length}
               </p>
-              <div className="bg-white border border-rule rounded-2xl divide-y divide-rule overflow-hidden">
+              <div className="lg divide-y divide-rule overflow-hidden">
                 {rows.map((row, i) => (
                   <Row key={i} row={row} depots={depots} employes={employes} />
                 ))}
@@ -253,7 +257,7 @@ function Row({
     return (
       <a
         href="/v2/reception"
-        className="px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
+        className="tap px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
       >
         <span className="w-9 h-9 rounded-xl bg-success-soft text-success flex items-center justify-center shrink-0">
           <ArrowDownToLine className="w-4 h-4" />
@@ -279,7 +283,7 @@ function Row({
     return (
       <a
         href={lowScore ? `/v2/admin/alertes?sortie=${s.id}` : "/v2/admin/alertes"}
-        className="px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
+        className="tap px-3 py-3 min-h-[56px] flex items-center gap-3 active:bg-cream transition-colors"
       >
         <span
           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
@@ -311,7 +315,7 @@ function Row({
   return (
     <a
       href="/v2/transfert"
-      className="px-3 py-2.5 flex items-center gap-3 active:bg-cream transition-colors"
+      className="tap px-3 py-2.5 flex items-center gap-3 active:bg-cream transition-colors"
     >
       <span className="w-9 h-9 rounded-xl bg-gold-soft text-primary-dark flex items-center justify-center shrink-0">
         <Repeat2 className="w-4 h-4" />

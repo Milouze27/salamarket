@@ -591,8 +591,8 @@ export function V2Shell({
   // derrière, posé une fois dans le shell). En desktop (≥lg) la sidebar glass
   // occupe la gouttière gauche ; le contenu se recentre dans l'espace restant.
   const containerClass = wide
-    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] lg:max-w-[1120px] xl:max-w-[1280px] min-h-[100dvh] relative"
-    : "mx-auto w-full max-w-[460px] lg:max-w-[760px] min-h-[100dvh] relative";
+    ? "mx-auto w-full max-w-[520px] sm:max-w-[820px] md:max-w-[980px] lg:max-w-[1160px] xl:max-w-[1340px] min-h-[100dvh] relative"
+    : "mx-auto w-full max-w-[520px] sm:max-w-[680px] md:max-w-[900px] lg:max-w-[1040px] xl:max-w-[1200px] min-h-[100dvh] relative";
 
   return (
     // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms
@@ -612,7 +612,7 @@ export function V2Shell({
             onToggle={toggleAside}
           />
         )}
-        <div className={`${containerClass} flex-1 lg:mx-0`}>
+        <div className={`${containerClass} flex-1`}>
           {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
           <header className="glass-bar sticky top-0 z-30">

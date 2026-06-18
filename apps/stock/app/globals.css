@@ -1517,3 +1517,237 @@ body.theme-nuit .cmdk-item[data-selected="true"] {
 body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
   color: var(--text-primary);
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   LIQUID GLASS — iOS 26 porté sur la palette Salamarket (atelier sombre
+   par défaut, or/sapin/crème). Inspiré du CRM ESF/Almys : verre frosté,
+   fond mesh vibrant, profondeur spéculaire, et surtout des entrées/sorties
+   ANIMÉES partout (plus de spawn/despawn brutal). 100% iOS-safe (CSS only,
+   pas de réfraction SVG Chromium-only). Respecte « réduire les animations ».
+   ════════════════════════════════════════════════════════════════════ */
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-enter: 240ms;
+  --dur-exit: 190ms;
+  --glass-radius: var(--radius-xl);
+}
+/* Vrai ressort iOS là où linear() est supporté (Safari 17.2+/PWA récente). */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(
+      0, 0.006, 0.025, 0.101, 0.539, 0.826, 0.967,
+      1.041, 1.063, 1.057, 1.029, 1.005, 0.995, 0.999, 1
+    );
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --ease-spring: linear; }
+}
+
+/* ── Verre .lg — DARK par défaut (atelier). Sapin translucide + arête
+   spéculaire (reflet haut net, liseré bas) + ombre flottante. ── */
+.lg {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--glass-radius);
+  background: rgba(19, 41, 31, 0.55);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 8px rgba(255, 255, 255, 0.03),
+    inset 0 -10px 18px -12px rgba(0, 0, 0, 0.4),
+    0 16px 38px -18px rgba(0, 0, 0, 0.62),
+    0 5px 14px -8px rgba(0, 0, 0, 0.4);
+  transition:
+    box-shadow 0.55s var(--ease-out-expo),
+    transform 0.55s var(--ease-out-expo);
+}
+.lg-hover {
+  transition:
+    transform 0.3s var(--ease-out-expo),
+    box-shadow 0.3s var(--ease-out-expo);
+}
+@media (hover: hover) {
+  .lg-hover:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 0 10px rgba(255, 255, 255, 0.04),
+      0 26px 54px -18px rgba(0, 0, 0, 0.7),
+      0 8px 18px -10px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Indicateur de sélection glissant (nav/onglets) — or translucide givré. */
+.lg-pill {
+  border-radius: var(--radius-md);
+  background: rgba(232, 194, 74, 0.16);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+  backdrop-filter: blur(10px) saturate(180%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px -2px rgba(0, 0, 0, 0.3),
+    0 6px 16px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* Barre flottante (header + bottom-nav) — givré sapin + arête haute. */
+.glass-bar {
+  background: linear-gradient(180deg, rgba(19, 41, 31, 0.94), rgba(8, 25, 18, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 14px 36px -16px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+}
+
+/* Fond liquide animé — mesh atelier (sapin + or) qui drift lentement. */
+.liquid-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(48% 56% at 14% 8%, rgba(45, 122, 79, 0.22), transparent 72%),
+    radial-gradient(42% 50% at 88% 4%, rgba(232, 194, 74, 0.12), transparent 72%),
+    radial-gradient(50% 56% at 86% 94%, rgba(20, 82, 63, 0.22), transparent 74%),
+    radial-gradient(44% 52% at 6% 92%, rgba(232, 194, 74, 0.07), transparent 74%),
+    var(--bg-abyss);
+}
+.liquid-bg::after {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  background:
+    radial-gradient(34% 40% at 30% 70%, rgba(45, 122, 79, 0.14), transparent 72%),
+    radial-gradient(30% 36% at 73% 27%, rgba(232, 194, 74, 0.08), transparent 72%);
+  animation: lgDrift 36s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes lgDrift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2.5%, -2%, 0) scale(1.07); }
+}
+
+/* ── Override JOUR (cream) — verre clair spéculaire façon iOS clair ── */
+[data-theme="jour"] .lg {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 1.5px 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 7px rgba(255, 255, 255, 0.6),
+    inset 0 -10px 18px -12px rgba(80, 105, 70, 0.12),
+    0 14px 34px -16px rgba(40, 60, 45, 0.2),
+    0 5px 14px -8px rgba(40, 60, 45, 0.12);
+}
+@media (hover: hover) {
+  [data-theme="jour"] .lg-hover:hover {
+    box-shadow:
+      inset 1.5px 1.5px 0 rgba(255, 255, 255, 1),
+      0 22px 48px -16px rgba(40, 60, 45, 0.26),
+      0 8px 18px -10px rgba(40, 60, 45, 0.16);
+  }
+}
+[data-theme="jour"] .lg-pill {
+  background: rgba(201, 162, 39, 0.14);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 1),
+    0 6px 16px -8px rgba(40, 60, 45, 0.28);
+}
+[data-theme="jour"] .glass-bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 247, 238, 0.96));
+  border-color: rgba(14, 59, 46, 0.1);
+  box-shadow:
+    0 10px 30px -16px rgba(40, 60, 45, 0.26),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+[data-theme="jour"] .liquid-bg {
+  background:
+    radial-gradient(46% 56% at 16% 12%, rgba(45, 122, 79, 0.14), transparent 72%),
+    radial-gradient(40% 50% at 87% 8%, rgba(201, 162, 39, 0.12), transparent 72%),
+    radial-gradient(48% 56% at 84% 90%, rgba(20, 82, 63, 0.1), transparent 74%),
+    var(--bg-cream);
+}
+
+/* ════════ Animations entrée/sortie — « tout animé, jamais brutal » ════════
+   Compositor-only (opacity/transform). Stagger via --i (cap conseillé : 8). */
+@keyframes lgPageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page-in { animation: lgPageIn var(--dur-enter) var(--ease-out-expo) both; }
+
+@keyframes lgRiseIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+.rise-in { animation: lgRiseIn 0.34s var(--ease-out-expo) both; animation-delay: calc(var(--i, 0) * 42ms); }
+
+/* Voile de modale */
+@keyframes lgScrimIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lgScrimOut { from { opacity: 1; } to { opacity: 0; } }
+.scrim-in { animation: lgScrimIn 0.22s ease-out both; }
+.scrim-out { animation: lgScrimOut 0.2s ease-in both; }
+
+/* Bottom-sheet : monte/descend mobile, pop centré ≥640px */
+@keyframes lgSheetUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@keyframes lgSheetDown { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(100%); } }
+.sheet-in { animation: lgSheetUp 0.34s var(--ease-spring) both; }
+.sheet-out { animation: lgSheetDown 0.24s cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes lgSheetPopIn { from { opacity: 0; transform: scale(0.94) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes lgSheetPopOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.96) translateY(6px); } }
+@media (min-width: 640px) {
+  .sheet-in { animation: lgSheetPopIn 0.26s var(--ease-out-expo) both; }
+  .sheet-out { animation: lgSheetPopOut 0.18s ease-in both; }
+}
+
+/* Pop menu/popover (entrée + sortie) */
+@keyframes lgMenuPop { from { opacity: 0; transform: scale(0.92) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes lgMenuOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.94) translateY(-3px); } }
+.menu-pop { animation: lgMenuPop 0.2s var(--ease-out-expo) both; }
+.menu-out { animation: lgMenuOut 0.14s cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes lgPopOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-6px) scale(0.97); } }
+.pop-out { animation: lgPopOut 0.16s cubic-bezier(0.4, 0, 1, 1) both; }
+
+/* Toast (haut) entrée + sortie */
+@keyframes lgToastDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+@keyframes lgToastUp { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-16px); } }
+.toast-down { animation: lgToastDown 0.3s var(--ease-out-expo) both; }
+.toast-up { animation: lgToastUp 0.22s cubic-bezier(0.4, 0, 1, 1) both; }
+
+/* Compteur qui « pope » au changement (récompense) */
+@keyframes lgCountPop { 0% { opacity: 0; transform: scale(0.5); } 60% { transform: scale(1.15); } 100% { opacity: 1; transform: none; } }
+.count-pop { animation: lgCountPop 0.28s var(--ease-spring) both; }
+
+/* Feedback tactile iOS sur tout pressable (pendant visuel du haptic). */
+.tap {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: transform var(--dur-fast) var(--ease-out-quart);
+}
+.tap:active { transform: scale(0.97); }
+
+/* Glissière fine façon iOS (listes longues, sidebar desktop). */
+.scrollbar-slim { scrollbar-width: thin; scrollbar-color: rgba(232, 194, 74, 0.4) transparent; }
+.scrollbar-slim::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-slim::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-slim::-webkit-scrollbar-thumb {
+  background: rgba(232, 194, 74, 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scrollbar-slim:hover::-webkit-scrollbar-thumb { background: rgba(232, 194, 74, 0.55); background-clip: padding-box; }
+
+/* Sidebar desktop repliable (largeur animée — l'anim n'est ajoutée qu'après
+   le 1er rendu via .lg-aside-anim pour éviter une anim de largeur au load). */
+.lg-aside-anim { transition: width 0.3s var(--ease-spring); }
+
+/* Curseur main sur les pressables (parité ESF). */
+button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for] { cursor: pointer; }
+
+/* Garde « réduire les animations » pour TOUTES les entrées/sorties liquid-glass
+   (on laisse jouer les *-out quasi-instantanément pour ne pas figer les overlays
+   qui se démontent sur animationend). */
+@media (prefers-reduced-motion: reduce) {
+  .page-in, .rise-in, .scrim-in, .sheet-in, .menu-pop, .toast-down, .count-pop { animation: none !important; }
+  .liquid-bg::after { animation: none; }
+}

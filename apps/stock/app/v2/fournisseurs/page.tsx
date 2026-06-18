@@ -34,6 +34,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 import { CertHalalBadge } from "@/components/po/cert-halal-badge";
 import { supabase } from "@/lib/supabase";
 
@@ -145,57 +146,25 @@ export default function AchatsPage() {
         </header>
 
         {/* Onglets de section */}
-        <div
-          className="flex gap-2 mb-5 scrollbar-none overflow-x-auto"
-          role="tablist"
-          aria-label="Sections Achats"
-        >
-          <SectionTab
-            label="Fournisseurs"
-            active={tab === "fournisseurs"}
-            onClick={() => selectTab("fournisseurs")}
-          />
-          <SectionTab
-            label="Commandes"
-            active={tab === "commandes"}
-            onClick={() => selectTab("commandes")}
-          />
-          <SectionTab
-            label="Réceptions"
-            active={tab === "receptions"}
-            onClick={() => selectTab("receptions")}
-          />
-        </div>
+        <GlassTabs<AchatsTab>
+          ariaLabel="Sections Achats"
+          className="mb-5 scrollbar-none overflow-x-auto"
+          value={tab}
+          onChange={selectTab}
+          items={[
+            { value: "fournisseurs", label: "Fournisseurs" },
+            { value: "commandes", label: "Commandes" },
+            { value: "receptions", label: "Réceptions" },
+          ]}
+        />
 
-        {tab === "fournisseurs" && <FournisseursPanel />}
-        {tab === "commandes" && <CommandesPanel />}
-        {tab === "receptions" && <ReceptionsPanel />}
+        <GlassTabPanel tabKey={tab}>
+          {tab === "fournisseurs" && <FournisseursPanel />}
+          {tab === "commandes" && <CommandesPanel />}
+          {tab === "receptions" && <ReceptionsPanel />}
+        </GlassTabPanel>
       </div>
     </V2Shell>
-  );
-}
-
-function SectionTab({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className="pill-filter press-btn shrink-0"
-      data-active={active}
-      style={{ minHeight: 44 }}
-    >
-      {label}
-    </button>
   );
 }
 

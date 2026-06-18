@@ -17,6 +17,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 import { useV2 } from "@/lib/v2-store";
 import {
   assignInventairesPourDepot,
@@ -273,26 +274,22 @@ export default function V2InventairePage() {
           </>
         ) : null}
 
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => selectTab("aujourdhui")}
-            data-active={tab === "aujourdhui"}
-            className="pill-filter"
-          >
-            Aujourd&apos;hui
-          </button>
-          <button
-            onClick={() => selectTab("historique")}
-            data-active={tab === "historique"}
-            className="pill-filter"
-          >
-            Historique
-          </button>
-        </div>
+        <GlassTabs<Tab>
+          ariaLabel="Vues de l'inventaire"
+          className="mt-4"
+          value={tab}
+          onChange={selectTab}
+          items={[
+            { value: "aujourdhui", label: "Aujourd'hui" },
+            { value: "historique", label: "Historique" },
+          ]}
+        />
       </header>
 
       {tab === "historique" ? (
-        <HistoriquePanel />
+        <GlassTabPanel tabKey="historique">
+          <HistoriquePanel />
+        </GlassTabPanel>
       ) : loading ? (
         <div className="px-5 pt-10 text-center text-text-secondary">
           Chargement…

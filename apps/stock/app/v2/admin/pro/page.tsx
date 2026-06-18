@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 
 const PanelLoader = () => (
   <div className="px-5 mt-5">
@@ -88,28 +89,19 @@ export default function ProPage() {
       </header>
 
       {/* Onglets */}
-      <div
-        className="px-5 mt-5 flex gap-2 overflow-x-auto scrollbar-hide"
-        role="tablist"
-        aria-label="Sections de l'espace pro"
-      >
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-            data-active={tab === t.key}
-            className="pill-filter min-h-[44px]"
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <GlassTabs<Tab>
+        ariaLabel="Sections de l'espace pro"
+        className="px-5 mt-5 overflow-x-auto scrollbar-hide"
+        value={tab}
+        onChange={setTab}
+        items={TABS.map((t) => ({ value: t.key, label: t.label }))}
+      />
 
-      {tab === "comptes" && <ComptesPanel />}
-      {tab === "commandes" && <CommandesProPanel />}
-      {tab === "factures" && <FacturesPanel />}
+      <GlassTabPanel tabKey={tab}>
+        {tab === "comptes" && <ComptesPanel />}
+        {tab === "commandes" && <CommandesProPanel />}
+        {tab === "factures" && <FacturesPanel />}
+      </GlassTabPanel>
     </V2Shell>
   );
 }

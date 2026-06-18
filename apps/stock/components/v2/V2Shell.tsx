@@ -29,6 +29,8 @@ import {
   Lock,
   MonitorPlay,
   MoreHorizontal,
+  PanelLeft,
+  PanelLeftClose,
   PackageSearch,
   QrCode,
   Receipt,
@@ -436,6 +438,30 @@ export function V2Shell({
   const setPreviewRole = useV2((s) => s.setPreviewRole);
   const [mode, setMode] = useState<"supabase" | "local">("local");
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Sidebar desktop (≥lg) repliable — état persistant. Démarre déplié ; on
+  // restaure le choix au montage pour éviter une anim de largeur au 1er rendu.
+  const [asideCollapsed, setAsideCollapsed] = useState(false);
+  const [asideReady, setAsideReady] = useState(false);
+  useEffect(() => {
+    try {
+      setAsideCollapsed(
+        localStorage.getItem("salam-stock:aside-collapsed") === "1",
+      );
+    } catch {
+      /* noop */
+    }
+    setAsideReady(true);
+  }, []);
+  const toggleAside = () =>
+    setAsideCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("salam-stock:aside-collapsed", next ? "1" : "0");
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
   // Sous-groupes du Plus-sheet repliés par défaut, sauf le terrain + pilotage.
   // L'utilisateur déplie le back-office au besoin (anti « bordel »).
   const [openGroups, setOpenGroups] = useState<Set<string>>(
@@ -561,19 +587,35 @@ export function V2Shell({
   // wide = pages admin/pilotage : sur desktop on utilise la vraie largeur
   // d'écran (1120/1280px) au lieu de gaspiller en colonne étroite. La bottom-nav
   // reste un îlot centré confortable (820px), elle ne s'étire pas à 1280.
+  // Liquid Glass : le conteneur est TRANSPARENT (le mesh .liquid-bg vit
+  // derrière, posé une fois dans le shell). En desktop (≥lg) la sidebar glass
+  // occupe la gouttière gauche ; le contenu se recentre dans l'espace restant.
   const containerClass = wide
-    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] lg:max-w-[1120px] xl:max-w-[1280px] min-h-[100dvh] relative bg-cream"
-    : "mx-auto w-full max-w-[460px] lg:max-w-[760px] min-h-[100dvh] relative bg-cream";
+    ? "mx-auto w-full max-w-[460px] md:max-w-[820px] lg:max-w-[1120px] xl:max-w-[1280px] min-h-[100dvh] relative"
+    : "mx-auto w-full max-w-[460px] lg:max-w-[760px] min-h-[100dvh] relative";
 
   return (
     // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms
     // (translate/scale/x) sous reduce-motion OS, en gardant les fades d'opacité.
     <MotionConfig reducedMotion="user">
-      <div className="min-h-[100dvh] bg-cream">
-        <div className={containerClass}>
+      {/* Fond mesh liquide — posé une seule fois, derrière tout le contenu. */}
+      <div className="liquid-bg" aria-hidden />
+      <div className="min-h-[100dvh] lg:flex">
+        {/* SIDEBAR GLASS desktop (≥lg) — nav filtrée par rôle, repliable. */}
+        {!hideNav && (
+          <DesktopAside
+            primary={primary}
+            sheetGroups={sheetGroups}
+            pathname={pathname}
+            collapsed={asideCollapsed}
+            ready={asideReady}
+            onToggle={toggleAside}
+          />
+        )}
+        <div className={`${containerClass} flex-1 lg:mx-0`}>
           {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
-          <header className="sticky top-0 z-30 bg-gradient-to-b from-[#0E3B2E] to-[#082A20] backdrop-blur-xl">
+          <header className="glass-bar sticky top-0 z-30">
             <div className="flex items-center gap-2 px-4 pt-3 pb-3 safe-top">
               {/* Bloc identité — clickable vers accueil, long-press → ⌘K (fallback mobile) */}
               <Link
@@ -590,10 +632,10 @@ export function V2Shell({
               >
                 <V2Logo size={32} />
                 <div className="min-w-0 leading-tight">
-                  <p className="text-[14px] font-extrabold text-white tracking-tight truncate">
+                  <p className="text-[14px] font-extrabold tracking-tight truncate" style={{ color: "var(--text-primary)" }}>
                     {employe.prenom}
                   </p>
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[#C9A227] truncate">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] truncate" style={{ color: "var(--accent-gold)" }}>
                     {/* EMP-01 — libellé FR unique via roleLabel (bannit l'enum
                       brut 'preparation' et les rendus incohérents). */}
                     {roleLabel(employe.role)}
@@ -615,7 +657,12 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher — palette de commandes (Cmd+K)"
-                className="hidden [@media(pointer:fine)]:inline-flex shrink-0 items-center gap-1.5 text-[10.5px] font-semibold text-white/70 hover:text-white bg-white/10 border border-white/20 rounded-full px-2 py-1.5 active:scale-95 transition-all"
+                className="tap hidden [@media(pointer:fine)]:inline-flex shrink-0 items-center gap-1.5 text-[10.5px] font-semibold rounded-full px-2 py-1.5 transition-colors"
+                style={{
+                  color: "var(--text-secondary)",
+                  background: "var(--surface-1)",
+                  border: "1px solid var(--border-card)",
+                }}
               >
                 <Search className="w-3.5 h-3.5 opacity-80" strokeWidth={2.2} />
                 <span className="opacity-80">Rechercher</span>
@@ -626,7 +673,12 @@ export function V2Shell({
                   window.dispatchEvent(new Event("salam-stock-cmdk:open"))
                 }
                 aria-label="Rechercher (Cmd+K)"
-                className="[@media(pointer:fine)]:hidden shrink-0 w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all"
+                className="tap [@media(pointer:fine)]:hidden shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-colors"
+                style={{
+                  color: "var(--text-secondary)",
+                  background: "var(--surface-1)",
+                  border: "1px solid var(--border-card)",
+                }}
               >
                 <Search className="w-4 h-4" strokeWidth={2.2} />
               </button>
@@ -677,16 +729,18 @@ export function V2Shell({
             )}
           </header>
 
-          {/* MAIN */}
+          {/* MAIN — transition de page Liquid Glass : rejoue en douceur à
+            chaque navigation (clé sur pathname), courbe iOS out-expo. */}
           <motion.main
+            key={pathname}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            // BUG-008 / L99-iPad : la nav bottom flotte à TOUTES les tailles
-            // (plus de md:hidden) → on garde pb-nav-stack y compris ≥md pour que
-            // la pill flottante ne chevauche jamais le contenu utile. Quand la
-            // nav est masquée (hideNav), on rabat sur le seul espace du CTA.
-            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack"} pt-2`}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            // BUG-008 / L99-iPad : la nav bottom flotte sous lg ; on réserve son
+            // espace (pb-nav-stack) en mobile/tablette. En desktop (≥lg) la nav
+            // passe en sidebar latérale → plus besoin du padding bas (lg:!pb-8).
+            // Quand la nav est masquée (hideNav), on rabat sur le seul CTA.
+            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack lg:!pb-10"} pt-2`}
           >
             {!depot && (
               <div className="px-5 pt-6">
@@ -707,21 +761,11 @@ export function V2Shell({
             Plus-sheet), iPad/tablette gardent donc leur navigation. */}
           {!hideNav && (
             <nav
-              className="fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none"
+              className="lg:hidden fixed bottom-0 inset-x-0 z-40 pb-safe pointer-events-none"
               aria-label="Navigation principale"
             >
               <div className="mx-auto max-w-[460px] md:max-w-[820px] px-3 pb-2 pt-2 pointer-events-auto">
-                <div
-                  className="rounded-[24px] px-2 py-2 flex items-center gap-1"
-                  style={{
-                    background: "var(--glass-nav)",
-                    backdropFilter: "var(--glass-nav-blur)",
-                    WebkitBackdropFilter: "var(--glass-nav-blur)",
-                    borderTop: "1px solid var(--border-hairline)",
-                    border: "1px solid var(--border-card)",
-                    boxShadow: "var(--shadow-elevated)",
-                  }}
-                >
+                <div className="glass-bar rounded-[24px] px-2 py-2 flex items-center gap-1">
                   {primary.map((it) => {
                     const Icon = it.icon;
                     const active = it.exact
@@ -733,21 +777,19 @@ export function V2Shell({
                         href={it.href}
                         aria-label={it.fullLabel ?? it.label}
                         aria-current={active ? "page" : undefined}
-                        className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
+                        className="tap relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
                       >
-                        {active && (
-                          <span
-                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full"
-                            style={{
-                              background: "var(--accent-gold-bright)",
-                              boxShadow: "var(--accent-gold-glow)",
-                            }}
+                        {/* Pastille de sélection glissante (or givré) — partagée
+                          via layoutId, elle glisse en douceur sous l'item actif. */}
+                        {active && !sheetOpen && (
+                          <motion.span
+                            layoutId="nav-pill"
+                            className="lg-pill absolute inset-0.5 -z-0"
+                            transition={{ type: "spring", stiffness: 380, damping: 32 }}
                           />
                         )}
                         <span
-                          className={`inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors ${
-                            active ? "bg-[color:var(--accent-gold-soft)]" : ""
-                          }`}
+                          className="relative z-10 inline-flex items-center justify-center w-9 h-9 rounded-full"
                         >
                           <Icon
                             className="w-[22px] h-[22px] transition-colors"
@@ -760,7 +802,7 @@ export function V2Shell({
                           />
                         </span>
                         <span
-                          className="text-[10.5px] leading-tight mt-0.5 transition-colors whitespace-nowrap"
+                          className="relative z-10 text-[10.5px] leading-tight mt-0.5 transition-colors whitespace-nowrap"
                           style={{
                             color: active
                               ? "var(--text-primary)"
@@ -783,18 +825,16 @@ export function V2Shell({
                     }
                     aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
-                    className="relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
+                    className="tap relative flex flex-col items-center justify-center px-1 py-1.5 flex-1 min-w-0 min-h-[48px] rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)]"
                   >
                     {sheetOpen && (
-                      <span
-                        className="absolute -top-1 left-1/2 -translate-x-1/2 w-7 h-0.5 rounded-full"
-                        style={{
-                          background: "var(--accent-gold-bright)",
-                          boxShadow: "var(--accent-gold-glow)",
-                        }}
+                      <motion.span
+                        layoutId="nav-pill"
+                        className="lg-pill absolute inset-0.5 -z-0"
+                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
                       />
                     )}
-                    <span className="relative inline-flex items-center justify-center w-9 h-9 rounded-full">
+                    <span className="relative z-10 inline-flex items-center justify-center w-9 h-9 rounded-full">
                       <MoreHorizontal
                         className="w-[22px] h-[22px]"
                         style={{
@@ -832,7 +872,7 @@ export function V2Shell({
                       )}
                     </span>
                     <span
-                      className="text-[10.5px] leading-tight mt-0.5 whitespace-nowrap"
+                      className="relative z-10 text-[10.5px] leading-tight mt-0.5 whitespace-nowrap"
                       style={{
                         color: sheetOpen
                           ? "var(--text-primary)"
@@ -889,12 +929,7 @@ export function V2Shell({
                   role="dialog"
                   aria-modal="true"
                   aria-label="Menu secondaire"
-                  className="fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] md:max-w-[820px] rounded-t-[28px] max-h-[78vh] flex flex-col"
-                  style={{
-                    background: "var(--surface-3)",
-                    borderTop: "1px solid var(--border-card)",
-                    boxShadow: "var(--shadow-elevated)",
-                  }}
+                  className="lg fixed inset-x-0 bottom-0 z-[61] mx-auto max-w-[460px] md:max-w-[820px] rounded-t-[28px] rounded-b-none max-h-[78vh] flex flex-col"
                 >
                   <div className="pt-2 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
                     <span className="w-10 h-1 rounded-full bg-line-medium" />
@@ -1042,5 +1077,169 @@ export function V2Shell({
         </div>
       </div>
     </MotionConfig>
+  );
+}
+
+/**
+ * SIDEBAR GLASS desktop (≥lg) — adaptation CRM iOS 26.
+ * Nav persistante à gauche, filtrée par rôle (réutilise EXACTEMENT le même
+ * périmètre que la bottom-nav mobile : `primary` + `sheetGroups`, donc
+ * primaryFor/sheetGroupsFor/filterItemsForRole inchangés). Repliable en rail
+ * d'icônes (largeur animée via .lg-aside-anim). Item actif = pastille .lg-pill.
+ * Masquée sous lg (la bottom-nav prend le relais en mobile).
+ */
+function DesktopAside({
+  primary,
+  sheetGroups,
+  pathname,
+  collapsed,
+  ready,
+  onToggle,
+}: {
+  primary: NavItem[];
+  sheetGroups: SheetGroup[];
+  pathname: string;
+  collapsed: boolean;
+  ready: boolean;
+  onToggle: () => void;
+}) {
+  const isActive = (it: NavItem) =>
+    it.exact ? pathname === it.href : pathname.startsWith(it.href);
+
+  const renderItem = (it: NavItem) => {
+    const Icon = it.icon;
+    const active = isActive(it);
+    // Feature cadenassée (ex. labo) : on la montre en teaser mais on n'y navigue
+    // pas — clic = upsell, cohérent avec le Plus-sheet mobile.
+    if (isLockedFeature(it.href)) {
+      return (
+        <button
+          key={it.href}
+          type="button"
+          onClick={() => toast(LOCKED_UPSELL_MESSAGE, { icon: "🔒" })}
+          aria-disabled
+          title={collapsed ? (it.fullLabel ?? it.label) : undefined}
+          className={`feature-locked tap relative flex items-center gap-3 rounded-2xl min-h-[44px] w-full text-left ${
+            collapsed ? "justify-center px-2" : "px-3"
+          }`}
+        >
+          <span className="inline-flex items-center justify-center w-10 h-10 shrink-0">
+            <Icon
+              className="w-[22px] h-[22px]"
+              style={{ color: "var(--accent-gold)" }}
+              strokeWidth={2}
+            />
+          </span>
+          {!collapsed && (
+            <span className="flex-1 min-w-0 flex items-center justify-between gap-2">
+              <span
+                className="text-[13.5px] font-semibold truncate"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {it.fullLabel ?? it.label}
+              </span>
+              <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--accent-gold)" }} />
+            </span>
+          )}
+        </button>
+      );
+    }
+    return (
+      <Link
+        key={it.href}
+        href={it.href}
+        aria-label={it.fullLabel ?? it.label}
+        aria-current={active ? "page" : undefined}
+        title={collapsed ? (it.fullLabel ?? it.label) : undefined}
+        className={`tap relative flex items-center gap-3 rounded-2xl min-h-[44px] outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary-ring)] ${
+          collapsed ? "justify-center px-2" : "px-3"
+        }`}
+      >
+        {active && (
+          <motion.span
+            layoutId="aside-pill"
+            className="lg-pill absolute inset-0 -z-0"
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+          />
+        )}
+        <span className="relative z-10 inline-flex items-center justify-center w-10 h-10 shrink-0">
+          <Icon
+            className="w-[22px] h-[22px]"
+            style={{
+              color: active
+                ? "var(--accent-gold-bright)"
+                : "var(--text-secondary)",
+            }}
+            strokeWidth={active ? 2.4 : 2}
+          />
+        </span>
+        {!collapsed && (
+          <span
+            className="relative z-10 text-[13.5px] truncate"
+            style={{
+              color: active ? "var(--text-primary)" : "var(--text-secondary)",
+              fontWeight: active ? 700 : 600,
+            }}
+          >
+            {it.fullLabel ?? it.label}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
+  return (
+    <aside
+      className={`glass-bar scrollbar-slim hidden lg:flex lg:flex-col shrink-0 sticky top-0 h-[100dvh] overflow-y-auto z-30 ${
+        ready ? "lg-aside-anim" : ""
+      } ${collapsed ? "w-[76px]" : "w-[268px]"}`}
+      aria-label="Navigation latérale"
+    >
+      {/* En-tête sidebar — logo + bouton replier (44px). */}
+      <div className="flex items-center gap-2 px-3 pt-4 pb-3 safe-top">
+        {!collapsed && (
+          <span className="min-w-0 flex-1">
+            <V2Logo size={30} />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? "Déplier la navigation" : "Replier la navigation"}
+          aria-expanded={!collapsed}
+          className={`tap inline-flex items-center justify-center w-11 h-11 rounded-2xl ${
+            collapsed ? "mx-auto" : ""
+          }`}
+          style={{ color: "var(--text-secondary)" }}
+        >
+          {collapsed ? (
+            <PanelLeft className="w-5 h-5" strokeWidth={2} />
+          ) : (
+            <PanelLeftClose className="w-5 h-5" strokeWidth={2} />
+          )}
+        </button>
+      </div>
+
+      <nav className="flex-1 px-2.5 pb-4 flex flex-col gap-0.5">
+        {primary.map(renderItem)}
+        {sheetGroups.map((group) => (
+          <div key={group.heading} className="mt-3 first:mt-2">
+            {!collapsed && (
+              <p
+                className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{ color: "var(--accent-gold-dim)" }}
+              >
+                {group.heading}
+              </p>
+            )}
+            {!collapsed && (
+              <div className="flex flex-col gap-0.5">
+                {group.items.map(renderItem)}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+    </aside>
   );
 }

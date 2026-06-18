@@ -6,6 +6,7 @@ import { CheckCircle2, FileSpreadsheet, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { GlassTabs } from "@/components/v2/GlassTabs";
 import { useV2 } from "@/lib/v2-store";
 
 type ImportType = "cashmag" | "stock";
@@ -193,32 +194,18 @@ function ImportPageInner() {
 
       {/* Onglets */}
       <section className="px-5 mt-5">
-        <div className="inline-flex rounded-full bg-cream border border-rule p-1 gap-1">
-          <button
-            type="button"
-            onClick={() => switchTab("cashmag")}
-            className={`rounded-full px-4 py-2 text-[13px] font-bold transition-colors ${
-              isCashmag
-                ? "bg-primary text-white"
-                : "text-text-secondary active:scale-95"
-            }`}
-          >
-            Ventes (Cashmag)
-          </button>
-          <button
-            type="button"
-            onClick={() => switchTab("stock")}
-            className={`rounded-full px-4 py-2 text-[13px] font-bold transition-colors ${
-              !isCashmag
-                ? "bg-primary text-white"
-                : "text-text-secondary active:scale-95"
-            }`}
-          >
-            Catalogue (stock)
-          </button>
-        </div>
+        <GlassTabs<ImportType>
+          ariaLabel="Type d'import"
+          value={type}
+          onChange={switchTab}
+          items={[
+            { value: "cashmag", label: "Ventes (Cashmag)" },
+            { value: "stock", label: "Catalogue (stock)" },
+          ]}
+        />
       </section>
 
+      <div key={type} className="rise-in">
       {/* Format attendu — onglet stock uniquement */}
       {!isCashmag && (
         <section className="px-5 mt-4">
@@ -310,6 +297,7 @@ function ImportPageInner() {
         ) : (
           <StockResultView result={result as StockResult} preview={preview} />
         ))}
+      </div>
     </V2Shell>
   );
 }

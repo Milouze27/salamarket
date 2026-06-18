@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
 
@@ -185,69 +186,60 @@ export default function SurveillancePage() {
       </header>
 
       {/* Onglets de niveau supérieur */}
-      <nav className="px-5 mt-5 pt-1 pb-2" role="tablist" aria-label="Sections">
-        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]">
-          <SectionBtn
-            active={section === "alertes"}
-            onClick={() => setSection("alertes")}
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            Alertes
-          </SectionBtn>
-          <SectionBtn
-            active={section === "dlc"}
-            onClick={() => setSection("dlc")}
-          >
-            <CalendarClock className="w-3.5 h-3.5" />
-            DLC
-          </SectionBtn>
-          <SectionBtn
-            active={section === "casse"}
-            onClick={() => setSection("casse")}
-          >
-            <PackageX className="w-3.5 h-3.5" />
-            Casse
-          </SectionBtn>
-          <SectionBtn
-            active={section === "activite"}
-            onClick={() => setSection("activite")}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            Activité
-          </SectionBtn>
-        </div>
+      <nav className="px-5 mt-5 pt-1 pb-2">
+        <GlassTabs<Section>
+          ariaLabel="Sections"
+          className="overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]"
+          value={section}
+          onChange={setSection}
+          items={[
+            {
+              value: "alertes",
+              label: (
+                <>
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  Alertes
+                </>
+              ),
+            },
+            {
+              value: "dlc",
+              label: (
+                <>
+                  <CalendarClock className="w-3.5 h-3.5" />
+                  DLC
+                </>
+              ),
+            },
+            {
+              value: "casse",
+              label: (
+                <>
+                  <PackageX className="w-3.5 h-3.5" />
+                  Casse
+                </>
+              ),
+            },
+            {
+              value: "activite",
+              label: (
+                <>
+                  <Activity className="w-3.5 h-3.5" />
+                  Activité
+                </>
+              ),
+            },
+          ]}
+        />
       </nav>
 
-      {section === "alertes" && <AlertesPanel />}
-      {section === "dlc" && <DlcPanel />}
-      {section === "casse" && <CassePanel />}
-      {section === "activite" && <ActivitePanel onCount={setActiviteCount} />}
+      <GlassTabPanel tabKey={section}>
+        {section === "alertes" && <AlertesPanel />}
+        {section === "dlc" && <DlcPanel />}
+        {section === "casse" && <CassePanel />}
+        {section === "activite" && <ActivitePanel onCount={setActiviteCount} />}
+      </GlassTabPanel>
     </V2Shell>
-  );
-}
-
-function SectionBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-bold shrink-0 transition-colors ${
-        active
-          ? "bg-primary text-white"
-          : "bg-white border border-rule text-text-secondary"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -583,38 +575,61 @@ function AlertesPanel() {
       </section>
 
       {/* Tabs — pas de sticky pour éviter de passer derrière le shell header */}
-      <nav className="px-5 mt-5 pt-2 pb-3" role="tablist">
-        <div className="flex gap-1 overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]">
-          <TabBtn active={tab === "sorties"} onClick={() => setTab("sorties")}>
-            <PackageX className="w-3.5 h-3.5" />
-            Sorties&nbsp;
-            <Badge>{sorties.length}</Badge>
-          </TabBtn>
-          {showDemarque && (
-            <TabBtn
-              active={tab === "demarque"}
-              onClick={() => setTab("demarque")}
-            >
-              <TrendingDown className="w-3.5 h-3.5" />
-              Démarque&nbsp;
-              <Badge>{demarque.length}</Badge>
-            </TabBtn>
-          )}
-          <TabBtn active={tab === "surplus"} onClick={() => setTab("surplus")}>
-            <Truck className="w-3.5 h-3.5" />
-            Surplus&nbsp;
-            <Badge>
-              {surplus.filter((s) => s.statut === "en_attente").length}
-            </Badge>
-          </TabBtn>
-          <TabBtn
-            active={tab === "historique"}
-            onClick={() => setTab("historique")}
-          >
-            <History className="w-3.5 h-3.5" />
-            Historique
-          </TabBtn>
-        </div>
+      <nav className="px-5 mt-5 pt-2 pb-3">
+        <GlassTabs<Tab>
+          ariaLabel="Catégories d'alertes"
+          size="sm"
+          className="overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]"
+          value={tab}
+          onChange={setTab}
+          items={[
+            {
+              value: "sorties",
+              label: (
+                <>
+                  <PackageX className="w-3.5 h-3.5" />
+                  Sorties&nbsp;
+                  <Badge>{sorties.length}</Badge>
+                </>
+              ),
+            },
+            ...(showDemarque
+              ? [
+                  {
+                    value: "demarque" as Tab,
+                    label: (
+                      <>
+                        <TrendingDown className="w-3.5 h-3.5" />
+                        Démarque&nbsp;
+                        <Badge>{demarque.length}</Badge>
+                      </>
+                    ),
+                  },
+                ]
+              : []),
+            {
+              value: "surplus",
+              label: (
+                <>
+                  <Truck className="w-3.5 h-3.5" />
+                  Surplus&nbsp;
+                  <Badge>
+                    {surplus.filter((s) => s.statut === "en_attente").length}
+                  </Badge>
+                </>
+              ),
+            },
+            {
+              value: "historique",
+              label: (
+                <>
+                  <History className="w-3.5 h-3.5" />
+                  Historique
+                </>
+              ),
+            },
+          ]}
+        />
       </nav>
 
       <section className="px-5 pb-12">
@@ -623,25 +638,26 @@ function AlertesPanel() {
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
-        ) : tab === "sorties" ? (
-          <SortiesPanel
-            sorties={sorties}
-            error={sortiesError}
-            onRetry={() => void loadAll()}
-            onDetail={(s) => setDetail(s)}
-          />
-        ) : tab === "demarque" ? (
-          <DemarquePanel rows={demarque} />
-        ) : tab === "surplus" ? (
-          <SurplusPanel
-            items={surplus}
-            onDetail={(s) => setSurplusDetail(s)}
-          />
         ) : (
-          <HistoriquePanel
-            sorties={sorties.filter((s) => s.ia_coherence_score >= 0.7)}
-            surplus={surplus.filter((s) => s.statut !== "en_attente")}
-          />
+          <GlassTabPanel tabKey={tab}>
+            {tab === "sorties" ? (
+              <SortiesPanel
+                sorties={sorties}
+                error={sortiesError}
+                onRetry={() => void loadAll()}
+                onDetail={(s) => setDetail(s)}
+              />
+            ) : tab === "demarque" ? (
+              <DemarquePanel rows={demarque} />
+            ) : tab === "surplus" ? (
+              <SurplusPanel items={surplus} onDetail={(s) => setSurplusDetail(s)} />
+            ) : (
+              <HistoriquePanel
+                sorties={sorties.filter((s) => s.ia_coherence_score >= 0.7)}
+                surplus={surplus.filter((s) => s.statut !== "en_attente")}
+              />
+            )}
+          </GlassTabPanel>
         )}
       </section>
 
@@ -934,31 +950,6 @@ function KpiCard({
       </p>
       <p className="text-[11px] text-text-secondary mt-1">{label}</p>
     </div>
-  );
-}
-
-function TabBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold shrink-0 transition-colors ${
-        active
-          ? "bg-primary text-white"
-          : "bg-white border border-rule text-text-secondary"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 

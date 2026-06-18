@@ -3,6 +3,7 @@
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -452,11 +453,16 @@ function NavRow({
   item,
   prefix,
   type,
+  rise,
+  index,
   onPick,
 }: {
   item: PaletteItem;
   prefix: string;
   type: RecentAction["type"];
+  /** Anim d'entrée (uniquement à l'ouverture, query vide — voir CommandPalette). */
+  rise?: boolean;
+  index?: number;
   onPick: (a: {
     id: string;
     label: string;
@@ -472,7 +478,10 @@ function NavRow({
       onSelect={() =>
         onPick({ id: item.id, label: item.label, href: item.href, type })
       }
-      className="cmdk-item"
+      className={`cmdk-item tap${rise ? " rise-in" : ""}`}
+      style={
+        rise ? ({ ["--i"]: Math.min(index ?? 0, 8) } as CSSProperties) : undefined
+      }
     >
       <Icon
         className="w-4 h-4 shrink-0"
@@ -499,6 +508,9 @@ function NavRow({
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Reste monté pendant l'anim de SORTIE (menu-out/scrim-out) avant démontage,
+  // pour éviter le despawn brutal. `open` reste la source de vérité logique.
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState("");
   const [depots, setDepots] = useState<Depot[]>([]);
   const [products, setProducts] = useState<Produit[]>([]);
@@ -562,9 +574,11 @@ export function CommandPalette() {
       );
   }, []);
 
-  // Charge recent à l'ouverture.
+  // Charge recent à l'ouverture + monte le portail (le démontage est différé
+  // par l'anim de sortie, voir onAnimationEnd plus bas).
   useEffect(() => {
     if (open) {
+      setMounted(true);
       setRecent(loadRecent());
       setQuery("");
     }
@@ -647,7 +661,12 @@ export function CommandPalette() {
     return filterItemsForRole(role, recent);
   }, [recent, query, role]);
 
-  if (!open) return null;
+  if (!mounted) return null;
+
+  // Anim d'entrée des items : uniquement à l'ouverture (query vide). Dès que
+  // l'utilisateur tape, cmdk re-filtre la liste à chaque frappe — rejouer
+  // .rise-in scintillerait, donc on la désactive en recherche.
+  const riseItems = query.trim().length === 0;
 
   return (
     <div
@@ -662,7 +681,7 @@ export function CommandPalette() {
         type="button"
         aria-label="Fermer la palette"
         onClick={() => setOpen(false)}
-        className="absolute inset-0"
+        className={`absolute inset-0 ${open ? "scrim-in" : "scrim-out"}`}
         style={{
           background: "var(--glass-overlay)",
           backdropFilter: "var(--glass-overlay-blur)",
@@ -670,11 +689,18 @@ export function CommandPalette() {
         }}
       />
 
-      {/* Modale — surface-3 (popover/palette) via .cmdk-root-wrap en dark.
-          Liseré or premium en haut (accent, jamais fill). */}
+      {/* Modale — surface verre .lg. Entre en menu-pop, sort en menu-out
+          (anim de sortie réelle avant démontage via onAnimationEnd). */}
       <div
-        className="relative w-full max-w-[640px] bg-white rounded-[20px] border border-rule overflow-hidden cmdk-root-wrap"
-        style={{ boxShadow: "var(--shadow-elevated)" }}
+        onAnimationEnd={(e) => {
+          // À la fin de l'anim de sortie du panneau, on démonte réellement.
+          if (!open && e.animationName.startsWith("lgMenuOut")) {
+            setMounted(false);
+          }
+        }}
+        className={`lg relative w-full max-w-[640px] rounded-[20px] overflow-hidden ${
+          open ? "menu-pop" : "menu-out"
+        }`}
       >
         <Command
           label="Recherche globale"
@@ -709,7 +735,7 @@ export function CommandPalette() {
 
             {recentResolved.length > 0 && (
               <Command.Group heading="Récent" className="cmdk-group">
-                {recentResolved.map((r) => (
+                {recentResolved.map((r, i) => (
                   <Command.Item
                     key={`recent-${r.id}`}
                     value={`recent ${r.label}`}
@@ -726,7 +752,12 @@ export function CommandPalette() {
                         type: r.type,
                       });
                     }}
-                    className="cmdk-item"
+                    className={`cmdk-item tap${riseItems ? " rise-in" : ""}`}
+                    style={
+                      riseItems
+                        ? ({ ["--i"]: Math.min(i, 8) } as CSSProperties)
+                        : undefined
+                    }
                   >
                     <Clock
                       className="w-4 h-4 text-text-tertiary shrink-0"
@@ -751,14 +782,19 @@ export function CommandPalette() {
             {actions.length > 0 && (
               <Command.Group heading="Actions" className="cmdk-group">
                 {actions.map(
-                  ({ id, label, href, icon: Icon, hint, keywords }) => (
+                  ({ id, label, href, icon: Icon, hint, keywords }, i) => (
                     <Command.Item
                       key={id}
                       value={`action ${label} ${hint} ${keywords ?? ""}`}
                       onSelect={() =>
                         handleSelect({ id, label, href, type: "action" })
                       }
-                      className="cmdk-item"
+                      className={`cmdk-item tap${riseItems ? " rise-in" : ""}`}
+                      style={
+                        riseItems
+                          ? ({ ["--i"]: Math.min(i, 8) } as CSSProperties)
+                          : undefined
+                      }
                     >
                       <span
                         className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
@@ -787,12 +823,14 @@ export function CommandPalette() {
 
             {operer.length > 0 && (
               <Command.Group heading="Opérer" className="cmdk-group">
-                {operer.map((item) => (
+                {operer.map((item, i) => (
                   <NavRow
                     key={item.id}
                     item={item}
                     prefix="operer"
                     type="nav"
+                    rise={riseItems}
+                    index={i}
                     onPick={handleSelect}
                   />
                 ))}
@@ -801,12 +839,14 @@ export function CommandPalette() {
 
             {piloter.length > 0 && (
               <Command.Group heading="Piloter" className="cmdk-group">
-                {piloter.map((item) => (
+                {piloter.map((item, i) => (
                   <NavRow
                     key={item.id}
                     item={item}
                     prefix="piloter"
                     type="nav"
+                    rise={riseItems}
+                    index={i}
                     onPick={handleSelect}
                   />
                 ))}
@@ -815,7 +855,7 @@ export function CommandPalette() {
 
             {depots.length > 0 && (
               <Command.Group heading="Dépôts" className="cmdk-group">
-                {depots.map((d) => {
+                {depots.map((d, i) => {
                   const Icon = depotIcon(d);
                   const active = currentDepot?.id === d.id;
                   return (
@@ -823,7 +863,12 @@ export function CommandPalette() {
                       key={`depot-${d.id}`}
                       value={`depot basculer changer ${d.nom} ${d.type ?? ""}`}
                       onSelect={() => handleSelectDepot(d)}
-                      className="cmdk-item"
+                      className={`cmdk-item tap${riseItems ? " rise-in" : ""}`}
+                      style={
+                        riseItems
+                          ? ({ ["--i"]: Math.min(i, 8) } as CSSProperties)
+                          : undefined
+                      }
                     >
                       <Icon
                         className="w-4 h-4 text-gold shrink-0"
@@ -845,12 +890,14 @@ export function CommandPalette() {
 
             {administrer.length > 0 && (
               <Command.Group heading="Administrer" className="cmdk-group">
-                {administrer.map((item) => (
+                {administrer.map((item, i) => (
                   <NavRow
                     key={item.id}
                     item={item}
                     prefix="administrer"
                     type="nav"
+                    rise={riseItems}
+                    index={i}
                     onPick={handleSelect}
                   />
                 ))}
@@ -871,7 +918,7 @@ export function CommandPalette() {
                         type: "action",
                       })
                     }
-                    className="cmdk-item"
+                    className="cmdk-item tap"
                   >
                     <PackageSearch
                       className="w-4 h-4 text-text-secondary shrink-0"

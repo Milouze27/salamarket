@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 import type { MonthlyReport } from "@/lib/cashbox/monthly-report";
 import type { DailyZSummary } from "@/lib/cashbox/daily-z";
 import { downloadOrShareBlob, base64ToBlob } from "@/lib/download-helper";
@@ -381,28 +382,16 @@ export default function RapportComptablePage() {
         </p>
 
         {/* Sélecteur de vue */}
-        <div className="mt-5 inline-flex p-1 bg-cream border border-rule rounded-[14px]">
-          <button
-            onClick={() => changeVue("mensuel")}
-            className={`px-4 py-2 rounded-[10px] text-[13px] font-bold transition-colors ${
-              vue === "mensuel"
-                ? "bg-primary text-white shadow-card"
-                : "text-text-secondary"
-            }`}
-          >
-            Rapport mensuel
-          </button>
-          <button
-            onClick={() => changeVue("recap")}
-            className={`px-4 py-2 rounded-[10px] text-[13px] font-bold transition-colors ${
-              vue === "recap"
-                ? "bg-primary text-white shadow-card"
-                : "text-text-secondary"
-            }`}
-          >
-            Récap fiscal (Z)
-          </button>
-        </div>
+        <GlassTabs<Vue>
+          ariaLabel="Type de rapport"
+          className="mt-5"
+          value={vue}
+          onChange={changeVue}
+          items={[
+            { value: "mensuel", label: "Rapport mensuel" },
+            { value: "recap", label: "Récap fiscal (Z)" },
+          ]}
+        />
 
         {/* Sélecteur de période, selon la vue */}
         {vue === "mensuel" ? (
@@ -429,6 +418,7 @@ export default function RapportComptablePage() {
         )}
       </header>
 
+      <GlassTabPanel tabKey={vue}>
       {vue === "mensuel" ? (
         loadingReport ? (
           <section className="px-5 mt-6">
@@ -764,6 +754,7 @@ export default function RapportComptablePage() {
           )}
         </>
       )}
+      </GlassTabPanel>
 
       <DownloadCompleteBar
         filename={downloaded?.filename ?? null}

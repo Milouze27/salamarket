@@ -87,7 +87,7 @@ export function AdminMenu({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-[200]"
             style={{
@@ -101,15 +101,14 @@ export function AdminMenu({
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 320 }}
+            transition={{ type: "spring", damping: 38, stiffness: 360, mass: 0.9 }}
             role="dialog"
             aria-modal="true"
             aria-label="Compte et réglages"
-            className="fixed inset-y-0 right-0 z-[201] w-[86%] max-w-[340px] flex flex-col"
+            className="lg fixed inset-y-0 right-0 z-[201] w-[86%] max-w-[340px] flex flex-col"
             style={{
-              background: "var(--surface-3)",
+              borderRadius: "28px 0 0 28px",
               borderLeft: "1px solid var(--border-card)",
-              boxShadow: "var(--shadow-elevated)",
             }}
           >
             {/* HEADER */}
@@ -142,7 +141,7 @@ export function AdminMenu({
               <button
                 onClick={() => setOpen(false)}
                 aria-label="Fermer"
-                className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary"
+                className="tap w-9 h-9 rounded-full flex items-center justify-center text-text-secondary"
                 style={{ background: "var(--surface-1)" }}
               >
                 <X className="w-4 h-4" />
@@ -179,7 +178,7 @@ export function AdminMenu({
                               setOpen(false);
                             }}
                             aria-pressed={active}
-                            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-[12.5px] font-bold transition-colors"
+                            className="tap inline-flex items-center gap-1.5 px-3 h-9 rounded-full text-[12.5px] font-bold transition-colors"
                             style={
                               active
                                 ? {
@@ -216,7 +215,7 @@ export function AdminMenu({
                       setOpen(false);
                       router.push("/v2/admin/equipe");
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                    className="tap w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
                   >
                     <span
                       className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
@@ -250,7 +249,7 @@ export function AdminMenu({
                 type="button"
                 onClick={toggleTheme}
                 aria-pressed={isNight}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                className="tap w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
               >
                 <span
                   className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
@@ -288,7 +287,7 @@ export function AdminMenu({
                 type="button"
                 onClick={toggleDensity}
                 aria-pressed={isCompact}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
+                className="tap w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors active:opacity-80"
               >
                 <span
                   className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
@@ -329,7 +328,7 @@ export function AdminMenu({
                     setOpen(false);
                     onLogout();
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-2xl transition-colors active:opacity-80"
+                  className="tap w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-2xl transition-colors active:opacity-80"
                 >
                   <span
                     className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"

@@ -66,14 +66,21 @@ export function MorningBriefCard({
   return (
     <section
       aria-label="Brief du matin"
-      className="relative overflow-hidden rounded-[24px] border p-4 sm:p-5"
+      className="lg relative overflow-hidden rounded-[28px] p-4 sm:p-5"
       style={{
-        background:
-          "linear-gradient(165deg, color-mix(in srgb, var(--accent-gold) 5%, var(--surface-1)), var(--surface-1))",
         borderColor: "var(--border-premium)",
-        boxShadow: "var(--shadow-card)",
       }}
     >
+      {/* Voile or léger sur le verre — signature "le cerveau a bossé". */}
+      <span
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(165deg, color-mix(in srgb, var(--accent-gold) 7%, transparent), transparent 60%)",
+        }}
+      />
+
       {/* Hairline or en haut — signature "le cerveau a bossé". */}
       <span
         aria-hidden
@@ -89,7 +96,7 @@ export function MorningBriefCard({
       <header className="flex items-center gap-2.5 mb-3.5">
         <span
           aria-hidden
-          className="inline-flex w-9 h-9 rounded-xl items-center justify-center shrink-0"
+          className="inline-flex w-9 h-9 rounded-2xl items-center justify-center shrink-0"
           style={{
             background: "var(--accent-gold-soft)",
             color: "var(--accent-gold-bright)",
@@ -137,9 +144,15 @@ export function MorningBriefCard({
       ) : actions.length === 0 ? (
         <ZenState message={zenMessage} prenom={prenom} />
       ) : (
-        <ol className="flex flex-col gap-2">
+        <ol className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {actions.map((a, i) => (
-            <BriefRow key={`${a.categorie}-${i}`} action={a} index={i + 1} onAction={onAction} />
+            <BriefRow
+              key={`${a.categorie}-${i}`}
+              action={a}
+              index={i + 1}
+              order={i}
+              onAction={onAction}
+            />
           ))}
         </ol>
       )}
@@ -150,20 +163,22 @@ export function MorningBriefCard({
 function BriefRow({
   action,
   index,
+  order,
   onAction,
 }: {
   action: BriefingAction;
   index: number;
+  order: number;
   onAction: (href: string) => void;
 }) {
   const Icon = CAT_ICON[action.categorie] ?? Clock;
   const toneColor = TONE_COLOR[action.tone];
   return (
-    <li>
+    <li className="rise-in" style={{ ["--i" as string]: order }}>
       <button
         type="button"
         onClick={() => onAction(action.href)}
-        className="group w-full text-left flex items-center gap-3 rounded-[16px] p-3 border transition active:scale-[0.99]"
+        className="tap group w-full text-left flex items-center gap-3 rounded-[20px] p-3 border min-h-[60px]"
         style={{
           background: "var(--surface-2)",
           borderColor: "var(--border-card)",
@@ -185,7 +200,7 @@ function BriefRow({
         {/* Icône catégorie (tone) */}
         <span
           aria-hidden
-          className="inline-flex w-9 h-9 rounded-xl items-center justify-center shrink-0"
+          className="inline-flex w-9 h-9 rounded-2xl items-center justify-center shrink-0"
           style={{
             background: `color-mix(in srgb, ${toneColor} 14%, transparent)`,
             color: toneColor,
@@ -231,7 +246,7 @@ function ZenState({
 }) {
   return (
     <div
-      className="flex items-center gap-3 rounded-[16px] p-3.5 border"
+      className="rise-in flex items-center gap-3 rounded-[20px] p-3.5 border"
       style={{
         background: "var(--success-soft)",
         borderColor: "color-mix(in srgb, var(--success) 22%, transparent)",
@@ -239,7 +254,7 @@ function ZenState({
     >
       <span
         aria-hidden
-        className="inline-flex w-10 h-10 rounded-xl items-center justify-center shrink-0"
+        className="inline-flex w-10 h-10 rounded-2xl items-center justify-center shrink-0"
         style={{
           background: "color-mix(in srgb, var(--success) 16%, transparent)",
           color: "var(--success)",
@@ -267,14 +282,15 @@ function ZenState({
 
 function BriefSkeleton() {
   return (
-    <div className="flex flex-col gap-2" aria-hidden>
+    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2" aria-hidden>
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="flex items-center gap-3 rounded-[16px] p-3 border animate-pulse"
+          className="rise-in flex items-center gap-3 rounded-[20px] p-3 border animate-pulse min-h-[60px]"
           style={{
             background: "var(--surface-2)",
             borderColor: "var(--border-card)",
+            ["--i" as string]: i,
           }}
         >
           <span
@@ -282,7 +298,7 @@ function BriefSkeleton() {
             style={{ background: "var(--surface-0)" }}
           />
           <span
-            className="w-9 h-9 rounded-xl shrink-0"
+            className="w-9 h-9 rounded-2xl shrink-0"
             style={{ background: "var(--surface-3)" }}
           />
           <span className="flex-1 flex flex-col gap-1.5">

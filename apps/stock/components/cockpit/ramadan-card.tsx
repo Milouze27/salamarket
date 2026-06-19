@@ -88,10 +88,7 @@ export function RamadanCard({
   const seasonal = getSeasonalMode();
 
   return (
-    <div
-      className="relative bg-[var(--surface-1)] border border-[var(--border-card)] rounded-[22px] p-5 sm:p-6 overflow-hidden"
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
+    <div className="lg relative p-5 sm:p-6 overflow-hidden">
       {/* Filet or vertical gauche — accent or (liseré), jamais fill */}
       <span
         aria-hidden
@@ -161,7 +158,7 @@ export function RamadanCard({
             type="button"
             onClick={onSeasonalTap}
             disabled={!onSeasonalTap}
-            className="group flex items-center gap-3 w-full text-left rounded-[14px] px-3 py-2.5 active:scale-[0.99] transition disabled:active:scale-100"
+            className={`group flex items-center gap-3 w-full text-left rounded-2xl px-3.5 min-h-[44px] py-2.5 transition ${onSeasonalTap ? "tap" : ""}`}
             style={{
               background: "var(--primary-green-soft)",
               border: "1px solid var(--border-premium)",
@@ -198,7 +195,8 @@ export function RamadanCard({
             {fenetre.slice(0, 3).map((f, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between gap-3 py-1"
+                className="rise-in flex items-center justify-between gap-3 py-1"
+                style={{ ["--i" as string]: i }}
               >
                 <p className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
                   {f.libelle}

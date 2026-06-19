@@ -96,7 +96,7 @@ export function AlertCard({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className={`inline-flex w-11 h-11 rounded-xl items-center justify-center shrink-0 ${style.iconBg} ${style.iconColor}`}
+          className={`inline-flex w-11 h-11 rounded-2xl items-center justify-center shrink-0 ${style.iconBg} ${style.iconColor}`}
         >
           <Icon className="w-5 h-5" strokeWidth={2.2} />
         </span>
@@ -146,7 +146,7 @@ export function AlertCard({
       <button
         type="button"
         onClick={onTap}
-        className={`w-full text-left bg-[var(--surface-1)] border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[var(--shadow-card)] active:scale-[0.99] transition-transform`}
+        className={`lg lg-hover tap w-full text-left border ${style.border} p-4 sm:p-5`}
       >
         {inner}
       </button>
@@ -155,7 +155,7 @@ export function AlertCard({
 
   return (
     <div
-      className={`bg-[var(--surface-1)] border ${style.border} rounded-[22px] p-4 sm:p-5 shadow-[var(--shadow-card)]`}
+      className={`lg border ${style.border} p-4 sm:p-5`}
     >
       {inner}
     </div>

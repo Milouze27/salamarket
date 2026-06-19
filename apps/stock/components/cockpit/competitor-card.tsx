@@ -11,7 +11,7 @@
  * Affiche les 5 derniers relevés en thumbnail row scrollable horizontale.
  * Vignettes d'affichage en lecture seule (pas d'interaction).
  */
-import { Eye, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
 import type { CockpitCompetitorRow } from "@/app/api/cockpit/snapshot/route";
 
 interface CompetitorCardProps {
@@ -115,35 +115,24 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
   const titleData = deriveTitle(rows);
 
   return (
-    <div
-      className="bg-[var(--surface-1)] border border-[var(--border-card)] rounded-[22px] p-4 sm:p-5"
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
+    <div className="lg p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="inline-flex w-11 h-11 rounded-xl items-center justify-center shrink-0 bg-[var(--surface-2)] text-[var(--accent-gold-bright)] border border-[var(--border-card)]"
-          >
-            <Eye className="w-5 h-5" strokeWidth={2.2} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[var(--accent-gold-dim)]">
-              {titleData.eyebrow}
-            </p>
-            <p className="text-[16px] font-bold text-[var(--text-primary)] leading-tight mt-0.5">
-              {titleData.title}
-            </p>
-            <p className="text-[11.5px] text-[var(--text-tertiary)] mt-0.5">
-              {titleData.sub}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[var(--accent-gold-dim)]">
+            {titleData.eyebrow}
+          </p>
+          <p className="text-[16px] font-bold text-[var(--text-primary)] leading-tight mt-0.5">
+            {titleData.title}
+          </p>
+          <p className="text-[11.5px] text-[var(--text-tertiary)] mt-0.5">
+            {titleData.sub}
+          </p>
         </div>
         {onAddRelevé && (
           <button
             type="button"
             onClick={onAddRelevé}
-            className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[var(--primary-green)] text-white text-[13px] md:text-[12px] font-bold active:scale-[0.97] transition-transform shrink-0"
+            className="tap inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[var(--primary-green)] text-white text-[13px] md:text-[12px] font-bold shrink-0"
             aria-label="Ajouter un relevé"
           >
             <Camera className="w-3.5 h-3.5" strokeWidth={2.4} />
@@ -153,7 +142,7 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
       </div>
 
       {empty && (
-        <div className="rounded-[16px] border border-dashed border-[var(--border-card)] py-6 text-center">
+        <div className="rounded-2xl border border-dashed border-[var(--border-card)] py-6 text-center">
           <p className="text-[13px] font-semibold text-[var(--text-secondary)]">
             Aucun prix Aya Market relevé cette semaine.
           </p>
@@ -165,10 +154,11 @@ export function CompetitorCard({ rows, onAddRelevé }: CompetitorCardProps) {
 
       {!empty && (
         <div className="-mx-1 px-1 flex gap-2.5 overflow-x-auto scrollbar-none snap-x snap-mandatory">
-          {rows.map((r) => (
+          {rows.map((r, i) => (
             <article
               key={r.id}
-              className="snap-start shrink-0 w-[150px] bg-[var(--surface-0)] border border-[var(--border-card)] rounded-[14px] overflow-hidden"
+              className="rise-in snap-start shrink-0 w-[150px] bg-[var(--surface-0)] border border-[var(--border-card)] rounded-2xl overflow-hidden"
+              style={{ ["--i" as string]: i }}
             >
               {/* Photo */}
               <div

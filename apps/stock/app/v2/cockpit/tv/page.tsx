@@ -187,7 +187,7 @@ export default function CockpitTvPage() {
         className="fixed inset-0 z-[200] overflow-hidden flex items-center justify-center"
         style={{
           background:
-            "radial-gradient(120% 90% at 80% 0%, var(--primary-green) 0%, var(--primary-green-dark) 55%, #061f17 100%)",
+            "radial-gradient(120% 90% at 80% 0%, var(--primary-green) 0%, var(--primary-green-dark) 55%, var(--primary-green-dark) 100%)",
           color: "var(--text-on-dark-muted)",
         }}
       >
@@ -206,7 +206,7 @@ export default function CockpitTvPage() {
       className="fixed inset-0 z-[200] overflow-hidden flex flex-col"
       style={{
         background:
-          "radial-gradient(120% 90% at 80% 0%, var(--primary-green) 0%, var(--primary-green-dark) 55%, #061f17 100%)",
+          "radial-gradient(120% 90% at 80% 0%, var(--primary-green) 0%, var(--primary-green-dark) 55%, var(--primary-green-dark) 100%)",
         color: "var(--text-on-dark)",
         padding: "max(2.5vh, env(safe-area-inset-top)) 4vw",
       }}
@@ -417,11 +417,12 @@ function RupturesPanel({ snap }: { snap: CockpitSnapshot }) {
         }
       />
       <ul className="mt-[2.5vh] flex flex-col gap-[1.4vh]">
-        {rows.map((s) => {
+        {rows.map((s, i) => {
           const danger = s.tier === "out" || s.tier === "blocker";
           return (
             <BigRow
               key={`${s.produit_id}-${s.depot_nom}`}
+              index={i}
               label={s.produit_nom}
               meta={`${s.depot_nom} · stock ${s.stock_actuel}`}
               value={
@@ -451,9 +452,10 @@ function DlcPanel({ snap }: { snap: CockpitSnapshot }) {
         sub={`${formatEur(snap.dlc.valeur_eur)} de démarque estimée`}
       />
       <ul className="mt-[2.5vh] flex flex-col gap-[1.4vh]">
-        {rows.map((d) => (
+        {rows.map((d, i) => (
           <BigRow
             key={d.lot_id}
+            index={i}
             label={d.produit_nom}
             meta={`${d.jours_restants <= 0 ? "Périmé" : `J-${d.jours_restants}`} · ${d.remise_suggeree_pct}% remise`}
             value={d.quantite_recue ? `${d.quantite_recue} u` : d.niveau_alerte}
@@ -487,11 +489,12 @@ function BriefPanel({
         {actions.map((a, i) => (
           <li
             key={i}
-            className="flex items-center gap-[2vw] rounded-[18px]"
+            className="flex items-center gap-[2vw] rounded-[24px] rise-in"
             style={{
               padding: "1.4vh 2vw",
               background: "rgba(255,255,255,0.06)",
               border: "1px solid rgba(255,255,255,0.12)",
+              ["--i" as string]: i,
             }}
           >
             <span
@@ -555,7 +558,7 @@ function PanelTitle({
   return (
     <div className="flex items-center gap-[2vw]">
       <span
-        className="rounded-[16px] flex items-center justify-center shrink-0"
+        className="rounded-[20px] flex items-center justify-center shrink-0"
         style={{
           width: "clamp(48px, 5vw, 84px)",
           height: "clamp(48px, 5vw, 84px)",
@@ -591,19 +594,22 @@ function BigRow({
   meta,
   value,
   danger,
+  index = 0,
 }: {
   label: string;
   meta: string;
   value: string;
   danger: boolean;
+  index?: number;
 }) {
   return (
     <li
-      className="flex items-center gap-[2vw] rounded-[18px]"
+      className="flex items-center gap-[2vw] rounded-[24px] rise-in"
       style={{
         padding: "1.4vh 2vw",
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.12)",
+        ["--i" as string]: index,
       }}
     >
       <div className="flex-1 min-w-0">

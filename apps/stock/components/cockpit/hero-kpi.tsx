@@ -130,7 +130,7 @@ export function HeroKpi({
             CA hier
           </p>
           {loading ? (
-            <div className="h-12 w-44 rounded-xl bg-white/10 animate-pulse" />
+            <div className="h-12 w-44 rounded-2xl bg-white/10 animate-pulse" />
           ) : caHier === null ? (
             <p className="text-[24px] font-bold text-white/45 tabular leading-[1]">
               En attente du Z
@@ -153,8 +153,9 @@ export function HeroKpi({
         <div className="flex flex-wrap items-center gap-2">
           {deltaN1Pct !== null && (
             <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tabular"
+              className="rise-in inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tabular"
               style={{
+                ["--i" as string]: 0,
                 background: deltaPositive
                   ? "var(--success-soft)"
                   : "var(--danger-soft)",
@@ -171,10 +172,10 @@ export function HeroKpi({
           )}
           {pctTarget !== null && (
             <span
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular text-[var(--accent-gold-bright)] border border-[var(--border-premium)]"
+              className="rise-in inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular text-[var(--accent-gold-bright)] border border-[var(--border-premium)]"
               // Or translucide fixe (héro toujours sombre) — var(--accent-gold-soft)
               // virerait crème opaque + texte or peu contrasté en mode jour.
-              style={{ background: "rgba(232,194,74,0.14)" }}
+              style={{ ["--i" as string]: 1, background: "rgba(232,194,74,0.14)" }}
               aria-label={`Atteinte du target : ${pctTarget.toFixed(0)} pourcent`}
             >
               <span className="opacity-75 font-semibold text-[11px]">
@@ -184,7 +185,10 @@ export function HeroKpi({
             </span>
           )}
           {nbTickets !== null && (
-            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular bg-white/10 text-white/85">
+            <span
+              className="rise-in inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] font-bold tabular bg-white/10 text-white/85"
+              style={{ ["--i" as string]: 2 }}
+            >
               <span className="opacity-75 font-semibold text-[11px]">
                 Tickets
               </span>

@@ -15,10 +15,18 @@ interface Props {
   hideOnNoNav?: boolean;
 }
 
+/**
+ * Pages "geste" où des boutons d'action (CTA / actions de carte) occupent le
+ * coin bas-droite : le FAB flottant chevaucherait leur bord droit. On le masque
+ * ici — l'assistant reste accessible via l'onglet « Assistant IA » de la nav.
+ */
+const HIDE_FAB_ON: readonly string[] = ["/v2/preparation", "/v2/fournisseurs"];
+
 export function AssistantFab({ role, hideOnNoNav = false }: Props) {
   const pathname = usePathname() ?? "";
   if (role !== "admin") return null;
   if (pathname.startsWith("/v2/admin/assistant-ia")) return null;
+  if (HIDE_FAB_ON.some((p) => pathname.startsWith(p))) return null;
   if (hideOnNoNav) return null;
 
   return (

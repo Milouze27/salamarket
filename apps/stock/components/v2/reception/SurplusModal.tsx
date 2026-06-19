@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Truck, X } from "lucide-react";
+import { AlertTriangle, Loader2, Truck, X } from "lucide-react";
 import type { SurplusState } from "./types";
 
 /**
@@ -22,8 +23,20 @@ export function SurplusModal({
   qty: number | "";
   onClose: () => void;
   onQtyChange: (next: number | "") => void;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
 }) {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {state && (
@@ -97,15 +110,26 @@ export function SurplusModal({
               </div>
             </div>
             <button
-              onClick={onSubmit}
-              className="w-full mt-5 bg-danger text-white rounded-[18px] py-4 px-5 flex items-center justify-center gap-2 font-bold shadow-card-lg active:scale-[0.99]"
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full mt-5 bg-danger text-white rounded-[18px] py-4 px-5 flex items-center justify-center gap-2 font-bold shadow-card-lg active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
             >
-              <Truck className="w-4 h-4" />
-              Signaler à Otmane et Ahmed
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Envoi en cours…
+                </>
+              ) : (
+                <>
+                  <Truck className="w-4 h-4" />
+                  Signaler à Otmane et Ahmed
+                </>
+              )}
             </button>
             <button
               onClick={onClose}
-              className="w-full mt-2 text-text-secondary text-[13px] font-semibold py-2"
+              disabled={submitting}
+              className="w-full mt-2 text-text-secondary text-[13px] font-semibold py-2 disabled:opacity-60"
             >
               Annuler
             </button>

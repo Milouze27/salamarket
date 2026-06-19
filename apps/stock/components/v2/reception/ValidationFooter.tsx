@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Download,
-  FileText,
-  PackageCheck,
-  PackagePlus,
-  ScanBarcode,
-} from "lucide-react";
+import { Download, PackageCheck, PackagePlus } from "lucide-react";
 import type { BdlDetail, Progression } from "./types";
 
 /**
@@ -53,17 +47,12 @@ export function ValidationFooter({
               }}
               className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
             >
-              <span className="flex items-center gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
-                  <FileText className="w-5 h-5" />
+              <span className="text-left">
+                <span className="block label-caps text-gold">
+                  BON DE RÉCEPTION
                 </span>
-                <span className="text-left">
-                  <span className="block label-caps text-gold">
-                    BON DE RÉCEPTION
-                  </span>
-                  <span className="block font-bold text-[15px]">
-                    Télécharger le BR PDF
-                  </span>
+                <span className="block font-bold text-[15px]">
+                  Télécharger le BR PDF
                 </span>
               </span>
               <Download className="w-5 h-5 text-gold" />
@@ -75,15 +64,10 @@ export function ValidationFooter({
               onClick={onScan}
               className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99]"
             >
-              <span className="flex items-center gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
-                  <ScanBarcode className="w-6 h-6" />
-                </span>
-                <span className="text-left">
-                  <span className="block label-caps text-gold">SCANNER</span>
-                  <span className="block font-bold text-[15px]">
-                    Scanner produit suivant
-                  </span>
+              <span className="text-left">
+                <span className="block label-caps text-gold">SCANNER</span>
+                <span className="block font-bold text-[15px]">
+                  Scanner produit suivant
                 </span>
               </span>
               <PackagePlus className="w-5 h-5 text-gold" />

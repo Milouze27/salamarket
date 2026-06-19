@@ -98,8 +98,14 @@ export default function V2InventairePage() {
 
   const mine = useMemo(() => {
     if (!employe) return rows;
-    // Show all but mark mine
-    return rows.sort((a) => (a.employe_assigne_id === employe.id ? -1 : 1));
+    // Trie une COPIE (pas de mutation de l'état rows) : mes lignes d'abord,
+    // puis ordre stable par id pour un tri déterministe.
+    return [...rows].sort((a, b) => {
+      const aMine = a.employe_assigne_id === employe.id ? 0 : 1;
+      const bMine = b.employe_assigne_id === employe.id ? 0 : 1;
+      if (aMine !== bMine) return aMine - bMine;
+      return a.id.localeCompare(b.id);
+    });
   }, [rows, employe]);
 
   // Décompte de clôture, source unique partagée par le bouton et

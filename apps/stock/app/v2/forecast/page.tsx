@@ -177,6 +177,12 @@ export default function ForecastPage() {
     // les dépôts puis on refiltre → les compteurs sautent « 5 puis 2 »).
     // On garde l'écran en chargement jusqu'à ce que le dépôt soit connu.
     if (!allDepots && !depot?.id) {
+      // MGR2-13bis : sans setLoading(false) ici, le spinner tournait à
+      // l'infini pour un employé sans dépôt rattaché (ou si l'hydratation du
+      // store échoue). On rend la main : la liste vide affichera l'empty state
+      // « aucun dépôt » plutôt qu'un chargement éternel.
+      setRows([]);
+      setLoading(false);
       return;
     }
     let query = sb
@@ -478,6 +484,7 @@ export default function ForecastPage() {
             recomputing={recomputing}
             hasRows={rows.length > 0}
             filter={filter}
+            noDepot={!allDepots && !depot?.id}
           />
         ) : (
           <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 max-w-7xl mx-auto w-full">
@@ -572,12 +579,29 @@ function EmptyState({
   recomputing,
   hasRows,
   filter,
+  noDepot,
 }: {
   onRecompute: () => void;
   recomputing: boolean;
   hasRows: boolean;
   filter: "all" | StockoutTier;
+  noDepot: boolean;
 }) {
+  // Aucun dépôt résolu en mode « dépôt courant » : la requête n'est jamais
+  // lancée (cf. load()). On l'explique plutôt que d'inviter à un recompute qui
+  // ne changerait rien tant qu'aucun dépôt n'est sélectionné.
+  if (noDepot) {
+    return (
+      <div className="lg rise-in p-8 text-center">
+        <PackageX className="w-7 h-7 text-text-tertiary mx-auto mb-2" />
+        <p className="font-bold text-text-primary">Aucun dépôt sélectionné</p>
+        <p className="text-xs text-text-secondary mt-1 max-w-[34ch] mx-auto">
+          Choisis un dépôt (ou bascule sur « Tous dépôts ») pour afficher les
+          ruptures imminentes.
+        </p>
+      </div>
+    );
+  }
   if (hasRows && filter !== "all") {
     return (
       <div className="lg rise-in p-8 text-center">

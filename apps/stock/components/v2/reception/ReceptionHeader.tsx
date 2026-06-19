@@ -31,7 +31,7 @@ export function ReceptionHeader({
   onCancelEditNumFourn: () => void;
 }) {
   return (
-    <header className="px-5 pt-5 pb-3 bg-cream border-b border-rule">
+    <header className="px-5 pt-5 pb-3 bg-[var(--surface-1)] border-b border-rule">
       <BackButton href="/v2/reception" />
       <div className="mt-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -55,7 +55,7 @@ export function ReceptionHeader({
                 value={numFournDraft}
                 onChange={(e) => onNumFournDraftChange(e.target.value)}
                 placeholder="N° BDL fournisseur"
-                className="flex-1 bg-white border border-rule rounded-lg px-2.5 py-1 text-[12px] font-mono"
+                className="flex-1 bg-white border border-rule rounded-2xl px-2.5 py-1 text-[12px] font-mono"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") onSaveNumFourn();
@@ -131,7 +131,7 @@ export function ReceptionHeader({
             {progression.scanned} / {progression.total} unités
           </span>
         </div>
-        <div className="h-2.5 rounded-full bg-cream overflow-hidden">
+        <div className="h-2.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
           <motion.div
             className={`h-full ${
               progression.hasSurReception ? "bg-warning" : "bg-primary"

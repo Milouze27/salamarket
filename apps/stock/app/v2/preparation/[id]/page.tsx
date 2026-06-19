@@ -756,7 +756,7 @@ export default function V2PreparationDetailPage() {
         <div className="mx-auto max-w-[680px] px-4 pt-3 pb-4 pointer-events-auto">
           <button
             onClick={finalize}
-            disabled={prepCount < totalCount}
+            disabled={totalCount === 0 || prepCount < totalCount}
             className="tap w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
           >
             <div className="text-left">

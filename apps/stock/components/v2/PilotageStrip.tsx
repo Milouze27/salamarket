@@ -9,7 +9,7 @@
  * opérationnels tappables (commandes Drive en cours, ruptures, valeur stock).
  * Tokens uniquement, dark natif, mobile-first (la rangée passe en ligne ≥ sm).
  */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ShoppingBag, PackageX, Boxes, ArrowRight } from "lucide-react";
 import { getPilotageToday, type PilotageToday } from "@/lib/db/pilotage";
@@ -27,24 +27,66 @@ function eur(n: number): string {
 export function PilotageStrip({ allDepots = false }: { allDepots?: boolean }) {
   const depot = useV2((s) => s.currentDepot);
   const [data, setData] = useState<PilotageToday | null>(null);
+  const [error, setError] = useState(false);
   const mounted = useRef(true);
+
+  const charger = useCallback(() => {
+    const depotId = allDepots ? undefined : depot?.id;
+    setError(false);
+    void getPilotageToday(depotId)
+      .then((d) => {
+        if (mounted.current) setData(d);
+      })
+      .catch(() => {
+        if (mounted.current) setError(true);
+      });
+  }, [depot?.id, allDepots]);
 
   useEffect(() => {
     mounted.current = true;
-    const depotId = allDepots ? undefined : depot?.id;
-    void getPilotageToday(depotId).then((d) => {
-      if (mounted.current) setData(d);
-    });
+    charger();
     return () => {
       mounted.current = false;
     };
-  }, [depot?.id, allDepots]);
+  }, [charger]);
 
   const enCours = data
     ? data.drive_orders.a_preparer +
       data.drive_orders.en_preparation +
       data.drive_orders.pret
     : 0;
+
+  // Échec du fetch sans aucune donnée en cache : on montre un état d'erreur
+  // tappable plutôt que des tirets figés indéfiniment.
+  if (error && !data) {
+    return (
+      <section
+        className="hero-surface rounded-[24px] border p-4 sm:p-5"
+        style={{
+          background: "var(--hero-gradient, var(--primary-green))",
+          borderColor: "var(--accent-gold-hairline, rgba(201,162,39,0.24))",
+        }}
+      >
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-[var(--accent-gold-bright)]">
+          Aujourd'hui · CA commandé
+        </p>
+        <p className="text-[14px] text-[var(--text-on-dark-muted)] mt-2">
+          Chargement du pilotage impossible.
+        </p>
+        <button
+          type="button"
+          onClick={charger}
+          className="tap mt-3 inline-flex items-center justify-center rounded-2xl border px-4 min-h-[44px] text-[13px] font-bold text-[var(--text-on-dark)] active:scale-[0.98] transition-transform"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            borderColor: "rgba(255,255,255,0.12)",
+          }}
+        >
+          Réessayer
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section

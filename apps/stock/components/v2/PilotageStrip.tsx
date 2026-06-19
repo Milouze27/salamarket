@@ -76,11 +76,7 @@ export function PilotageStrip({ allDepots = false }: { allDepots?: boolean }) {
         <button
           type="button"
           onClick={charger}
-          className="tap mt-3 inline-flex items-center justify-center rounded-2xl border px-4 min-h-[44px] text-[13px] font-bold text-[var(--text-on-dark)] active:scale-[0.98] transition-transform"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            borderColor: "rgba(255,255,255,0.12)",
-          }}
+          className="pilot-veil tap mt-3 inline-flex items-center justify-center rounded-2xl border px-4 min-h-[44px] text-[13px] font-bold text-[var(--text-on-dark)] active:scale-[0.98] transition-transform"
         >
           Réessayer
         </button>
@@ -180,20 +176,13 @@ function Indicateur({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border p-3 flex items-center gap-3 active:scale-[0.98] transition-transform min-h-[64px]"
-      style={{
-        background: "rgba(255,255,255,0.06)",
-        borderColor: urgent
-          ? "rgba(232,194,74,0.45)"
-          : "rgba(255,255,255,0.12)",
-      }}
+      data-urgent={urgent}
+      className="pilot-veil group rounded-2xl border p-3 flex items-center gap-3 active:scale-[0.98] transition-transform min-h-[64px]"
     >
       <span
-        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+        data-urgent={urgent}
+        className="pilot-veil-ic w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
         style={{
-          background: urgent
-            ? "rgba(232,194,74,0.18)"
-            : "rgba(255,255,255,0.08)",
           color: urgent ? "var(--accent-gold-bright)" : "var(--text-on-dark)",
         }}
       >

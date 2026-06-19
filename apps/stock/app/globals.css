@@ -1698,6 +1698,38 @@ body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
 /* Le glow radial sombre de .hero-action-card::after n'a plus lieu d'être en jour. */
 [data-theme="jour"] .hero-action-card::after { opacity: 0; }
 
+/* PilotageStrip — voiles d'indicateurs adaptatifs sur la carte hero.
+   Nuit (base) = identique aux anciens styles inline (voile blanc sur sapin) ;
+   jour = voile sapin sombre pour que la carte indicateur reste visible sur le
+   verre clair (le voile blanc y était invisible). */
+.pilot-veil {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.pilot-veil[data-urgent="true"] {
+  border-color: rgba(232, 194, 74, 0.45);
+}
+.pilot-veil-ic {
+  background: rgba(255, 255, 255, 0.08);
+}
+.pilot-veil-ic[data-urgent="true"] {
+  background: rgba(232, 194, 74, 0.18);
+}
+[data-theme="jour"] .pilot-veil {
+  background: rgba(14, 59, 46, 0.05);
+  border-color: rgba(14, 59, 46, 0.16);
+}
+[data-theme="jour"] .pilot-veil[data-urgent="true"] {
+  background: rgba(201, 162, 39, 0.1);
+  border-color: rgba(201, 162, 39, 0.55);
+}
+[data-theme="jour"] .pilot-veil-ic {
+  background: rgba(14, 59, 46, 0.07);
+}
+[data-theme="jour"] .pilot-veil-ic[data-urgent="true"] {
+  background: rgba(201, 162, 39, 0.2);
+}
+
 /* ════════ Animations entrée/sortie — « tout animé, jamais brutal » ════════
    Compositor-only (opacity/transform). Stagger via --i (cap conseillé : 8). */
 @keyframes lgPageIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }

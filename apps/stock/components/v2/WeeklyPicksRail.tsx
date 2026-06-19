@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Activity } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useV2 } from "@/lib/v2-store";
 import { listProduitsInDepot } from "@/lib/db";
 import type { ProduitInDepot } from "@/lib/types/db";
@@ -117,7 +117,7 @@ export function WeeklyPicksRail() {
                 >
                   <Link
                     href={`/v2/stock?q=${encodeURIComponent(p.nom)}`}
-                    className="group block w-[148px] rounded-[18px] border border-rule bg-white p-3 card-tappable focus-visible:outline-2 focus-visible:outline-primary"
+                    className="lg lg-hover group block w-[148px] rounded-2xl p-3 card-tappable focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <div className="relative">
                       <ProductThumbnail
@@ -128,8 +128,7 @@ export function WeeklyPicksRail() {
                         className="w-full aspect-square text-[28px]"
                       />
                       {p.quantite <= 5 && (
-                        <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-1.5 py-0.5 text-[9.5px] font-bold text-danger uppercase tracking-wider border border-rule">
-                          <Activity className="w-2.5 h-2.5" strokeWidth={2.4} />
+                        <span className="absolute top-1.5 left-1.5 inline-flex items-center bg-white/95 backdrop-blur rounded-full px-2 py-0.5 text-[9.5px] font-bold text-danger uppercase tracking-wider border border-rule">
                           Bas
                         </span>
                       )}

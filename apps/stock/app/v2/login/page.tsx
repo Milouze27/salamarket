@@ -349,14 +349,7 @@ export default function V2LoginPage() {
           </div>
 
           {showDemoPins && employes.length > 0 && (
-            <div
-              className="mt-6 mb-7 mx-auto w-full max-w-[300px] rounded-2xl px-4 py-3.5"
-              style={{
-                background: "var(--surface-1)",
-                border: "1px solid var(--border-hairline)",
-                boxShadow: "var(--shadow-card)",
-              }}
-            >
+            <div className="lg rise-in mt-6 mb-7 mx-auto w-full max-w-[300px] px-4 py-3.5">
               <p
                 className="text-[10.5px] font-bold uppercase tracking-[0.18em] mb-2.5 inline-flex items-center gap-1.5"
                 style={{ color: "var(--text-tertiary)" }}
@@ -365,10 +358,11 @@ export default function V2LoginPage() {
                 Comptes démo
               </p>
               <ul className="space-y-2">
-                {employes.map((e) => (
+                {employes.map((e, i) => (
                   <li
                     key={e.id}
-                    className="flex items-center justify-between gap-3 text-[13px]"
+                    className="rise-in flex items-center justify-between gap-3 text-[13px]"
+                    style={{ ["--i" as string]: i + 1 }}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
                       <span

@@ -625,14 +625,19 @@ export default function V2ReceptionPage() {
               <p className="label-caps text-primary mb-2">
                 Livraisons en cours · {bdlEnCours.length}
               </p>
-              <div className="space-y-2">
-                {bdlEnCours.map((b) => (
-                  <BdlCard
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                {bdlEnCours.map((b, i) => (
+                  <div
                     key={b.id}
-                    bdl={b}
-                    variant="encours"
-                    onClick={() => router.push(`/v2/reception/${b.id}`)}
-                  />
+                    className="rise-in"
+                    style={{ "--i": i } as React.CSSProperties}
+                  >
+                    <BdlCard
+                      bdl={b}
+                      variant="encours"
+                      onClick={() => router.push(`/v2/reception/${b.id}`)}
+                    />
+                  </div>
                 ))}
               </div>
             </section>
@@ -644,12 +649,12 @@ export default function V2ReceptionPage() {
               Livraisons attendues aujourd&apos;hui
             </p>
             {bdlLoading ? (
-              <div className="bg-white border border-rule rounded-2xl p-6 flex items-center justify-center gap-2">
+              <div className="lg rounded-[22px] p-6 flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 text-primary animate-spin" />
                 <p className="text-sm text-text-secondary">Chargement BDL…</p>
               </div>
             ) : bdlToday.length === 0 ? (
-              <div className="bg-cream border border-rule rounded-2xl p-6 text-center">
+              <div className="lg rounded-[22px] p-6 text-center">
                 <Truck className="w-6 h-6 text-text-tertiary mx-auto mb-2" />
                 <p className="text-sm font-bold text-text-primary">
                   Aucune livraison prévue aujourd&apos;hui
@@ -659,14 +664,19 @@ export default function V2ReceptionPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {bdlToday.map((b) => (
-                  <BdlCard
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                {bdlToday.map((b, i) => (
+                  <div
                     key={b.id}
-                    bdl={b}
-                    variant="prevu"
-                    onClick={() => router.push(`/v2/reception/${b.id}`)}
-                  />
+                    className="rise-in"
+                    style={{ "--i": i } as React.CSSProperties}
+                  >
+                    <BdlCard
+                      bdl={b}
+                      variant="prevu"
+                      onClick={() => router.push(`/v2/reception/${b.id}`)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -682,10 +692,10 @@ export default function V2ReceptionPage() {
             </p>
             <button
               onClick={() => setShowLibre(true)}
-              className="w-full bg-white border border-rule rounded-2xl py-4 px-4 flex items-center justify-between press-card"
+              className="lg lg-hover tap w-full rounded-[22px] py-4 px-4 flex items-center justify-between press-card"
             >
               <span className="flex items-center gap-3 text-text-primary">
-                <span className="w-10 h-10 rounded-xl bg-gold-soft text-primary-dark flex items-center justify-center">
+                <span className="w-10 h-10 rounded-2xl bg-gold-soft text-primary-dark flex items-center justify-center">
                   <PackagePlus className="w-5 h-5" />
                 </span>
                 <span className="text-left">
@@ -704,11 +714,11 @@ export default function V2ReceptionPage() {
       )}
 
       {step === "intake" && showLibre && (
-        <section className="px-5 mt-6 space-y-4">
+        <section className="px-5 mt-6 space-y-4 lg:max-w-xl">
           <button
             onClick={() => setShowLibre(false)}
             type="button"
-            className="inline-flex items-center gap-1.5 h-11 pl-3 pr-5 mb-2 rounded-full bg-white border border-rule shadow-card text-[13px] font-bold text-primary press-btn"
+            className="lg tap inline-flex items-center gap-1.5 h-11 pl-3 pr-5 mb-2 rounded-full text-[13px] font-bold text-primary press-btn"
           >
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-cream">
               <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.4} />
@@ -773,7 +783,7 @@ export default function V2ReceptionPage() {
             {photoCarton && photoIa.status !== "idle" && (
               <div
                 role="status"
-                className={`mt-2 flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold ${
+                className={`mt-2 flex items-start gap-2 rounded-2xl px-3 py-2.5 text-xs font-semibold ${
                   photoIa.status === "ok"
                     ? "bg-success-soft text-success"
                     : photoIa.status === "rejected"
@@ -818,7 +828,7 @@ export default function V2ReceptionPage() {
           <section className="px-5 mt-5">
             <button
               onClick={() => setScannerOpen(true)}
-              className="w-full bg-primary text-white rounded-[20px] py-5 px-5 flex items-center justify-between shadow-card-lg press-card"
+              className="tap w-full bg-primary text-white rounded-[24px] py-5 px-5 flex items-center justify-between shadow-card-lg press-card"
             >
               <span className="flex items-center gap-3">
                 <span className="w-12 h-12 rounded-2xl bg-gold/20 text-gold flex items-center justify-center">
@@ -846,20 +856,20 @@ export default function V2ReceptionPage() {
               </p>
             </div>
             {scans.length === 0 ? (
-              <div className="bg-cream border border-rule rounded-2xl p-6 text-center text-text-secondary text-sm">
+              <div className="lg rounded-[22px] p-6 text-center text-text-secondary text-sm">
                 Aucun produit scanné. Scanne le premier code-barres.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {scans.map((row) => (
                   <motion.div
                     key={row.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white border border-rule rounded-xl p-3 flex items-center gap-3"
+                    className="lg rounded-2xl p-3 flex items-center gap-3"
                   >
                     <span
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
                         row.source === "carton"
                           ? "bg-gold-soft text-primary-dark"
                           : "bg-cream text-primary"
@@ -978,7 +988,7 @@ export default function V2ReceptionPage() {
                 <X className="w-4 h-4 text-text-tertiary" />
               </button>
             </div>
-            <p className="text-xs font-mono bg-cream rounded-xl px-3 py-2 text-text-primary">
+            <p className="text-xs font-mono bg-cream rounded-2xl px-3 py-2 text-text-primary">
               {unknownEan}
             </p>
 
@@ -998,14 +1008,14 @@ export default function V2ReceptionPage() {
                 <div className="grid grid-cols-2 gap-3 mt-5">
                   <button
                     onClick={() => setLearnMode("carton-qty")}
-                    className="bg-gold-soft text-primary-dark rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
+                    className="tap bg-gold-soft text-primary-dark rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
                   >
                     <Package className="w-6 h-6" />
                     <span className="font-bold">Carton</span>
                   </button>
                   <button
                     onClick={() => setLearnMode("search")}
-                    className="bg-cream text-primary rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
+                    className="tap bg-cream text-primary rounded-2xl py-5 flex flex-col items-center gap-2 press-card"
                   >
                     <PackageOpen className="w-6 h-6" />
                     <span className="font-bold">Unité</span>
@@ -1115,11 +1125,12 @@ export default function V2ReceptionPage() {
                   />
                 </div>
                 <div className="mt-3 max-h-64 overflow-y-auto space-y-1">
-                  {searchResults.map((p) => (
+                  {searchResults.map((p, i) => (
                     <button
                       key={p.id}
                       onClick={() => handleLearnUnitFor(p)}
-                      className="w-full flex items-center gap-3 p-2 min-h-[56px] rounded-xl active:bg-cream press-card text-left"
+                      style={{ "--i": i } as React.CSSProperties}
+                      className="rise-in tap w-full flex items-center gap-3 p-2 min-h-[56px] rounded-2xl active:bg-cream press-card text-left"
                     >
                       <ProductThumbnail
                         nom={p.nom}
@@ -1195,13 +1206,13 @@ function BdlCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full bg-white border rounded-2xl p-4 flex flex-col gap-3 text-left press-card ${
-        variant === "encours" ? "border-gold/40 shadow-card" : "border-rule"
+      className={`lg lg-hover tap w-full rounded-[22px] p-4 flex flex-col gap-3 text-left press-card ${
+        variant === "encours" ? "ring-1 ring-gold/40" : ""
       }`}
     >
       <div className="flex items-start gap-3">
         <span
-          className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+          className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
             variant === "encours"
               ? "bg-gold-soft text-primary-dark"
               : "bg-cream text-primary"

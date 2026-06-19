@@ -7,11 +7,9 @@ import {
   ArrowLeft,
   Check,
   ClipboardCheck,
-  Sparkles,
   Sprout,
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
@@ -299,14 +297,14 @@ export default function V2InventairePage() {
           Aucun inventaire assigné aujourd&apos;hui.
         </div>
       ) : (
-        <section className="px-5 mt-5 space-y-3">
-          <div className="bg-gold-soft rounded-2xl p-3 flex items-start gap-2 text-xs text-primary-dark">
-            <Sparkles className="w-4 h-4 mt-0.5 shrink-0" />
+        <section className="px-5 mt-5">
+          <div className="lg rise-in p-4 text-xs text-text-secondary">
             <p>
               Les produits sont tirés au sort parmi le catalogue du dépôt actif.
               Compte physiquement, saisis la quantité, valide.
             </p>
           </div>
+          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
           {mine.map((r, i) => {
             const isMine = r.employe_assigne_id === employe?.id;
             const c = parseInt(counts[r.id] ?? "", 10);
@@ -314,13 +312,11 @@ export default function V2InventairePage() {
               ? c - (r.quantite_attendue ?? 0)
               : null;
             return (
-              <motion.div
+              <div
                 key={r.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className={`bg-white border rounded-2xl p-4 ${
-                  isMine ? "border-primary" : "border-rule"
+                style={{ ["--i" as string]: i }}
+                className={`lg rise-in p-4 ${
+                  isMine ? "border-primary" : ""
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -367,7 +363,7 @@ export default function V2InventairePage() {
                             [r.id]: e.target.value.replace(/[^0-9]/g, ""),
                           }))
                         }
-                        className="w-20 mt-0.5 text-center bg-cream border border-rule rounded-xl py-2.5 min-h-[44px] text-lg font-bold"
+                        className="w-24 mt-0.5 text-center bg-[var(--surface-2)] text-text-primary border border-rule rounded-2xl py-2.5 min-h-[48px] text-lg font-bold"
                       />
                     </div>
                   </div>
@@ -398,9 +394,10 @@ export default function V2InventairePage() {
                       {ecart}
                     </p>
                   )}
-              </motion.div>
+              </div>
             );
           })}
+          </div>
         </section>
       )}
 
@@ -426,7 +423,7 @@ export default function V2InventairePage() {
               <button
                 onClick={validateAll}
                 disabled={submitting || nothingAssigned || !canValidate}
-                className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors ${
+                className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors active:scale-[0.99] ${
                   noneFilled ? "bg-warning text-white" : "bg-primary text-white"
                 }`}
               >

@@ -699,7 +699,7 @@ export default function V2PreparationKanbanPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {items.map((cmd) => {
+                      {items.map((cmd, cmdIndex) => {
                         const totalLignes = cmd.lignes.length;
                         const prepares = cmd.lignes.filter(
                           (l) => l.statut_preparation === "prepare",
@@ -770,8 +770,8 @@ export default function V2PreparationKanbanPage() {
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.18 }}
-                            className={`bg-card-bg border rounded-2xl p-3.5 shadow-card ${cardClass}`}
-                            style={cardStyle}
+                            className={`lg lg-hover rise-in p-3.5 ${cardClass}`}
+                            style={{ ["--i" as string]: cmdIndex, ...cardStyle }}
                           >
                             {isUrgent && (
                               <span
@@ -974,7 +974,7 @@ export default function V2PreparationKanbanPage() {
                     {/* Category header */}
                     <button
                       onClick={() => toggleCategory(cat.categorie)}
-                      className="w-full flex items-center justify-between rounded-lg px-3.5 min-h-[44px] mb-2"
+                      className="tap w-full flex items-center justify-between rounded-2xl px-3.5 min-h-[44px] mb-2"
                       style={{ background: "var(--surface-2)" }}
                     >
                       <span className="text-[13px] font-bold text-text-primary text-left">
@@ -1001,7 +1001,7 @@ export default function V2PreparationKanbanPage() {
                           className="overflow-hidden"
                         >
                           <div className="space-y-2">
-                            {cat.products.map((product) => {
+                            {cat.products.map((product, productIndex) => {
                               const isPicked = pickedProducts.has(
                                 product.produit_id,
                               );
@@ -1011,10 +1011,10 @@ export default function V2PreparationKanbanPage() {
                               return (
                                 <div
                                   key={product.produit_id}
-                                  className={`bg-card-bg rounded-lg border transition-opacity ${
+                                  className={`lg rise-in transition-opacity ${
                                     isPicked ? "opacity-60" : ""
                                   }`}
-                                  style={{ borderColor: "var(--border-card)" }}
+                                  style={{ ["--i" as string]: productIndex }}
                                 >
                                   <div className="flex items-center gap-3 p-3">
                                     {/* Checkbox */}

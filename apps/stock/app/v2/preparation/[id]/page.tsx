@@ -590,7 +590,7 @@ export default function V2PreparationDetailPage() {
       <section className="px-5 mt-4">
         <button
           onClick={() => setScannerOpen(true)}
-          className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
+          className="tap w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
         >
           <ScanBarcode className="w-5 h-5" />
           <span className="font-bold">Scanner le produit collecté</span>
@@ -599,7 +599,7 @@ export default function V2PreparationDetailPage() {
 
       {pickingOrder.length > 1 && (
         <section className="px-5 mt-4">
-          <div className="flex items-start gap-2.5 rounded-2xl border border-rule bg-cream px-3.5 py-3">
+          <div className="lg rise-in flex items-start gap-2.5 rounded-2xl px-3.5 py-3">
             <span className="shrink-0 mt-0.5 text-primary" aria-hidden>
               <Route className="w-4 h-4" />
             </span>
@@ -624,7 +624,7 @@ export default function V2PreparationDetailPage() {
               {ZONE_LABEL[group.zone]} · {group.items.length} produit
               {group.items.length > 1 ? "s" : ""}
             </p>
-            <div className="space-y-2">
+            <div className="grid gap-2 lg:grid-cols-2 items-start">
               {group.items.map((l, i) => {
                 const cold = COLD_CATEGORIES.has(l.produit?.categorie ?? "");
                 const done = l.statut_preparation !== "en_attente";
@@ -632,15 +632,15 @@ export default function V2PreparationDetailPage() {
                 const missing = l.statut_preparation === "manquant";
                 const weight = isWeightLine(l);
                 const justScanned = justScannedId === l.id;
-                // État visuel persistant :
-                //  - préparé   => fond success-soft + bordure success (net)
-                //  - manquant  => estompé neutre
-                //  - en attente=> carte blanche standard
+                // État visuel persistant (sur base verre .lg, cohérent jour/nuit) :
+                //  - préparé   => teinte success-soft + bordure success (net)
+                //  - manquant  => verre estompé
+                //  - en attente=> carte verre standard
                 const cardState = prepared
-                  ? "bg-success-soft border-success"
+                  ? "bg-success-soft border border-success"
                   : missing
-                    ? "bg-white opacity-60 border-rule"
-                    : "bg-white border-rule";
+                    ? "lg opacity-60"
+                    : "lg lg-hover";
                 return (
                   <motion.div
                     key={l.id}
@@ -658,7 +658,7 @@ export default function V2PreparationDetailPage() {
                         ? { duration: 0.36, ease: [0.16, 1, 0.3, 1] }
                         : { delay: i * 0.03 }
                     }
-                    className={`border rounded-2xl p-3 transition-colors duration-300 ease-out ${
+                    className={`rounded-2xl p-3 transition-colors duration-300 ease-out ${
                       weight ? "flex flex-col gap-3" : "flex items-center gap-3"
                     } ${cardState}`}
                   >
@@ -718,7 +718,7 @@ export default function V2PreparationDetailPage() {
                       {!weight && l.statut_preparation === "en_attente" && (
                         <button
                           onClick={() => setMissingPhotoFor(l.id)}
-                          className="min-h-[44px] text-xs font-bold text-danger px-3 py-1.5 rounded-lg bg-danger-soft inline-flex items-center gap-1"
+                          className="tap min-h-[44px] text-xs font-bold text-danger px-3 py-1.5 rounded-xl bg-danger-soft inline-flex items-center gap-1"
                         >
                           <PackageMinus className="w-3.5 h-3.5" />
                           Manquant
@@ -751,11 +751,11 @@ export default function V2PreparationDetailPage() {
           cta-above-safe => bottom: var(--safe-bottom). Sans ça le bouton
           était coupé sous le home-indicator en PWA plein écran. */}
       <div className="fixed cta-above-safe inset-x-0 z-30 pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-4 pointer-events-auto">
+        <div className="mx-auto max-w-[680px] px-4 pt-3 pb-4 pointer-events-auto">
           <button
             onClick={finalize}
             disabled={prepCount < totalCount}
-            className="w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
+            className="tap w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
           >
             <div className="text-left">
               <p
@@ -990,7 +990,7 @@ function WeightLineRow({
       {needsClientValidation && !ligne.saved && (
         <div
           role="alert"
-          className={`-mx-3 rounded-xl px-3.5 py-3.5 ${
+          className={`-mx-3 rounded-2xl px-3.5 py-3.5 ${
             confirmedHighEcart
               ? "bg-success-soft border border-success"
               : "bg-danger text-white"
@@ -1018,13 +1018,13 @@ function WeightLineRow({
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={() => setConfirmedHighEcart(true)}
-                  className="flex-1 min-h-[44px] rounded-xl bg-white text-danger text-sm font-extrabold px-3"
+                  className="tap flex-1 min-h-[44px] rounded-2xl bg-white text-danger text-sm font-extrabold px-3"
                 >
                   Oui, confirmer
                 </button>
                 <button
                   onClick={() => onChange({ weighedKg: "" })}
-                  className="flex-1 min-h-[44px] rounded-xl border border-white/60 bg-transparent text-white text-sm font-bold px-3"
+                  className="tap flex-1 min-h-[44px] rounded-2xl border border-white/60 bg-transparent text-white text-sm font-bold px-3"
                 >
                   Non, repeser
                 </button>
@@ -1058,7 +1058,7 @@ function WeightLineRow({
                 ni à la capture (re-passe par saveWeightLigne au ré-enreg.). */}
             <button
               onClick={() => onChange({ saved: false })}
-              className="min-h-[44px] text-[12px] font-semibold text-text-secondary inline-flex items-center gap-1 px-2 rounded-lg hover:text-primary"
+              className="tap min-h-[44px] text-[12px] font-semibold text-text-secondary inline-flex items-center gap-1 px-2 rounded-xl hover:text-primary"
               aria-label={`Corriger la pesée ${ligne.produit?.nom ?? ""}`}
             >
               <Pencil className="w-3.5 h-3.5" aria-hidden />
@@ -1069,7 +1069,7 @@ function WeightLineRow({
           <button
             onClick={() => void onSave()}
             disabled={ligne.saving || reelTtcLive == null || saveBlocked}
-            className="min-h-[44px] text-sm font-bold text-white bg-primary px-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+            className="tap min-h-[44px] text-sm font-bold text-white bg-primary px-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
           >
             {ligne.saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />

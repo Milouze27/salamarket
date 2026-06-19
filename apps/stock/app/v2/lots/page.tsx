@@ -16,7 +16,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   Calendar,
@@ -179,7 +178,7 @@ export default function V2LotsListPage() {
             <Loader2 size={16} className="animate-spin" /> Chargement…
           </div>
         ) : list.length === 0 ? (
-          <div className="card" style={{ padding: 8 }}>
+          <div className="lg rise-in" style={{ padding: 8 }}>
             <EmptyState
               icon={QrCode}
               title="Aucun lot enregistré"
@@ -197,15 +196,14 @@ export default function V2LotsListPage() {
             />
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {list.map((lot, i) => {
               const state = certifState(lot.certifier_valid_until);
               return (
-                <motion.li
+                <li
                   key={lot.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i * 0.015, 0.3) }}
+                  className="rise-in"
+                  style={{ ["--i" as string]: Math.min(i, 8) }}
                 >
                   <div
                     role="button"
@@ -214,8 +212,8 @@ export default function V2LotsListPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") router.push(`/v2/lots/${lot.id}`);
                     }}
-                    className="block card card-tappable hover:shadow-md cursor-pointer"
-                    style={{ padding: 14 }}
+                    className="block lg lg-hover tap cursor-pointer"
+                    style={{ padding: 16 }}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
@@ -307,7 +305,7 @@ export default function V2LotsListPage() {
                       </span>
                     </div>
                   </div>
-                </motion.li>
+                </li>
               );
             })}
           </ul>
@@ -383,7 +381,7 @@ function StatPill({
   const t = tones[tone];
   return (
     <div
-      className="rounded-xl px-3 py-2 text-center"
+      className="rounded-[20px] px-3 py-3 text-center"
       style={{ background: t.bg }}
     >
       <p

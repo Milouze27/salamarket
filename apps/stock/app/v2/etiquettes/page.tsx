@@ -196,8 +196,8 @@ export default function V2EtiquettesPage() {
       </header>
 
       {/* Sélecteur de format */}
-      <section className="px-5 mt-5">
-        <div className="grid grid-cols-2 gap-2 p-1 bg-cream border border-rule rounded-2xl">
+      <section className="px-5 mt-5 lg:max-w-md">
+        <div className="lg grid grid-cols-2 gap-1 p-1.5 rounded-[24px]">
           <FormatTab
             active={format === "brother"}
             onClick={() => setFormat("brother")}
@@ -224,14 +224,15 @@ export default function V2EtiquettesPage() {
             compact
           />
         ) : (
-          <div className="space-y-2">
-            {items.map((p) => {
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            {items.map((p, i) => {
               const n = copies[p.id] ?? 0;
               const prix = prixTtcOf(p);
               return (
                 <div
                   key={p.id}
-                  className="bg-white border border-rule rounded-xl p-3 flex items-center gap-3"
+                  className="lg rise-in rounded-[20px] p-3 flex items-center gap-3"
+                  style={{ ["--i" as string]: i }}
                 >
                   <ProductThumbnail
                     nom={p.nom}
@@ -284,7 +285,7 @@ export default function V2EtiquettesPage() {
                     inputMode="numeric"
                     aria-label={`Nombre d'étiquettes pour ${p.nom} (max ${MAX_COPIES})`}
                     title={`Nombre d'étiquettes à imprimer (max ${MAX_COPIES})`}
-                    className="w-16 text-center bg-cream border border-rule rounded-xl min-h-[44px] text-base font-bold tabular-nums"
+                    className="w-16 text-center bg-cream border border-rule rounded-2xl min-h-[44px] text-base font-bold tabular-nums"
                   />
                 </div>
               );
@@ -314,7 +315,7 @@ export default function V2EtiquettesPage() {
             onClick={generate}
             disabled={generating}
             title={`Générer ${totalCopies} étiquette${totalCopies > 1 ? "s" : ""} ${format === "brother" ? "Brother" : "gondole"} au format PDF`}
-            className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="tap w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {generating ? (
               <span className="w-5 h-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
@@ -366,21 +367,26 @@ function FormatTab({
       onClick={onClick}
       title={`Format ${label} (${sub})`}
       aria-pressed={active}
-      className={`flex items-center justify-center gap-2 min-h-[44px] rounded-xl text-[13px] font-bold transition-colors ${
-        active
-          ? "bg-primary text-white shadow-card"
-          : "text-text-secondary active:opacity-70"
-      }`}
+      className="tap relative flex items-center justify-center gap-2 min-h-[44px] rounded-[18px] text-[13px] font-bold"
     >
-      {icon}
-      <span className="flex flex-col items-start leading-tight">
-        <span>{label}</span>
-        <span
-          className={`text-[10px] font-semibold ${
-            active ? "text-white/70" : "text-text-tertiary"
-          }`}
-        >
-          {sub}
+      {active && (
+        <span aria-hidden className="lg-pill absolute inset-0 rounded-[18px]" />
+      )}
+      <span
+        className={`relative z-10 flex items-center gap-2 ${
+          active ? "text-text-primary" : "text-text-secondary"
+        }`}
+      >
+        {icon}
+        <span className="flex flex-col items-start leading-tight">
+          <span>{label}</span>
+          <span
+            className={`text-[10px] font-semibold ${
+              active ? "text-gold-bright" : "text-text-tertiary"
+            }`}
+          >
+            {sub}
+          </span>
         </span>
       </span>
     </button>

@@ -240,13 +240,13 @@ export default function V2StockPage() {
         <div
           role="tablist"
           aria-label="Vue stock"
-          className="inline-flex bg-white border border-rule rounded-full p-1 mt-3 shadow-card"
+          className="lg inline-flex rounded-full p-1 mt-3"
         >
           <button
             role="tab"
             aria-selected={view === "depot"}
             onClick={() => setView("depot")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
+            className={`tap inline-flex items-center gap-1.5 min-h-[44px] px-4 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
               view === "depot" ? "bg-primary text-white" : "text-text-secondary"
             }`}
           >
@@ -257,7 +257,7 @@ export default function V2StockPage() {
             role="tab"
             aria-selected={view === "regroupe"}
             onClick={() => setView("regroupe")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
+            className={`tap inline-flex items-center gap-1.5 min-h-[44px] px-4 py-1.5 rounded-full text-[12px] font-bold transition-colors ${
               view === "regroupe"
                 ? "bg-primary text-white"
                 : "text-text-secondary"
@@ -271,7 +271,7 @@ export default function V2StockPage() {
         <button
           type="button"
           onClick={() => router.push("/v2/stock/sans-ean")}
-          className="block mt-3 text-[12px] font-bold text-text-secondary underline underline-offset-4 decoration-rule hover:text-primary"
+          className="tap inline-flex items-center min-h-[44px] mt-1 text-[12px] font-bold text-text-secondary underline underline-offset-4 decoration-rule hover:text-primary"
         >
           Produits sans code-barre →
         </button>
@@ -345,31 +345,32 @@ export default function V2StockPage() {
         // Skeleton de chargement : grille de cartes neutres tant que le stock
         // n'est pas résolu — évite le flash trompeur « Aucun produit ».
         <section
-          className="px-5 mt-4 grid grid-cols-2 gap-3"
+          className="px-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4"
           aria-busy="true"
           aria-label="Chargement du stock"
         >
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white border border-rule rounded-2xl overflow-hidden animate-pulse"
+              className="lg rounded-[22px] overflow-hidden animate-pulse"
             >
-              <div className="aspect-square bg-cream" />
+              <div className="aspect-square bg-cream/40" />
               <div className="p-3 space-y-2">
-                <div className="h-3 rounded bg-cream w-4/5" />
-                <div className="h-2.5 rounded bg-cream w-2/5" />
-                <div className="h-3.5 rounded bg-cream w-1/3 mt-1" />
+                <div className="h-3 rounded bg-cream/40 w-4/5" />
+                <div className="h-2.5 rounded bg-cream/40 w-2/5" />
+                <div className="h-3.5 rounded bg-cream/40 w-1/3 mt-1" />
               </div>
             </div>
           ))}
         </section>
       ) : view === "depot" ? (
         <>
-          <section className="px-5 mt-4 grid grid-cols-2 gap-3">
-            {filtered.map((p) => (
+          <section className="px-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map((p, i) => (
               <div
                 key={p.id}
-                className="bg-white border border-rule rounded-2xl overflow-hidden"
+                style={{ "--i": i } as React.CSSProperties}
+                className="lg lg-hover rise-in rounded-[22px] overflow-hidden"
               >
                 <div className="aspect-square relative">
                   <ProductThumbnail
@@ -383,7 +384,7 @@ export default function V2StockPage() {
                       className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-bold inline-flex items-center gap-1 shadow-sm"
                       style={{
                         background: "var(--danger)",
-                        color: "var(--text-on-danger, #fff)",
+                        color: "var(--text-on-dark)",
                       }}
                     >
                       <Package className="w-3 h-3" />
@@ -398,7 +399,7 @@ export default function V2StockPage() {
                   {editAllowed && (
                     <button
                       onClick={() => setEditing(p)}
-                      className="absolute bottom-2 right-2 w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-card-lg active:scale-95"
+                      className="tap absolute bottom-2 right-2 w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shadow-card-lg"
                       aria-label="Modifier le stock"
                     >
                       <Pencil className="w-4 h-4" />
@@ -485,11 +486,12 @@ export default function V2StockPage() {
       ) : (
         // ─── VUE REGROUPÉE 3 DÉPÔTS ─────────────────────────────
         <>
-          <section className="px-5 mt-4 space-y-2.5">
-            {filteredAggregated.map((p) => (
+          <section className="px-5 mt-4 grid grid-cols-1 gap-2.5 lg:grid-cols-2">
+            {filteredAggregated.map((p, i) => (
               <div
                 key={p.id}
-                className="bg-white border border-rule rounded-2xl p-3 flex items-center gap-3"
+                style={{ "--i": i } as React.CSSProperties}
+                className="lg lg-hover rise-in rounded-[22px] p-3 flex items-center gap-3"
               >
                 <ProductThumbnail
                   nom={p.nom}

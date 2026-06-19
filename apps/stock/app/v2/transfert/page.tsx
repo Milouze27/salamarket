@@ -290,7 +290,7 @@ export default function V2TransfertPage() {
             Produit à transférer (depuis {source.nom})
           </p>
           {produit ? (
-            <div className="bg-white border border-rule rounded-2xl p-4 flex items-center gap-3">
+            <div className="lg rise-in p-4 flex items-center gap-3">
               <ProductThumbnail
                 nom={produit.nom}
                 categorie={produit.categorie}
@@ -313,7 +313,7 @@ export default function V2TransfertPage() {
                   setProduit(null);
                   setShowSearch(false);
                 }}
-                className="text-xs font-bold text-text-secondary"
+                className="tap text-xs font-bold text-text-secondary min-h-[44px] min-w-[44px] px-3 -mr-2 shrink-0"
               >
                 Changer
               </button>
@@ -322,7 +322,7 @@ export default function V2TransfertPage() {
             <div className="space-y-2">
               <button
                 onClick={() => setScannerOpen(true)}
-                className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
+                className="tap w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
               >
                 <ScanBarcode className="w-5 h-5" />
                 <span className="font-bold">Scanner</span>
@@ -330,7 +330,7 @@ export default function V2TransfertPage() {
               {!showSearch ? (
                 <button
                   onClick={() => setShowSearch(true)}
-                  className="w-full bg-cream text-primary rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-bold border border-rule"
+                  className="tap w-full bg-cream text-primary rounded-2xl py-3 min-h-[44px] flex items-center justify-center gap-2 text-sm font-bold border border-rule"
                 >
                   <Search className="w-4 h-4" />
                   Rechercher par nom (filtré sur {source.nom})
@@ -356,14 +356,15 @@ export default function V2TransfertPage() {
                         Recherche…
                       </p>
                     )}
-                    {searchResults.map((p) => (
+                    {searchResults.map((p, i) => (
                       <button
                         key={p.id}
                         onClick={() => {
                           setProduit(p);
                           setShowSearch(false);
                         }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl active:bg-cream text-left"
+                        style={{ ["--i" as string]: i }}
+                        className="tap rise-in w-full flex items-center gap-3 p-2 min-h-[56px] rounded-2xl active:bg-cream text-left"
                       >
                         <ProductThumbnail
                           nom={p.nom}
@@ -397,7 +398,7 @@ export default function V2TransfertPage() {
 
       {/* QUANTITÉ + PHOTO */}
       {produit && (
-        <section className="px-5 mt-6 space-y-4">
+        <section className="px-5 mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <div>
             <label htmlFor="transfert-quantite">
               <span className="label-caps text-text-tertiary mb-2 block">
@@ -459,7 +460,7 @@ export default function V2TransfertPage() {
                 />
                 <button
                   onClick={() => setPhotoOpen(true)}
-                  className="absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-3 py-1.5 shadow"
+                  className="tap absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-4 py-2 min-h-[36px] shadow"
                 >
                   Reprendre
                 </button>
@@ -467,7 +468,7 @@ export default function V2TransfertPage() {
             ) : (
               <button
                 onClick={() => setPhotoOpen(true)}
-                className="w-full bg-cream border border-dashed border-rule rounded-2xl py-5 flex items-center justify-center gap-2 text-text-secondary text-sm"
+                className="tap w-full bg-cream border border-dashed border-rule rounded-2xl py-5 flex items-center justify-center gap-2 text-text-secondary text-sm"
               >
                 <Camera className="w-4 h-4" />
                 Ajouter une photo
@@ -478,11 +479,11 @@ export default function V2TransfertPage() {
       )}
 
       <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
-        <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
+        <div className="sticky-action-inner pt-3 pb-3 pointer-events-auto">
           <button
             onClick={submit}
             disabled={!canSubmit || submitting}
-            className="w-full bg-gold text-primary-dark rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
+            className="tap w-full bg-gold text-primary-dark rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
           >
             <div className="text-left">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary-dark/70">
@@ -540,7 +541,7 @@ function DepotPick({
           if (d) onChange(d);
         }}
         aria-label={`Choisir le dépôt ${label.toLowerCase()}`}
-        className="w-full bg-white border border-rule rounded-2xl px-3 py-3 text-base font-bold text-text-primary appearance-none text-center"
+        className="lg lg-hover tap w-full px-3 py-3 min-h-[44px] text-base font-bold text-text-primary appearance-none text-center"
       >
         <option value="">Choisir</option>
         {depots.map((d) => (
@@ -560,7 +561,7 @@ function DepotLocked({ label, depot }: { label: string; depot: Depot | null }) {
   return (
     <div>
       <p className="label-caps text-text-tertiary mb-2 text-center">{label}</p>
-      <div className="w-full bg-primary text-white rounded-2xl px-3 py-3 text-sm font-bold text-center inline-flex items-center justify-center gap-1.5">
+      <div className="w-full bg-primary text-white rounded-2xl px-3 py-3 min-h-[44px] text-sm font-bold text-center inline-flex items-center justify-center gap-1.5">
         <Building2 className="w-3.5 h-3.5 text-gold" />
         {depot?.nom ?? "Aucun"}
       </div>

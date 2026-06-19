@@ -389,7 +389,7 @@ export default function V2SortiePage() {
       <section className="px-5 mt-6">
         <p className="label-caps text-text-tertiary mb-2">Produit</p>
         {produit ? (
-          <div className="bg-white border border-rule rounded-2xl p-4 flex items-center gap-3">
+          <div className="lg rise-in p-4 flex items-center gap-3">
             <ProductThumbnail
               nom={produit.nom}
               categorie={produit.categorie}
@@ -419,7 +419,7 @@ export default function V2SortiePage() {
           <div className="space-y-2">
             <button
               onClick={() => setScannerOpen(true)}
-              className="w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 press-card"
+              className="rise-in w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2 press-card"
             >
               <ScanBarcode className="w-5 h-5" />
               <span className="font-bold">Scanner le produit</span>
@@ -427,7 +427,7 @@ export default function V2SortiePage() {
             {!showSearch ? (
               <button
                 onClick={() => setShowSearch(true)}
-                className="w-full bg-cream text-primary rounded-2xl py-3 min-h-[44px] flex items-center justify-center gap-2 text-sm font-bold border border-rule"
+                className="lg lg-hover tap w-full rounded-2xl py-3 min-h-[44px] flex items-center justify-center gap-2 text-sm font-bold text-text-primary"
               >
                 <Search className="w-4 h-4" />
                 Rechercher par nom
@@ -448,14 +448,15 @@ export default function V2SortiePage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  {searchResults.map((p) => (
+                  {searchResults.map((p, i) => (
                     <button
                       key={p.id}
                       onClick={() => {
                         setProduit(p);
                         setShowSearch(false);
                       }}
-                      className="w-full flex items-center gap-3 p-2 min-h-[56px] rounded-xl active:bg-cream text-left"
+                      style={{ ["--i" as string]: i }}
+                      className="tap rise-in w-full flex items-center gap-3 p-2 min-h-[56px] rounded-2xl active:bg-cream text-left"
                     >
                       <ProductThumbnail
                         nom={p.nom}
@@ -483,8 +484,8 @@ export default function V2SortiePage() {
       {produit && (
         <section className="px-5 mt-6">
           <p className="section-eyebrow mb-3">Motif de sortie</p>
-          <div className="grid grid-cols-2 gap-2.5">
-            {TYPES.map((t) => {
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {TYPES.map((t, i) => {
               const Icon = t.icon;
               const active = type === t.value;
               const fullWidth = t.value === "autre";
@@ -494,12 +495,13 @@ export default function V2SortiePage() {
                   onClick={() => setType(t.value)}
                   aria-pressed={active}
                   aria-label={`Motif : ${t.label} · ${t.desc}`}
-                  className={`relative text-left rounded-2xl border transition-all duration-200 ease-out press-card ${
-                    fullWidth ? "col-span-2 px-4 py-3" : "p-3"
+                  style={{ ["--i" as string]: i }}
+                  className={`relative rise-in text-left rounded-2xl transition-all duration-200 ease-out press-card ${
+                    fullWidth ? "col-span-2 lg:col-span-3 px-4 py-3" : "p-3"
                   } ${
                     active
-                      ? "bg-danger-soft border-danger shadow-card"
-                      : "bg-white border-rule"
+                      ? "bg-danger-soft border border-danger shadow-card"
+                      : "lg lg-hover"
                   }`}
                 >
                   <div
@@ -553,7 +555,7 @@ export default function V2SortiePage() {
 
       {/* QUANTITÉ + PHOTO */}
       {produit && type && (
-        <section className="px-5 mt-6 space-y-4">
+        <section className="px-5 mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
             <div className="flex items-baseline justify-between mb-2">
               <label htmlFor="sortie-quantite">
@@ -654,7 +656,7 @@ export default function V2SortiePage() {
             )}
           </div>
 
-          <div className="bg-cream border border-rule rounded-2xl p-3 flex items-start gap-2 text-xs text-text-secondary">
+          <div className="lg rise-in lg:col-span-2 p-3 flex items-start gap-2 text-xs text-text-secondary">
             <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
             <p>
               À la validation, Claude vision analyse la photo et compare avec ta

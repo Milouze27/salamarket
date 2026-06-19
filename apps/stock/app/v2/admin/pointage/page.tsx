@@ -210,6 +210,7 @@ export default function PointagePage() {
   return (
     <V2Shell hideNav>
       <PageAccentStripe accent="sapin-or" />
+      <div className="mx-auto w-full max-w-3xl lg:max-w-5xl">
       <header className="px-4 sm:px-5 pt-7">
         <BackButton />
         <EditorialEyebrow num="01" label="RH" className="mt-3" />
@@ -235,16 +236,18 @@ export default function PointagePage() {
 
       {/* KPI strip */}
       <section className="px-4 sm:px-5 mt-4 grid grid-cols-3 gap-2.5">
-        <Kpi value={`${kpi.presents}`} label="présents" />
+        <Kpi value={`${kpi.presents}`} label="présents" index={0} />
         <Kpi
           value={formatHeures(kpi.totalMin || null)}
           label="cumul jour"
+          index={1}
         />
         <Kpi
           value={`${kpi.total}`}
           label="pointés"
           tone={kpi.anomalies > 0 ? "warn" : "neutral"}
           sub={kpi.anomalies > 0 ? `${kpi.anomalies} anomalie(s)` : undefined}
+          index={2}
         />
       </section>
 
@@ -254,7 +257,7 @@ export default function PointagePage() {
           <button
             type="button"
             onClick={exportCsv}
-            className="w-full min-h-[48px] rounded-[16px] py-3 text-[14px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+            className="tap w-full min-h-[48px] rounded-[20px] py-3 text-[14px] font-bold flex items-center justify-center gap-2"
             style={{
               background: "var(--surface-2)",
               color: "var(--text-primary)",
@@ -280,13 +283,7 @@ export default function PointagePage() {
         </p>
 
         {loading ? (
-          <div
-            className="rounded-2xl p-10 flex items-center justify-center gap-2"
-            style={{
-              background: "var(--surface-1)",
-              border: "1px solid var(--border-light)",
-            }}
-          >
+          <div className="lg p-10 flex items-center justify-center gap-2">
             <Loader2
               className="w-5 h-5 animate-spin"
               style={{ color: "var(--primary-green)" }}
@@ -302,24 +299,24 @@ export default function PointagePage() {
             description="Dès qu'un membre de l'équipe pointe son arrivée, il apparaît ici avec ses heures."
           />
         ) : (
-          <ul className="space-y-2.5">
-            {rows.map((p) => {
+          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+            {rows.map((p, i) => {
               const min = computeHeures(p);
               const enService = p.check_in && !p.check_out;
               const anomalie =
                 p.anomalie !== "aucune" ? ANOMALIE_LABEL[p.anomalie] : "";
               return (
-                <motion.li
+                <li
                   key={p.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl p-4"
-                  style={{
-                    background: "var(--surface-1)",
-                    border: enService
-                      ? "1px solid var(--accent-gold-hairline)"
-                      : "1px solid var(--border-light)",
-                  }}
+                  className="lg rise-in p-4"
+                  style={
+                    {
+                      "--i": i,
+                      border: enService
+                        ? "1px solid var(--accent-gold-hairline)"
+                        : undefined,
+                    } as React.CSSProperties
+                  }
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -396,7 +393,7 @@ export default function PointagePage() {
                     <button
                       type="button"
                       onClick={() => setEditing(p)}
-                      className="mt-3 w-full min-h-[44px] rounded-[14px] py-2.5 text-[13px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.99]"
+                      className="tap mt-3 w-full min-h-[44px] rounded-[16px] py-2.5 text-[13px] font-bold flex items-center justify-center gap-1.5"
                       style={{
                         background: "var(--surface-2)",
                         color: "var(--text-secondary)",
@@ -406,12 +403,13 @@ export default function PointagePage() {
                       <Pencil className="w-3.5 h-3.5" /> Corriger les horaires
                     </button>
                   )}
-                </motion.li>
+                </li>
               );
             })}
           </ul>
         )}
       </section>
+      </div>
 
       {isAdmin && (
         <EditDrawer
@@ -481,14 +479,15 @@ function ClockCard({
 
   return (
     <div
-      className="rounded-[22px] p-5"
-      style={{
-        background:
-          etat === "parti"
-            ? "var(--surface-1)"
-            : "linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 100%)",
-        border: etat === "parti" ? "1px solid var(--border-light)" : "none",
-      }}
+      className={etat === "parti" ? "lg p-5" : "rounded-[28px] p-5"}
+      style={
+        etat === "parti"
+          ? undefined
+          : {
+              background:
+                "linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 100%)",
+            }
+      }
     >
       <p
         className="text-[10.5px] font-bold uppercase tracking-[0.18em]"
@@ -514,7 +513,7 @@ function ClockCard({
         type="button"
         onClick={onClock}
         disabled={c.disabled || acting}
-        className="mt-4 w-full min-h-[56px] rounded-[16px] py-4 text-[16px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+        className="tap mt-4 w-full min-h-[56px] rounded-[18px] py-4 text-[16px] font-extrabold flex items-center justify-center gap-2 disabled:opacity-60"
         style={
           etat === "parti"
             ? {
@@ -551,23 +550,30 @@ function Kpi({
   label,
   sub,
   tone = "neutral",
+  index = 0,
 }: {
   value: string;
   label: string;
   sub?: string;
   tone?: "neutral" | "warn";
+  index?: number;
 }) {
   return (
     <div
-      className="rounded-2xl p-3.5"
-      style={{
-        background:
-          tone === "warn" ? "var(--status-warning-bg)" : "var(--surface-1)",
-        border:
-          tone === "warn"
-            ? "1px solid var(--status-warning)"
-            : "1px solid var(--border-light)",
-      }}
+      className={
+        tone === "warn"
+          ? "rise-in rounded-[20px] p-3.5"
+          : "lg rise-in p-3.5"
+      }
+      style={
+        tone === "warn"
+          ? ({
+              "--i": index,
+              background: "var(--status-warning-bg)",
+              border: "1px solid var(--status-warning)",
+            } as React.CSSProperties)
+          : ({ "--i": index } as React.CSSProperties)
+      }
     >
       <p
         className="text-[22px] font-extrabold tabular-nums leading-none"
@@ -689,12 +695,12 @@ function EditDrawer({
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         transition={{ type: "spring", damping: 32, stiffness: 360 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col lg:mx-auto lg:max-w-lg"
         style={{
           maxHeight: "92vh",
           background: "var(--surface-1)",
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
           boxShadow: "0 -8px 32px rgba(0,0,0,0.45)",
           borderTop: "1px solid var(--border-light)",
         }}
@@ -711,7 +717,7 @@ function EditDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-3 p-2 rounded-full"
+            className="tap absolute right-4 top-3 p-2 rounded-full"
             style={{
               background: "var(--surface-2)",
               border: "1px solid var(--border-light)",
@@ -784,7 +790,7 @@ function EditDrawer({
             type="button"
             disabled={saving}
             onClick={() => void save()}
-            className="w-full min-h-[52px] rounded-[16px] text-[15px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
+            className="tap w-full min-h-[52px] rounded-[18px] text-[15px] font-extrabold flex items-center justify-center gap-2 disabled:opacity-60"
             style={{
               background: "var(--primary-green)",
               color: "#FFFFFF",

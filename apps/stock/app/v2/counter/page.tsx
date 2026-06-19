@@ -549,15 +549,22 @@ function BayCard({ row, isOldest }: { row: CounterRow; isOldest: boolean }) {
       exit={{ opacity: 0, x: -40, scale: 0.94 }}
       transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
       className={`relative rounded-[28px] p-6 lg:p-8 flex flex-col gap-3 ${
-        isOldest ? "counter-card-pulse" : ""
-      }`}
-      style={{
-        background: "var(--surface-1)",
-        border: isOldest
-          ? "1px solid var(--border-premium)"
-          : "1px solid var(--border-card)",
-        boxShadow: "var(--shadow-elevated)",
-      }}
+        // Carte « en file » (sans borne) = sémantique danger → reste solide
+        // pour ne pas se diluer. Les bornes normales prennent le vrai verre .lg
+        // (profondeur translucide premium sur le fond sapin/abyss).
+        isOverflow ? "" : "lg"
+      } ${isOldest ? "counter-card-pulse" : ""}`}
+      style={
+        isOverflow
+          ? {
+              background: "var(--surface-1)",
+              border: "1px solid var(--danger)",
+              boxShadow: "var(--shadow-elevated)",
+            }
+          : isOldest
+            ? { border: "1px solid var(--border-premium)" }
+            : undefined
+      }
     >
       {/* Bay label — gigantesque pour un code court (A1, B2…), rayonne comme un
           néon. Sans borne assignée (overflow), on N'affiche PAS le mot

@@ -272,8 +272,8 @@ export default function V2LotDetailPage() {
 
       {/* ─── Not found ──────────────────────────────────────── */}
       {!loading && notFound && (
-        <div className="px-5 mt-6">
-          <div className="bg-white border border-rule rounded-2xl p-6 text-center">
+        <div className="px-5 mt-6 max-w-2xl mx-auto">
+          <div className="lg rise-in p-6 text-center">
             <p className="text-sm font-bold text-text-primary mb-1">
               Lot introuvable
             </p>
@@ -288,13 +288,13 @@ export default function V2LotDetailPage() {
 
       {/* ─── Content ────────────────────────────────────────── */}
       {!loading && lot && (
-        <div className="px-5 mt-6 space-y-4">
+        <div className="px-5 mt-6 space-y-4 max-w-5xl mx-auto">
           {/* Alertes intégrité du moat — vues EN PREMIER par le staff.
               Certificat expiré (rouge) et/ou DLC dépassée (ambre). */}
           {certifExpired && (
             <div
               role="alert"
-              className="rounded-2xl p-4 flex items-start gap-3 bg-danger-soft border border-[var(--danger-border)]"
+              className="rise-in rounded-2xl p-4 flex items-start gap-3 bg-danger-soft border border-[var(--danger-border)]"
             >
               <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-danger" />
               <div className="min-w-0">
@@ -312,7 +312,7 @@ export default function V2LotDetailPage() {
           {dlcPassed && (
             <div
               role="alert"
-              className="rounded-2xl p-4 flex items-start gap-3 bg-warning-soft border border-[var(--warning-border)]"
+              className="rise-in rounded-2xl p-4 flex items-start gap-3 bg-warning-soft border border-[var(--warning-border)]"
             >
               <CalendarX className="w-5 h-5 shrink-0 mt-0.5 text-warning" />
               <div className="min-w-0">
@@ -328,7 +328,7 @@ export default function V2LotDetailPage() {
           )}
 
           {/* QR card — admin-only preview + print */}
-          <section className="bg-white border border-rule rounded-2xl p-5 shadow-card">
+          <section className="lg rise-in p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-[color:var(--accent-gold)]">
@@ -339,9 +339,9 @@ export default function V2LotDetailPage() {
                 </h2>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3 lg:flex-row lg:items-start lg:gap-6">
               <div
-                className="w-[200px] h-[200px] bg-white rounded-xl border border-rule p-2"
+                className="w-[200px] h-[200px] bg-white rounded-2xl border border-rule p-2 shrink-0"
                 aria-label="Aperçu du QR code"
               >
                 {qrSvg ? (
@@ -356,56 +356,60 @@ export default function V2LotDetailPage() {
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={copyUrl}
-                className="w-full min-h-[44px] inline-flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-cream border border-rule text-[13px] font-semibold text-text-primary active:opacity-80"
-              >
-                <span className="truncate tabular-nums">{publicUrl}</span>
-                <Copy className="w-4 h-4 text-text-secondary shrink-0" />
-              </button>
-              {/* PDF-02 — Certificat halal A4 : le moat, CTA primaire */}
-              <button
-                type="button"
-                onClick={openCertificat}
-                className="btn-gold w-full inline-flex items-center justify-center gap-2 min-h-[48px] py-3.5 rounded-xl text-[14px] font-bold"
-              >
-                <Award className="w-4 h-4" />
-                Imprimer le certificat halal
-              </button>
-              <div className="grid grid-cols-3 gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={printLabel}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
-                >
-                  <Printer className="w-4 h-4" />
-                  Étiquette
-                </button>
+              <div className="flex flex-col gap-3 w-full lg:flex-1 lg:min-w-0">
                 <button
                   type="button"
                   onClick={copyUrl}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
+                  className="tap w-full min-h-[44px] inline-flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl bg-cream border border-rule text-[13px] font-semibold text-text-primary active:opacity-80"
                 >
-                  <Copy className="w-4 h-4" />
-                  Lien
+                  <span className="truncate tabular-nums">{publicUrl}</span>
+                  <Copy className="w-4 h-4 text-text-secondary shrink-0" />
                 </button>
-                <a
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-xl bg-primary text-white text-[12.5px] font-bold active:opacity-90"
+                {/* PDF-02 — Certificat halal A4 : le moat, CTA primaire */}
+                <button
+                  type="button"
+                  onClick={openCertificat}
+                  className="btn-gold tap w-full inline-flex items-center justify-center gap-2 min-h-[48px] py-3.5 rounded-2xl text-[14px] font-bold"
                 >
-                  Public
-                  <ArrowUpRight className="w-4 h-4" />
-                </a>
+                  <Award className="w-4 h-4" />
+                  Imprimer le certificat halal
+                </button>
+                <div className="grid grid-cols-3 gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={printLabel}
+                    className="tap inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-2xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Étiquette
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyUrl}
+                    className="tap inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-2xl bg-cream border border-rule text-[12.5px] font-bold text-text-primary active:opacity-80"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Lien
+                  </button>
+                  <a
+                    href={publicUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="tap inline-flex items-center justify-center gap-1.5 min-h-[44px] py-3 rounded-2xl bg-primary text-white text-[12.5px] font-bold active:opacity-90"
+                  >
+                    Public
+                    <ArrowUpRight className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </section>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Certification — le titre suit l'état réel du certificat :
               JAMAIS « Halal vérifié » sur un certificat expiré. */}
           <Section
+            index={0}
             eyebrow="02 — Certification"
             title={certifExpired ? "Certificat expiré" : "Halal vérifié"}
             icon={
@@ -441,6 +445,7 @@ export default function V2LotDetailPage() {
 
           {/* Origine */}
           <Section
+            index={1}
             eyebrow="03 — Origine"
             title="Abattoir"
             icon={<Factory className="w-5 h-5" />}
@@ -455,6 +460,7 @@ export default function V2LotDetailPage() {
 
           {/* Fournisseur + quantités */}
           <Section
+            index={2}
             eyebrow="04 — Fournisseur"
             title="Approvisionnement"
             icon={<Factory className="w-5 h-5" />}
@@ -480,6 +486,7 @@ export default function V2LotDetailPage() {
 
           {/* Réception magasin */}
           <Section
+            index={3}
             eyebrow="05 — Magasin"
             title="Réception & DLC"
             icon={<CalendarDays className="w-5 h-5" />}
@@ -498,9 +505,10 @@ export default function V2LotDetailPage() {
             )}
             {lot.ddm && <DataRow label="DDM" value={formatDate(lot.ddm)} />}
           </Section>
+          </div>
 
           {lot.notes && (
-            <section className="bg-white border border-rule rounded-2xl p-5">
+            <section className="lg rise-in p-5">
               <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-text-secondary mb-2">
                 Notes
               </p>
@@ -520,14 +528,19 @@ function Section({
   title,
   icon,
   children,
+  index = 0,
 }: {
   eyebrow: string;
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  index?: number;
 }) {
   return (
-    <section className="bg-white border border-rule rounded-2xl p-5 shadow-card">
+    <section
+      className="lg rise-in p-5"
+      style={{ ["--i" as string]: index } as React.CSSProperties}
+    >
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-[color:var(--accent-gold)]">

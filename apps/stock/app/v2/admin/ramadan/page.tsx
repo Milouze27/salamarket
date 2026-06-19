@@ -144,14 +144,7 @@ export default function RamadanModePage() {
           </h1>
         </header>
         <section className="px-4 sm:px-5 mt-8 pb-[max(3rem,env(safe-area-inset-bottom))]">
-          <div
-            className="rounded-[22px] p-8 text-center border"
-            style={{
-              background: "var(--surface-1)",
-              borderColor: "var(--border-card)",
-              boxShadow: "var(--shadow-card)",
-            }}
-          >
+          <div className="lg rise-in p-8 text-center max-w-prose mx-auto">
             <Moon
               className="w-8 h-8 mx-auto mb-3 text-[var(--accent-gold-bright)]"
               strokeWidth={2}
@@ -191,17 +184,14 @@ export default function RamadanModePage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
-        className="px-4 sm:px-5 mt-5 flex flex-col gap-4 pb-[max(3rem,env(safe-area-inset-bottom))]"
+        className="px-4 sm:px-5 mt-5 flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start pb-[max(3rem,env(safe-area-inset-bottom))]"
       >
-        {/* ── HERO COUNTDOWN ── */}
-        <div
-          className="relative rounded-[24px] p-6 overflow-hidden border"
-          style={{
-            background: "var(--hero-gradient, linear-gradient(165deg,#134A36,#0A2419))",
-            borderColor: "var(--border-premium)",
-            boxShadow: "var(--shadow-elevated)",
-          }}
-        >
+        {/* ── HERO COUNTDOWN ──
+            .hero-action-card = surface hero dual-mode du design system :
+            dégradé sapin en nuit, verre clair en jour. Les tokens texte
+            (--text-primary, --accent-gold-bright) restent lisibles dans les
+            deux modes — pas de texte sombre sur fond sombre. */}
+        <div className="hero-action-card relative rounded-[28px] p-6 overflow-hidden rise-in lg:col-span-2">
           <span
             aria-hidden
             className="absolute right-[-30px] top-[-30px] w-40 h-40 rounded-full opacity-[0.10]"
@@ -234,7 +224,7 @@ export default function RamadanModePage() {
           <div
             className="relative mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
             style={{
-              background: "var(--accent-gold-soft, rgba(232,194,74,0.14))",
+              background: "var(--accent-gold-soft)",
               border: "1px solid var(--border-premium)",
             }}
           >
@@ -250,18 +240,14 @@ export default function RamadanModePage() {
 
         {/* ── ACTION : PO PRÉVISIONNEL ── */}
         <div
-          className="rounded-[22px] p-5 border"
-          style={{
-            background: "var(--surface-1)",
-            borderColor: "var(--border-card)",
-            boxShadow: "var(--shadow-card)",
-          }}
+          className="lg rise-in p-5 flex flex-col lg:col-span-2"
+          style={{ ["--i" as string]: 1 }}
         >
           <div className="flex items-start gap-3">
             <div
-              className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
+              className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
               style={{
-                background: "var(--primary-green-soft, rgba(27,106,74,0.16))",
+                background: "var(--primary-green-soft)",
               }}
             >
               <Sparkles
@@ -284,7 +270,7 @@ export default function RamadanModePage() {
             type="button"
             onClick={() => void genererPoPrevisionnel()}
             disabled={generating}
-            className="w-full min-h-[50px] mt-4 rounded-[16px] text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.99] transition disabled:opacity-60"
+            className="tap w-full min-h-[52px] mt-4 rounded-[20px] text-[15px] font-bold flex items-center justify-center gap-2 transition disabled:opacity-60"
             style={{
               background: "var(--primary-green)",
               color: "var(--text-primary)",
@@ -301,14 +287,7 @@ export default function RamadanModePage() {
         </div>
 
         {/* ── MULTIPLICATEURS PAR CATÉGORIE ── */}
-        <div
-          className="rounded-[22px] p-5 border"
-          style={{
-            background: "var(--surface-1)",
-            borderColor: "var(--border-card)",
-            boxShadow: "var(--shadow-card)",
-          }}
-        >
+        <div className="lg rise-in p-5" style={{ ["--i" as string]: 2 }}>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp
               className="w-4 h-4 text-[var(--accent-gold-dim)]"
@@ -349,7 +328,7 @@ export default function RamadanModePage() {
                         width: `${pct}%`,
                         background: hot
                           ? "linear-gradient(90deg, var(--accent-gold) 0%, var(--accent-gold-bright) 100%)"
-                          : "var(--primary-green-hover, #22855C)",
+                          : "var(--primary-green-hover)",
                       }}
                     />
                   </div>
@@ -364,14 +343,7 @@ export default function RamadanModePage() {
         </div>
 
         {/* ── CHECKLIST ── */}
-        <div
-          className="rounded-[22px] p-5 border"
-          style={{
-            background: "var(--surface-1)",
-            borderColor: "var(--border-card)",
-            boxShadow: "var(--shadow-card)",
-          }}
-        >
+        <div className="lg rise-in p-5" style={{ ["--i" as string]: 3 }}>
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
               <CalendarClock
@@ -394,7 +366,7 @@ export default function RamadanModePage() {
                   <button
                     type="button"
                     onClick={() => toggleCheck(c.key)}
-                    className={`w-full flex items-center gap-3 py-3 text-left active:scale-[0.995] transition ${
+                    className={`tap w-full flex items-center gap-3 min-h-[44px] py-3 text-left ${
                       i > 0 ? "border-t border-[var(--border-hairline)]" : ""
                     }`}
                   >

@@ -556,18 +556,20 @@ export default function BdlScanFirstPage() {
               Préambule obligatoire
             </p>
             <div className="space-y-3">
-              {/* PHOTOS PALETTE */}
+              {/* PHOTOS PALETTE — carte sémantique success une fois OK, verre sinon */}
               <div
-                className={`rounded-2xl border-2 p-4 transition-colors ${
+                className={`rise-in p-4 transition-colors ${
                   photosOk
-                    ? "border-success/40 bg-success-soft"
-                    : "border-rule bg-white"
+                    ? "rounded-2xl border-2 border-success/40 bg-success-soft"
+                    : "lg"
                 }`}
               >
                 <div className="flex items-start gap-3 mb-3">
                   <span
-                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-white border ${
-                      photosOk ? "border-success/40" : "border-rule"
+                    className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
+                      photosOk
+                        ? "bg-white border-success/40"
+                        : "bg-[var(--surface-2)] border-rule"
                     }`}
                   >
                     <ImagePlus
@@ -645,29 +647,28 @@ export default function BdlScanFirstPage() {
           </>
         )}
 
-        {/* Liste compacte des lignes */}
-        <div className="space-y-2">
-          {bdl.bons_de_livraison_lignes.map((l) => {
+        {/* Liste compacte des lignes — verre, cascade, 2 colonnes sur desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          {bdl.bons_de_livraison_lignes.map((l, i) => {
             const ecart = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
             const isRecu =
               l.quantite_recue >= l.quantite_attendue && ecart === 0;
             const isSurplus = ecart > 0;
             const isManquant = l.quantite_recue < l.quantite_attendue;
             return (
-              <motion.div
+              <div
                 key={l.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`bg-white border rounded-2xl p-3 flex items-center gap-3 ${
+                style={{ ["--i" as string]: i }}
+                className={`lg rise-in p-3 flex items-center gap-3 ${
                   isRecu
                     ? "border-success/40"
                     : isSurplus
                       ? "border-warning/40"
-                      : "border-rule"
+                      : ""
                 }`}
               >
                 <span
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                     isRecu
                       ? "bg-success-soft text-success"
                       : isSurplus
@@ -725,7 +726,7 @@ export default function BdlScanFirstPage() {
                     </p>
                   )}
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -760,7 +761,7 @@ export default function BdlScanFirstPage() {
               <button
                 type="button"
                 onClick={() => setCertifAck((v) => !v)}
-                className={`w-full rounded-xl py-2.5 px-3 text-[12.5px] font-bold transition-colors ${
+                className={`tap w-full rounded-2xl py-3 px-3 min-h-[44px] text-[12.5px] font-bold transition-colors ${
                   certifAck
                     ? "bg-danger text-white"
                     : "bg-white border border-danger/50 text-danger"
@@ -874,12 +875,12 @@ export default function BdlScanFirstPage() {
               <button
                 onClick={() => setSignOffOpen(true)}
                 disabled={!preambleOk || (certifBloquant && !certifAck)}
-                className={`w-full rounded-[20px] py-3.5 px-4 flex items-center justify-between transition-colors disabled:opacity-40 ${
+                className={`tap w-full rounded-[20px] py-3.5 px-4 min-h-[44px] flex items-center justify-between transition-colors disabled:opacity-40 ${
                   preambleOk && !(certifBloquant && !certifAck)
                     ? progression.scanned > 0
                       ? "bg-success text-white shadow-card"
-                      : "bg-white border border-rule text-text-primary"
-                    : "bg-white border border-rule text-text-tertiary"
+                      : "lg lg-hover text-text-primary"
+                    : "lg text-text-tertiary"
                 }`}
               >
                 <span className="text-left">

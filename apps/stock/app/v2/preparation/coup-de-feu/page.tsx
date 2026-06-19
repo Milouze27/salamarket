@@ -53,24 +53,18 @@ function useNowTick(intervalMs = 30_000): number {
   return now;
 }
 
-const TIER_STYLE: Record<
-  UrgencyTier,
-  { label: string; badge: string; cardBorder: string }
-> = {
+const TIER_STYLE: Record<UrgencyTier, { label: string; badge: string }> = {
   urgent: {
     label: "Urgent",
     badge: "bg-danger-soft text-danger",
-    cardBorder: "var(--danger)",
   },
   normal: {
     label: "À suivre",
     badge: "bg-warning-soft text-warning",
-    cardBorder: "var(--border-card)",
   },
   late: {
     label: "Plus tard",
     badge: "bg-success-soft text-success",
-    cardBorder: "var(--border-card)",
   },
 };
 
@@ -252,21 +246,16 @@ export default function CoupDeFeuPage() {
         {/* Bandeau compteurs du rush */}
         {!loading && (
           <div className="mt-4 flex items-stretch gap-2">
-            <div
-              className="flex-1 rounded-2xl border px-3.5 py-3"
-              style={{
-                background: "var(--surface-1)",
-                borderColor: "var(--border-light)",
-              }}
-            >
+            <div className="lg flex-1 px-3.5 py-3 rise-in" style={{ ["--i" as string]: 0 }}>
               <p className="label-caps text-text-tertiary">À préparer</p>
               <p className="text-[22px] font-extrabold tabular text-text-primary mt-0.5">
                 {rush.length}
               </p>
             </div>
             <div
-              className="flex-1 rounded-2xl border px-3.5 py-3"
+              className="flex-1 rounded-2xl border px-3.5 py-3 rise-in"
               style={{
+                ["--i" as string]: 1,
                 background:
                   urgentCount > 0 ? "var(--danger-soft)" : "var(--surface-1)",
                 borderColor:
@@ -303,13 +292,7 @@ export default function CoupDeFeuPage() {
         </p>
       ) : rush.length === 0 ? (
         <div className="px-5 mt-8">
-          <div
-            className="border rounded-2xl px-5 py-10 flex flex-col items-center text-center"
-            style={{
-              background: "var(--surface-2)",
-              borderColor: "var(--border-light)",
-            }}
-          >
+          <div className="lg rise-in px-5 py-10 flex flex-col items-center text-center">
             <span
               className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
               style={{
@@ -369,16 +352,16 @@ export default function CoupDeFeuPage() {
                 >
                   <Link
                     href={`/v2/preparation/${cmd.id}`}
-                    className="block rounded-2xl border bg-card-bg shadow-card active:scale-[0.99] transition-transform"
-                    style={{
-                      borderColor: style.cardBorder,
-                      ...(tier === "urgent"
+                    className="lg lg-hover block active:scale-[0.99]"
+                    style={
+                      tier === "urgent"
                         ? {
+                            borderColor: "var(--danger-border)",
                             boxShadow:
                               "0 0 0 1px var(--danger-border), inset 3px 0 0 var(--danger)",
                           }
-                        : {}),
-                    }}
+                        : undefined
+                    }
                   >
                     {/* Tap target généreux : toute la rangée est cliquable,
                         min-h 64px + chevron d'action explicite à droite. */}

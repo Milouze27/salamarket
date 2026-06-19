@@ -278,7 +278,7 @@ export default function CockpitPage() {
           type="button"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 md:h-9 px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[13px] md:text-[12px] font-bold text-[var(--text-primary)] active:scale-[0.97] transition disabled:opacity-50"
+          className="tap inline-flex items-center gap-1.5 min-h-[44px] md:min-h-[44px] px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[13px] md:text-[12px] font-bold text-[var(--text-primary)] transition disabled:opacity-50"
           aria-label="Actualiser le cockpit"
         >
           <RefreshCw
@@ -335,6 +335,7 @@ export default function CockpitPage() {
             2 cols sur tablette, 3 cols sur desktop. BUG-006 fix. */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* ZONE 2 — Calendrier hijri */}
+          <div className="rise-in" style={{ ["--i" as string]: 0 }}>
           <RamadanCard
             message={hijriMessage}
             joursJusqua={hijriJours}
@@ -345,8 +346,10 @@ export default function CockpitPage() {
             fenetre={fenetreHijri}
             onSeasonalTap={() => router.push("/v2/admin/ramadan")}
           />
+          </div>
 
           {/* ZONE 3 — DLC */}
+          <div className="rise-in" style={{ ["--i" as string]: 1 }}>
           <AlertCard
             icon={Clock}
             tone={snap && snap.dlc.count_critique > 0 ? "danger" : "warn"}
@@ -386,8 +389,10 @@ export default function CockpitPage() {
               />
             ))}
           </AlertCard>
+          </div>
 
           {/* ZONE 4 — Stockout prédictif */}
+          <div className="rise-in" style={{ ["--i" as string]: 2 }}>
           <AlertCard
             icon={PackageX}
             tone={snap && snap.stockout.count_out > 0 ? "danger" : "warn"}
@@ -437,9 +442,11 @@ export default function CockpitPage() {
               />
             ))}
           </AlertCard>
+          </div>
 
           {/* ZONE 5 — Casse 24h */}
           {snap?.casse_24h && snap.casse_24h.nb_evenements > 0 && (
+            <div className="rise-in" style={{ ["--i" as string]: 3 }}>
             <AlertCard
               icon={Flame}
               tone={
@@ -463,13 +470,16 @@ export default function CockpitPage() {
               }
               onTap={() => router.push("/v2/sortie")}
             />
+            </div>
           )}
 
           {/* ZONE 6 — Competitor intel */}
+          <div className="rise-in" style={{ ["--i" as string]: 4 }}>
           <CompetitorCard
             rows={snap?.competitor ?? []}
             onAddRelevé={() => setReleveOpen(true)}
           />
+          </div>
         </div>
         {/* /grid responsive */}
 
@@ -480,7 +490,7 @@ export default function CockpitPage() {
             jamais au client pendant une démo. */}
         {showCockpitWarnings && snap && snap.warnings.length > 0 && (
           <div
-            className="rounded-[16px] p-3 flex items-start gap-2.5 border"
+            className="rise-in rounded-[20px] p-3.5 flex items-start gap-2.5 border"
             style={{
               background: "var(--warning-soft)",
               borderColor:
@@ -506,7 +516,7 @@ export default function CockpitPage() {
 
         {error && (
           <div
-            className="rounded-[16px] p-3 text-[13px] text-[var(--danger)] border"
+            className="rise-in rounded-[20px] p-3.5 text-[13px] text-[var(--danger)] border"
             style={{
               background: "var(--danger-soft)",
               borderColor: "color-mix(in srgb, var(--danger) 24%, transparent)",
@@ -520,7 +530,7 @@ export default function CockpitPage() {
                 setError(null);
                 void loadSnapshot();
               }}
-              className="mt-2.5 inline-flex items-center gap-1.5 min-h-[40px] px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[12px] font-bold text-[var(--text-primary)] active:scale-[0.97] transition"
+              className="tap mt-2.5 inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-full bg-[var(--surface-2)] border border-[var(--border-card)] text-[12px] font-bold text-[var(--text-primary)] transition"
             >
               <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.4} />
               Réessayer
@@ -544,15 +554,9 @@ export default function CockpitPage() {
             type="button"
             aria-label="Fermer"
             onClick={() => !releveSaving && setReleveOpen(false)}
-            className="absolute inset-0 bg-black/50"
+            className="scrim-in absolute inset-0 bg-black/50"
           />
-          <div
-            className="relative w-full sm:max-w-[420px] mx-3 mb-3 sm:mb-0 rounded-[22px] p-5"
-            style={{
-              background: "var(--surface-1)",
-              border: "1px solid var(--border-card)",
-            }}
-          >
+          <div className="lg sheet-in relative w-full sm:max-w-[420px] mx-3 mb-3 sm:mb-0 p-5">
             <p className="text-[15px] font-extrabold text-[var(--text-primary)]">
               Relevé prix concurrent
             </p>
@@ -567,7 +571,7 @@ export default function CockpitPage() {
                 <input
                   value={releveConcurrent}
                   onChange={(e) => setReleveConcurrent(e.target.value)}
-                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  className="mt-1 w-full min-h-[44px] rounded-2xl px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                 />
               </label>
               <label className="block">
@@ -578,7 +582,7 @@ export default function CockpitPage() {
                   value={releveLibelle}
                   onChange={(e) => setReleveLibelle(e.target.value)}
                   placeholder="Poulet entier halal 1,2 kg"
-                  className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                  className="mt-1 w-full min-h-[44px] rounded-2xl px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -591,7 +595,7 @@ export default function CockpitPage() {
                     onChange={(e) => setRelevePrix(e.target.value)}
                     inputMode="decimal"
                     placeholder="9,90"
-                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                    className="mt-1 w-full min-h-[44px] rounded-2xl px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                   />
                 </label>
                 <label className="block">
@@ -602,7 +606,7 @@ export default function CockpitPage() {
                     value={releveUnite}
                     onChange={(e) => setReleveUnite(e.target.value)}
                     placeholder="kg"
-                    className="mt-1 w-full min-h-[44px] rounded-[12px] px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
+                    className="mt-1 w-full min-h-[44px] rounded-2xl px-3 text-[16px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)]"
                   />
                 </label>
               </div>
@@ -612,7 +616,7 @@ export default function CockpitPage() {
                 type="button"
                 onClick={() => setReleveOpen(false)}
                 disabled={releveSaving}
-                className="flex-1 min-h-[46px] rounded-[14px] font-bold text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] disabled:opacity-50"
+                className="tap flex-1 min-h-[46px] rounded-2xl font-bold text-[14px] bg-[var(--surface-2)] border border-[var(--border-card)] text-[var(--text-primary)] disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -620,7 +624,7 @@ export default function CockpitPage() {
                 type="button"
                 onClick={() => void saveReleve()}
                 disabled={releveSaving}
-                className="flex-1 min-h-[46px] rounded-[14px] font-bold text-[14px] bg-[var(--primary-green)] text-white disabled:opacity-60"
+                className="tap flex-1 min-h-[46px] rounded-2xl font-bold text-[14px] bg-[var(--primary-green)] text-white disabled:opacity-60"
               >
                 {releveSaving ? "Enregistrement…" : "Enregistrer"}
               </button>

@@ -90,7 +90,7 @@ export default function StockSansEanPage() {
             <button
               key={d.id}
               onClick={() => setSelectedDepotId(d.id)}
-              className={`px-3 py-1.5 rounded-full text-[11.5px] font-bold whitespace-nowrap border transition-colors ${
+              className={`tap min-h-[44px] px-4 inline-flex items-center rounded-full text-[12px] font-bold whitespace-nowrap border transition-colors ${
                 selectedDepotId === d.id
                   ? "bg-primary text-white border-primary"
                   : "bg-white text-text-primary border-rule"
@@ -128,17 +128,18 @@ export default function StockSansEanPage() {
           </p>
         </div>
       ) : (
-        <section className="px-5 mt-4 space-y-2 pb-nav-stack">
-          {filtered.map((p) => (
+        <section className="px-5 mt-4 grid grid-cols-1 lg:grid-cols-2 gap-2.5 pb-nav-stack">
+          {filtered.map((p, i) => (
             <div
               key={p.id}
-              className="bg-white border border-rule rounded-2xl p-3 flex items-center gap-3"
+              className="lg rise-in p-3.5 flex items-center gap-3"
+              style={{ ["--i" as string]: i }}
             >
               <ProductThumbnail
                 nom={p.nom}
                 categorie={p.categorie}
                 size={48}
-                rounded="xl"
+                rounded="2xl"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-text-primary truncate">

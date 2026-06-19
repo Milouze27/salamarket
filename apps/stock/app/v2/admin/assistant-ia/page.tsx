@@ -150,8 +150,8 @@ export default function AssistantIAPage() {
         </div>
       </header>
 
-      {/* Chat zone */}
-      <section className="px-4 pt-5 pb-[200px]">
+      {/* Chat zone — largeur alignée sur le composer ancré (cohérence desktop). */}
+      <section className="mx-auto w-full max-w-[460px] lg:max-w-[760px] px-4 pt-5 pb-[200px]">
         {messages.length === 0 ? (
           <EmptyState prenom={prenom} onPick={(q) => void send(q)} />
         ) : (
@@ -164,7 +164,7 @@ export default function AssistantIAPage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex justify-end"
                 >
-                  <div className="bg-primary text-white rounded-[18px] rounded-tr-md px-4 py-2.5 max-w-[78%] shadow-card">
+                  <div className="bg-primary text-white rounded-[22px] rounded-tr-lg px-4 py-2.5 max-w-[78%] shadow-card">
                     <p className="text-[14px] leading-relaxed whitespace-pre-wrap">
                       {m.content}
                     </p>
@@ -177,11 +177,11 @@ export default function AssistantIAPage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex gap-2"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shrink-0 shadow-card">
+                  <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shrink-0 shadow-card">
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="bg-white border border-rule rounded-[18px] rounded-tl-md px-4 py-3 shadow-card">
+                    <div className="lg rounded-[22px] rounded-tl-lg px-4 py-3">
                       <p
                         className="text-[14px] text-text-primary leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: md(m.content) }}
@@ -211,11 +211,11 @@ export default function AssistantIAPage() {
                 animate={{ opacity: 1 }}
                 className="flex gap-2 items-center"
               >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shadow-card">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shadow-card">
                   <Bot className="w-4 h-4" />
                 </div>
                 <div
-                  className="bg-white border border-rule rounded-[18px] px-4 py-3 shadow-card"
+                  className="lg rounded-[22px] rounded-tl-lg px-4 py-3"
                   aria-live="polite"
                   aria-label="L'assistant réfléchit"
                 >
@@ -250,7 +250,7 @@ export default function AssistantIAPage() {
                   key={s}
                   onClick={() => void send(s)}
                   disabled={sending}
-                  className="bg-[var(--surface-1)] border border-rule rounded-full px-3 py-1.5 text-[11.5px] font-bold text-text-primary shrink-0 active:scale-95 transition-transform disabled:opacity-50 shadow-card"
+                  className="tap bg-[var(--surface-1)] border border-rule rounded-full px-3 py-1.5 text-[11.5px] font-bold text-text-primary shrink-0 disabled:opacity-50 shadow-card"
                 >
                   {s}
                 </button>
@@ -262,7 +262,7 @@ export default function AssistantIAPage() {
               e.preventDefault();
               void send(input);
             }}
-            className="flex items-center gap-2 rounded-[22px] bg-cream/92 backdrop-blur-md border border-rule shadow-card-lg p-2"
+            className="glass-bar flex items-center gap-2 rounded-[24px] p-2"
           >
             <input
               value={input}
@@ -274,7 +274,7 @@ export default function AssistantIAPage() {
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="shrink-0 bg-primary text-white w-11 h-11 rounded-2xl flex items-center justify-center shadow-card disabled:opacity-40 active:scale-95 transition-transform"
+              className="tap shrink-0 bg-primary text-white w-11 h-11 rounded-2xl flex items-center justify-center shadow-card disabled:opacity-40"
               aria-label="Envoyer"
             >
               <Send className="w-4 h-4" />
@@ -294,7 +294,7 @@ function EmptyState({
   onPick: (q: string) => void;
 }) {
   return (
-    <div className="bg-white border border-rule rounded-[20px] p-6 shadow-card">
+    <div className="lg p-6">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-gold flex items-center justify-center shadow-card">
           <TrendingUp className="w-6 h-6" />
@@ -310,11 +310,12 @@ function EmptyState({
       </div>
       <p className="label-caps text-text-tertiary mt-5 mb-2">Suggestions</p>
       <div className="space-y-2">
-        {SUGGESTIONS.map((s) => (
+        {SUGGESTIONS.map((s, i) => (
           <button
             key={s}
             onClick={() => onPick(s)}
-            className="w-full bg-cream border border-rule rounded-2xl p-3 text-left flex items-center gap-2.5 active:scale-[0.99] transition-transform"
+            style={{ ["--i" as string]: i }}
+            className="tap rise-in w-full bg-[var(--surface-2)] border border-rule rounded-2xl p-3 text-left flex items-center gap-2.5 min-h-[44px]"
           >
             <Sparkles className="w-4 h-4 text-gold shrink-0" />
             <span className="text-[13px] font-bold text-text-primary">{s}</span>
@@ -345,7 +346,7 @@ function ToolBadges({
     <div className="mt-2">
       <button
         onClick={onToggle}
-        className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary"
+        className="tap inline-flex items-center gap-1.5 min-h-[44px] text-[10.5px] font-bold uppercase tracking-wide text-text-tertiary"
       >
         <Database className="w-3 h-3" />
         {sources.length} source{sources.length > 1 ? "s" : ""} consultée
@@ -366,7 +367,7 @@ function ToolBadges({
               {sources.map((label) => (
                 <span
                   key={label}
-                  className="bg-cream rounded-full px-2.5 py-1 text-[11px] font-bold text-text-secondary"
+                  className="bg-[var(--surface-2)] border border-rule rounded-full px-2.5 py-1 text-[11px] font-bold text-text-secondary"
                 >
                   {label}
                 </span>

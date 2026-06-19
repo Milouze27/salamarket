@@ -367,7 +367,7 @@ export default function ForecastPage() {
           multiplicateurs hijri qui contredisent la phase courante. */}
       {phaseStale && rows.length > 0 && (
         <section className="px-4 sm:px-5 mt-4">
-          <div className="flex items-start gap-3 rounded-[16px] p-3.5 bg-[var(--status-warning-bg)] border border-[var(--status-warning)]/40">
+          <div className="flex items-start gap-3 rounded-2xl p-3.5 bg-[var(--status-warning-bg)] border border-[var(--status-warning)]/40">
             <AlertTriangle className="w-4 h-4 text-[var(--status-warning-text)] shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-[12.5px] font-extrabold text-[var(--status-warning-text)]">
@@ -386,6 +386,7 @@ export default function ForecastPage() {
       {/* KPI grid — 2-up sur mobile, 4-up dès lg pour densifier le desktop (LAY-12) */}
       <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-7xl mx-auto w-full">
         <KpiCard
+          index={0}
           variant="danger"
           icon={<AlertOctagon className="w-4 h-4" />}
           eyebrow="RUPTURES + BLOQUANT"
@@ -393,6 +394,7 @@ export default function ForecastPage() {
           label="à commander aujourd'hui"
         />
         <KpiCard
+          index={1}
           variant="warn"
           icon={<AlertTriangle className="w-4 h-4" />}
           eyebrow="CRITIQUE"
@@ -400,6 +402,7 @@ export default function ForecastPage() {
           label="< 3 jours de couverture"
         />
         <KpiCard
+          index={2}
           variant="gold"
           icon={<TrendingUp className="w-4 h-4" />}
           eyebrow="À SURVEILLER"
@@ -407,6 +410,7 @@ export default function ForecastPage() {
           label="< 7 jours"
         />
         <KpiCard
+          index={3}
           variant="neutral"
           icon={<Sparkles className="w-4 h-4" />}
           eyebrow="DERNIER CALCUL"
@@ -425,7 +429,7 @@ export default function ForecastPage() {
           <button
             type="button"
             onClick={() => setAllDepots((v) => !v)}
-            className="pill-filter min-h-[44px] md:min-h-0"
+            className="tap pill-filter min-h-[44px] md:min-h-0"
             data-active={allDepots}
           >
             {allDepots ? "Tous dépôts" : (depot?.nom ?? "Dépôt courant")}
@@ -434,7 +438,7 @@ export default function ForecastPage() {
             type="button"
             onClick={() => void handleRecompute()}
             disabled={recomputing}
-            className="ml-auto inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 px-4 py-2 rounded-full bg-primary text-white text-[13px] md:text-[12px] font-bold active:scale-[0.97] disabled:opacity-60"
+            className="tap ml-auto inline-flex items-center gap-1.5 min-h-[44px] md:min-h-0 px-4 py-2 rounded-full bg-primary text-white text-[13px] md:text-[12px] font-bold disabled:opacity-60"
           >
             {recomputing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -455,7 +459,7 @@ export default function ForecastPage() {
                   type="button"
                   onClick={() => setFilter(f.key)}
                   data-active={filter === f.key}
-                  className="pill-filter shrink-0 min-h-[44px] md:min-h-0"
+                  className="tap pill-filter shrink-0 min-h-[44px] md:min-h-0"
                 >
                   {f.label}
                   <span className="ml-1 tabular text-[11px] opacity-80">
@@ -471,7 +475,7 @@ export default function ForecastPage() {
       {/* Liste */}
       <section className="px-4 sm:px-5 mt-5 pb-[max(3rem,env(safe-area-inset-bottom))]">
         {loading ? (
-          <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
+          <div className="lg p-10 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
             <p className="text-sm text-text-secondary">Chargement…</p>
           </div>
@@ -483,14 +487,15 @@ export default function ForecastPage() {
             filter={filter}
           />
         ) : (
-          <ul className="space-y-2.5">
-            {filteredRows.map((r) => {
+          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 max-w-7xl mx-auto w-full">
+            {filteredRows.map((r, i) => {
               const style = TIER_STYLE[r.tier];
               const rec = recommendedOrder(r);
               return (
                 <li
                   key={`${r.produit_id}-${r.depot_id}`}
-                  className={`bg-white border-2 rounded-2xl p-4 ${style.border}`}
+                  className={`lg lg-hover rise-in border-2 p-4 ${style.border}`}
+                  style={{ ["--i" as string]: Math.min(i, 8) }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -545,7 +550,7 @@ export default function ForecastPage() {
 
                   {r.reason && !phaseStale && (
                     <p
-                      className={`mt-3 text-[12px] leading-snug rounded-xl px-3 py-2 ${style.bg} text-text-primary`}
+                      className={`mt-3 text-[12px] leading-snug rounded-2xl px-3 py-2 ${style.bg} text-text-primary`}
                     >
                       {r.reason}
                     </p>
@@ -554,7 +559,7 @@ export default function ForecastPage() {
                   <button
                     type="button"
                     onClick={() => void handleDraftPO(r)}
-                    className="w-full mt-3 bg-primary text-white rounded-[14px] min-h-[44px] py-3 md:py-2.5 text-[14px] md:text-[13px] font-bold flex items-center justify-center gap-2 active:scale-[0.99]"
+                    className="tap w-full mt-3 bg-primary text-white rounded-2xl min-h-[44px] py-3 md:py-2.5 text-[14px] md:text-[13px] font-bold flex items-center justify-center gap-2"
                   >
                     <ShoppingCart className="w-4 h-4" />
                     Préparer commande · {rec.qty} {rec.unit}
@@ -582,7 +587,7 @@ function EmptyState({
 }) {
   if (hasRows && filter !== "all") {
     return (
-      <div className="bg-white border border-rule rounded-2xl p-8 text-center">
+      <div className="lg rise-in p-8 text-center">
         <CheckCircle2 className="w-7 h-7 text-success mx-auto mb-2" />
         <p className="font-bold text-text-primary">
           Aucune ligne en {TIER_LABEL[filter as StockoutTier].toLowerCase()}
@@ -594,7 +599,7 @@ function EmptyState({
     );
   }
   return (
-    <div className="bg-cream border border-rule rounded-2xl p-8 text-center">
+    <div className="lg rise-in p-8 text-center">
       <PackageX className="w-7 h-7 text-text-tertiary mx-auto mb-2" />
       <p className="font-bold text-text-primary">
         Pas encore de calcul de stockout
@@ -607,7 +612,7 @@ function EmptyState({
         type="button"
         onClick={onRecompute}
         disabled={recomputing}
-        className="mt-4 inline-flex items-center gap-1.5 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-white text-[14px] font-bold active:scale-[0.97] disabled:opacity-60"
+        className="tap mt-4 inline-flex items-center gap-1.5 min-h-[44px] px-5 py-2.5 rounded-full bg-primary text-white text-[14px] font-bold disabled:opacity-60"
       >
         {recomputing ? (
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -648,12 +653,14 @@ function Stat({
 }
 
 function KpiCard({
+  index,
   variant,
   icon,
   eyebrow,
   value,
   label,
 }: {
+  index: number;
   variant: "danger" | "warn" | "gold" | "neutral";
   icon: React.ReactNode;
   eyebrow: string;
@@ -662,29 +669,33 @@ function KpiCard({
 }) {
   const palette = {
     danger: {
-      bg: "bg-[var(--status-danger-bg)]",
+      bg: "rounded-2xl bg-[var(--status-danger-bg)]",
       chip: "bg-[var(--status-danger)] text-white",
       value: "text-[var(--status-danger-text)]",
     },
     warn: {
-      bg: "bg-[var(--status-warning-bg)]",
+      bg: "rounded-2xl bg-[var(--status-warning-bg)]",
       chip: "bg-[var(--status-warning)] text-white",
       value: "text-[var(--status-warning-text)]",
     },
     gold: {
-      bg: "bg-[var(--accent-gold-soft)]",
+      bg: "rounded-2xl bg-[var(--accent-gold-soft)]",
       chip: "bg-[var(--accent-gold-bright)] text-[var(--text-on-gold)]",
       value: "text-[var(--or-text)]",
     },
+    // Neutre = vraie surface élevée → verre Liquid Glass (cohérent jour/nuit).
     neutral: {
-      bg: "bg-white border border-rule",
+      bg: "lg",
       chip: "bg-primary text-white",
       value: "text-text-primary",
     },
   }[variant];
 
   return (
-    <div className={`rounded-2xl p-3.5 ${palette.bg}`}>
+    <div
+      className={`rise-in p-3.5 ${palette.bg}`}
+      style={{ ["--i" as string]: index }}
+    >
       <div className="flex items-center gap-2">
         <span
           className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${palette.chip}`}

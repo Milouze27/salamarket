@@ -251,15 +251,13 @@ export default function EquipePage() {
           />
         </div>
       ) : (
-        <section className="px-5 mt-5 space-y-3 pb-28">
+        <section className="px-5 mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 pb-28">
           {employes.map((e, i) => (
-            <motion.div
+            <div
               key={e.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
-              className={`bg-white border rounded-2xl p-4 ${
-                e.is_active ? "border-rule" : "border-rule opacity-60"
+              style={{ "--i": i } as React.CSSProperties}
+              className={`lg rise-in rounded-[20px] p-4 ${
+                e.is_active ? "" : "opacity-60"
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -286,7 +284,7 @@ export default function EquipePage() {
                 </div>
                 <button
                   onClick={() => ouvrirEdition(e)}
-                  className="shrink-0 text-[11px] font-bold text-primary px-2.5 py-1.5 rounded-lg bg-cream min-h-[36px]"
+                  className="tap shrink-0 text-[11px] font-bold text-primary px-3.5 py-1.5 rounded-full bg-cream min-h-[36px]"
                 >
                   Modifier
                 </button>
@@ -299,7 +297,7 @@ export default function EquipePage() {
                     setNewPin("");
                   }}
                   disabled={busy}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold text-text-secondary border border-rule rounded-xl py-2.5 min-h-[44px] disabled:opacity-50"
+                  className="tap flex-1 flex items-center justify-center gap-1.5 text-xs font-bold text-text-secondary border border-rule rounded-2xl py-2.5 min-h-[44px] disabled:opacity-50"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
                   Réinitialiser le PIN
@@ -307,7 +305,7 @@ export default function EquipePage() {
                 <button
                   onClick={() => basculerActif(e)}
                   disabled={busy}
-                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-bold rounded-xl py-2.5 min-h-[44px] disabled:opacity-50 ${
+                  className={`tap flex-1 flex items-center justify-center gap-1.5 text-xs font-bold rounded-2xl py-2.5 min-h-[44px] disabled:opacity-50 ${
                     e.is_active
                       ? "text-danger border border-danger-soft"
                       : "text-success border border-success-soft"
@@ -326,7 +324,7 @@ export default function EquipePage() {
                   )}
                 </button>
               </div>
-            </motion.div>
+            </div>
           ))}
         </section>
       )}
@@ -337,7 +335,7 @@ export default function EquipePage() {
           <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
             <button
               onClick={ouvrirCreation}
-              className="w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg bg-primary text-white"
+              className="tap w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg bg-primary text-white"
             >
               <div className="text-left">
                 <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gold">
@@ -370,10 +368,10 @@ export default function EquipePage() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
-              className="w-full max-w-[460px] bg-white rounded-t-3xl pb-safe max-h-[90vh] overflow-y-auto"
+              className="lg w-full max-w-[460px] rounded-t-[28px] pb-safe max-h-[90vh] overflow-y-auto"
               onClick={(ev) => ev.stopPropagation()}
             >
-              <div className="px-5 pt-5 pb-3 flex items-center justify-between sticky top-0 bg-white">
+              <div className="glass-bar px-5 pt-5 pb-3 flex items-center justify-between sticky top-0 z-10">
                 <h2 className="text-base font-extrabold text-text-primary">
                   {form.id === null ? "Nouvel employé" : "Modifier l'employé"}
                 </h2>
@@ -393,7 +391,7 @@ export default function EquipePage() {
                       setForm({ ...form, nom: e.target.value })
                     }
                     placeholder="Nasri"
-                    className="w-full bg-cream border border-rule rounded-xl px-3.5 py-3 min-h-[44px] text-base"
+                    className="w-full bg-cream border border-rule rounded-2xl px-3.5 py-3 min-h-[44px] text-base"
                   />
                 </Field>
 
@@ -404,7 +402,7 @@ export default function EquipePage() {
                       setForm({ ...form, prenom: e.target.value })
                     }
                     placeholder="Ahmed"
-                    className="w-full bg-cream border border-rule rounded-xl px-3.5 py-3 min-h-[44px] text-base"
+                    className="w-full bg-cream border border-rule rounded-2xl px-3.5 py-3 min-h-[44px] text-base"
                   />
                 </Field>
 
@@ -414,7 +412,7 @@ export default function EquipePage() {
                       <button
                         key={r}
                         onClick={() => setForm({ ...form, role: r })}
-                        className={`text-xs font-bold rounded-xl py-2.5 min-h-[44px] border transition-colors ${
+                        className={`tap text-xs font-bold rounded-2xl py-2.5 min-h-[44px] border transition-colors ${
                           form.role === r
                             ? "bg-primary text-white border-primary"
                             : "bg-cream text-text-secondary border-rule"
@@ -432,7 +430,7 @@ export default function EquipePage() {
                     onChange={(e) =>
                       setForm({ ...form, depotId: e.target.value })
                     }
-                    className="w-full bg-cream border border-rule rounded-xl px-3.5 py-3 min-h-[44px] text-base"
+                    className="w-full bg-cream border border-rule rounded-2xl px-3.5 py-3 min-h-[44px] text-base"
                   >
                     <option value="">Aucun</option>
                     {depots.map((d) => (
@@ -458,7 +456,7 @@ export default function EquipePage() {
                         })
                       }
                       placeholder="0000"
-                      className="w-full bg-cream border border-rule rounded-xl px-3.5 py-3 min-h-[44px] text-base tracking-[0.4em] font-bold text-center"
+                      className="w-full bg-cream border border-rule rounded-2xl px-3.5 py-3 min-h-[44px] text-base tracking-[0.4em] font-bold text-center"
                     />
                   </Field>
                 )}
@@ -466,7 +464,7 @@ export default function EquipePage() {
                 <button
                   onClick={soumettre}
                   disabled={busy}
-                  className="w-full bg-primary text-white rounded-2xl py-4 min-h-[52px] font-extrabold flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="tap w-full bg-primary text-white rounded-2xl py-4 min-h-[52px] font-extrabold flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -495,7 +493,7 @@ export default function EquipePage() {
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              className="w-full max-w-[360px] bg-white rounded-3xl p-5"
+              className="lg w-full max-w-[360px] rounded-[28px] p-5"
               onClick={(ev) => ev.stopPropagation()}
             >
               <div className="flex items-center gap-2 text-text-primary">
@@ -519,19 +517,19 @@ export default function EquipePage() {
                 }
                 placeholder="0000"
                 autoFocus
-                className="w-full mt-4 bg-cream border border-rule rounded-xl px-3.5 py-3 min-h-[44px] text-lg tracking-[0.5em] font-bold text-center"
+                className="w-full mt-4 bg-cream border border-rule rounded-2xl px-3.5 py-3 min-h-[44px] text-lg tracking-[0.5em] font-bold text-center"
               />
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => !busy && setPinTarget(null)}
-                  className="flex-1 border border-rule rounded-xl py-3 min-h-[44px] text-sm font-bold text-text-secondary"
+                  className="tap flex-1 border border-rule rounded-2xl py-3 min-h-[44px] text-sm font-bold text-text-secondary"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={resetPin}
                   disabled={busy}
-                  className="flex-1 bg-primary text-white rounded-xl py-3 min-h-[44px] text-sm font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  className="tap flex-1 bg-primary text-white rounded-2xl py-3 min-h-[44px] text-sm font-extrabold flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

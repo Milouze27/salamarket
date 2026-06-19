@@ -11,7 +11,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   Check,
   Loader2,
@@ -229,7 +228,7 @@ export default function PoDetailPage() {
   return (
     <V2Shell>
       <PageAccentStripe accent="sapin-or" />
-      <div className="px-5 pt-4 pb-cta-stack">
+      <div className="px-5 pt-4 pb-cta-stack lg:mx-auto lg:max-w-5xl lg:px-8">
         <BackButton href="/v2/po" />
 
         {/* Header */}
@@ -270,31 +269,32 @@ export default function PoDetailPage() {
         {/* Alerte certif KO */}
         {bloque && isDraft && (
           <div
-            className="mt-4 rounded-2xl px-4 py-3"
+            className="rise-in mt-4 rounded-[20px] px-4 py-3"
             style={{
-              background: "#FEF2F1",
-              border: "1px solid #F4B7B1",
-              color: "#A02921",
+              background: "var(--danger-soft)",
+              border: "1px solid var(--danger-border)",
+              color: "var(--danger)",
             }}
           >
             <p className="flex items-center gap-2 font-semibold text-[14px]">
               <ShieldAlert size={16} /> Envoi bloqué — certif{" "}
               {alerte === "expiree" ? "expiré" : "manquant"}
             </p>
-            <p className="text-[13px] mt-1" style={{ color: "#A02921" }}>
+            <p className="text-[13px] mt-1" style={{ color: "var(--danger)" }}>
               Mets à jour le PDF de certif dans la fiche fournisseur, ou bascule
               ces produits sur un fournisseur backup.
             </p>
           </div>
         )}
 
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
         {/* Lignes */}
-        <section className="mt-5">
+        <section>
           <p className="section-eyebrow mb-3">
             {lignes.length} ligne{lignes.length > 1 ? "s" : ""}
           </p>
           {lignes.length === 0 ? (
-            <div className="card text-center" style={{ padding: 28 }}>
+            <div className="lg rise-in text-center" style={{ padding: 28 }}>
               <ShoppingCart
                 size={28}
                 color="var(--text-tertiary)"
@@ -307,13 +307,11 @@ export default function PoDetailPage() {
             </div>
           ) : (
             <ul className="space-y-2">
-              {lignes.map((l) => (
-                <motion.li
+              {lignes.map((l, i) => (
+                <li
                   key={l.id}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="card"
-                  style={{ padding: 14 }}
+                  className="lg rise-in"
+                  style={{ padding: 14, ["--i" as string]: i }}
                 >
                   <p
                     className="font-semibold text-[14px]"
@@ -358,20 +356,23 @@ export default function PoDetailPage() {
                     <button
                       type="button"
                       onClick={() => removeLigne(l.id)}
-                      className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold"
+                      className="tap mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-[13px] font-semibold"
                       style={{ color: "var(--danger)" }}
                     >
                       <Trash2 size={14} /> Retirer la ligne
                     </button>
                   )}
-                </motion.li>
+                </li>
               ))}
             </ul>
           )}
         </section>
 
         {/* Totaux */}
-        <section className="mt-5 card" style={{ padding: 16 }}>
+        <section
+          className="lg rise-in lg:sticky lg:top-4"
+          style={{ padding: 16 }}
+        >
           <Row label="Total HT" value={eur(totalHt)} />
           <Row label="TVA 5,5 %" value={eur(totalHt * 0.055)} muted />
           <div
@@ -381,6 +382,7 @@ export default function PoDetailPage() {
             <Row label="Total TTC" value={eur(totalHt * 1.055)} bold />
           </div>
         </section>
+        </div>
       </div>
 
       {/* CTA bottom */}
@@ -390,18 +392,15 @@ export default function PoDetailPage() {
           style={{ background: "transparent" }}
         >
           <div
-            className="card flex gap-2"
-            style={{
-              padding: 10,
-              boxShadow: "0 -4px 24px rgba(14,59,46,0.10)",
-            }}
+            className="glass-bar flex gap-2 rounded-[24px] lg:mx-auto lg:max-w-5xl"
+            style={{ padding: 10 }}
           >
             {dirty ? (
               <button
                 type="button"
                 onClick={saveLignes}
                 disabled={saving}
-                className="btn-primary flex-1"
+                className="tap btn-primary flex-1"
                 style={{ minHeight: 48 }}
               >
                 {saving ? (
@@ -419,7 +418,7 @@ export default function PoDetailPage() {
                 type="button"
                 onClick={sendPo}
                 disabled={sending || bloque}
-                className="btn-primary flex-1"
+                className="tap btn-primary flex-1"
                 style={{ minHeight: 48 }}
               >
                 {sending ? (
@@ -467,9 +466,9 @@ function QtyControl({
       <div
         className="flex items-center"
         style={{
-          background: readOnly ? "var(--bg-cream)" : "white",
+          background: readOnly ? "var(--bg-cream)" : "var(--surface-0)",
           border: "1px solid var(--border-light)",
-          borderRadius: 14,
+          borderRadius: "var(--radius-lg)",
           height: 48,
           overflow: "hidden",
         }}
@@ -478,8 +477,8 @@ function QtyControl({
           type="button"
           disabled={readOnly}
           onClick={() => onChange(Math.max(0, value - 1))}
-          className="px-3 h-full flex items-center justify-center"
-          style={{ color: "var(--primary-green)" }}
+          className="tap px-3 h-full flex items-center justify-center"
+          style={{ color: "var(--primary-green)", minWidth: 44 }}
           aria-label="Diminuer"
         >
           <Minus size={18} />
@@ -497,8 +496,8 @@ function QtyControl({
           type="button"
           disabled={readOnly}
           onClick={() => onChange(value + 1)}
-          className="px-3 h-full flex items-center justify-center"
-          style={{ color: "var(--primary-green)" }}
+          className="tap px-3 h-full flex items-center justify-center"
+          style={{ color: "var(--primary-green)", minWidth: 44 }}
           aria-label="Augmenter"
         >
           <Plus size={18} />
@@ -530,9 +529,9 @@ function PriceControl({
       <div
         className="flex items-center"
         style={{
-          background: readOnly ? "var(--bg-cream)" : "white",
+          background: readOnly ? "var(--bg-cream)" : "var(--surface-0)",
           border: "1px solid var(--border-light)",
-          borderRadius: 14,
+          borderRadius: "var(--radius-lg)",
           height: 48,
           paddingInline: 12,
         }}

@@ -381,18 +381,16 @@ export default function V2StockPage() {
                   />
                   {p.quantite === 0 ? (
                     <span
-                      className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-bold inline-flex items-center gap-1 shadow-sm"
+                      className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm"
                       style={{
                         background: "var(--danger)",
                         color: "var(--text-on-dark)",
                       }}
                     >
-                      <Package className="w-3 h-3" />
                       Rupture
                     </span>
                   ) : (
-                    <span className="absolute top-2 right-2 bg-white/95 rounded-full px-2 py-0.5 text-[11px] font-bold text-primary inline-flex items-center gap-1 shadow-sm">
-                      <Package className="w-3 h-3" />
+                    <span className="absolute top-2 right-2 bg-white/95 rounded-full px-2 py-0.5 text-[11px] font-bold text-primary tabular shadow-sm">
                       {p.quantite}
                     </span>
                   )}

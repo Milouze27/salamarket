@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  Building2,
   Camera,
   Check,
   Repeat2,
@@ -68,17 +67,22 @@ export default function V2TransfertPage() {
   const isAdmin = employe?.role === "admin";
 
   useEffect(() => {
-    void listDepots().then((d) => {
-      setDepots(d);
-      // Destination forcée au dépôt principal de l'employé (sauf admin
-      // qui peut tout faire et garde le current depot du switcher).
-      if (!isAdmin && employe?.depot_principal_id) {
-        const own = d.find((x) => x.id === employe.depot_principal_id);
-        if (own) setDestination(own);
-      } else if (isAdmin && currentDepot) {
-        setDestination(currentDepot);
-      }
-    });
+    void listDepots()
+      .then((d) => {
+        setDepots(d);
+        // Destination forcée au dépôt principal de l'employé (sauf admin
+        // qui peut tout faire et garde le current depot du switcher).
+        if (!isAdmin && employe?.depot_principal_id) {
+          const own = d.find((x) => x.id === employe.depot_principal_id);
+          if (own) setDestination(own);
+        } else if (isAdmin && currentDepot) {
+          setDestination(currentDepot);
+        }
+      })
+      .catch((err) => {
+        console.error("[transfert] chargement dépôts échoué:", err);
+        toast.error("Dépôts indisponibles · vérifie la connexion");
+      });
   }, [currentDepot, employe?.depot_principal_id, isAdmin]);
 
   function allowedSources(dest: Depot | null): Depot[] {
@@ -95,10 +99,16 @@ export default function V2TransfertPage() {
       setStockSource(null);
       return;
     }
-    void listProduitsInDepot(source.id).then((list) => {
-      const item = list.find((p) => p.id === produit.id);
-      setStockSource(item?.quantite ?? 0);
-    });
+    void listProduitsInDepot(source.id)
+      .then((list) => {
+        const item = list.find((p) => p.id === produit.id);
+        setStockSource(item?.quantite ?? 0);
+      })
+      .catch((err) => {
+        console.error("[transfert] lecture stock source échouée:", err);
+        setStockSource(null);
+        toast.error("Stock source indisponible · vérifie la connexion");
+      });
   }, [produit, source]);
 
   // search ⇒ filter to source depot stock
@@ -237,8 +247,7 @@ export default function V2TransfertPage() {
           Bouger du <span className="gold">stock</span>.
         </h1>
         {isAdmin && (
-          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gold-soft text-primary-dark px-3 py-1.5 text-[11px] font-bold">
-            <Building2 className="w-3.5 h-3.5 text-gold" />
+          <div className="mt-3 inline-flex items-center rounded-full bg-gold-soft text-primary-dark px-3 py-1.5 text-[11px] font-bold">
             Mode admin · transfert libre entre tous les dépôts
           </div>
         )}
@@ -561,8 +570,7 @@ function DepotLocked({ label, depot }: { label: string; depot: Depot | null }) {
   return (
     <div>
       <p className="label-caps text-text-tertiary mb-2 text-center">{label}</p>
-      <div className="w-full bg-primary text-white rounded-2xl px-3 py-3 min-h-[44px] text-sm font-bold text-center inline-flex items-center justify-center gap-1.5">
-        <Building2 className="w-3.5 h-3.5 text-gold" />
+      <div className="w-full bg-primary text-white rounded-2xl px-3 py-3 min-h-[44px] text-sm font-bold text-center inline-flex items-center justify-center">
         {depot?.nom ?? "Aucun"}
       </div>
     </div>

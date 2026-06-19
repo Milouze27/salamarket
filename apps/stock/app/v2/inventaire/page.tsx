@@ -3,12 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import {
-  ArrowLeft,
-  Check,
-  ClipboardCheck,
-  Sprout,
-} from "lucide-react";
+import { Check, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
@@ -293,11 +288,20 @@ export default function V2InventairePage() {
           Chargement…
         </div>
       ) : rows.length === 0 ? (
-        <div className="px-5 pt-10 text-center text-text-secondary">
-          Aucun inventaire assigné aujourd&apos;hui.
+        <div className="px-5 pt-10 text-center">
+          <p className="text-text-secondary">
+            Aucun inventaire assigné aujourd&apos;hui.
+          </p>
+          <button
+            onClick={() => void load()}
+            className="lg-pill tap mt-5 inline-flex items-center gap-2 px-5 py-3 min-h-[48px] text-sm font-bold text-text-primary"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Actualiser
+          </button>
         </div>
       ) : (
-        <section className="px-5 mt-5">
+        <section className="px-5 mt-5 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]">
           <div className="lg rise-in p-4 text-xs text-text-secondary">
             <p>
               Les produits sont tirés au sort parmi le catalogue du dépôt actif.
@@ -442,7 +446,7 @@ export default function V2InventairePage() {
                 </div>
                 <span className="bg-white/15 backdrop-blur-sm rounded-full p-2.5">
                   {submitting ? (
-                    <Sprout className="w-5 h-5" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Check className="w-5 h-5" />
                   )}

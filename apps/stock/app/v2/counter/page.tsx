@@ -24,7 +24,7 @@ import {
   useState,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, Clock3, PackageX } from "lucide-react";
+import { ArrowDown, PackageX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface CounterRow {
@@ -384,7 +384,6 @@ export default function CounterPage() {
               backdropFilter: "var(--glass-nav-blur)",
             }}
           >
-            <Clock3 className="w-4 h-4 text-[var(--accent-gold-bright)]" />
             <span suppressHydrationWarning>
               {now
                 ? now.toLocaleTimeString("fr-FR", {
@@ -396,7 +395,7 @@ export default function CounterPage() {
           </div>
           <p
             className="text-[var(--text-tertiary)] mt-2 tracking-widest uppercase"
-            style={{ fontSize: "clamp(9px, 0.7vw, 12px)" }}
+            style={{ fontSize: "clamp(11px, 0.7vw, 13px)" }}
           >
             {sorted.length} en attente
           </p>

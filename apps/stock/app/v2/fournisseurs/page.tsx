@@ -15,17 +15,14 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Building2,
-  Calendar,
   CheckCircle2,
   ExternalLink,
   FileText,
   Loader2,
-  Mail,
   Pencil,
+  RefreshCw,
   Save,
   Search,
-  ShieldCheck,
   Upload,
   X,
 } from "lucide-react";
@@ -282,12 +279,21 @@ function FournisseursPanel() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="card text-center" style={{ padding: 28 }}>
-            <Building2
-              size={32}
-              color="var(--text-tertiary)"
-              className="mx-auto mb-2"
-            />
-            <p className="body-md">Aucun fournisseur ne correspond.</p>
+            <p className="body-md">
+              {search.trim()
+                ? "Aucun fournisseur ne correspond à ta recherche."
+                : "Aucun fournisseur actif pour le moment."}
+            </p>
+            {!search.trim() && (
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="btn-ghost mt-3"
+                style={{ minHeight: 44, paddingInline: 18 }}
+              >
+                <RefreshCw size={14} /> Réessayer
+              </button>
+            )}
           </div>
         ) : (
           <ul className="space-y-3">
@@ -306,8 +312,7 @@ function FournisseursPanel() {
                       >
                         {f.nom}
                       </h3>
-                      <p className="body-sm mt-0.5 flex items-center gap-1.5">
-                        <Mail size={12} />
+                      <p className="body-sm mt-0.5">
                         {f.email_commandes ?? "Email non renseigné"}
                       </p>
                     </div>
@@ -569,7 +574,7 @@ function EditDrawer({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-4">
-          <Field label="Email commandes" icon={<Mail size={14} />}>
+          <Field label="Email commandes">
             <input
               type="email"
               className="input-field"
@@ -642,9 +647,7 @@ function EditDrawer({
               border: "1px solid var(--accent-gold-hairline)",
             }}
           >
-            <p className="section-eyebrow mb-3 flex items-center gap-1.5">
-              <ShieldCheck size={14} /> Certif halal
-            </p>
+            <p className="section-eyebrow mb-3">Certif halal</p>
 
             <Field label="Organisme">
               <select
@@ -680,7 +683,7 @@ function EditDrawer({
                   }
                 />
               </Field>
-              <Field label="Expire le" icon={<Calendar size={14} />}>
+              <Field label="Expire le">
                 <input
                   type="date"
                   className="input-field"
@@ -695,7 +698,7 @@ function EditDrawer({
               </Field>
             </div>
 
-            <Field label="Certificat PDF" icon={<FileText size={14} />}>
+            <Field label="Certificat PDF">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -812,20 +815,18 @@ function EditDrawer({
 
 function Field({
   label,
-  icon,
   children,
 }: {
   label: string;
-  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
       <span
-        className="label-caps mb-1.5 inline-flex items-center gap-1.5"
+        className="label-caps mb-1.5 inline-block"
         style={{ color: "var(--text-secondary)" }}
       >
-        {icon} {label}
+        {label}
       </span>
       {children}
     </label>

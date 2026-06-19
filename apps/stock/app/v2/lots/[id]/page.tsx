@@ -6,14 +6,12 @@ import {
   ArrowUpRight,
   Award,
   BadgeCheck,
-  CalendarDays,
   CalendarX,
   Copy,
-  Factory,
   Loader2,
   Printer,
+  RefreshCw,
   ShieldAlert,
-  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
@@ -91,6 +89,9 @@ export default function V2LotDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [qrSvg, setQrSvg] = useState<string | null>(null);
+  // Incrémenté par le bouton « Réessayer » pour relancer le fetch (réseau
+  // coupé, client Supabase pas prêt) sans recharger toute la page.
+  const [reloadKey, setReloadKey] = useState(0);
 
   const publicUrl = useMemo(
     () => (lotId ? generateLotQrUrl(lotId) : ""),
@@ -138,7 +139,7 @@ export default function V2LotDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [lotId]);
+  }, [lotId, reloadKey]);
 
   // Render the QR client-side once we know the lotId.
   useEffect(() => {
@@ -282,6 +283,14 @@ export default function V2LotDetailPage() {
               <span className="tabular-nums font-semibold">{lotId}</span>.
               Vérifie le code scanné ou saisi.
             </p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="tap mt-4 inline-flex items-center justify-center gap-2 min-h-[44px] px-5 py-2.5 rounded-2xl bg-cream border border-rule text-[13px] font-bold text-text-primary active:opacity-80"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Réessayer
+            </button>
           </div>
         </div>
       )}
@@ -412,13 +421,6 @@ export default function V2LotDetailPage() {
             index={0}
             eyebrow="02 — Certification"
             title={certifExpired ? "Certificat expiré" : "Halal vérifié"}
-            icon={
-              certifExpired ? (
-                <ShieldAlert className="w-5 h-5" />
-              ) : (
-                <ShieldCheck className="w-5 h-5" />
-              )
-            }
           >
             <DataRow label="Certificateur" value={lot.certifier_name} />
             <DataRow label="Identifiant" value={lot.certifier_id} mono />
@@ -448,7 +450,6 @@ export default function V2LotDetailPage() {
             index={1}
             eyebrow="03 — Origine"
             title="Abattoir"
-            icon={<Factory className="w-5 h-5" />}
           >
             <DataRow label="Abattoir" value={lot.abattoir_nom} />
             <DataRow label="Pays" value={lot.abattoir_pays} />
@@ -463,7 +464,6 @@ export default function V2LotDetailPage() {
             index={2}
             eyebrow="04 — Fournisseur"
             title="Approvisionnement"
-            icon={<Factory className="w-5 h-5" />}
           >
             <DataRow
               label="Fournisseur"
@@ -489,7 +489,6 @@ export default function V2LotDetailPage() {
             index={3}
             eyebrow="05 — Magasin"
             title="Réception & DLC"
-            icon={<CalendarDays className="w-5 h-5" />}
           >
             <DataRow
               label="Date de réception"
@@ -526,13 +525,11 @@ export default function V2LotDetailPage() {
 function Section({
   eyebrow,
   title,
-  icon,
   children,
   index = 0,
 }: {
   eyebrow: string;
   title: string;
-  icon: React.ReactNode;
   children: React.ReactNode;
   index?: number;
 }) {
@@ -541,18 +538,13 @@ function Section({
       className="lg rise-in p-5"
       style={{ ["--i" as string]: index } as React.CSSProperties}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-[color:var(--accent-gold)]">
-            {eyebrow}
-          </p>
-          <h2 className="text-[15px] font-extrabold text-text-primary tracking-tight">
-            {title}
-          </h2>
-        </div>
-        <span className="w-9 h-9 rounded-full bg-cream text-primary flex items-center justify-center shrink-0">
-          {icon}
-        </span>
+      <div className="mb-3">
+        <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-[color:var(--accent-gold)]">
+          {eyebrow}
+        </p>
+        <h2 className="text-[15px] font-extrabold text-text-primary tracking-tight">
+          {title}
+        </h2>
       </div>
       <div className="space-y-1">{children}</div>
     </section>

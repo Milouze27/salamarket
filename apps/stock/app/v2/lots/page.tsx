@@ -13,7 +13,7 @@
  * lien staff vers /v2/lots/{id}.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
   Factory,
   Loader2,
   QrCode,
+  RotateCw,
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
@@ -93,45 +94,45 @@ export default function V2LotsListPage() {
   const router = useRouter();
   const [list, setList] = useState<LotRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const sb = supabase();
-      if (!sb) {
-        if (!cancelled) {
-          setLoading(false);
-          toast.error("Connexion Supabase indisponible");
-        }
-        return;
-      }
-      const { data, error } = await sb
-        .from("produits_lots")
-        .select(
-          `
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    const sb = supabase();
+    if (!sb) {
+      setError(true);
+      setLoading(false);
+      toast.error("Connexion Supabase indisponible");
+      return;
+    }
+    const { data, error: err } = await sb
+      .from("produits_lots")
+      .select(
+        `
           id, produit_id, abattoir_nom, abattoir_pays,
           certifier_id, certifier_name, certifier_valid_until,
           date_abattage, date_reception, dlc, quantite_recue, unite, created_at,
           produits ( id, nom, marque ),
           fournisseurs ( id, nom )
         `,
-        )
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (cancelled) return;
-      if (error) {
-        console.error("[v2/lots] load", error);
-        toast.error("Impossible de charger les lots");
-        setLoading(false);
-        return;
-      }
-      setList((data ?? []) as unknown as LotRow[]);
+      )
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (err) {
+      console.error("[v2/lots] load", err);
+      toast.error("Impossible de charger les lots");
+      setError(true);
       setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+      return;
+    }
+    setList((data ?? []) as unknown as LotRow[]);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const counts = useMemo(() => {
     const acc = { ok: 0, expire_soon: 0, expired: 0, unknown: 0 };
@@ -176,6 +177,25 @@ export default function V2LotsListPage() {
             style={{ color: "var(--text-secondary)" }}
           >
             <Loader2 size={16} className="animate-spin" /> Chargement…
+          </div>
+        ) : error ? (
+          <div className="lg rise-in" style={{ padding: 8 }}>
+            <EmptyState
+              icon={ShieldAlert}
+              title="Chargement impossible"
+              description="Les lots n'ont pas pu être récupérés. Vérifie ta connexion puis réessaie."
+              compact
+              action={
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  className="btn-primary tap"
+                  style={{ minHeight: 44 }}
+                >
+                  <RotateCw size={16} /> Réessayer
+                </button>
+              }
+            />
           </div>
         ) : list.length === 0 ? (
           <div className="lg rise-in" style={{ padding: 8 }}>

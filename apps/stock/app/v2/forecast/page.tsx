@@ -18,7 +18,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertOctagon,
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
@@ -27,8 +26,6 @@ import {
   PackageX,
   RefreshCw,
   ShoppingCart,
-  Sparkles,
-  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
@@ -388,7 +385,6 @@ export default function ForecastPage() {
         <KpiCard
           index={0}
           variant="danger"
-          icon={<AlertOctagon className="w-4 h-4" />}
           eyebrow="RUPTURES + BLOQUANT"
           value={`${countRupturesImminentes(rows)}`}
           label="à commander aujourd'hui"
@@ -396,7 +392,6 @@ export default function ForecastPage() {
         <KpiCard
           index={1}
           variant="warn"
-          icon={<AlertTriangle className="w-4 h-4" />}
           eyebrow="CRITIQUE"
           value={`${counts.crit}`}
           label="< 3 jours de couverture"
@@ -404,7 +399,6 @@ export default function ForecastPage() {
         <KpiCard
           index={2}
           variant="gold"
-          icon={<TrendingUp className="w-4 h-4" />}
           eyebrow="À SURVEILLER"
           value={`${counts.warn}`}
           label="< 7 jours"
@@ -412,7 +406,6 @@ export default function ForecastPage() {
         <KpiCard
           index={3}
           variant="neutral"
-          icon={<Sparkles className="w-4 h-4" />}
           eyebrow="DERNIER CALCUL"
           value={lastComputedLabel}
           label={
@@ -655,14 +648,12 @@ function Stat({
 function KpiCard({
   index,
   variant,
-  icon,
   eyebrow,
   value,
   label,
 }: {
   index: number;
   variant: "danger" | "warn" | "gold" | "neutral";
-  icon: React.ReactNode;
   eyebrow: string;
   value: string;
   label: string;
@@ -670,23 +661,19 @@ function KpiCard({
   const palette = {
     danger: {
       bg: "rounded-2xl bg-[var(--status-danger-bg)]",
-      chip: "bg-[var(--status-danger)] text-white",
       value: "text-[var(--status-danger-text)]",
     },
     warn: {
       bg: "rounded-2xl bg-[var(--status-warning-bg)]",
-      chip: "bg-[var(--status-warning)] text-white",
       value: "text-[var(--status-warning-text)]",
     },
     gold: {
       bg: "rounded-2xl bg-[var(--accent-gold-soft)]",
-      chip: "bg-[var(--accent-gold-bright)] text-[var(--text-on-gold)]",
       value: "text-[var(--or-text)]",
     },
     // Neutre = vraie surface élevée → verre Liquid Glass (cohérent jour/nuit).
     neutral: {
       bg: "lg",
-      chip: "bg-primary text-white",
       value: "text-text-primary",
     },
   }[variant];
@@ -696,16 +683,9 @@ function KpiCard({
       className={`rise-in p-3.5 ${palette.bg}`}
       style={{ ["--i" as string]: index }}
     >
-      <div className="flex items-center gap-2">
-        <span
-          className={`inline-flex items-center justify-center w-6 h-6 rounded-md ${palette.chip}`}
-        >
-          {icon}
-        </span>
-        <span className="text-[10px] font-extrabold uppercase tracking-wide text-text-secondary">
-          {eyebrow}
-        </span>
-      </div>
+      <span className="text-[10px] font-extrabold uppercase tracking-wide text-text-secondary">
+        {eyebrow}
+      </span>
       <p
         className={`text-[24px] font-extrabold tabular leading-tight mt-2 ${palette.value}`}
       >

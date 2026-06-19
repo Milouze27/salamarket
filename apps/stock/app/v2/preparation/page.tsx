@@ -318,6 +318,14 @@ export default function V2PreparationKanbanPage() {
 
   const filtersActive = segmentFilter !== "tous" || urgenceFilter !== "tous";
 
+  // Réinitialise les deux filtres (segment + urgence). Exposé dans les états
+  // vides « aucune commande ne correspond aux filtres » pour ne jamais laisser
+  // l'écran muet sans porte de sortie.
+  function resetFilters() {
+    setSegmentFilter("tous");
+    setUrgenceFilter("tous");
+  }
+
   const byColumn = useMemo(() => {
     const map = new Map<KanbanStatut, CommandeWithLignes[]>();
     for (const col of COLUMNS) map.set(col.key, []);
@@ -646,13 +654,21 @@ export default function V2PreparationKanbanPage() {
             if (filtersActive && visibleColumns.length === 0) {
               return (
                 <div
-                  className="border rounded-2xl p-6 text-center text-[13px] text-text-tertiary md:col-span-full"
+                  className="border rounded-2xl p-6 text-center md:col-span-full"
                   style={{
                     background: "var(--surface-2)",
                     borderColor: "var(--border-light)",
                   }}
                 >
-                  Aucune commande ne correspond aux filtres.
+                  <p className="text-[13px] text-text-tertiary">
+                    Aucune commande ne correspond aux filtres.
+                  </p>
+                  <button
+                    onClick={resetFilters}
+                    className="mt-3 inline-flex items-center justify-center min-h-[44px] px-4 rounded-full text-[12.5px] font-bold text-white bg-primary active:scale-[0.98] transition-transform"
+                  >
+                    Réinitialiser les filtres
+                  </button>
                 </div>
               );
             }
@@ -950,15 +966,25 @@ export default function V2PreparationKanbanPage() {
 
           {batchCategories.length === 0 ? (
             <div
-              className="border rounded-2xl p-6 text-center text-[13px] text-text-secondary"
+              className="border rounded-2xl p-6 text-center"
               style={{
                 background: "var(--surface-2)",
                 borderColor: "var(--border-light)",
               }}
             >
-              {filtersActive
-                ? "Aucune commande ne correspond aux filtres."
-                : "Aucune commande en attente de préparation."}
+              <p className="text-[13px] text-text-secondary">
+                {filtersActive
+                  ? "Aucune commande ne correspond aux filtres."
+                  : "Aucune commande en attente de préparation."}
+              </p>
+              {filtersActive && (
+                <button
+                  onClick={resetFilters}
+                  className="mt-3 inline-flex items-center justify-center min-h-[44px] px-4 rounded-full text-[12.5px] font-bold text-white bg-primary active:scale-[0.98] transition-transform"
+                >
+                  Réinitialiser les filtres
+                </button>
+              )}
             </div>
           ) : (
             /* L99-iPad : mobile = catégories empilées (space-y-4). Sur md+

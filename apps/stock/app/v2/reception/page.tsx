@@ -655,7 +655,6 @@ export default function V2ReceptionPage() {
               </div>
             ) : bdlToday.length === 0 ? (
               <div className="lg rounded-[22px] p-6 text-center">
-                <Truck className="w-6 h-6 text-text-tertiary mx-auto mb-2" />
                 <p className="text-sm font-bold text-text-primary">
                   Aucune livraison prévue aujourd&apos;hui
                 </p>
@@ -845,7 +844,7 @@ export default function V2ReceptionPage() {
             </button>
           </section>
 
-          <section className="px-5 mt-5">
+          <section className="px-5 mt-5 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))]">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-text-primary">
                 {scans.length} ligne{scans.length > 1 ? "s" : ""} scannée

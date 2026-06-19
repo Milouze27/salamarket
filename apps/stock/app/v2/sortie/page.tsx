@@ -448,6 +448,11 @@ export default function V2SortiePage() {
                   />
                 </div>
                 <div className="space-y-1">
+                  {searchQuery.trim() && searchResults.length === 0 && (
+                    <p className="text-xs text-text-tertiary px-2 py-3 text-center">
+                      Aucun produit trouvé · réessaie ou scanne le code
+                    </p>
+                  )}
                   {searchResults.map((p, i) => (
                     <button
                       key={p.id}
@@ -483,7 +488,7 @@ export default function V2SortiePage() {
       {/* TYPE */}
       {produit && (
         <section className="px-5 mt-6">
-          <p className="section-eyebrow mb-3">Motif de sortie</p>
+          <p className="label-caps text-text-tertiary mb-2">Motif de sortie</p>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
             {TYPES.map((t, i) => {
               const Icon = t.icon;
@@ -637,7 +642,7 @@ export default function V2SortiePage() {
                 />
                 <button
                   onClick={() => setPhotoOpen(true)}
-                  className="absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-4 py-2 min-h-[36px] shadow"
+                  className="absolute bottom-2 right-2 bg-white text-primary text-xs font-bold rounded-full px-4 py-2 min-h-[44px] shadow"
                 >
                   Reprendre
                 </button>
@@ -680,7 +685,9 @@ export default function V2SortiePage() {
               </p>
               <p className="text-[15px] font-extrabold mt-0.5">
                 {produit
-                  ? `${produit.nom.split(" ").slice(0, 4).join(" ")} · ${quantite}`
+                  ? `${produit.nom.split(" ").slice(0, 4).join(" ")}${
+                      quantite.trim() ? ` · ${quantite}` : ""
+                    }`
                   : "Choisir un produit"}
               </p>
             </div>

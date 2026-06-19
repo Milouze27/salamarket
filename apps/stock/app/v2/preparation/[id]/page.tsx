@@ -90,13 +90,6 @@ const ZONE_LABEL: Record<ZoneKey, string> = {
   autre: "Autres produits",
 };
 
-const ZONE_EMOJI: Record<ZoneKey, string> = {
-  particulier: "🛒",
-  professionnel: "🏢",
-  traiteur: "🍽️",
-  autre: "📦",
-};
-
 /**
  * Parse un poids saisi au clavier FR. CRITIQUE : les balances/employés
  * tapent la virgule décimale ("2,50"), or `parseFloat("2,50")` renvoie 2.
@@ -617,10 +610,19 @@ export default function V2PreparationDetailPage() {
           sous le CTA fixe (cta-height + safe-bottom + respiration). hideNav
           ici => pas de nav-height à compter. */}
       <section className="px-5 mt-5 space-y-4 pb-cta-only">
+        {groupedByZone.length === 0 && (
+          <div className="lg rise-in rounded-2xl px-4 py-8 text-center">
+            <p className="text-sm font-bold text-text-primary">
+              Aucun produit à préparer
+            </p>
+            <p className="text-[13px] text-text-secondary mt-1">
+              Cette commande ne contient aucune ligne.
+            </p>
+          </div>
+        )}
         {groupedByZone.map((group) => (
           <div key={group.zone}>
-            <p className="label-caps text-text-tertiary mb-2 inline-flex items-center gap-1">
-              <span aria-hidden>{ZONE_EMOJI[group.zone]}</span>
+            <p className="label-caps text-text-tertiary mb-2">
               {ZONE_LABEL[group.zone]} · {group.items.length} produit
               {group.items.length > 1 ? "s" : ""}
             </p>

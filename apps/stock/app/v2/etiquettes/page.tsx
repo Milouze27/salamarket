@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Download, Tag, Printer, LayoutGrid } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Tag, Printer, LayoutGrid, RotateCw } from "lucide-react";
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
@@ -37,13 +37,15 @@ export default function V2EtiquettesPage() {
   const [copies, setCopies] = useState<Record<string, number>>({});
   const [generating, setGenerating] = useState(false);
   const [format, setFormat] = useState<LabelFormat>("brother");
+  const [loadError, setLoadError] = useState(false);
   const [progress, setProgress] = useState<{
     done: number;
     total: number;
   } | null>(null);
 
-  useEffect(() => {
+  const loadItems = useCallback(() => {
     if (!depot) return;
+    setLoadError(false);
     void listProduitsInDepot(depot.id)
       .then((all) => {
         const filtered = all.filter(
@@ -55,11 +57,16 @@ export default function V2EtiquettesPage() {
         // Sans ce catch, une erreur réseau laissait une liste vide avec le
         // message trompeur « Aucun produit » (sans signal d'erreur).
         console.error("[etiquettes] chargement produits échoué:", err);
+        setLoadError(true);
         toast.error(
           "Impossible de charger les produits · vérifie la connexion",
         );
       });
   }, [depot]);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
   const totalCopies = useMemo(
     () => Object.values(copies).reduce((s, n) => s + n, 0),
@@ -216,7 +223,25 @@ export default function V2EtiquettesPage() {
       </section>
 
       <section className="px-5 mt-5">
-        {items.length === 0 ? (
+        {loadError ? (
+          <div className="lg rounded-[20px] p-6 text-center">
+            <p className="body-md text-text-primary font-bold">
+              Chargement impossible
+            </p>
+            <p className="text-sm text-text-secondary mt-1">
+              Les produits n&apos;ont pas pu être récupérés. Vérifie la
+              connexion puis réessaie.
+            </p>
+            <button
+              type="button"
+              onClick={loadItems}
+              className="tap mt-4 inline-flex items-center gap-2 bg-primary text-white rounded-2xl px-5 min-h-[44px] font-bold"
+            >
+              <RotateCw className="w-4 h-4" />
+              Réessayer
+            </button>
+          </div>
+        ) : items.length === 0 ? (
           <EmptyState
             icon={Tag}
             title="Aucune étiquette à imprimer"
@@ -327,8 +352,7 @@ export default function V2EtiquettesPage() {
               {format === "brother" ? "Brother" : "gondole"}
             </span>
           </button>
-          <p className="text-xs text-text-tertiary text-center mt-2 inline-flex items-center gap-1 justify-center w-full">
-            <Tag className="w-3 h-3" />
+          <p className="text-xs text-text-tertiary text-center mt-2">
             {format === "brother" ? (
               <>
                 PDF Brother QL-820 ·{" "}

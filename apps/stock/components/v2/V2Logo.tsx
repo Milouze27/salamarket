@@ -19,10 +19,16 @@ export function V2Logo({ size = 28, className = "" }: V2LogoProps) {
       alt="Salamarket"
       width={size}
       height={size}
-      className={`inline-block shrink-0 ${className}`}
+      className={className}
       style={{
+        // Dimensions verrouillées : le header est un flex serré qui écrasait
+        // l'img à ~8px (min-width auto + shrink). min*/flexShrink figent le carré.
         width: size,
         height: size,
+        minWidth: size,
+        minHeight: size,
+        flexShrink: 0,
+        objectFit: "contain",
         borderRadius: Math.round(size * 0.28),
         boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
         display: "block",

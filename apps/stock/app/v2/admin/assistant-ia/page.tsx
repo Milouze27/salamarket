@@ -244,7 +244,7 @@ export default function AssistantIAPage() {
       <div className="fixed bottom-0 inset-x-0 z-30 pointer-events-none">
         <div className="mx-auto w-full max-w-[460px] lg:max-w-[760px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 pointer-events-auto">
           {messages.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_8px,#000_calc(100%-20px),transparent)]">
+            <div className="flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-hide">
               {SUGGESTIONS.slice(0, 3).map((s) => (
                 <button
                   key={s}

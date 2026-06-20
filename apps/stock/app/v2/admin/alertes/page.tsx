@@ -189,7 +189,7 @@ export default function SurveillancePage() {
       <nav className="px-5 mt-5 pt-1 pb-2">
         <GlassTabs<Section>
           ariaLabel="Sections"
-          className="overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]"
+          className="overflow-x-auto -mx-1 px-1 scrollbar-hide"
           value={section}
           onChange={setSection}
           items={[
@@ -579,7 +579,7 @@ function AlertesPanel() {
         <GlassTabs<Tab>
           ariaLabel="Catégories d'alertes"
           size="sm"
-          className="overflow-x-auto -mx-1 px-1 scrollbar-hide [mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-24px),transparent)]"
+          className="overflow-x-auto -mx-1 px-1 scrollbar-hide"
           value={tab}
           onChange={setTab}
           items={[

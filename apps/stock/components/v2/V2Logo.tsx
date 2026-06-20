@@ -30,6 +30,8 @@ export function V2Logo({ size = 28, className = "" }: V2LogoProps) {
         flexShrink: 0,
         objectFit: "contain",
         borderRadius: Math.round(size * 0.28),
+        // Liseré doré : démarque le badge du chrome, sombre comme clair.
+        border: "1px solid rgba(201,162,39,0.5)",
         boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
         display: "block",
       }}

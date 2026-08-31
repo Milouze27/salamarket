@@ -51,7 +51,10 @@ export function BackButton({
       type="button"
       onClick={handleClick}
       aria-label={label}
-      className={`inline-flex items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full border text-[13px] font-bold active:scale-[0.97] transition-transform ${className}`}
+      /* DESKTOP 31/08/2026 — masqué à partir de 1024 px : la barre latérale
+         est visible en permanence et surligne la page courante, un « Retour »
+         en haut de contenu y est un vestige du téléphone (25 pages). */
+      className={`inline-flex lg:hidden items-center gap-1.5 h-10 pl-2.5 pr-4 rounded-full border text-[13px] font-bold active:scale-[0.97] transition-transform ${className}`}
       style={{
         background: "var(--surface-1)",
         borderColor: "var(--border-card)",

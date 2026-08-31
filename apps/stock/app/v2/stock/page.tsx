@@ -17,6 +17,7 @@ import {
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
+import { DataTable } from "@/components/v2/DataTable";
 import { ProductThumbnail } from "@/components/v2/ProductThumbnail";
 import { StockEditModal } from "@/components/v2/StockEditModal";
 import { PriceTag } from "@/components/v2/PriceTag";
@@ -202,7 +203,7 @@ export default function V2StockPage() {
   }, [aggregated, cat, query]);
 
   return (
-    <V2Shell>
+    <V2Shell layout="full">
       <PageAccentStripe accent="fonce" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -345,7 +346,7 @@ export default function V2StockPage() {
         // Skeleton de chargement : grille de cartes neutres tant que le stock
         // n'est pas résolu — évite le flash trompeur « Aucun produit ».
         <section
-          className="px-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4"
+          className="px-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-6"
           aria-busy="true"
           aria-label="Chargement du stock"
         >
@@ -365,7 +366,178 @@ export default function V2StockPage() {
         </section>
       ) : view === "depot" ? (
         <>
-          <section className="px-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+          {/* ── POSTE DE TRAVAIL (≥lg) : tableau ────────────────────────
+            Mesuré le 31/08/2026 à 1920 px : la grille de vignettes montrait
+            8 produits par écran. Le tableau en montre une trentaine, avec
+            l'EAN et la marge que la vignette ne pouvait pas porter. */}
+          <section className="hidden lg:block px-5 mt-4">
+            <DataTable
+              rows={filtered}
+              getKey={(p) => p.id}
+              caption={`Stock du dépôt ${depot?.nom ?? ""}, ${filtered.length} produits`}
+              defaultSort={{ key: "nom", dir: "asc" }}
+              onRowClick={editAllowed ? (p) => setEditing(p) : undefined}
+              rowAccent={(p) => (p.quantite === 0 ? "var(--danger)" : null)}
+              columns={[
+                {
+                  key: "nom",
+                  label: "Produit",
+                  sort: (a, b) => a.nom.localeCompare(b.nom, "fr"),
+                  render: (p) => (
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <ProductThumbnail
+                        nom={p.nom}
+                        categorie={p.categorie}
+                        size={30}
+                        rounded="lg"
+                      />
+                      <span
+                        className="font-semibold truncate"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {p.nom}
+                      </span>
+                    </span>
+                  ),
+                },
+                {
+                  key: "marque",
+                  label: "Marque",
+                  width: "150px",
+                  sort: (a, b) => (a.marque ?? "").localeCompare(b.marque ?? "", "fr"),
+                  render: (p) => (
+                    <span className="truncate" style={{ color: "var(--text-secondary)" }}>
+                      {p.marque || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "categorie",
+                  label: "Catégorie",
+                  width: "160px",
+                  xlOnly: true,
+                  sort: (a, b) => (a.categorie ?? "").localeCompare(b.categorie ?? "", "fr"),
+                  render: (p) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {p.categorie || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "ean",
+                  label: "Code-barres",
+                  width: "150px",
+                  xlOnly: true,
+                  render: (p) => (
+                    <span className="mono text-[12.5px]" style={{ color: "var(--text-tertiary)" }}>
+                      {p.ean || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "quantite",
+                  label: "Stock",
+                  width: "90px",
+                  align: "right",
+                  sort: (a, b) => a.quantite - b.quantite,
+                  render: (p) =>
+                    p.quantite === 0 ? (
+                      <span className="font-bold" style={{ color: "var(--danger)" }}>
+                        Rupture
+                      </span>
+                    ) : (
+                      <span className="font-bold" style={{ color: "var(--text-primary)" }}>
+                        {p.quantite}
+                      </span>
+                    ),
+                },
+                {
+                  key: "prix",
+                  label: "Prix de vente",
+                  width: "120px",
+                  align: "right",
+                  sort: (a, b) => (a.prix_vente ?? 0) - (b.prix_vente ?? 0),
+                  render: (p) => (
+                    <PriceTag
+                      amount={p.prix_vente}
+                      className="font-bold"
+                    />
+                  ),
+                },
+                ...(canSeeMargin
+                  ? [
+                      {
+                        key: "marge",
+                        label: "Marge",
+                        width: "110px",
+                        align: "right" as const,
+                        sort: (a: ProduitInDepot, b: ProduitInDepot) => {
+                          const m = (x: ProduitInDepot) =>
+                            x.prix_vente && x.cout_achat_ht != null && x.prix_vente > 0
+                              ? (x.prix_vente - x.cout_achat_ht) / x.prix_vente
+                              : -Infinity;
+                          return m(a) - m(b);
+                        },
+                        render: (p: ProduitInDepot) => {
+                          if (
+                            p.cout_achat_ht == null ||
+                            p.prix_vente == null ||
+                            p.prix_vente <= 0
+                          ) {
+                            return <span style={{ color: "var(--text-tertiary)" }}>—</span>;
+                          }
+                          const pct = Math.round(
+                            ((p.prix_vente - p.cout_achat_ht) / p.prix_vente) * 100,
+                          );
+                          return (
+                            <span
+                              className="font-bold"
+                              style={{
+                                color: pct < 0 ? "var(--text-tertiary)" : "var(--success)",
+                              }}
+                              title={`Coût d'achat ${p.cout_achat_ht.toFixed(2)} €`}
+                            >
+                              {pct} %
+                            </span>
+                          );
+                        },
+                      },
+                    ]
+                  : []),
+                ...(editAllowed
+                  ? [
+                      {
+                        key: "action",
+                        label: "",
+                        width: "52px",
+                        align: "center" as const,
+                        render: (p: ProduitInDepot) => (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditing(p);
+                            }}
+                            aria-label={`Modifier le stock de ${p.nom}`}
+                            className="w-9 h-9 rounded-full inline-flex items-center justify-center"
+                            style={{
+                              background: "var(--surface-2)",
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+              emptyLabel="Aucun produit ne correspond à cette recherche."
+            />
+          </section>
+
+          {/* ── TERRAIN (< lg) : vignettes au pouce, inchangées ────────── */}
+          <section className="lg:hidden px-5 mt-4 grid grid-cols-2 gap-3">
             {filtered.map((p, i) => (
               <div
                 key={p.id}

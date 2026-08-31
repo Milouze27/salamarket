@@ -421,12 +421,30 @@ export function V2Shell({
   hideNav = false,
   className = "",
   wide = false,
+  layout,
 }: {
   children: ReactNode;
+  /**
+   * Masque la navigation DU TÉLÉPHONE (barre du bas + FAB) pendant un flux
+   * d'action à la main — scan, saisie, validation — pour libérer le pouce.
+   *
+   * ⚠ Ne masque PLUS la barre latérale d'ordinateur : sur ≥lg il n'y a pas
+   * de conflit de place et 16 pages se retrouvaient sans aucune navigation
+   * (mesuré le 31/08/2026 : 27 pages sur 40 sans barre latérale à 1920 px).
+   */
   hideNav?: boolean;
   className?: string;
-  /** Si true : le shell s'étend en max-w-7xl sur ≥md (cockpit / admin desktop). */
+  /** Alias historique de layout="wide". Conservé pour ne rien casser. */
   wide?: boolean;
+  /**
+   * Largeur de travail du contenu sur ordinateur. Le châssis (en-tête, barres
+   * d'action) occupe toujours la pleine largeur ; seul le contenu est cadré.
+   *
+   *  - "flow"  (défaut) : colonne de lecture — flux d'action, formulaires.
+   *  - "wide"           : tableau de bord multi-colonnes.
+   *  - "full"           : tableau de données, prend toute la largeur utile.
+   */
+  layout?: "flow" | "wide" | "full";
 }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -452,6 +470,24 @@ export function V2Shell({
     }
     setAsideReady(true);
   }, []);
+  // DESKTOP 31/08/2026 — largeur de la barre latérale exposée en variable
+  // globale. Les barres d'action collées sont `fixed inset-x-0` : sans ça
+  // elles passent SOUS la barre latérale et leur contenu est masqué.
+  // Vaut 0 sous 1024 px, donc le téléphone n'est pas concerné.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        "--aside-w",
+        mq.matches ? (asideCollapsed ? "76px" : "268px") : "0px",
+      );
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [asideCollapsed]);
+
   const toggleAside = () =>
     setAsideCollapsed((prev) => {
       const next = !prev;
@@ -590,9 +626,24 @@ export function V2Shell({
   // Liquid Glass : le conteneur est TRANSPARENT (le mesh .liquid-bg vit
   // derrière, posé une fois dans le shell). En desktop (≥lg) la sidebar glass
   // occupe la gouttière gauche ; le contenu se recentre dans l'espace restant.
-  const containerClass = wide
-    ? "mx-auto w-full max-w-[520px] sm:max-w-[820px] md:max-w-[980px] lg:max-w-[1160px] xl:max-w-[1340px] min-h-[100dvh] relative"
-    : "mx-auto w-full max-w-[520px] sm:max-w-[680px] md:max-w-[900px] lg:max-w-[1040px] xl:max-w-[1200px] min-h-[100dvh] relative";
+  // DESKTOP 31/08/2026 — le châssis prend toute la largeur restante à partir
+  // de lg (la barre latérale occupe déjà la gouttière gauche) ; c'est le
+  // CONTENU qui porte la largeur de lecture, via mainWidthClass. Avant, le
+  // conteneur plafonnait à 1200/1340 px sans palier 2xl : à 1920 px il restait
+  // 601 px de vide à droite en moyenne, en-tête compris.
+  const containerClass =
+    "mx-auto w-full max-w-[520px] sm:max-w-[820px] md:max-w-[1024px] lg:max-w-none min-h-[100dvh] relative";
+
+  const effectiveLayout: "flow" | "wide" | "full" =
+    layout ?? (wide ? "wide" : "flow");
+
+  // Largeur de travail du contenu. Sous lg, tout reste en colonne unique :
+  // le téléphone et l'iPad portrait ne changent pas d'un pixel.
+  const mainWidthClass = {
+    flow: "lg:max-w-[1080px] xl:max-w-[1200px] 2xl:max-w-[1280px]",
+    wide: "lg:max-w-[1180px] xl:max-w-[1480px] 2xl:max-w-[1760px]",
+    full: "lg:max-w-none",
+  }[effectiveLayout];
 
   return (
     // DSN-04 : reducedMotion="user" => framer-motion neutralise les transforms
@@ -601,21 +652,26 @@ export function V2Shell({
       {/* Fond mesh liquide — posé une seule fois, derrière tout le contenu. */}
       <div className="liquid-bg" aria-hidden />
       <div className="min-h-[100dvh] lg:flex">
-        {/* SIDEBAR GLASS desktop (≥lg) — nav filtrée par rôle, repliable. */}
-        {!hideNav && (
-          <DesktopAside
-            primary={primary}
-            sheetGroups={sheetGroups}
-            pathname={pathname}
-            collapsed={asideCollapsed}
-            ready={asideReady}
-            onToggle={toggleAside}
-          />
-        )}
+        {/* SIDEBAR GLASS desktop (≥lg) — nav filtrée par rôle, repliable.
+          Affichée sur TOUTES les pages, y compris en hideNav : sur grand écran
+          la place ne manque pas et l'opérateur doit toujours pouvoir sortir
+          d'un flux sans revenir en arrière à l'aveugle. */}
+        <DesktopAside
+          primary={primary}
+          sheetGroups={sheetGroups}
+          pathname={pathname}
+          collapsed={asideCollapsed}
+          ready={asideReady}
+          onToggle={toggleAside}
+        />
         <div className={`${containerClass} flex-1`}>
           {/* HEADER — refonte L99 : 3 zones (logo+identité / dépôt / actions admin),
             une ligne, breathing room, hiérarchie claire (logo-name-role). */}
-          <header className="sticky top-0 z-30 px-3 pt-3 safe-top">
+          {/* DESKTOP 31/08/2026 — l'en-tête partage exactement la grille du
+            contenu (même mainWidthClass), sinon il flotte décalé au-dessus. */}
+          <header
+            className={`sticky top-0 z-30 px-3 pt-3 safe-top lg:mx-auto lg:w-full ${mainWidthClass}`}
+          >
             <div className="glass-bar rounded-[22px] flex items-center gap-2 px-4 py-2.5 shadow-[0_14px_36px_-18px_rgba(0,0,0,0.55)]">
               {/* Bloc identité — clickable vers accueil, long-press → ⌘K (fallback mobile) */}
               <Link
@@ -740,7 +796,9 @@ export function V2Shell({
             // espace (pb-nav-stack) en mobile/tablette. En desktop (≥lg) la nav
             // passe en sidebar latérale → plus besoin du padding bas (lg:!pb-8).
             // Quand la nav est masquée (hideNav), on rabat sur le seul CTA.
-            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack lg:!pb-10"} pt-2`}
+            // DESKTOP 31/08/2026 — mx-auto + mainWidthClass : le contenu se
+            // cadre lui-même dans le châssis pleine largeur.
+            className={`${className} ${hideNav ? "pb-cta-only md:pb-8" : "pb-nav-stack lg:!pb-10"} pt-2 lg:mx-auto lg:w-full ${mainWidthClass}`}
           >
             {!depot && (
               <div className="px-5 pt-6">

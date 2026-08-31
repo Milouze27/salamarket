@@ -172,7 +172,7 @@ export default function V2LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col relative overflow-hidden"
+      className="min-h-screen flex flex-col lg:flex-row relative overflow-hidden"
       style={{ background: "var(--bg-abyss)" }}
     >
       {/* Profondeur : double radial sapin derrière, jamais plat. */}
@@ -185,10 +185,83 @@ export default function V2LoginPage() {
         }}
       />
 
-      <div className="mx-auto w-full max-w-[440px] flex-1 flex flex-col relative">
-        <header className="safe-top-hero pb-8 px-7 relative">
-          {/* Logo + halo or */}
-          <div className="flex items-center gap-3.5 mb-9 relative">
+      {/* ── VOLET DE MARQUE (≥lg) ──────────────────────────────────────
+        Mesuré le 31/08/2026 : la page de code occupait 440 px au milieu de
+        1920, soit 19 % de l'écran, le reste noir. Sur ordinateur, la moitié
+        gauche porte l'identité et le pavé prend la moitié droite. Sous
+        1024 px, ce volet n'existe pas : le téléphone garde sa colonne. */}
+      <aside
+        className="hidden lg:flex lg:flex-col lg:justify-between shrink-0 relative px-14 py-12"
+        style={{
+          width: "42%",
+          maxWidth: 720,
+          borderRight: "1px solid var(--border-medium)",
+        }}
+      >
+        <div className="relative flex items-center gap-4">
+          <span className="relative inline-flex">
+            <span
+              aria-hidden
+              className="absolute inset-0 rounded-[16px] blur-md"
+              style={{
+                background: "var(--accent-gold-bright)",
+                opacity: 0.28,
+                transform: "scale(1.25)",
+              }}
+            />
+            <V2Logo size={52} variant="dark" className="relative" />
+          </span>
+          <div>
+            <p
+              className="text-[13px] font-bold"
+              style={{ color: "var(--accent-gold-dim)" }}
+            >
+              Salam Stock
+            </p>
+            <p
+              className="text-[14px] font-medium mt-0.5"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Multi-dépôts · Toulouse
+            </p>
+          </div>
+        </div>
+
+        <div className="relative max-w-[26ch]">
+          <p
+            className="text-[40px] font-bold leading-[1.08] tracking-[-0.02em]"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Réception, sorties,
+            <br />
+            transferts et{" "}
+            <span style={{ color: "var(--accent-gold-bright)" }}>
+              inventaire
+            </span>
+            .
+          </p>
+          <p
+            className="text-[15px] mt-4 leading-relaxed"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Les trois dépôts au même endroit. Chaque mouvement de marchandise
+            est daté, compté et signé.
+          </p>
+        </div>
+
+        <p
+          className="relative text-[12.5px]"
+          style={{ color: "var(--text-tertiary)" }}
+        >
+          8 av. Larrieu-Thibaud, Toulouse · Particulier · Professionnel ·
+          Sodrune
+        </p>
+      </aside>
+
+      <div className="mx-auto w-full max-w-[440px] flex-1 flex flex-col relative lg:justify-center lg:max-w-[520px]">
+        <header className="safe-top-hero pb-8 px-7 relative lg:pt-0 lg:pb-10 lg:text-center">
+          {/* Logo + halo or — déplacé dans le volet de marque sur ordinateur */}
+          <div className="flex lg:hidden items-center gap-3.5 mb-9 relative">
             <span className="relative inline-flex">
               <span
                 aria-hidden
@@ -231,7 +304,7 @@ export default function V2LoginPage() {
           </p>
         </header>
 
-        <div className="flex-1 px-6 pt-2 flex flex-col">
+        <div className="flex-1 lg:flex-none px-6 pt-2 flex flex-col">
           {/* Dots PIN */}
           <motion.div
             animate={shake ? { x: [-9, 9, -7, 7, -3, 3, 0] } : { x: 0 }}
@@ -269,7 +342,7 @@ export default function V2LoginPage() {
           </motion.div>
 
           {/* Keypad */}
-          <div className="grid grid-cols-3 gap-3.5 max-w-[300px] mx-auto w-full">
+          <div className="grid grid-cols-3 gap-3.5 max-w-[300px] lg:max-w-[348px] lg:gap-4 mx-auto w-full">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
               <KeyButton
                 key={d}

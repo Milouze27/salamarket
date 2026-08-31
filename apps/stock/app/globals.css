@@ -19,7 +19,11 @@
   --accent-gold-soft: #f4e9c4;
   --text-primary: #0f1a14;
   --text-secondary: #5a6470; /* durci de #6B7280 → contrast 7.3:1 sur cream */
-  --text-tertiary: #7b8693; /* durci de #9CA3AF → contrast 4.6:1 sur cream (WCAG AA) */
+  /* 31/08/2026 — le commentaire précédent annonçait 4,6:1 ; la mesure au
+     pixel donnait 3,46:1 sur crème (11px = seuil 4,5). Durci de #7b8693
+     à #67717f, re-mesuré à 4,6:1. Ne concerne que le thème jour : la nuit
+     redéfinit ce token (#7c8a82, déjà à 5,24:1). */
+  --text-tertiary: #67717f;
   --text-on-dark: #ffffff;
   --text-on-dark-muted: #d7e0da; /* durci de #B8C8C0 → contrast 8.1:1 sur sapin */
   --danger: #e5483d;
@@ -67,7 +71,9 @@
 
   /* AA-safe gold for TEXT on cream/white (DSN-07) — #C9A227 fails WCAG
      on light, so labels/eyebrows on cream use this darker gold. */
-  --or-text: #8b6f0e;
+  /* 31/08/2026 — mesuré 4,48:1 sur crème, soit 0,02 sous le seuil AA.
+     Assombri à #876b0d → 4,7:1. */
+  --or-text: #876b0d;
 
   /* Canonical status aliases — shared names + hues with Drive (DSN-02) */
   --status-success: #2d7a4f;
@@ -1808,4 +1814,174 @@ button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, lab
 @media (prefers-reduced-motion: reduce) {
   .page-in, .rise-in, .scrim-in, .sheet-in, .menu-pop, .toast-down, .count-pop { animation: none !important; }
   .liquid-bg::after { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   POSTE DE TRAVAIL — adaptations ordinateur (31/08/2026)
+   ──────────────────────────────────────────────────────────────────────
+   Mesuré avant travaux (banc étalonné, 40 routes, 1920×1080) : 50 % de la
+   largeur utile occupée, 601 px de vide moyen à droite, 27 pages sur 40
+   sans barre latérale, 38 sur 40 affichant encore la nav du téléphone.
+   Rien ici ne s'applique sous 1024 px : le terrain ne bouge pas d'un pixel.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 1 — Les réserves d'espace de la nav du téléphone n'ont plus lieu d'être
+   quand la nav passe en barre latérale. .pb-nav-stack réservait 164 px de
+   vide en bas de CHAQUE page sur ordinateur. Une seule règle suffit : toutes
+   les classes dérivées (.pb-nav-stack, .pb-fab-stack, .cta-above-nav…) lisent
+   ces variables. */
+@media (min-width: 1024px) {
+  :root {
+    --nav-height: 0px;
+    --nav-breathing: 24px;
+  }
+}
+
+/* 2 — Classe employée 7 fois (alertes, assistant-ia, pro, panneaux B2B) mais
+   jamais définie : les barres de défilement restaient visibles. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── LISIBILITÉ — quatre défauts lus au pixel, pas déduits du CSS ──────
+   Sonde scratchpad/qa/contraste.mjs, étalonnée sur trois paires connues
+   (21,00 / 4,54 / 2,35 attendus → mesurés à l'identique). */
+
+/* 3 — Vert clair de nuit. Le sapin #1b6a4a est lisible sur crème (11,6:1)
+   mais pas sur le fond abyssal : mesuré 2,89:1 sur la page, 2,35:1 sur une
+   carte, 2,08:1 sur surface-2. Il fallait un vert de nuit, il n'existait pas. */
+:root {
+  --primary-green-light: var(--primary-green);
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --primary-green-light: #5fbf8f;
+}
+
+/* .section-eyebrow — 20 occurrences dans 11 fichiers, 11px : c'était le pire
+   cas de l'app en thème nuit (le thème par défaut). */
+.section-eyebrow {
+  color: var(--primary-green-light);
+}
+
+/* .btn-ghost — texte 2,35:1 et bordure 1,55:1 en nuit. La bordure d'un
+   bouton est un élément d'interface : le seuil applicable est 3:1. */
+.btn-ghost {
+  color: var(--primary-green-light);
+  border-color: var(--border-ghost);
+}
+:root {
+  --border-ghost: var(--border-medium);
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --border-ghost: rgba(255, 255, 255, 0.38);
+}
+
+/* 4 — Le mot en or des grands titres. En thème jour il était mesuré à
+   2,26:1 sur 8 pages sur 8 — le mot le plus gros de l'écran (56 px) était
+   le moins lisible. La nuit était déjà bonne (13,07:1), on n'y touche pas. */
+[data-theme="jour"] .h1-display .gold,
+[data-theme="jour"] .h1-display em,
+body.theme-jour .h1-display .gold,
+body.theme-jour .h1-display em {
+  color: var(--or-text);
+}
+
+/* 5 — Barres d'action collées en bas. Elles sont `fixed inset-x-0` : sur
+   ordinateur elles passaient sous la barre latérale et restaient calées à
+   460 px de large pendant que le contenu s'étalait sur 1200. --aside-w est
+   posée par V2Shell (0 sous 1024 px). */
+:root {
+  --aside-w: 0px;
+}
+@media (min-width: 1024px) {
+  .sticky-action-inner {
+    max-width: 1080px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  /* Décale toute barre collée de la largeur de la barre latérale. */
+  .bar-desktop {
+    left: var(--aside-w);
+  }
+}
+@media (min-width: 1280px) {
+  .sticky-action-inner {
+    max-width: 1200px;
+  }
+}
+
+/* ══ LOT 1 — EN-TÊTE DE PAGE SUR ORDINATEUR ═══════════════════════════
+   Le motif `<header className="px-5 pt-7">` + grand titre est copié 25 fois.
+   On ne le réécrit pas page par page : trois règles suffisent, et elles ne
+   s'appliquent qu'à partir de 1024 px. Au téléphone, le titre éditorial de
+   56 px reste intact — c'est l'ADN visuel de l'app. */
+@media (min-width: 1024px) {
+  /* Un titre de 56 px mange 200 px de haut pour une information que la barre
+     latérale donne déjà (l'entrée active y est surlignée). Sur un poste de
+     travail il devient une barre de titre. */
+  .h1-display {
+    font-size: 34px;
+    line-height: 1.12;
+  }
+  /* Le sous-titre sous le grand titre était bridé à 40 caractères pour la
+     colonne du téléphone ; sur ordinateur il tient sur une ligne. */
+  header .max-w-\[40ch\] {
+    max-width: 78ch;
+  }
+}
+@media (min-width: 1536px) {
+  .h1-display {
+    font-size: 38px;
+  }
+}
+
+/* ══ LOT 2 — TABLEAUX DE DONNÉES (composant DataTable, ≥ lg) ═══════════
+   Filets horizontaux seulement, pas de quadrillage : la lecture d'une ligne
+   de stock se fait à l'horizontale. Survol sur --surface-2, sans ombre ni
+   glow — le tableau doit rester silencieux, c'est la donnée qui parle. */
+.data-row {
+  border-bottom: 1px solid var(--border-hairline);
+  transition: background 140ms var(--ease-out-quart);
+}
+.data-row:hover {
+  background: var(--surface-2);
+}
+.data-row:focus-visible {
+  outline: 2px solid var(--primary-ring);
+  outline-offset: -2px;
+}
+/* Filet vertical de tête de ligne : sert d'alerte (rupture, DLC dépassée)
+   sans ajouter une colonne ni une pastille de plus. */
+.data-row[data-accent="1"] > td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--row-accent);
+}
+
+/* ── Compacité de l'en-tête de page sur ordinateur ────────────────────
+   Mesuré sur /v2/stock à 1920×1080 : l'en-tête éditorial occupait 380 px
+   avant la première ligne de données — 9 lignes visibles sur un écran qui
+   peut en montrer une vingtaine. On resserre les rythmes verticaux SANS
+   toucher au téléphone, où cette respiration est juste. */
+@media (min-width: 1024px) {
+  main > header {
+    padding-top: 18px;
+  }
+  main > header .h1-display {
+    margin-top: 4px;
+  }
+  main > header .h1-display + p {
+    margin-top: 6px;
+  }
+  /* Un champ de recherche de 1 600 px de large ne sert personne : la requête
+     y fait dix caractères. On le ramène à une largeur de saisie crédible. */
+  main input[type="search"] {
+    max-width: 460px;
+  }
 }

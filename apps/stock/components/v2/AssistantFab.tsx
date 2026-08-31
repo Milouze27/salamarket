@@ -33,7 +33,14 @@ export function AssistantFab({ role, hideOnNoNav = false }: Props) {
     <Link
       href="/v2/admin/assistant-ia"
       aria-label="Ouvrir l'assistant IA"
-      className="assistant-fab fixed z-[55] bottom-[calc(var(--nav-height,64px)+var(--safe-bottom,0px)+36px)] right-4 w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+      /* DESKTOP 31/08/2026 — masqué au-dessus de 1024 px. Posé en `right-4`,
+         il recouvrait la DERNIÈRE COLONNE des tableaux pleine largeur :
+         mesuré sur /v2/labo à 1440 et 1920 px, il masquait la cellule
+         « Coût MO » de la dernière ligne visible. Et il fait doublon : sur
+         grand écran l'assistant a sa propre entrée dans la barre latérale
+         (groupe « Outils »). Au téléphone, où il n'y a pas de barre
+         latérale, il reste indispensable — rien ne change en dessous. */
+      className="assistant-fab lg:hidden fixed z-[55] bottom-[calc(var(--nav-height,64px)+var(--safe-bottom,0px)+36px)] right-4 w-14 h-14 rounded-full flex items-center justify-center active:scale-95 transition-transform"
       style={{
         background: "var(--hero-gradient)",
         border: "1px solid var(--border-premium)",

@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { DataTable } from "@/components/v2/DataTable";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { supabase } from "@/lib/supabase";
 import { generateLotQrSvg, generateLotQrUrl } from "@/lib/qr-lot";
@@ -26,7 +27,31 @@ import { generateLotQrSvg, generateLotQrUrl } from "@/lib/qr-lot";
  * link). PIN-protected via V2Shell.
  *
  * For the demo : seeded lot L2026-05-A23 (see migration 0031).
+ *
+ * POSTE DE TRAVAIL — 31/08/2026
+ * La traçabilité d'un lot est une suite de couples « donnée → valeur » :
+ * c'est un tableau, pas quatre cartes empilées.
+ *   - à partir de 1024 px : les quatre cartes deviennent UN tableau, sur
+ *     toute la largeur, la carte QR au-dessus ;
+ *   - à partir de 1536 px : deux volets — le tableau à gauche, l'IDENTITÉ &
+ *     les ACTIONS (QR public, certificat, étiquette, lien) à droite, collées,
+ *     donc toujours sous les yeux quand on fait défiler.
+ * Le seuil du deuxième volet est à 1536 px, pas 1024 : mesuré au banc, un
+ * volet de 380 px ne laissait que 352 px au tableau à 1024 px et 502 px à
+ * 1280 px — moins que la place utile de ses trois colonnes.
+ * Sous 1024 px, rien ne bouge : les quatre cartes au pouce restent le rendu
+ * de terrain (on lit un lot debout, devant le rayon).
  */
+
+/** Une ligne de traçabilité, telle qu'elle s'affiche dans le tableau ≥ lg. */
+interface LigneTracabilite {
+  id: string;
+  rubrique: string;
+  donnee: string;
+  valeur: string;
+  /** Filet vertical d'alerte en tête de ligne (jamais une couleur en dur). */
+  accent?: "danger" | "warning" | null;
+}
 
 interface ProduitLite {
   id: string;
@@ -183,6 +208,61 @@ export default function V2LotDetailPage() {
   // Verdict global du moat (priorité : certif expiré > DLC dépassée > OK).
   const certifExpired = certifValid === false;
 
+  // ── Traçabilité mise à plat pour le tableau du poste de travail ───────
+  // Mêmes champs, même ordre et mêmes libellés que les quatre cartes du
+  // téléphone. Une donnée absente n'apparaît pas : on n'invente rien et on
+  // n'affiche pas de ligne vide (comportement identique à <DataRow/>).
+  const lignesTracabilite = useMemo<LigneTracabilite[]>(() => {
+    if (!lot) return [];
+    const brut: Array<
+      [string, string, string | null, ("danger" | "warning" | null)?]
+    > = [
+      ["Certification", "Certificateur", lot.certifier_name],
+      ["Certification", "Identifiant", lot.certifier_id],
+      [
+        "Certification",
+        certifExpired ? "Certificat expiré le" : "Certificat valide jusqu'au",
+        lot.certifier_valid_until ? formatDate(lot.certifier_valid_until) : null,
+        certifExpired ? "danger" : null,
+      ],
+      ["Origine", "Abattoir", lot.abattoir_nom],
+      ["Origine", "Pays", lot.abattoir_pays],
+      [
+        "Origine",
+        "Date d'abattage",
+        lot.date_abattage ? formatDate(lot.date_abattage) : null,
+      ],
+      ["Fournisseur", "Fournisseur", lot.fournisseurs?.nom ?? null],
+      ["Fournisseur", "SIRET", lot.fournisseurs?.siret ?? null],
+      ["Fournisseur", "Lot fournisseur", lot.supplier_lot],
+      [
+        "Fournisseur",
+        "Quantité reçue",
+        lot.quantite_recue != null
+          ? `${lot.quantite_recue} ${lot.unite ?? ""}`.trim()
+          : null,
+      ],
+      ["Fournisseur", "Quantité restante", "Non suivi"],
+      ["Magasin", "Date de réception", formatDate(lot.date_reception)],
+      [
+        "Magasin",
+        dlcPassed ? "DLC dépassée" : "DLC",
+        lot.dlc ? formatDate(lot.dlc) : null,
+        dlcPassed ? "warning" : null,
+      ],
+      ["Magasin", "DDM", lot.ddm ? formatDate(lot.ddm) : null],
+    ];
+    return brut
+      .filter(([, , valeur]) => Boolean(valeur))
+      .map(([rubrique, donnee, valeur, accent], i) => ({
+        id: `${rubrique}-${donnee}-${i}`,
+        rubrique,
+        donnee,
+        valeur: valeur as string,
+        accent: accent ?? null,
+      }));
+  }, [lot, certifExpired, dlcPassed]);
+
   function copyUrl() {
     if (!publicUrl) return;
     void navigator.clipboard.writeText(publicUrl);
@@ -243,9 +323,9 @@ export default function V2LotDetailPage() {
   }
 
   return (
-    <V2Shell>
+    <V2Shell layout="flow">
       <PageAccentStripe accent="or-sapin" />
-      <header className="px-5 pt-7">
+      <header className="px-5 pt-7 lg:px-8">
         <BackButton />
         <p className="label-caps text-primary mt-3">01 — Traçabilité</p>
         <h1 className="h1-display text-text-primary mt-1">
@@ -297,7 +377,7 @@ export default function V2LotDetailPage() {
 
       {/* ─── Content ────────────────────────────────────────── */}
       {!loading && lot && (
-        <div className="px-5 mt-6 space-y-4 max-w-5xl mx-auto">
+        <div className="px-5 mt-6 space-y-4 lg:px-8">
           {/* Alertes intégrité du moat — vues EN PREMIER par le staff.
               Certificat expiré (rouge) et/ou DLC dépassée (ambre). */}
           {certifExpired && (
@@ -336,8 +416,15 @@ export default function V2LotDetailPage() {
             </div>
           )}
 
+          {/* ── DEUX VOLETS À PARTIR DE 1024 px ──────────────────────────
+            Le QR et ses actions restent EN PREMIER dans le DOM (ordre de
+            lecture du téléphone, inchangé) ; sur ordinateur la grille les
+            place dans la colonne de droite, collante, et laisse la colonne
+            de gauche au tableau de traçabilité. */}
+          <div className="space-y-4 2xl:grid 2xl:grid-cols-[minmax(0,1fr)_380px] 2xl:items-start 2xl:gap-6 2xl:space-y-0">
+
           {/* QR card — admin-only preview + print */}
-          <section className="lg rise-in p-5">
+          <section className="lg rise-in p-5 2xl:col-start-2 2xl:row-start-1 2xl:sticky 2xl:top-4">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-[10.5px] font-bold tracking-[0.18em] uppercase text-[color:var(--accent-gold)]">
@@ -348,7 +435,9 @@ export default function V2LotDetailPage() {
                 </h2>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-3 lg:flex-row lg:items-start lg:gap-6">
+            {/* Colonne de 380 px sur ordinateur : le QR reste empilé
+              au-dessus de ses actions, jamais côte à côte. */}
+            <div className="flex flex-col items-center gap-3">
               <div
                 className="w-[200px] h-[200px] bg-white rounded-2xl border border-rule p-2 shrink-0"
                 aria-label="Aperçu du QR code"
@@ -365,7 +454,7 @@ export default function V2LotDetailPage() {
                   </div>
                 )}
               </div>
-              <div className="flex flex-col gap-3 w-full lg:flex-1 lg:min-w-0">
+              <div className="flex flex-col gap-3 w-full">
                 <button
                   type="button"
                   onClick={copyUrl}
@@ -414,7 +503,95 @@ export default function V2LotDetailPage() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* lg:flex + gap : sur ordinateur on abandonne `space-y` (marges sur
+            l'enfant) pour un `gap` de conteneur. Sinon le tableau, qui est le
+            2e enfant du DOM, héritait d'un margin-top de 16 px et démarrait
+            plus bas que la carte QR d'à côté. Sous 1024 px, `space-y-4` reste
+            seul actif : l'espacement du téléphone est inchangé. */}
+          <div className="space-y-4 2xl:space-y-0 2xl:flex 2xl:flex-col 2xl:gap-4 2xl:col-start-1 2xl:row-start-1">
+
+          {/* ── POSTE DE TRAVAIL (≥lg) : la traçabilité est un tableau ────
+            Quatorze couples donnée/valeur lus d'un seul regard, au lieu de
+            quatre cartes qui obligent à balayer la page. */}
+          <div className="hidden lg:block lg rise-in p-5">
+            {/* Pas d'exergue numérotée ici : ce tableau fusionne les quatre
+              rubriques 02 à 05 du téléphone, aucun numéro ne lui correspond.
+              Un titre suffit. */}
+            <h2 className="text-[15px] font-extrabold text-text-primary tracking-tight mb-3">
+              Traçabilité — {certifExpired ? "certificat expiré" : "halal vérifié"}
+            </h2>
+            <DataTable
+              rows={lignesTracabilite}
+              getKey={(r) => r.id}
+              caption={`Traçabilité du lot ${lotId}`}
+              rowAccent={(r) =>
+                r.accent === "danger"
+                  ? "var(--danger)"
+                  : r.accent === "warning"
+                    ? "var(--warning)"
+                    : null
+              }
+              columns={[
+                {
+                  key: "rubrique",
+                  label: "Rubrique",
+                  width: "150px",
+                  sort: (x, y) => x.rubrique.localeCompare(y.rubrique, "fr"),
+                  render: (r) => (
+                    <span
+                      className="font-semibold"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {r.rubrique}
+                    </span>
+                  ),
+                },
+                {
+                  key: "donnee",
+                  label: "Donnée",
+                  width: "210px",
+                  render: (r) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {r.donnee}
+                    </span>
+                  ),
+                },
+                {
+                  key: "valeur",
+                  label: "Valeur",
+                  render: (r) => (
+                    <span
+                      className="font-bold"
+                      style={{
+                        color:
+                          r.accent === "danger"
+                            ? "var(--danger)"
+                            : r.accent === "warning"
+                              ? "var(--warning)"
+                              : "var(--text-primary)",
+                      }}
+                    >
+                      {r.valeur}
+                    </span>
+                  ),
+                },
+              ]}
+              emptyLabel="Aucune donnée de traçabilité sur ce lot."
+            />
+            <p
+              className="text-[12px] mt-3"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              {lignesTracabilite.length} donnée
+              {lignesTracabilite.length > 1 ? "s" : ""} enregistrée
+              {lignesTracabilite.length > 1 ? "s" : ""} sur ce lot — tableau
+              complet, sans plafond. Les champs non renseignés en base ne sont
+              pas affichés.
+            </p>
+          </div>
+
+          {/* ── TERRAIN (<lg) : quatre cartes au pouce, inchangées ─────── */}
+          <div className="grid grid-cols-1 gap-4 lg:hidden">
           {/* Certification — le titre suit l'état réel du certificat :
               JAMAIS « Halal vérifié » sur un certificat expiré. */}
           <Section
@@ -516,6 +693,8 @@ export default function V2LotDetailPage() {
               </p>
             </section>
           )}
+          </div>
+          </div>
         </div>
       )}
     </V2Shell>

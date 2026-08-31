@@ -20,6 +20,15 @@
  * LOIS L99 : tokens only (jamais d'hex thème en dur), middot · jamais —,
  * tabular-nums sur €/%/kg, cibles ≥44px, inputs ≥16px, responsive, dark
  * natif, motion sobre.
+ *
+ * POSTE DE TRAVAIL (≥ 1024 px) — 31/08/2026
+ * La page portait des `max-w-7xl mx-auto` internes : à 1920 px elle se
+ * recentrait en colonne de 1280 px au milieu d'un châssis de 1652 px, avec
+ * 186 px de vide de chaque côté. Ces plafonds sont retirés — c'est V2Shell
+ * (layout="wide") qui décide de la largeur de travail, une seule fois.
+ * Le catalogue de recettes et les productions récentes sont deux LISTES
+ * TABULAIRES : elles passent en <DataTable> à partir de 1024 px, la grille
+ * de cartes restant le rendu de terrain en dessous.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -39,6 +48,7 @@ import {
 } from "lucide-react";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { DataTable } from "@/components/v2/DataTable";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { EmptyState } from "@/components/v2/EmptyState";
@@ -90,6 +100,10 @@ const STATUT_PROD: Record<ProductionRecente["statut"], string> = {
 
 const PERIODS: KpiPeriod[] = [7, 30, 90];
 
+/** Plafond d'affichage des productions récentes. Il est ÉCRIT à l'écran sous
+ *  le tableau : un `.slice()` silencieux ferait croire à un atelier vide. */
+const LIMITE_PRODUCTIONS = 12;
+
 /** Couleur d'une marge % : sapin si saine, ambre si fine, danger si négative. */
 function margeTone(pctVal: number | null): string {
   if (pctVal === null) return "var(--text-tertiary)";
@@ -116,7 +130,7 @@ export default function LaboPage() {
       setLoading(true);
       const [recs, prods] = await Promise.all([
         listRecettes(),
-        listProductions(12),
+        listProductions(LIMITE_PRODUCTIONS),
       ]);
       if (!alive) return;
       setRecettes(recs);
@@ -156,10 +170,10 @@ export default function LaboPage() {
     recettes.length > 0 || productions.length > 0 || kpiLignes.length > 0;
 
   return (
-    <V2Shell wide>
+    <V2Shell layout="wide">
       <PageAccentStripe accent="sapin-or" />
 
-      <header className="px-4 sm:px-5 pt-7 max-w-7xl mx-auto w-full">
+      <header className="px-4 sm:px-5 pt-7">
         <BackButton href="/v2" />
         <EditorialEyebrow num="07" label="Labo" className="mt-3" />
         <h1 className="h1-display mt-1">
@@ -179,7 +193,7 @@ export default function LaboPage() {
       </header>
 
       {/* ───────── (a) Bandeau MARGE + sélecteur période ───────── */}
-      <section className="px-4 sm:px-5 mt-5 max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-5 mt-5">
         {/* Pills période */}
         <div
           className="flex items-center gap-2 mb-3"
@@ -219,7 +233,13 @@ export default function LaboPage() {
           style={{
             background:
               "linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-hover) 58%, var(--accent-gold) 150%)",
-            color: "#fff",
+            // Ce bandeau est posé sur un dégradé sapin qui reste sombre dans
+            // les deux thèmes : son texte doit rester BLANC, pas crème.
+            // --text-on-dark avait été essayé et vaut la crème en thème nuit :
+            // 3 533 pixels modifiés à 390 px, une régression au téléphone
+            // invisible à l'œil nu. --text-on-gradient nomme ce blanc et vaut
+            // strictement #fff dans les deux thèmes.
+            color: "var(--text-on-gradient)",
           }}
         >
           <div
@@ -230,7 +250,11 @@ export default function LaboPage() {
                 "radial-gradient(circle at 92% 8%, rgba(255,255,255,0.22) 0%, transparent 55%)",
             }}
           />
-          <div className="relative">
+          {/* Deux volets a partir de 1024 px : a gauche la marge de la
+            periode, a droite les trois sous-indicateurs. Sous 1024 px la
+            div reste un simple bloc — rien ne change au telephone. */}
+          <div className="relative lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-end lg:gap-10">
+            <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-white/15 backdrop-blur-sm shrink-0">
                 <TrendingUp className="w-5 h-5 text-[var(--accent-gold-bright)]" />
@@ -243,13 +267,13 @@ export default function LaboPage() {
             <p className="text-[40px] sm:text-[48px] font-extrabold tabular leading-none mt-3">
               {eur(kpi?.marge_eur_total ?? 0)}
             </p>
-            <p className="text-[13px] text-white/85 mt-1.5 flex items-center gap-1.5 flex-wrap">
+            <p className="text-[13px] text-[color:var(--text-on-gradient-85)] mt-1.5 flex items-center gap-1.5 flex-wrap">
               <span className="tabular font-bold">
                 {eur(kpi?.marge_eur_par_jour ?? 0)}
               </span>
-              <span className="text-white/70">/ jour produit actif</span>
+              <span className="text-[color:var(--text-on-gradient-70)]">/ jour produit actif</span>
               {kpi && kpi.nb_productions > 0 && (
-                <span className="text-white/70">
+                <span className="text-[color:var(--text-on-gradient-70)]">
                   · {kpi.nb_productions}{" "}
                   {kpi.nb_productions > 1 ? "productions" : "production"}{" "}
                   terminée
@@ -258,8 +282,11 @@ export default function LaboPage() {
               )}
             </p>
 
-            {/* Sous-KPI : 3 colonnes au pied du héros */}
-            <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-white/15">
+            </div>
+
+            {/* Sous-KPI : 3 colonnes au pied du héros (a droite en desktop,
+              ou le filet horizontal n'a plus lieu d'etre). */}
+            <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-[color:var(--border-on-gradient)] lg:mt-0 lg:pt-0 lg:border-t-0">
               <HeroSubKpi
                 icon={<Percent className="w-3.5 h-3.5" />}
                 label="Marge moy."
@@ -281,7 +308,7 @@ export default function LaboPage() {
       </section>
 
       {loading ? (
-        <div className="px-4 sm:px-5 mt-8 max-w-7xl mx-auto w-full">
+        <div className="px-4 sm:px-5 mt-8">
           <div
             className="rounded-2xl p-10 flex items-center justify-center gap-2"
             style={{
@@ -299,7 +326,7 @@ export default function LaboPage() {
           </div>
         </div>
       ) : !hasAnyData ? (
-        <section className="px-4 sm:px-5 mt-2 max-w-7xl mx-auto w-full">
+        <section className="px-4 sm:px-5 mt-2">
           <div
             className="rounded-[22px]"
             style={{
@@ -317,7 +344,7 @@ export default function LaboPage() {
       ) : (
         <>
           {/* ───────── (b) RECETTES ───────── */}
-          <section className="px-4 sm:px-5 mt-9 max-w-7xl mx-auto w-full">
+          <section className="px-4 sm:px-5 mt-9">
             <SectionHead
               icon={<ChefHat className="w-4 h-4" />}
               eyebrow="Catalogue"
@@ -342,16 +369,149 @@ export default function LaboPage() {
                 </p>
               </div>
             ) : (
-              <ul className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                {recettes.map((r, i) => (
-                  <RecetteCard key={r.id} recette={r} index={i} />
-                ))}
-              </ul>
+              <>
+                {/* ── POSTE DE TRAVAIL (≥lg) : le catalogue est un tableau ──
+                  Nom, catégorie, version, statut, ingrédients, postes de
+                  main d'œuvre et coût MO : sept colonnes que la vignette ne
+                  pouvait pas porter, triables. */}
+                <div className="hidden lg:block mt-3">
+                  <DataTable
+                    rows={recettes}
+                    getKey={(r) => r.id}
+                    caption={`Catalogue du labo, ${recettes.length} recettes`}
+                    defaultSort={{ key: "nom", dir: "asc" }}
+                    columns={[
+                      {
+                        key: "nom",
+                        label: "Recette",
+                        sort: (a, b) => a.nom.localeCompare(b.nom, "fr"),
+                        render: (r) => (
+                          <span
+                            className="font-semibold"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {r.nom}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "categorie",
+                        label: "Catégorie",
+                        width: "170px",
+                        sort: (a, b) =>
+                          (a.categorie ?? "").localeCompare(
+                            b.categorie ?? "",
+                            "fr",
+                          ),
+                        render: (r) => (
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {r.categorie || "Sans catégorie"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "version",
+                        label: "Version",
+                        width: "100px",
+                        align: "right",
+                        xlOnly: true,
+                        sort: (a, b) => a.version - b.version,
+                        render: (r) => (
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            v{r.version}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "statut",
+                        label: "Statut",
+                        width: "130px",
+                        render: (r) => (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold"
+                            style={
+                              r.statut === "active"
+                                ? {
+                                    background: "var(--status-success-bg)",
+                                    color: "var(--status-success-text)",
+                                  }
+                                : {
+                                    background: "var(--status-neutral-bg)",
+                                    color: "var(--status-neutral-text)",
+                                  }
+                            }
+                          >
+                            {STATUT_RECETTE[r.statut]}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "ingredients",
+                        label: "Ingrédients",
+                        width: "120px",
+                        align: "right",
+                        sort: (a, b) => a.nb_ingredients - b.nb_ingredients,
+                        render: (r) => (
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {r.nb_ingredients}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "postes",
+                        label: "Postes MO",
+                        width: "120px",
+                        align: "right",
+                        xlOnly: true,
+                        sort: (a, b) => a.nb_postes_mo - b.nb_postes_mo,
+                        render: (r) => (
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {r.nb_postes_mo}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "cout",
+                        label: "Coût MO",
+                        width: "130px",
+                        align: "right",
+                        sort: (a, b) =>
+                          (a.cout_total_theo ?? 0) - (b.cout_total_theo ?? 0),
+                        render: (r) => (
+                          <span
+                            className="font-bold"
+                            style={{ color: "var(--text-gold)" }}
+                          >
+                            {eur(r.cout_total_theo)}
+                          </span>
+                        ),
+                      },
+                    ]}
+                    emptyLabel="Aucune recette enregistrée."
+                  />
+                  <p
+                    className="text-[12px] mt-3"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Catalogue complet ({recettes.length} recettes), sans
+                    plafond d'affichage. Le coût matières n'est pas chiffrable
+                    au niveau d'un modèle de recette : seul le coût de main
+                    d'œuvre théorique est connu ici.
+                  </p>
+                </div>
+
+                {/* ── TERRAIN (<lg) : vignettes au pouce, inchangées ────── */}
+                <ul className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2.5 lg:hidden">
+                  {recettes.map((r, i) => (
+                    <RecetteCard key={r.id} recette={r} index={i} />
+                  ))}
+                </ul>
+              </>
             )}
           </section>
 
           {/* ───────── (c) PRODUCTIONS récentes ───────── */}
-          <section className="px-4 sm:px-5 mt-9 pb-[max(3rem,env(safe-area-inset-bottom))] max-w-7xl mx-auto w-full">
+          <section className="px-4 sm:px-5 mt-9 pb-[max(3rem,env(safe-area-inset-bottom))]">
             <SectionHead
               icon={<Factory className="w-4 h-4" />}
               eyebrow="Atelier"
@@ -376,16 +536,173 @@ export default function LaboPage() {
                 </p>
               </div>
             ) : (
-              <ul className="mt-3 space-y-2.5">
-                {productions.map((p, i) => (
-                  <ProductionRow
-                    key={p.id}
-                    prod={p}
-                    kpi={margeParProd.get(p.id) ?? null}
-                    index={i}
+              <>
+                {/* POSTE DE TRAVAIL (>=lg) : l'atelier devient un tableau.
+                  Date, recette, lot, statut, rendement, marge % et marge EUR
+                  alignes en colonnes triables : on compare deux lots d'un
+                  regard, ce que la carte empilee interdisait. */}
+                <div className="hidden lg:block mt-3">
+                  <DataTable
+                    rows={productions}
+                    getKey={(p) => p.id}
+                    caption={`Productions recentes du labo, ${productions.length} lots`}
+                    defaultSort={{ key: "date", dir: "desc" }}
+                    rowAccent={(p) => {
+                      const m = margeParProd.get(p.id)?.marge_pct_ht ?? null;
+                      return m !== null && m < 0 ? "var(--danger)" : null;
+                    }}
+                    columns={[
+                      {
+                        key: "date",
+                        label: "Date",
+                        width: "110px",
+                        sort: (a, b) =>
+                          a.date_production.localeCompare(b.date_production),
+                        render: (p) => (
+                          <span
+                            className="font-semibold tabular"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {dateCourt(p.date_production)}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "recette",
+                        label: "Recette",
+                        sort: (a, b) =>
+                          (a.recette ?? "").localeCompare(b.recette ?? "", "fr"),
+                        render: (p) => (
+                          <span
+                            className="font-semibold"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {p.recette ?? "Production libre"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "lot",
+                        label: "Lot",
+                        width: "160px",
+                        xlOnly: true,
+                        render: (p) => (
+                          <span
+                            className="tabular"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {p.lot_numero ?? "·"}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "statut",
+                        label: "Statut",
+                        width: "130px",
+                        render: (p) => (
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-extrabold"
+                            style={
+                              p.statut === "terminee"
+                                ? {
+                                    background: "var(--status-success-bg)",
+                                    color: "var(--status-success-text)",
+                                  }
+                                : {
+                                    background: "var(--status-neutral-bg)",
+                                    color: "var(--status-neutral-text)",
+                                  }
+                            }
+                          >
+                            {STATUT_PROD[p.statut]}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "rendement",
+                        label: "Rendement",
+                        width: "120px",
+                        align: "right",
+                        sort: (a, b) =>
+                          (margeParProd.get(a.id)?.rendement_pct ?? -Infinity) -
+                          (margeParProd.get(b.id)?.rendement_pct ?? -Infinity),
+                        render: (p) => (
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {pct(margeParProd.get(p.id)?.rendement_pct ?? null)}
+                          </span>
+                        ),
+                      },
+                      {
+                        key: "marge_pct",
+                        label: "Marge %",
+                        width: "110px",
+                        align: "right",
+                        sort: (a, b) =>
+                          (margeParProd.get(a.id)?.marge_pct_ht ?? -Infinity) -
+                          (margeParProd.get(b.id)?.marge_pct_ht ?? -Infinity),
+                        render: (p) => {
+                          const m = margeParProd.get(p.id)?.marge_pct_ht ?? null;
+                          return (
+                            <span
+                              className="font-bold"
+                              style={{ color: margeTone(m) }}
+                            >
+                              {pct(m)}
+                            </span>
+                          );
+                        },
+                      },
+                      {
+                        key: "marge_eur",
+                        label: "Marge HT",
+                        width: "130px",
+                        align: "right",
+                        sort: (a, b) =>
+                          ((margeParProd.get(a.id)?.marge_eur_ht ??
+                            a.marge_calculee) ??
+                            -Infinity) -
+                          ((margeParProd.get(b.id)?.marge_eur_ht ??
+                            b.marge_calculee) ??
+                            -Infinity),
+                        render: (p) => {
+                          const k = margeParProd.get(p.id) ?? null;
+                          return (
+                            <span
+                              className="font-extrabold"
+                              style={{ color: margeTone(k?.marge_pct_ht ?? null) }}
+                            >
+                              {eur(k?.marge_eur_ht ?? p.marge_calculee ?? null)}
+                            </span>
+                          );
+                        },
+                      },
+                    ]}
+                    emptyLabel="Aucune production lancee."
                   />
-                ))}
-              </ul>
+                  <p
+                    className="text-[12px] mt-3"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    Liste plafonnée aux {LIMITE_PRODUCTIONS} productions les
+                    plus récentes ({productions.length} affichée
+                    {productions.length > 1 ? "s" : ""}). Rendement et marge %
+                    ne sont connus que pour les lots terminés : le point
+                    médian signale une donnée absente, jamais une valeur nulle.
+                  </p>
+                </div>
+
+                {/* TERRAIN (<lg) : cartes au pouce, inchangees. */}
+                <ul className="mt-3 space-y-2.5 lg:hidden">
+                  {productions.map((p, i) => (
+                    <ProductionRow
+                      key={p.id}
+                      prod={p}
+                      kpi={margeParProd.get(p.id) ?? null}
+                      index={i}
+                    />
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         </>
@@ -430,7 +747,9 @@ function SectionHead({
   count: number;
 }) {
   return (
-    <div className="flex items-end justify-between gap-3">
+    // lg:justify-start — a 1920 px, justify-between envoyait le compteur a
+    // 25 px du bord droit de la fenetre, orphelin a 1 500 px de son titre.
+    <div className="flex items-end justify-between gap-3 lg:justify-start lg:gap-4">
       <div>
         <p
           className="label-caps flex items-center gap-1.5"

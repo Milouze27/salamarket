@@ -2278,3 +2278,20 @@ body.theme-nuit .bg-gold-soft.text-primary-dark {
 body.theme-nuit .bg-cream.text-text-tertiary {
   background-color: var(--surface-2);
 }
+
+/* ── Blanc pur, dans les deux thèmes ──────────────────────────────────
+   31/08/2026 — aucun jeton de la palette ne vaut du blanc des DEUX côtés :
+   --text-on-dark devient crème la nuit, --surface-0 devient sapin. Or
+   plusieurs bandeaux (marge du labo, héros du cockpit) sont posés sur un
+   DÉGRADÉ SAPIN qui, lui, reste sombre dans les deux thèmes : le texte y
+   doit rester blanc, quoi qu'il arrive. Faute de jeton, ces endroits
+   gardaient un #fff en dur — et une tentative de les « corriger » avec
+   --text-on-dark a modifié 3 533 pixels au téléphone en thème nuit, sans
+   que rien ne se voie à l'œil.
+   Ces jetons nomment ce blanc et ses voiles, sans changer une valeur. */
+:root {
+  --text-on-gradient: #ffffff;
+  --text-on-gradient-85: rgba(255, 255, 255, 0.85);
+  --text-on-gradient-70: rgba(255, 255, 255, 0.7);
+  --border-on-gradient: rgba(255, 255, 255, 0.15);
+}

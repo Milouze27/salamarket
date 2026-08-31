@@ -1,5 +1,24 @@
 "use client";
 
+/* /v2/admin/rapport-mensuel — Rapport comptable (mensuel + récap fiscal Z)
+ * ────────────────────────────────────────────────────────────────────────
+ * POSTE DE TRAVAIL (>= 1024 px) — 31/08/2026
+ * Un rapport comptable se lit en tableau et en colonnes. Avant travaux la
+ * page empilait quatre cartes pleine largeur : a 1440 px il fallait faire
+ * defiler pour voir le CA magasin sous le CA consolide.
+ * A partir de 1024 px :
+ *   - la ventilation de TVA devient un vrai tableau (taux, base HT, TVA,
+ *     TTC) — la colonne TTC existe en base et n'etait pas affichee ;
+ *   - « Ventes magasin » et « Ventes drive » se placent cote a cote ;
+ *   - les tops produits deviennent des tableaux ;
+ *   - les actions (PDF, CSV, email) passent dans une colonne collante.
+ * Sous 1024 px : pas un pixel ne change.
+ *
+ * DONNEES SENSIBLES — cette page affiche des montants reels. Aucun montant,
+ * aucun nom de client ne doit partir en console, en titre de page ni en nom
+ * de fichier de capture.
+ */
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -12,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { DataTable } from "@/components/v2/DataTable";
 import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
 import type { MonthlyReport } from "@/lib/cashbox/monthly-report";
 import type { DailyZSummary } from "@/lib/cashbox/daily-z";
@@ -54,6 +74,10 @@ function cleanProduitLabel(designation: string): string {
 // mois de données (le précédent est vide ou quasi nul), le % explose
 // (« +8355 % ») et n'a aucune valeur : on l'affiche « 1er mois » à la place.
 const EVOLUTION_MAX_PCT = 500;
+
+/** Plafond du tableau « top produits » sur ordinateur. Ecrit a l'ecran sous
+ *  le tableau : un .slice() muet laisserait croire a une liste complete. */
+const TOP_DESKTOP = 10;
 function evolutionIsMeaningful(evo: number | null): evo is number {
   return evo !== null && Math.abs(evo) <= EVOLUTION_MAX_PCT;
 }
@@ -189,6 +213,29 @@ export default function RapportComptablePage() {
       if (fetchTimer.current) clearTimeout(fetchTimer.current);
     };
   }, [date]);
+
+  // Ventilation de TVA mise a plat pour le tableau du poste de travail.
+  // Meme source que la liste du telephone : report.consolidation.tva_par_taux.
+  const lignesTva = useMemo(() => {
+    if (!report) return [];
+    const lignes = Object.entries(report.consolidation.tva_par_taux)
+      .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
+      .map(([taux, v]) => ({ taux, ...v, total: false }));
+    if (!lignes.length) return lignes;
+    // Ligne de total DANS le tableau, pas a cote : un total pose sous le
+    // tableau se retrouvait aligne sous la colonne TTC alors qu'il additionne
+    // la colonne TVA. Un comptable lisait « 3 728,45 € de TTC ».
+    return [
+      ...lignes,
+      {
+        taux: "__total",
+        base_ht: lignes.reduce((s, l) => s + l.base_ht, 0),
+        tva: lignes.reduce((s, l) => s + l.tva, 0),
+        ttc: lignes.reduce((s, l) => s + l.ttc, 0),
+        total: true,
+      },
+    ];
+  }, [report]);
 
   const monthOptions = useMemo(() => {
     const out: { value: string; label: string }[] = [];
@@ -366,8 +413,11 @@ export default function RapportComptablePage() {
   }
 
   return (
-    <V2Shell hideNav layout="wide">
-      <header className="px-5 pt-7">
+    /* Deux familles de page dans un seul ecran : le rapport mensuel est un
+       tableau de bord (layout wide), le recap fiscal est le fac-simile d'un
+       ticket Z — un document a largeur naturelle (layout flow). */
+    <V2Shell hideNav layout={vue === "recap" ? "flow" : "wide"}>
+      <header className="px-5 pt-7 lg:px-5">
         <BackButton />
         <p className="section-eyebrow mt-3"><FileText className="w-3 h-3" />Rapport comptable</p>
         <h1 className="h1 text-text-primary mt-1">
@@ -446,7 +496,14 @@ export default function RapportComptablePage() {
               </section>
             )}
 
-            <section className="px-5 mt-5">
+            {/* POSTE DE TRAVAIL : rapport a gauche, actions collees a droite,
+              a partir de 1280 px SEULEMENT. Mesure a 1024 px : un volet
+              d'actions de 320 px ne laissait que 412 px au rapport.
+              Sous 1280 px ces deux div ne portent que `min-w-0` (sans effet
+              en flux normal) : la pile de sections du telephone est intacte. */}
+            <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-6 xl:items-start xl:px-5 xl:mt-5">
+            <div className="min-w-0">
+            <section className="px-5 mt-5 xl:px-0 xl:mt-0">
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}
                 className="bg-white border border-rule rounded-[20px] p-5 shadow-card">
                 <p className="section-eyebrow"><TrendingUp className="w-3 h-3" />CA total consolidé</p>
@@ -482,7 +539,61 @@ export default function RapportComptablePage() {
                 </div>
                 <div className="mt-5 border-t border-rule pt-4">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-text-secondary mb-2">Ventilation TVA collectée</p>
-                  <div className="space-y-1.5">
+                  {/* >= lg : vrai tableau. La colonne TTC existe en base
+                    (tva_par_taux[taux].ttc) et n'etait affichee nulle part —
+                    c'est la colonne que le comptable additionne. */}
+                  <div className="hidden lg:block">
+                    <DataTable
+                      rows={lignesTva}
+                      getKey={(l) => l.taux}
+                      caption="Ventilation de la TVA collectée par taux"
+                      columns={[
+                        {
+                          key: "taux",
+                          label: "Taux",
+                          width: "140px",
+                          render: (l) => (
+                            <span className={`text-text-primary tabular ${l.total ? "font-extrabold" : "font-bold"}`}>
+                              {l.total ? "Total" : `TVA ${formatTvaRateFr(l.taux)}`}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "base",
+                          label: "Base HT",
+                          align: "right",
+                          render: (l) => (
+                            <span className={l.total ? "font-extrabold text-text-primary" : "text-text-secondary"}>
+                              {fr2(l.base_ht)}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "tva",
+                          label: "TVA collectée",
+                          align: "right",
+                          render: (l) => (
+                            <span className={`text-text-primary ${l.total ? "font-extrabold" : "font-bold"}`}>
+                              {fr2(l.tva)}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "ttc",
+                          label: "TTC",
+                          align: "right",
+                          render: (l) => (
+                            <span className={l.total ? "font-extrabold text-text-primary" : "text-text-secondary"}>
+                              {fr2(l.ttc)}
+                            </span>
+                          ),
+                        },
+                      ]}
+                      emptyLabel="Aucune TVA collectée sur la période."
+                    />
+                  </div>
+                  {/* &lt; lg : la liste au pouce, inchangee. */}
+                  <div className="space-y-1.5 lg:hidden">
                     {Object.entries(report.consolidation.tva_par_taux).sort((a, b) => parseFloat(a[0]) - parseFloat(b[0])).map(([rate, v]) => (
                       <div key={rate} className="flex items-baseline text-[12.5px]">
                         <span className="w-[80px] font-bold text-text-primary tabular">TVA {formatTvaRateFr(rate)}</span>
@@ -495,21 +606,30 @@ export default function RapportComptablePage() {
               </motion.div>
             </section>
 
-            <section className="px-5 mt-5">
+            {/* Magasin / Drive cote a cote seulement au-dela de 1800 px. Mesure a
+              1536 px (le palier 2xl) : les deux cartes tombaient a 390 px, le
+              tableau des tops produits a 155 px de colonne « Produit », et
+              CHAQUE nom passait sur deux lignes. Empilees, elles disposent de
+              842 px a 1536 px. Le palier est donc ecrit en clair. */}
+            <div className="min-[1800px]:grid min-[1800px]:grid-cols-2 min-[1800px]:gap-5">
+            <section className="px-5 mt-5 xl:px-0">
               <SectionCard icon={<Store className="w-3 h-3" />} eyebrow="Ventes magasin"
                 ca={report.magasin.ca_ttc} m1l="Tickets" m1v={report.magasin.nb_tickets.toString()}
                 m2l="Panier moyen" m2v={fr2(report.magasin.panier_moyen)} top={report.magasin.top_produits}
                 hint={report.magasin.last_import_at ? `Importé ${new Date(report.magasin.last_import_at).toLocaleDateString("fr-FR")}` : "Aucun import Cashmag"} />
             </section>
 
-            <section className="px-5 mt-5">
+            <section className="px-5 mt-5 xl:px-0">
               <SectionCard icon={<ShoppingBag className="w-3 h-3" />} eyebrow="Ventes drive"
                 ca={report.drive.ca_ttc} m1l="Commandes" m1v={report.drive.nb_tickets.toString()}
                 m2l="Panier moyen" m2v={fr2(report.drive.panier_moyen)} top={report.drive.top_produits}
                 hint={`Frais Stripe ${fr2(report.drive.frais_stripe)} · Net ${fr2(report.drive.net)}`} />
             </section>
+            </div>
+            </div>
 
-            <section className="px-5 mt-6 space-y-2.5">
+            <aside className="xl:sticky xl:top-4">
+            <section className="px-5 mt-6 space-y-2.5 xl:px-0 xl:mt-0">
               <p className="section-eyebrow mb-2"><FileText className="w-3 h-3" />Pour ton comptable</p>
               <button onClick={downloadPdf}
                 className="w-full bg-primary text-white rounded-[18px] py-3.5 px-4 flex items-center justify-between shadow-card active:scale-[0.99] transition-transform">
@@ -549,12 +669,21 @@ export default function RapportComptablePage() {
                 Cron auto : envoi le 1er de chaque mois à 06h00.
               </p>
             </section>
+            </aside>
+            </div>
           </>
         )
       ) : (
         <>
+          {/* POSTE DE TRAVAIL : le ticket Z est un DOCUMENT, il garde une
+            largeur naturelle (620 px) ; les actions se rangent a cote.
+            Le couple est cale a GAUCHE, sur le bord du titre : centre, il
+            demarrait 98 px a droite de l'en-tete (releve a 1440 px).
+            Etirer un fac-simile de ticket sur 1650 px n'aurait aucun sens :
+            c'est pour ca que cette vue passe en layout="flow". */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,620px)_300px] lg:gap-6 lg:items-start lg:px-5 lg:mt-6 lg:max-w-[980px]">
           {/* TICKET Z */}
-          <section className="px-5 mt-6">
+          <section className="px-5 mt-6 lg:px-0 lg:mt-0">
             {loadingZ ? (
               <div className="bg-white border border-rule rounded-[20px] p-10 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -713,7 +842,7 @@ export default function RapportComptablePage() {
 
           {/* Actions */}
           {summary && summary.status === "ok" && (
-            <section className="px-5 mt-5 space-y-2.5">
+            <section className="px-5 mt-5 space-y-2.5 lg:px-0 lg:mt-0 lg:sticky lg:top-4">
               <button
                 onClick={downloadZPdf}
                 className="w-full bg-primary text-white rounded-[18px] py-3.5 px-4 flex items-center justify-between shadow-card active:scale-[0.99] transition-transform"
@@ -752,6 +881,7 @@ export default function RapportComptablePage() {
               </p>
             </section>
           )}
+          </div>
         </>
       )}
       </GlassTabPanel>
@@ -802,8 +932,53 @@ function SectionCard({ icon, eyebrow, ca, m1l, m1v, m2l, m2v, top, hint }: {
       </div>
       {topProduits.length > 0 && (
         <div className="mt-4 border-t border-rule pt-3">
-          <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-2">Top {Math.min(topProduits.length, 5)} produits</p>
-          <ul className="space-y-1.5">
+          {/* >= lg : tableau, jusqu'a 10 produits. Le plafond est ECRIT
+            sous la liste, jamais implicite. */}
+          <div className="hidden lg:block">
+            <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-1">
+              Top {Math.min(topProduits.length, TOP_DESKTOP)} produits
+            </p>
+            <DataTable
+              rows={topProduits.slice(0, TOP_DESKTOP)}
+              getKey={(p) => p.designation}
+              caption="Meilleures ventes de la période"
+              columns={[
+                {
+                  key: "designation",
+                  label: "Produit",
+                  render: (p) => (
+                    <span className="font-semibold text-text-primary">{p.designation}</span>
+                  ),
+                },
+                {
+                  key: "quantite",
+                  label: "Quantité",
+                  width: "110px",
+                  align: "right",
+                  sort: (a, b) => a.quantite - b.quantite,
+                  render: (p) => <span className="text-text-secondary">{p.quantite}</span>,
+                },
+                {
+                  key: "ca",
+                  label: "CA TTC",
+                  width: "130px",
+                  align: "right",
+                  sort: (a, b) => a.ca - b.ca,
+                  render: (p) => (
+                    <span className="font-bold text-text-primary">{fr2(p.ca)}</span>
+                  ),
+                },
+              ]}
+              emptyLabel="Aucun produit identifié sur la période."
+            />
+            <p className="text-[11px] text-text-tertiary mt-2">
+              {topProduits.length > TOP_DESKTOP
+                ? `Liste plafonnée aux ${TOP_DESKTOP} premiers produits sur ${topProduits.length} identifiés.`
+                : `${topProduits.length} produit${topProduits.length > 1 ? "s" : ""} identifié${topProduits.length > 1 ? "s" : ""} — liste complète.`}
+            </p>
+          </div>
+          <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-2 lg:hidden">Top {Math.min(topProduits.length, 5)} produits</p>
+          <ul className="space-y-1.5 lg:hidden">
             {topProduits.slice(0, 5).map((p, idx) => (
               <li key={p.designation} className="flex items-baseline gap-2 text-[12px]">
                 <span className="text-text-tertiary w-4 tabular">{idx + 1}.</span>

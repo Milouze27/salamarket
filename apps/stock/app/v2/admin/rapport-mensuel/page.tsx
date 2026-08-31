@@ -4,17 +4,17 @@
  * ────────────────────────────────────────────────────────────────────────
  * POSTE DE TRAVAIL (>= 1024 px) — 31/08/2026
  * Un rapport comptable se lit en tableau et en colonnes. Avant travaux la
- * page empilait quatre cartes pleine largeur : a 1440 px il fallait faire
- * defiler pour voir le CA magasin sous le CA consolide.
- * A partir de 1024 px :
+ * page empilait quatre cartes pleine largeur : à 1440 px il fallait faire
+ * défiler pour voir le CA magasin sous le CA consolidé.
+ * À partir de 1024 px :
  *   - la ventilation de TVA devient un vrai tableau (taux, base HT, TVA,
- *     TTC) — la colonne TTC existe en base et n'etait pas affichee ;
- *   - « Ventes magasin » et « Ventes drive » se placent cote a cote ;
+ *     TTC) — la colonne TTC existe en base et n'était pas affichée ;
+ *   - « Ventes magasin » et « Ventes drive » se placent côte à côte ;
  *   - les tops produits deviennent des tableaux ;
  *   - les actions (PDF, CSV, email) passent dans une colonne collante.
  * Sous 1024 px : pas un pixel ne change.
  *
- * DONNEES SENSIBLES — cette page affiche des montants reels. Aucun montant,
+ * DONNÉES SENSIBLES — cette page affiche des montants réels. Aucun montant,
  * aucun nom de client ne doit partir en console, en titre de page ni en nom
  * de fichier de capture.
  */
@@ -75,8 +75,8 @@ function cleanProduitLabel(designation: string): string {
 // (« +8355 % ») et n'a aucune valeur : on l'affiche « 1er mois » à la place.
 const EVOLUTION_MAX_PCT = 500;
 
-/** Plafond du tableau « top produits » sur ordinateur. Ecrit a l'ecran sous
- *  le tableau : un .slice() muet laisserait croire a une liste complete. */
+/** Plafond du tableau « top produits » sur ordinateur. Écrit à l'écran sous
+ *  le tableau : un .slice() muet laisserait croire à une liste complète. */
 const TOP_DESKTOP = 10;
 function evolutionIsMeaningful(evo: number | null): evo is number {
   return evo !== null && Math.abs(evo) <= EVOLUTION_MAX_PCT;
@@ -214,15 +214,15 @@ export default function RapportComptablePage() {
     };
   }, [date]);
 
-  // Ventilation de TVA mise a plat pour le tableau du poste de travail.
-  // Meme source que la liste du telephone : report.consolidation.tva_par_taux.
+  // Ventilation de TVA mise à plat pour le tableau du poste de travail.
+  // Même source que la liste du téléphone : report.consolidation.tva_par_taux.
   const lignesTva = useMemo(() => {
     if (!report) return [];
     const lignes = Object.entries(report.consolidation.tva_par_taux)
       .sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]))
       .map(([taux, v]) => ({ taux, ...v, total: false }));
     if (!lignes.length) return lignes;
-    // Ligne de total DANS le tableau, pas a cote : un total pose sous le
+    // Ligne de total DANS le tableau, pas à côté : un total posé sous le
     // tableau se retrouvait aligne sous la colonne TTC alors qu'il additionne
     // la colonne TVA. Un comptable lisait « 3 728,45 € de TTC ».
     return [
@@ -413,7 +413,7 @@ export default function RapportComptablePage() {
   }
 
   return (
-    /* Deux familles de page dans un seul ecran : le rapport mensuel est un
+    /* Deux familles de page dans un seul écran : le rapport mensuel est un
        tableau de bord (layout wide), le recap fiscal est le fac-simile d'un
        ticket Z — un document a largeur naturelle (layout flow). */
     <V2Shell hideNav layout={vue === "recap" ? "flow" : "wide"}>
@@ -496,7 +496,7 @@ export default function RapportComptablePage() {
               </section>
             )}
 
-            {/* POSTE DE TRAVAIL : rapport a gauche, actions collees a droite,
+            {/* POSTE DE TRAVAIL : rapport à gauche, actions collées à droite,
               a partir de 1280 px SEULEMENT. Mesure a 1024 px : un volet
               d'actions de 320 px ne laissait que 412 px au rapport.
               Sous 1280 px ces deux div ne portent que `min-w-0` (sans effet
@@ -606,7 +606,7 @@ export default function RapportComptablePage() {
               </motion.div>
             </section>
 
-            {/* Magasin / Drive cote a cote seulement au-dela de 1800 px. Mesure a
+            {/* Magasin / Drive côte à côte seulement au-delà de 1800 px. Mesuré à
               1536 px (le palier 2xl) : les deux cartes tombaient a 390 px, le
               tableau des tops produits a 155 px de colonne « Produit », et
               CHAQUE nom passait sur deux lignes. Empilees, elles disposent de
@@ -932,7 +932,7 @@ function SectionCard({ icon, eyebrow, ca, m1l, m1v, m2l, m2v, top, hint }: {
       </div>
       {topProduits.length > 0 && (
         <div className="mt-4 border-t border-rule pt-3">
-          {/* >= lg : tableau, jusqu'a 10 produits. Le plafond est ECRIT
+          {/* >= lg : tableau, jusqu'à 10 produits. Le plafond est ÉCRIT
             sous la liste, jamais implicite. */}
           <div className="hidden lg:block">
             <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-bold mb-1">

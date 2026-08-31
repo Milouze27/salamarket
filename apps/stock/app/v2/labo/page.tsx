@@ -250,7 +250,7 @@ export default function LaboPage() {
                 "radial-gradient(circle at 92% 8%, rgba(255,255,255,0.22) 0%, transparent 55%)",
             }}
           />
-          {/* Deux volets a partir de 1024 px : a gauche la marge de la
+          {/* Deux volets à partir de 1024 px : à gauche la marge de la
             periode, a droite les trois sous-indicateurs. Sous 1024 px la
             div reste un simple bloc — rien ne change au telephone. */}
           <div className="relative lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-end lg:gap-10">
@@ -284,7 +284,7 @@ export default function LaboPage() {
 
             </div>
 
-            {/* Sous-KPI : 3 colonnes au pied du héros (a droite en desktop,
+            {/* Sous-KPI : 3 colonnes au pied du héros (à droite en desktop,
               ou le filet horizontal n'a plus lieu d'etre). */}
             <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-[color:var(--border-on-gradient)] lg:mt-0 lg:pt-0 lg:border-t-0">
               <HeroSubKpi
@@ -747,8 +747,8 @@ function SectionHead({
   count: number;
 }) {
   return (
-    // lg:justify-start — a 1920 px, justify-between envoyait le compteur a
-    // 25 px du bord droit de la fenetre, orphelin a 1 500 px de son titre.
+    // lg:justify-start — à 1920 px, justify-between envoyait le compteur à
+    // 25 px du bord droit de la fenêtre, orphelin à 1 500 px de son titre.
     <div className="flex items-end justify-between gap-3 lg:justify-start lg:gap-4">
       <div>
         <p

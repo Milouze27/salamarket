@@ -80,7 +80,9 @@ export default function ProPage() {
   const sousTitre = TABS.find((t) => t.key === tab)?.sousTitre ?? "";
 
   return (
-    <V2Shell hideNav wide>
+    // layout="full" : les trois onglets sont des TABLEAUX à partir de lg.
+    // En "wide" le contenu plafonnait à 1760 px et laissait du vide à 1920.
+    <V2Shell hideNav layout="full">
       <PageAccentStripe accent="or-sapin" />
       <header className="px-5 pt-7">
         <BackButton />

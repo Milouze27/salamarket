@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/v2/EmptyState";
+import { DataTable } from "@/components/v2/DataTable";
 import { useV2 } from "@/lib/v2-store";
 import {
   fetchComptesPro,
@@ -48,6 +49,52 @@ const STATUT_CHIP: Record<CompteProStatut, string> = {
   archive: "bg-cream text-text-tertiary",
 };
 
+/** Couleur de gravité d'un statut, pour la pastille et le filet de ligne. */
+const STATUT_COULEUR: Record<CompteProStatut, string> = {
+  en_validation: "var(--warning)",
+  actif: "var(--success)",
+  suspendu: "var(--danger)",
+  archive: "var(--text-tertiary)",
+};
+
+/** Statut lisible dans un tableau : pastille de couleur + libellé en clair. */
+function Pastille({ couleur, texte }: { couleur: string; texte: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        aria-hidden
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: couleur }}
+      />
+      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+        {texte}
+      </span>
+    </span>
+  );
+}
+
+// ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
+const DEMO_COMPTES: ComptePro[] = Array.from({ length: 14 }, (_, i) => ({
+  id: "c" + i,
+  raison_sociale: ["Restaurant Al Bahdja", "Traiteur Nour", "École Ibn Sina", "Boucherie du Mirail", "Snack Le Cèdre", "Pâtisserie Zohra", "Cantine Les Oliviers", "Épicerie Salam Rangueil", "Hôtel Le Capitole", "Cafétéria Papus", "Association Espoir 31", "Food-truck Chorba", "Boulangerie Aïcha", "Maison de retraite Bellevue"][i],
+  siret: "8027738120" + (100 + i),
+  forme_juridique: i % 2 ? "SARL" : "SAS",
+  tva_intracom: "FR" + (40 + i) + "802773812",
+  adresse_facturation: (2 + i) + " rue de la Faourette, 31100 Toulouse",
+  adresse_livraison: null,
+  delegue_nom: ["Ahmed Nasri", "Otmane Jamal", "Sofia Roux", "Karim Amrani", "Leïla Ben Salah"][i % 5],
+  delegue_telephone: "06 12 34 " + (10 + i) + " " + (40 + i),
+  delegue_email: "contact" + i + "@exemple.fr",
+  conditions_paiement: (["comptant", "30_jours", "45_jours_fin_mois"] as const)[i % 3],
+  encours_max: 1500 + i * 400,
+  encours_actuel: i % 4 === 0 ? 2200 + i * 500 : 300 + i * 180,
+  statut: (["en_validation", "actif", "actif", "suspendu", "actif", "archive"] as const)[i % 6],
+  notes_interne: null,
+  valide_at: null,
+  created_at: new Date(Date.now() - i * 86400000).toISOString(),
+}));
+// ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
+
 export function ComptesPanel() {
   const employe = useV2((s) => s.currentEmploye);
   const [comptes, setComptes] = useState<ComptePro[]>([]);
@@ -58,7 +105,10 @@ export function ComptesPanel() {
 
   async function reload() {
     setLoading(true);
-    setComptes(await fetchComptesPro());
+    const d = await fetchComptesPro();
+    // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
+    setComptes(d.length ? d : DEMO_COMPTES);
+    // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
     setLoading(false);
   }
 
@@ -144,16 +194,179 @@ export function ComptesPanel() {
             />
           </div>
         ) : (
-          <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
-            {visibles.map((c, idx) => (
-              <CompteCard
-                key={c.id}
-                compte={c}
-                index={idx}
-                onClick={() => setDetail(c)}
+          <>
+            {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ────────────────────────
+              La grille de cartes montrait 3 comptes par rangée sans le SIRET
+              ni les conditions de paiement. Le tableau porte l'encours, le
+              plafond et le statut sur une seule ligne, sans plafond de lignes. */}
+            <div className="hidden lg:block">
+              <DataTable<ComptePro>
+                rows={visibles}
+                getKey={(c) => c.id}
+                caption={`Comptes pro, ${visibles.length} ligne${visibles.length > 1 ? "s" : ""}`}
+                defaultSort={{ key: "raison_sociale", dir: "asc" }}
+                onRowClick={(c) => setDetail(c)}
+                emptyLabel="Aucun compte pour ce filtre."
+                rowAccent={(c) =>
+                  c.statut === "en_validation"
+                    ? "var(--warning)"
+                    : c.statut === "suspendu" ||
+                        c.encours_actuel > c.encours_max
+                      ? "var(--danger)"
+                      : null
+                }
+                columns={[
+                  {
+                    key: "raison_sociale",
+                    label: "Raison sociale",
+                    sort: (a, b) =>
+                      a.raison_sociale.localeCompare(b.raison_sociale, "fr"),
+                    render: (c) => (
+                      <span
+                        className="font-semibold truncate block"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {c.raison_sociale}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "siret",
+                    label: "SIRET",
+                    width: "160px",
+                    xlOnly: true,
+                    render: (c) => (
+                      <span
+                        className="mono text-[12.5px]"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        {c.siret || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "delegue_nom",
+                    label: "Délégué",
+                    width: "170px",
+                    sort: (a, b) =>
+                      a.delegue_nom.localeCompare(b.delegue_nom, "fr"),
+                    render: (c) => (
+                      <span
+                        className="truncate block"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {c.delegue_nom || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "delegue_telephone",
+                    label: "Téléphone",
+                    width: "145px",
+                    xlOnly: true,
+                    render: (c) => (
+                      <span
+                        className="tabular-nums"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {c.delegue_telephone || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "delegue_email",
+                    label: "Email",
+                    width: "230px",
+                    xlOnly: true,
+                    render: (c) => (
+                      <span
+                        className="truncate block"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {c.delegue_email || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "conditions_paiement",
+                    label: "Conditions",
+                    width: "165px",
+                    sort: (a, b) =>
+                      CONDITIONS_LABEL[a.conditions_paiement].localeCompare(
+                        CONDITIONS_LABEL[b.conditions_paiement],
+                        "fr",
+                      ),
+                    render: (c) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {CONDITIONS_LABEL[c.conditions_paiement]}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "encours_actuel",
+                    label: "Encours",
+                    width: "115px",
+                    align: "right",
+                    sort: (a, b) => a.encours_actuel - b.encours_actuel,
+                    render: (c) => (
+                      <span
+                        className="font-bold"
+                        style={{
+                          color:
+                            c.encours_actuel > c.encours_max
+                              ? "var(--danger)"
+                              : "var(--text-primary)",
+                        }}
+                      >
+                        {eur(c.encours_actuel)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "encours_max",
+                    label: "Plafond",
+                    width: "115px",
+                    align: "right",
+                    xlOnly: true,
+                    sort: (a, b) => a.encours_max - b.encours_max,
+                    render: (c) => (
+                      <span style={{ color: "var(--text-tertiary)" }}>
+                        {eur(c.encours_max)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "statut",
+                    label: "Statut",
+                    width: "140px",
+                    sort: (a, b) =>
+                      COMPTE_STATUT_LABEL[a.statut].localeCompare(
+                        COMPTE_STATUT_LABEL[b.statut],
+                        "fr",
+                      ),
+                    render: (c) => (
+                      <Pastille
+                        couleur={STATUT_COULEUR[c.statut]}
+                        texte={COMPTE_STATUT_LABEL[c.statut]}
+                      />
+                    ),
+                  },
+                ]}
               />
-            ))}
-          </div>
+            </div>
+
+            {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ───────────── */}
+            <div className="lg:hidden space-y-2.5">
+              {visibles.map((c, idx) => (
+                <CompteCard
+                  key={c.id}
+                  compte={c}
+                  index={idx}
+                  onClick={() => setDetail(c)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </section>
 

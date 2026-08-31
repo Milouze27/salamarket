@@ -619,6 +619,13 @@ export default function V2ReceptionPage() {
             </section>
           )}
 
+          {/* DESKTOP 31/08/2026 — deux volets. À gauche ce qui est attendu
+            et en cours (la liste de travail), à droite l'entrée manuelle.
+            Avant : trois blocs empilés dans une colonne de 1 280 px, avec
+            801 px de vide à droite (mesuré à 1920×1080). Sous 1024 px,
+            l'empilement d'origine est conservé. */}
+          <div className="lg:flex lg:gap-6 lg:px-5 lg:mt-1">
+          <div className="lg:flex-1 lg:min-w-0">
           {/* ─── BDL EN COURS ─────────────────────────────────────── */}
           {bdlEnCours.length > 0 && (
             <section className="px-5 mt-6">
@@ -644,7 +651,7 @@ export default function V2ReceptionPage() {
           )}
 
           {/* ─── BDL ATTENDUS AUJOURD'HUI ─────────────────────────── */}
-          <section className="px-5 mt-6">
+          <section className="px-5 lg:px-0 mt-6">
             <p className="label-caps text-text-tertiary mb-2">
               Livraisons attendues aujourd&apos;hui
             </p>
@@ -681,8 +688,10 @@ export default function V2ReceptionPage() {
             )}
           </section>
 
+          </div>
+          <div className="lg:w-[380px] lg:shrink-0">
           {/* ─── RÉCEPTION LIBRE ─────────────────────────────────── */}
-          <section className="px-5 mt-6">
+          <section className="px-5 lg:px-0 mt-6 lg:mt-0">
             <p className="label-caps text-text-tertiary mb-2">
               <GlossaryTerm
                 term="Réception libre"
@@ -709,6 +718,8 @@ export default function V2ReceptionPage() {
               <ChevronRight className="w-4 h-4 text-text-tertiary" />
             </button>
           </section>
+          </div>
+          </div>
         </>
       )}
 
@@ -899,7 +910,7 @@ export default function V2ReceptionPage() {
             )}
           </section>
 
-          <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+          <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
             <div className="sticky-action-inner pt-3 pb-3 pointer-events-auto">
               <button
                 onClick={finalize}
@@ -974,7 +985,7 @@ export default function V2ReceptionPage() {
           aria-label="Code-barres inconnu"
           className="fixed inset-0 z-[70] fixed-overlay flex items-end md:items-center justify-center"
         >
-          <div className="bg-white w-full max-w-[460px] rounded-t-[28px] md:rounded-[28px] p-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-slide-up max-h-[90dvh] overflow-y-auto">
+          <div className="sheet-panel w-full max-w-[460px] rounded-t-[28px] md:rounded-[28px] p-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] animate-slide-up max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-text-primary">
                 Code inconnu

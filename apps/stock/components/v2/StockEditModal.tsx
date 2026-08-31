@@ -96,14 +96,28 @@ export function StockEditModal({
             onClick={onClose}
             className="fixed inset-0 z-[70] bg-primary-dark/60 backdrop-blur-[6px]"
           />
+          {/* DESKTOP 31/08/2026 — deux corrections.
+            1. Le fond était `bg-white` EN DUR : en thème nuit (le défaut), le
+               texte crème se posait sur du blanc. On passe au token de surface.
+            2. La feuille montait du bas, plafonnée à 460 px, ancrée sous la
+               barre latérale. À partir de lg elle devient une fenêtre centrée.
+            Sous 1024 px, la feuille du bas est conservée : au comptoir, elle
+            se referme d'un geste du pouce. */}
+          <div className="fixed inset-0 z-[71] flex items-end lg:items-center justify-center pointer-events-none">
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 320 }}
-            className="fixed inset-x-0 bottom-0 z-[71] mx-auto max-w-[460px] bg-white rounded-t-[28px] shadow-card-lg pb-[calc(var(--safe-bottom)+16px)]"
+            className="pointer-events-auto w-full max-w-[460px] lg:max-w-[540px] rounded-t-[28px] lg:rounded-[26px] shadow-card-lg pb-[calc(var(--safe-bottom)+16px)] lg:pb-5 lg:mb-0"
+            style={{
+              background: "var(--surface-1)",
+              border: "1px solid var(--border-card)",
+              maxHeight: "88vh",
+              overflowY: "auto",
+            }}
           >
-            <div className="pt-2 pb-1 flex justify-center">
+            <div className="pt-2 pb-1 flex justify-center lg:hidden">
               <span className="w-10 h-1 rounded-full bg-line-medium" />
             </div>
             <div className="px-5 pb-4 flex items-start justify-between gap-3">
@@ -208,6 +222,7 @@ export function StockEditModal({
               </p>
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

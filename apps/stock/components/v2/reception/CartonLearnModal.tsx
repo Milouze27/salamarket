@@ -40,14 +40,14 @@ export function CartonLearnModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center"
         >
           <motion.div
             initial={{ y: 60 }}
             animate={{ y: 0 }}
             exit={{ y: 60 }}
             transition={{ type: "spring", damping: 26, stiffness: 280 }}
-            className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg max-h-[90vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-start gap-3">
               <span className="w-12 h-12 rounded-2xl bg-gold-soft text-primary-dark flex items-center justify-center shrink-0">

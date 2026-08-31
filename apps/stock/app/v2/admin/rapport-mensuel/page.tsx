@@ -366,7 +366,7 @@ export default function RapportComptablePage() {
   }
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="wide">
       <header className="px-5 pt-7">
         <BackButton />
         <p className="section-eyebrow mt-3"><FileText className="w-3 h-3" />Rapport comptable</p>

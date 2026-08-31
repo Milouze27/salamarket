@@ -29,6 +29,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
+import { DataTable } from "@/components/v2/DataTable";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
 
@@ -151,6 +152,52 @@ function nameOf(p: { prenom: string | null; nom: string } | null) {
   return `${p.prenom ?? ""} ${p.nom}`.trim();
 }
 
+/** Date + heure pour les tableaux du poste de travail (l'écran a la place). */
+function dateHeureTableau(iso: string | null) {
+  if (!iso) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Statut lisible dans un tableau : pastille de couleur + libellé en clair. */
+function Pastille({ couleur, texte }: { couleur: string; texte: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        aria-hidden
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: couleur }}
+      />
+      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+        {texte}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Note de bas de tableau : dit à l'écran ce que la requête a plafonné.
+ * Une troncature muette fait croire à une liste complète — donc on l'écrit.
+ */
+function NotePlafond({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-[12.5px] mt-2.5 px-3"
+      style={{ color: "var(--text-tertiary)" }}
+    >
+      {children}
+    </p>
+  );
+}
+
+/** Plafond serveur de la requête « sorties suspectes » (cf. loadAll). */
+const PLAFOND_SORTIES = 50;
+
 export default function SurveillancePage() {
   const searchParams = useSearchParams();
   // Section active (onglet supérieur) pilotée par ?section=… au montage.
@@ -173,7 +220,9 @@ export default function SurveillancePage() {
       : SECTION_SOUS_LIBELLE[section];
 
   return (
-    <V2Shell hideNav>
+    // layout="full" : les quatre sections sont des LISTES. À partir de lg
+    // elles se lisent en tableau, qui a besoin de toute la largeur d'écran.
+    <V2Shell hideNav layout="full">
       <PageAccentStripe accent="bordeaux" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -419,8 +468,15 @@ function AlertesPanel() {
     setLoading(true);
     const sb = supabase();
     if (!sb) {
+      // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
+      const noms = ["Coca Zero 33cl", "Poulet fermier 1,2 kg", "Dattes Deglet Nour 500 g", "Huile d'olive 1 L", "Semoule fine 5 kg", "Merguez artisanale 1 kg", "Yaourt nature x8", "Thé à la menthe 200 g", "Riz basmati 2 kg", "Miel d'oranger 250 g", "Amandes 500 g", "Pain pita x6"];
+      setSorties(noms.map((n, i) => ({ id: "s" + i, type: i % 3 === 0 ? "casse" : i % 3 === 1 ? "perime" : "don_association", motif_libre: i % 2 ? "Carton écrasé en réserve" : null, quantite: 1 + (i % 7), photo_url: "", ia_coherence_score: 0.12 + (i * 0.07), ia_coherence_notes: "La photo montre " + (1 + (i % 3)) + " unité(s) alors que la sortie en déclare " + (1 + (i % 7)) + ".", created_at: new Date(Date.now() - i * 5400000).toISOString(), produits: { nom: n }, employes: { prenom: ["Otmane", "Yacine", "Sofia", "Karim"][i % 4], nom: ["Jamal", "Bencheikh", "Roux", "Amrani"][i % 4] }, depots: { nom: i % 2 ? "Particulier" : "Réserve Papus" } })) as SortieSuspecte[]);
+      setSurplus(noms.slice(0, 9).map((n, i) => ({ id: "u" + i, bdl_id: "b" + i, code_barre_scanne: "540123400" + (1000 + i), produit_id: "p" + i, quantite_surplus: 2 + (i % 9), signale_par: null, signale_le: new Date(Date.now() - i * 9000000).toISOString(), statut: (i % 3 === 0 ? "en_attente" : i % 3 === 1 ? "accepte" : "refuse") as AlerteSurplus["statut"], decideur: null, decide_le: i % 3 === 0 ? null : new Date(Date.now() - i * 3600000).toISOString(), photo_preuve_url: null, notes: null, produits: { id: "p" + i, nom: n, ean: "540123400" + (1000 + i) }, bons_de_livraison: { id: "b" + i, numero_bdl: "BDL-2026-0" + (120 + i), fournisseurs: { id: "f" + (i % 3), nom: ["Sodiaal Sud", "Halal Distrib 31", "Maghreb Import"][i % 3] } } })) as AlerteSurplus[]);
+      setDemarque(noms.slice(0, 6).map((n, i) => ({ produit: n, ean: "540123400" + (2000 + i), entrees: 40 + i * 3, ventes: 22 + i, sorties_tracees: 2 + i, stock_theorique: 16 + i, stock_physique: 16 + i - (2 + i), ecart: -(2 + i), valeur: (2 + i) * 3.4 })));
+      setSortiesError(false);
       setLoading(false);
       return;
+      // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
     }
     // 1. Sorties suspectes (score IA < 0.7)
     // NB : on NE joint PAS `employes` directement — anon n'a plus SELECT sur
@@ -437,7 +493,8 @@ function AlertesPanel() {
       )
       .lt("ia_coherence_score", 0.7)
       .order("created_at", { ascending: false })
-      .limit(50);
+      // Plafond serveur assumé, ET AFFICHÉ sous le tableau (NotePlafond).
+      .limit(PLAFOND_SORTIES);
     if (sortiesErr) {
       console.error(
         "[alertes] chargement sorties suspectes échoué:",
@@ -541,7 +598,9 @@ function AlertesPanel() {
   return (
     <>
       {/* KPI top */}
-      <section className="px-5 mt-5 grid grid-cols-2 gap-2.5">
+      {/* À partir de lg les 3-4 KPI tiennent sur une rangée : à 1920 px, deux
+        cartes par rangée s'étiraient sur toute la largeur pour trois chiffres. */}
+      <section className="px-5 mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:max-w-[1000px]">
         <KpiCard
           variant="danger"
           icon={<AlertCircle className="w-4 h-4" />}
@@ -1007,13 +1066,155 @@ function SortiesPanel({
     );
   }
   return (
-    <div className="space-y-2.5 mt-1">
-      {sorties.map((s) => {
-        const isRed = s.ia_coherence_score < 0.5;
-        return (
-          <button
-            key={s.id}
-            onClick={() => onDetail(s)}
+    <>
+      {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────────────
+        La vignette portait 3 informations. Le tableau porte le type de
+        sortie, la quantité, le dépôt, la note de l'IA et l'horodatage exact,
+        et se trie par score pour attaquer les pires d'abord. */}
+      <section className="hidden lg:block">
+        <DataTable<SortieSuspecte>
+          rows={sorties}
+          getKey={(s) => s.id}
+          caption={`Sorties suspectes, ${sorties.length} ligne${sorties.length > 1 ? "s" : ""}`}
+          defaultSort={{ key: "score", dir: "asc" }}
+          onRowClick={(s) => onDetail(s)}
+          emptyLabel="Aucune sortie suspecte."
+          rowAccent={(s) =>
+            s.ia_coherence_score < 0.5 ? "var(--danger)" : "var(--warning)"
+          }
+          columns={[
+            {
+              key: "produit",
+              label: "Produit",
+              width: "240px",
+              sort: (a, b) =>
+                (a.produits?.nom ?? "").localeCompare(b.produits?.nom ?? "", "fr"),
+              render: (s) => (
+                <span
+                  className="font-semibold truncate block"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {s.produits?.nom ?? "Produit inconnu"}
+                </span>
+              ),
+            },
+            {
+              key: "type",
+              label: "Type de sortie",
+              width: "145px",
+              sort: (a, b) => a.type.localeCompare(b.type, "fr"),
+              render: (s) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {s.type.replace(/_/g, " ")}
+                </span>
+              ),
+            },
+            {
+              key: "quantite",
+              label: "Qté",
+              width: "75px",
+              align: "right",
+              sort: (a, b) => a.quantite - b.quantite,
+              render: (s) => (
+                <span
+                  className="font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {s.quantite}
+                </span>
+              ),
+            },
+            {
+              key: "employe",
+              label: "Opérateur",
+              width: "165px",
+              sort: (a, b) => nameOf(a.employes).localeCompare(nameOf(b.employes), "fr"),
+              render: (s) => (
+                <span
+                  className="truncate block"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {nameOf(s.employes)}
+                </span>
+              ),
+            },
+            {
+              key: "depot",
+              label: "Dépôt",
+              width: "140px",
+              xlOnly: true,
+              render: (s) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {s.depots?.nom ?? "—"}
+                </span>
+              ),
+            },
+            {
+              key: "score",
+              label: "Score IA",
+              width: "105px",
+              align: "right",
+              sort: (a, b) => a.ia_coherence_score - b.ia_coherence_score,
+              render: (s) => (
+                <span
+                  className="font-bold"
+                  style={{
+                    color:
+                      s.ia_coherence_score < 0.5
+                        ? "var(--danger)"
+                        : "var(--warning)",
+                  }}
+                >
+                  {(s.ia_coherence_score * 100).toFixed(0)} %
+                </span>
+              ),
+            },
+            {
+              key: "note",
+              label: "Note de l'IA",
+              xlOnly: true,
+              render: (s) => (
+                <span
+                  className="truncate block"
+                  style={{ color: "var(--text-tertiary)" }}
+                  title={s.ia_coherence_notes ?? undefined}
+                >
+                  {s.ia_coherence_notes ?? "—"}
+                </span>
+              ),
+            },
+            {
+              key: "quand",
+              label: "Horodatage",
+              width: "160px",
+              sort: (a, b) => a.created_at.localeCompare(b.created_at),
+              render: (s) => (
+                <span
+                  className="tabular-nums"
+                  style={{ color: "var(--text-secondary)" }}
+                  title={timeAgoFr(s.created_at)}
+                >
+                  {dateHeureTableau(s.created_at)}
+                </span>
+              ),
+            },
+          ]}
+        />
+        <NotePlafond>
+          {sorties.length} sortie{sorties.length > 1 ? "s" : ""} affichée
+          {sorties.length > 1 ? "s" : ""} · la requête ne remonte que les{" "}
+          {PLAFOND_SORTIES} plus récentes sous le seuil de 0,7.
+        </NotePlafond>
+      </section>
+
+      {/* ── TERRAIN (< lg) : vignettes au pouce, inchangées ───────────────── */}
+      <div className="lg:hidden space-y-2.5 mt-1">
+        {sorties.map((s) => {
+          const isRed = s.ia_coherence_score < 0.5;
+          return (
+            <button
+              key={s.id}
+              onClick={() => onDetail(s)}
             className={`w-full bg-white border rounded-2xl p-3.5 flex items-center gap-3 text-left active:scale-[0.99] transition-transform ${
               isRed ? "border-danger/40 shadow-card" : "border-warning/30"
             }`}
@@ -1049,9 +1250,10 @@ function SortiesPanel({
               </p>
             </div>
           </button>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -1067,8 +1269,141 @@ function DemarquePanel({ rows }: { rows: DemarqueRow[] }) {
     );
   }
   return (
-    <div className="space-y-3 mt-1">
-      {rows.map((r) => (
+    <>
+      {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────────────
+        Une démarque se lit en comparant sept nombres. En colonnes, l'écart
+        entre théorique et physique saute aux yeux d'une ligne à l'autre. */}
+      <section className="hidden lg:block">
+        <DataTable<DemarqueRow>
+          rows={rows}
+          getKey={(r) => r.ean}
+          caption={`Démarque détectée, ${rows.length} ligne${rows.length > 1 ? "s" : ""}`}
+          defaultSort={{ key: "valeur", dir: "desc" }}
+          emptyLabel="Aucune démarque détectée."
+          rowAccent={() => "var(--danger)"}
+          columns={[
+            {
+              key: "produit",
+              label: "Produit",
+              sort: (a, b) => a.produit.localeCompare(b.produit, "fr"),
+              render: (r) => (
+                <span
+                  className="font-semibold truncate block"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {r.produit}
+                </span>
+              ),
+            },
+            {
+              key: "ean",
+              label: "Code-barres",
+              width: "160px",
+              xlOnly: true,
+              render: (r) => (
+                <span
+                  className="mono text-[12.5px]"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  {r.ean}
+                </span>
+              ),
+            },
+            {
+              key: "entrees",
+              label: "Entrées",
+              width: "95px",
+              align: "right",
+              sort: (a, b) => a.entrees - b.entrees,
+              render: (r) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  +{r.entrees}
+                </span>
+              ),
+            },
+            {
+              key: "ventes",
+              label: "Ventes",
+              width: "95px",
+              align: "right",
+              sort: (a, b) => a.ventes - b.ventes,
+              render: (r) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  −{r.ventes}
+                </span>
+              ),
+            },
+            {
+              key: "sorties_tracees",
+              label: "Sorties tracées",
+              width: "135px",
+              align: "right",
+              xlOnly: true,
+              sort: (a, b) => a.sorties_tracees - b.sorties_tracees,
+              render: (r) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  −{r.sorties_tracees}
+                </span>
+              ),
+            },
+            {
+              key: "stock_theorique",
+              label: "Théorique",
+              width: "115px",
+              align: "right",
+              sort: (a, b) => a.stock_theorique - b.stock_theorique,
+              render: (r) => (
+                <span style={{ color: "var(--text-secondary)" }}>
+                  {r.stock_theorique}
+                </span>
+              ),
+            },
+            {
+              key: "stock_physique",
+              label: "Physique",
+              width: "115px",
+              align: "right",
+              sort: (a, b) => a.stock_physique - b.stock_physique,
+              render: (r) => (
+                <span
+                  className="font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {r.stock_physique}
+                </span>
+              ),
+            },
+            {
+              key: "ecart",
+              label: "Écart",
+              width: "100px",
+              align: "right",
+              sort: (a, b) => a.ecart - b.ecart,
+              render: (r) => (
+                <span className="font-bold" style={{ color: "var(--danger)" }}>
+                  {r.ecart} u.
+                </span>
+              ),
+            },
+            {
+              key: "valeur",
+              label: "Valeur perdue",
+              width: "140px",
+              align: "right",
+              sort: (a, b) => a.valeur - b.valeur,
+              render: (r) => (
+                <span className="font-bold" style={{ color: "var(--danger)" }}>
+                  {fr2(r.valeur)}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </section>
+
+      {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ──────────────────── */}
+      <div className="lg:hidden space-y-3 mt-1">
+        {rows.map((r) => (
         <div
           key={r.ean}
           className="bg-white border border-danger/30 rounded-2xl p-4 shadow-card"
@@ -1100,8 +1435,9 @@ function DemarquePanel({ rows }: { rows: DemarqueRow[] }) {
             <b className="text-danger tabular">{fr2(r.valeur)}</b>
           </p>
         </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -1128,7 +1464,161 @@ function SurplusPanel({
   const pending = items.filter((i) => i.statut === "en_attente");
   const historique = items.filter((i) => i.statut !== "en_attente");
   return (
-    <div className="space-y-3 mt-1">
+    <>
+      {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────────────
+        Un seul tableau au lieu de deux piles : les surplus en attente
+        remontent en tête (tri par défaut), l'historique reste lisible dans
+        la même grille — et SANS le plafond de 10 lignes de la version
+        téléphone, qui masquait le reste sans le dire. */}
+      <section className="hidden lg:block">
+        <DataTable<AlerteSurplus>
+          rows={items}
+          getKey={(s) => s.id}
+          caption={`Surplus fournisseurs, ${items.length} ligne${items.length > 1 ? "s" : ""} dont ${pending.length} en attente`}
+          defaultSort={{ key: "signale_le", dir: "desc" }}
+          onRowClick={(s) => onDetail(s)}
+          emptyLabel="Aucun surplus signalé."
+          rowAccent={(s) =>
+            s.statut === "en_attente"
+              ? "var(--danger)"
+              : s.statut === "accepte"
+                ? "var(--success)"
+                : null
+          }
+          columns={[
+            {
+              key: "produit",
+              label: "Produit",
+              sort: (a, b) =>
+                (a.produits?.nom ?? "").localeCompare(b.produits?.nom ?? "", "fr"),
+              render: (s) => (
+                <span
+                  className="font-semibold truncate block"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {s.produits?.nom ?? "Produit inconnu"}
+                </span>
+              ),
+            },
+            {
+              key: "code_barre",
+              label: "Code-barres",
+              width: "160px",
+              xlOnly: true,
+              render: (s) => (
+                <span
+                  className="mono text-[12.5px]"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  {s.code_barre_scanne}
+                </span>
+              ),
+            },
+            {
+              key: "fournisseur",
+              label: "Fournisseur",
+              width: "190px",
+              sort: (a, b) =>
+                (a.bons_de_livraison?.fournisseurs?.nom ?? "").localeCompare(
+                  b.bons_de_livraison?.fournisseurs?.nom ?? "",
+                  "fr",
+                ),
+              render: (s) => (
+                <span
+                  className="truncate block"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {s.bons_de_livraison?.fournisseurs?.nom ?? "—"}
+                </span>
+              ),
+            },
+            {
+              key: "bdl",
+              label: "N° BDL",
+              width: "150px",
+              render: (s) => (
+                <span
+                  className="mono text-[12.5px]"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  {s.bons_de_livraison?.numero_bdl ?? "—"}
+                </span>
+              ),
+            },
+            {
+              key: "quantite_surplus",
+              label: "Surplus",
+              width: "100px",
+              align: "right",
+              sort: (a, b) => a.quantite_surplus - b.quantite_surplus,
+              render: (s) => (
+                <span
+                  className="font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  +{s.quantite_surplus}
+                </span>
+              ),
+            },
+            {
+              key: "signale_le",
+              label: "Signalé le",
+              width: "160px",
+              sort: (a, b) => a.signale_le.localeCompare(b.signale_le),
+              render: (s) => (
+                <span
+                  className="tabular-nums"
+                  style={{ color: "var(--text-secondary)" }}
+                  title={timeAgoFr(s.signale_le)}
+                >
+                  {dateHeureTableau(s.signale_le)}
+                </span>
+              ),
+            },
+            {
+              key: "statut",
+              label: "Statut",
+              width: "140px",
+              sort: (a, b) => a.statut.localeCompare(b.statut, "fr"),
+              render: (s) => (
+                <Pastille
+                  couleur={
+                    s.statut === "en_attente"
+                      ? "var(--danger)"
+                      : s.statut === "accepte"
+                        ? "var(--success)"
+                        : "var(--text-tertiary)"
+                  }
+                  texte={
+                    s.statut === "en_attente"
+                      ? "En attente"
+                      : s.statut === "accepte"
+                        ? "Accepté"
+                        : "Refusé"
+                  }
+                />
+              ),
+            },
+            {
+              key: "decide_le",
+              label: "Décidé le",
+              width: "160px",
+              xlOnly: true,
+              render: (s) => (
+                <span
+                  className="tabular-nums"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  {dateHeureTableau(s.decide_le)}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </section>
+
+      {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ──────────────────── */}
+      <div className="lg:hidden space-y-3 mt-1">
       {pending.length === 0 ? (
         <div className="bg-success-soft border border-success/20 rounded-2xl p-6 text-center">
           <PackageCheck className="w-7 h-7 text-success mx-auto mb-2" />
@@ -1171,7 +1661,8 @@ function SurplusPanel({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -1235,26 +1726,38 @@ function HistoriquePanel({
   sorties: SortieSuspecte[];
   surplus: AlerteSurplus[];
 }) {
-  const merged = [
-    ...sorties.slice(0, 15).map((s) => ({
+  // Liste COMPLÈTE : c'est elle que lit le tableau du poste de travail.
+  // Les plafonds 15/15/30 d'origine étaient taillés pour une colonne de
+  // téléphone ; ils ne sont plus appliqués qu'à la vue téléphone.
+  const complet = [
+    ...sorties.map((s) => ({
+      id: `sortie-${s.id}`,
       kind: "sortie" as const,
       ts: s.created_at,
       title: s.produits?.nom ?? "Produit",
       sub: `${nameOf(s.employes)} · ${s.type.replace(/_/g, " ")}`,
       val: `${(s.ia_coherence_score * 100).toFixed(0)}%`,
     })),
-    ...surplus.slice(0, 15).map((s) => ({
+    ...surplus.map((s) => ({
+      id: `surplus-${s.id}`,
       kind: "surplus" as const,
       ts: s.signale_le,
       title: s.produits?.nom ?? "Produit",
-      sub: `Surplus ${s.bons_de_livraison?.fournisseurs?.nom ?? ""} · ${s.statut}`,
+      // Le statut brut de la base (accepte/refuse) ne s'affiche pas tel quel.
+      sub: `Surplus ${s.bons_de_livraison?.fournisseurs?.nom ?? ""} · ${
+        s.statut === "accepte"
+          ? "accepté"
+          : s.statut === "refuse"
+            ? "refusé"
+            : "en attente"
+      }`,
       val: `+${s.quantite_surplus}`,
     })),
-  ]
-    .sort((a, b) => (a.ts > b.ts ? -1 : 1))
-    .slice(0, 30);
+  ].sort((a, b) => (a.ts > b.ts ? -1 : 1));
 
-  if (merged.length === 0) {
+  const merged = complet.slice(0, 30);
+
+  if (complet.length === 0) {
     return (
       <p className="text-center text-sm text-text-tertiary py-6">
         Aucun historique.
@@ -1262,8 +1765,97 @@ function HistoriquePanel({
     );
   }
   return (
-    <div className="space-y-2 mt-1 opacity-90">
-      {merged.map((m, i) => (
+    <>
+      {/* ── POSTE DE TRAVAIL (≥ lg) : tableau, liste complète ─────────────── */}
+      <section className="hidden lg:block">
+        <DataTable<(typeof complet)[number]>
+          rows={complet}
+          getKey={(m) => m.id}
+          caption={`Historique des alertes traitées, ${complet.length} ligne${complet.length > 1 ? "s" : ""}`}
+          defaultSort={{ key: "quand", dir: "desc" }}
+          emptyLabel="Aucun historique."
+          columns={[
+            {
+              key: "nature",
+              label: "Nature",
+              width: "130px",
+              sort: (a, b) => a.kind.localeCompare(b.kind, "fr"),
+              render: (m) => (
+                <span
+                  className="inline-flex items-center gap-2 whitespace-nowrap"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {m.kind === "sortie" ? (
+                    <PackageX className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <Truck className="w-4 h-4 shrink-0" />
+                  )}
+                  {m.kind === "sortie" ? "Sortie" : "Surplus"}
+                </span>
+              ),
+            },
+            {
+              key: "produit",
+              label: "Produit",
+              width: "280px",
+              sort: (a, b) => a.title.localeCompare(b.title, "fr"),
+              render: (m) => (
+                <span
+                  className="font-semibold truncate block"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {m.title}
+                </span>
+              ),
+            },
+            {
+              key: "detail",
+              label: "Détail",
+              render: (m) => (
+                <span
+                  className="truncate block"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {m.sub}
+                </span>
+              ),
+            },
+            {
+              key: "valeur",
+              label: "Valeur",
+              width: "110px",
+              align: "right",
+              render: (m) => (
+                <span
+                  className="font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {m.val}
+                </span>
+              ),
+            },
+            {
+              key: "quand",
+              label: "Horodatage",
+              width: "160px",
+              sort: (a, b) => a.ts.localeCompare(b.ts),
+              render: (m) => (
+                <span
+                  className="tabular-nums"
+                  style={{ color: "var(--text-secondary)" }}
+                  title={timeAgoFr(m.ts)}
+                >
+                  {dateHeureTableau(m.ts)}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </section>
+
+      {/* ── TERRAIN (< lg) : liste au pouce, plafonnée à 30, inchangée ────── */}
+      <div className="lg:hidden space-y-2 mt-1 opacity-90">
+        {merged.map((m, i) => (
         <div
           key={i}
           className="bg-white border border-rule rounded-xl p-3 flex items-center gap-3"
@@ -1293,8 +1885,9 @@ function HistoriquePanel({
             {m.val}
           </p>
         </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 

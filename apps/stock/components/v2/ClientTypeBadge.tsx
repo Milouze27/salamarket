@@ -13,22 +13,23 @@ export type ClientType = "particulier" | "pro" | "traiteur";
  *  - Traiteur     : bordeaux sur danger-soft (service à la commande)
  */
 
-const STYLE: Record<ClientType, { bg: string; text: string; label: string; Icon: typeof ShoppingBasket }> = {
+/* 31/08/2026 — les couples fond/texte sont désormais des classes du design
+   system (globals.css), pas des utilitaires Tailwind : `bg-cream` vaut le
+   fond de page en thème nuit, le badge Particulier y devenait invisible
+   (1,86:1 mesuré au pixel). Chaque classe porte son inversion de thème. */
+const STYLE: Record<ClientType, { chip: string; label: string; Icon: typeof ShoppingBasket }> = {
   particulier: {
-    bg: "bg-cream",
-    text: "text-primary-dark",
+    chip: "badge-client-particulier",
     label: "Particulier",
     Icon: ShoppingBasket,
   },
   pro: {
-    bg: "bg-primary",
-    text: "text-gold",
+    chip: "badge-client-pro",
     label: "Pro",
     Icon: Building2,
   },
   traiteur: {
-    bg: "bg-gold-soft",
-    text: "text-primary-dark",
+    chip: "badge-client-traiteur",
     label: "Traiteur",
     Icon: ChefHat,
   },
@@ -48,7 +49,7 @@ export function ClientTypeBadge({
   const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-bold uppercase tracking-wide ${cfg.bg} ${cfg.text} ${padding} ${textSize}`}
+      className={`inline-flex items-center gap-1 rounded-full font-bold uppercase tracking-wide ${cfg.chip} ${padding} ${textSize}`}
     >
       <Icon className={iconSize} strokeWidth={2.4} />
       {cfg.label}

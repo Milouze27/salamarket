@@ -97,7 +97,7 @@ const COLUMNS: Array<{
     next: "retire",
     nextLabel: "Marquer retirée",
     accent: "bg-gold-soft border-gold/30",
-    textAccent: "text-primary-dark",
+    textAccent: "chip-or-text",
     emptyIcon: PackageCheck,
     emptyLabel: "Aucune commande prête",
   },
@@ -831,7 +831,7 @@ export default function V2PreparationKanbanPage() {
                               {nbAPeser > 0 && (
                                 <span
                                   title="Lignes au poids à peser"
-                                  className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide bg-gold-soft text-primary-dark px-2 py-0.5 rounded-full"
+                                  className="chip-or inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
                                 >
                                   <Scale className="w-3 h-3" aria-hidden />
                                   {nbAPeser} à peser

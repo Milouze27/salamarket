@@ -875,7 +875,7 @@ function WeightLineRow({
     action === "auto_accept"
       ? "bg-success-soft text-success"
       : action === "preparator_decision"
-        ? "bg-gold-soft text-primary-dark"
+        ? "chip-or"
         : action === "client_notify"
           ? "bg-warning-soft text-warning"
           : "bg-danger-soft text-danger";

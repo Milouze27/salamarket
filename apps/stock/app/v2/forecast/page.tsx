@@ -10,9 +10,15 @@
  * Source : view `v_stockout_critiques` (migration 0035). Tout est
  * pré-trié SQL : out → blocker → crit → warn, ascending par days_cover.
  *
- * Filtre par tier en pills horizontales (scroll-x sur mobile).
+ * Filtre par tier en pills horizontales (scroll-x sur mobile, wrap dès lg :
+ * sur un poste de travail la place ne manque plus, on ne cache rien).
  * Action principale par ligne : "Préparer commande" → ouvre le réassort
  * (/v2/po) où les bons de commande sont générés/confirmés depuis le forecast.
+ *
+ * Deux rendus de la même liste :
+ *   - ≥ lg : tableau (DataTable), trié par urgence — c'est un écran de
+ *     décision d'achat, on veut comparer trente lignes d'un coup d'œil ;
+ *   - < lg : les cartes d'origine, inchangées (usage au pouce en rayon).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,6 +38,7 @@ import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
+import { DataTable } from "@/components/v2/DataTable";
 import { supabase } from "@/lib/supabase";
 import { useV2 } from "@/lib/v2-store";
 import { resolveHijriContext, formatHijri } from "@/lib/forecast/hijri";
@@ -123,6 +130,68 @@ function formatDays(d: number | null): string {
   if (d === null) return "—";
   if (d < 1) return `${Math.round(d * 24)} h`;
   return `${d.toFixed(1)} j`;
+}
+
+/** Ordre d'urgence, identique au tri SQL de la vue : out → blocker → crit → warn. */
+const TIER_RANG: Record<StockoutTier, number> = {
+  out: 0,
+  blocker: 1,
+  crit: 2,
+  warn: 3,
+  ok: 4,
+};
+
+/** Comparateur d'urgence : niveau d'abord, puis couverture la plus courte. */
+function compareUrgence(a: ForecastRow, b: ForecastRow): number {
+  const r = TIER_RANG[a.tier] - TIER_RANG[b.tier];
+  if (r !== 0) return r;
+  return (a.days_cover ?? Infinity) - (b.days_cover ?? Infinity);
+}
+
+/** Couleur de statut d'une ligne (aucun hex : tokens seulement). */
+function tierColor(tier: StockoutTier): string {
+  if (tier === "warn") return "var(--status-warning-text)";
+  if (tier === "ok") return "var(--success)";
+  return "var(--status-danger-text)";
+}
+
+/** Pastille de niveau du tableau — même palette que les cartes, en casse normale. */
+function tierChipStyle(tier: StockoutTier): React.CSSProperties {
+  if (tier === "warn") {
+    return {
+      background: "var(--status-warning-bg)",
+      color: "var(--status-warning-text)",
+    };
+  }
+  if (tier === "ok") {
+    return { background: "var(--success-soft)", color: "var(--success)" };
+  }
+  return {
+    background: "var(--status-danger-bg)",
+    color: "var(--status-danger-text)",
+  };
+}
+
+/**
+ * Date de rupture prévue = instant du calcul + jours de couverture.
+ * Le forecast est un snapshot : on part de `computed_at`, pas de « maintenant »,
+ * sinon la date glisse à chaque consultation sans qu'aucun calcul ait été refait.
+ */
+function dateRupture(row: ForecastRow): Date | null {
+  if (row.days_cover === null) return null;
+  const base = row.computed_at ? new Date(row.computed_at) : new Date();
+  if (Number.isNaN(base.getTime())) return null;
+  return new Date(base.getTime() + row.days_cover * 86_400_000);
+}
+
+function formatDateRupture(row: ForecastRow): string {
+  const d = dateRupture(row);
+  if (!d) return "—";
+  return d.toLocaleDateString("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
 function recommendedOrder(row: ForecastRow): {
@@ -297,7 +366,9 @@ export default function ForecastPage() {
     : "—";
 
   return (
-    <V2Shell hideNav>
+    // layout="full" : dès lg on rend un tableau de 9 colonnes, la gouttière
+    // de 1 280 px du layout « flow » le comprimait inutilement à 1 920.
+    <V2Shell hideNav layout="full">
       <PageAccentStripe accent="sapin-or" />
       <header className="px-4 sm:px-5 pt-7">
         <BackButton />
@@ -387,7 +458,7 @@ export default function ForecastPage() {
       )}
 
       {/* KPI grid — 2-up sur mobile, 4-up dès lg pour densifier le desktop (LAY-12) */}
-      <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 w-full">
         <KpiCard
           index={0}
           variant="danger"
@@ -448,8 +519,11 @@ export default function ForecastPage() {
           </button>
         </div>
 
-        <div className="scroll-x-fade -mx-1">
-          <div className="flex gap-2 px-1 overflow-x-auto scrollbar-none">
+        {/* Sous lg : défilement horizontal au pouce (inchangé). Dès lg : les
+            pills se rangent sur une ou deux lignes — plus de défilement, donc
+            plus de fondu de bord à afficher non plus. */}
+        <div className="scroll-x-fade -mx-1 lg:before:hidden lg:after:hidden">
+          <div className="flex gap-2 px-1 overflow-x-auto scrollbar-none lg:flex-wrap lg:overflow-x-visible">
             {FILTERS.map((f) => {
               const n = f.key === "all" ? rows.length : counts[f.key];
               return (
@@ -487,7 +561,190 @@ export default function ForecastPage() {
             noDepot={!allDepots && !depot?.id}
           />
         ) : (
-          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 max-w-7xl mx-auto w-full">
+          <>
+            {/* ── POSTE DE TRAVAIL (≥ lg) : tableau de décision d'achat ─────
+              Les cartes montraient 4 lignes par écran à 1920 et obligeaient à
+              comparer de mémoire. Le tableau aligne stock, consommation,
+              couverture et date de rupture sur une même colonne. */}
+            <div className="hidden lg:block">
+              <DataTable
+                rows={filteredRows}
+                getKey={(r) => `${r.produit_id}-${r.depot_id}`}
+                caption={`Ruptures prévues, ${filteredRows.length} couples produit/dépôt, triés par urgence`}
+                defaultSort={{ key: "rupture", dir: "asc" }}
+                emptyLabel="Aucune ligne à ce niveau d'alerte."
+                rowAccent={(r) =>
+                  r.tier === "warn"
+                    ? "var(--warning)"
+                    : r.tier === "ok"
+                      ? null
+                      : "var(--danger)"
+                }
+                columns={[
+                  {
+                    key: "niveau",
+                    label: "Niveau",
+                    width: "112px",
+                    sort: compareUrgence,
+                    render: (r) => (
+                      <span
+                        className="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold whitespace-nowrap"
+                        style={tierChipStyle(r.tier)}
+                      >
+                        {TIER_LABEL[r.tier]}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "produit",
+                    label: "Produit",
+                    sort: (a, b) => a.produit_nom.localeCompare(b.produit_nom, "fr"),
+                    render: (r) => (
+                      <span
+                        className="font-semibold truncate block"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {r.produit_nom}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "ean",
+                    label: "Code-barres",
+                    width: "142px",
+                    xlOnly: true,
+                    render: (r) => (
+                      <span
+                        className="mono text-[12.5px]"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        {r.ean || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "depot",
+                    label: "Dépôt",
+                    width: "130px",
+                    sort: (a, b) => a.depot_nom.localeCompare(b.depot_nom, "fr"),
+                    render: (r) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {r.depot_nom}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "stock",
+                    label: "Stock",
+                    width: "84px",
+                    align: "right",
+                    sort: (a, b) => a.stock_actuel - b.stock_actuel,
+                    render: (r) => (
+                      <span
+                        className="font-bold"
+                        style={{
+                          color:
+                            r.stock_actuel === 0
+                              ? "var(--danger)"
+                              : "var(--text-primary)",
+                        }}
+                      >
+                        {r.stock_actuel}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "conso",
+                    label: "Conso./jour",
+                    width: "140px",
+                    align: "right",
+                    sort: (a, b) => a.velocity_adj - b.velocity_adj,
+                    // Le multiplicateur hijri reste sur la MÊME ligne : en
+                    // deuxième ligne il faisait grandir une ligne sur quatre et
+                    // cassait le rythme vertical du tableau.
+                    render: (r) => (
+                      <span className="inline-flex items-baseline justify-end gap-1.5 whitespace-nowrap">
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {r.velocity_adj.toFixed(1)}
+                        </span>
+                        {r.multiplicateur > 1.1 && !phaseStale && (
+                          <span
+                            className="text-[11.5px] font-semibold"
+                            style={{ color: "var(--or-text)" }}
+                            title={`Vélocité ajustée par la phase hijri (× ${r.multiplicateur.toFixed(2)})`}
+                          >
+                            ×{r.multiplicateur.toFixed(2)}
+                          </span>
+                        )}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "rupture",
+                    label: "Rupture dans",
+                    width: "132px",
+                    align: "right",
+                    sort: compareUrgence,
+                    render: (r) => (
+                      <span
+                        className="font-bold"
+                        style={{ color: tierColor(r.tier) }}
+                      >
+                        {formatDays(r.days_cover)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "date",
+                    label: "Date prévue",
+                    width: "146px",
+                    sort: compareUrgence,
+                    render: (r) =>
+                      r.tier === "out" ? (
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--status-danger-text)" }}
+                        >
+                          Déjà en rupture
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {formatDateRupture(r)}
+                        </span>
+                      ),
+                  },
+                  {
+                    key: "action",
+                    label: "",
+                    width: "196px",
+                    align: "right",
+                    render: (r) => {
+                      const rec = recommendedOrder(r);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => void handleDraftPO(r)}
+                          className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold whitespace-nowrap"
+                          style={{
+                            background: "var(--primary-green)",
+                            color: "var(--text-on-dark)",
+                          }}
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                          Commander · {rec.qty} {rec.unit}
+                        </button>
+                      );
+                    },
+                  },
+                ]}
+              />
+            </div>
+
+            {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ────────────── */}
+            <ul className="lg:hidden grid grid-cols-1 gap-2.5 w-full">
             {filteredRows.map((r, i) => {
               const style = TIER_STYLE[r.tier];
               const rec = recommendedOrder(r);
@@ -567,7 +824,8 @@ export default function ForecastPage() {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </>
         )}
       </section>
     </V2Shell>

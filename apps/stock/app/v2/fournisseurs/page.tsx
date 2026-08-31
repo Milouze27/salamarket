@@ -32,6 +32,7 @@ import { BackButton } from "@/components/v2/BackButton";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { GlassTabs, GlassTabPanel } from "@/components/v2/GlassTabs";
+import { DataTable } from "@/components/v2/DataTable";
 import { CertHalalBadge } from "@/components/po/cert-halal-badge";
 import { supabase } from "@/lib/supabase";
 
@@ -94,6 +95,18 @@ const ORGANISMES: CertifOrganisme[] = [
  *  sous le préfixe `certifs-halal/`. */
 const CERTIFS_BUCKET = "productions";
 
+/** Date courte FR pour les colonnes du tableau (« 12 juin 2026 », ou « — »). */
+function dateCourteFr(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /** Ordre de tri : urgence d'abord. */
 const ALERTE_ORDER = {
   expiree: 0,
@@ -124,7 +137,9 @@ export default function AchatsPage() {
   }
 
   return (
-    <V2Shell>
+    // layout="full" : les trois onglets rendent des tableaux dès lg. La
+    // gouttière de 1 280 px du layout par défaut les comprimait à 1 920.
+    <V2Shell layout="full">
       <PageAccentStripe accent="or-sapin" />
       <div className="px-5 pt-4 pb-nav-stack">
         <BackButton href="/v2/admin" />
@@ -135,7 +150,7 @@ export default function AchatsPage() {
             <em className="gold">Achats</em>
           </h1>
           <p
-            className="body-md mt-2"
+            className="body-md mt-2 lg:max-w-[70ch]"
             style={{ color: "var(--text-secondary)" }}
           >
             {TAB_SOUS_LIBELLE[tab]}
@@ -170,6 +185,16 @@ function FournisseursPanel() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<FournisseurFull | null>(null);
+  // Colonnes de contexte du tableau desktop. Chargées à part, en best-effort :
+  // si `produits_fournisseurs` ou `purchase_orders` sont indisponibles (RLS,
+  // migration non jouée), on affiche « — » plutôt que de faire échouer la
+  // liste des fournisseurs elle-même.
+  const [nbReferences, setNbReferences] = useState<Map<string, number>>(
+    new Map(),
+  );
+  const [derniereCommande, setDerniereCommande] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   useEffect(() => {
     void load();
@@ -202,6 +227,45 @@ function FournisseursPanel() {
       setList((data ?? []) as unknown as FournisseurFull[]);
     }
     setLoading(false);
+    void loadContexte(sb);
+  }
+
+  /** Nombre de références catalogue + date de la dernière commande, par
+   *  fournisseur. Deux requêtes légères, jamais bloquantes pour l'affichage. */
+  async function loadContexte(sb: NonNullable<ReturnType<typeof supabase>>) {
+    const [refs, pos] = await Promise.all([
+      sb.from("produits_fournisseurs").select("fournisseur_id").limit(5000),
+      sb
+        .from("purchase_orders")
+        .select("fournisseur_id, date_creation")
+        .order("date_creation", { ascending: false })
+        .limit(1000),
+    ]);
+    if (!refs.error && refs.data) {
+      const m = new Map<string, number>();
+      for (const r of refs.data as Array<{ fournisseur_id: string }>) {
+        m.set(r.fournisseur_id, (m.get(r.fournisseur_id) ?? 0) + 1);
+      }
+      setNbReferences(m);
+    } else if (refs.error) {
+      console.warn("[fournisseurs] références indisponibles", refs.error.message);
+    }
+    if (!pos.error && pos.data) {
+      const m = new Map<string, string>();
+      for (const p of pos.data as Array<{
+        fournisseur_id: string;
+        date_creation: string;
+      }>) {
+        // Requête déjà triée du plus récent au plus ancien : la première
+        // occurrence d'un fournisseur est sa dernière commande.
+        if (!m.has(p.fournisseur_id) && p.date_creation) {
+          m.set(p.fournisseur_id, p.date_creation);
+        }
+      }
+      setDerniereCommande(m);
+    } else if (pos.error) {
+      console.warn("[fournisseurs] commandes indisponibles", pos.error.message);
+    }
   }
 
   const filtered = useMemo(() => {
@@ -237,8 +301,9 @@ function FournisseursPanel() {
 
   return (
     <>
-        {/* Strip stats */}
-        <div className="grid grid-cols-5 gap-2 mb-5">
+        {/* Strip stats — plafonné sur grand écran : cinq compteurs étirés sur
+            1 600 px ne se lisent pas mieux, ils se lisent moins bien. */}
+        <div className="grid grid-cols-5 gap-2 mb-5 lg:max-w-[860px]">
           <StatPill value={counts.expiree} label="Expirés" tone="danger" />
           <StatPill value={counts.manquante} label="Manquants" tone="danger" />
           <StatPill value={counts.expire_30j} label="< 30 j" tone="warning" />
@@ -296,7 +361,185 @@ function FournisseursPanel() {
             )}
           </div>
         ) : (
-          <ul className="space-y-3">
+          <>
+            {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────────
+              Une carte par fournisseur ne portait que le nom, l'email et le
+              certif. Le tableau ajoute le délai, le nombre de références et la
+              dernière commande — les trois chiffres qui servent à décider. */}
+            <div className="hidden lg:block">
+              <DataTable
+                rows={filtered}
+                getKey={(f) => f.id}
+                caption={`Fournisseurs actifs, ${filtered.length} lignes, triés par urgence de certificat halal`}
+                defaultSort={{ key: "certif", dir: "asc" }}
+                onRowClick={(f) => setEditing(f)}
+                emptyLabel="Aucun fournisseur ne correspond à cette recherche."
+                rowAccent={(f) => {
+                  const a = certifAlerte(f.certif_expire_le);
+                  if (a === "expiree" || a === "manquante")
+                    return "var(--danger)";
+                  if (a === "expire_30j") return "var(--warning)";
+                  return null;
+                }}
+                columns={[
+                  {
+                    key: "nom",
+                    label: "Fournisseur",
+                    sort: (a, b) => a.nom.localeCompare(b.nom, "fr"),
+                    render: (f) => (
+                      <span
+                        className="font-semibold truncate block"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {f.nom}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "contact",
+                    label: "Contact commandes",
+                    width: "240px",
+                    sort: (a, b) =>
+                      (a.email_commandes ?? "").localeCompare(
+                        b.email_commandes ?? "",
+                        "fr",
+                      ),
+                    render: (f) => (
+                      <span
+                        className="truncate block"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {f.email_commandes || "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "certif",
+                    label: "Certif halal",
+                    width: "215px",
+                    sort: (a, b) => {
+                      const d =
+                        ALERTE_ORDER[certifAlerte(a.certif_expire_le)] -
+                        ALERTE_ORDER[certifAlerte(b.certif_expire_le)];
+                      return d !== 0 ? d : a.nom.localeCompare(b.nom, "fr");
+                    },
+                    render: (f) => (
+                      <CertHalalBadge
+                        organisme={f.certif_organisme}
+                        numero={f.certif_numero}
+                        expireLe={f.certif_expire_le}
+                        size="sm"
+                      />
+                    ),
+                  },
+                  {
+                    key: "delai",
+                    label: "Délai",
+                    width: "92px",
+                    align: "right",
+                    sort: (a, b) =>
+                      (a.lead_time_jours ?? Infinity) -
+                      (b.lead_time_jours ?? Infinity),
+                    render: (f) =>
+                      f.lead_time_jours != null ? (
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {f.lead_time_jours} j
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      ),
+                  },
+                  {
+                    key: "references",
+                    label: "Références",
+                    width: "112px",
+                    align: "right",
+                    xlOnly: true,
+                    sort: (a, b) =>
+                      (nbReferences.get(a.id) ?? 0) -
+                      (nbReferences.get(b.id) ?? 0),
+                    render: (f) => {
+                      const n = nbReferences.get(f.id);
+                      return n ? (
+                        <span
+                          className="font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {n}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      );
+                    },
+                  },
+                  {
+                    key: "derniere",
+                    label: "Dernière commande",
+                    width: "168px",
+                    xlOnly: true,
+                    sort: (a, b) =>
+                      (derniereCommande.get(a.id) ?? "").localeCompare(
+                        derniereCommande.get(b.id) ?? "",
+                      ),
+                    render: (f) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {dateCourteFr(derniereCommande.get(f.id) ?? null)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "pdf",
+                    label: "Certificat",
+                    width: "116px",
+                    xlOnly: true,
+                    render: (f) =>
+                      f.certif_pdf_url ? (
+                        <a
+                          href={f.certif_pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold"
+                          style={{ color: "var(--primary-green)" }}
+                        >
+                          <FileText size={13} /> PDF
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      ),
+                  },
+                  {
+                    key: "action",
+                    label: "",
+                    width: "56px",
+                    align: "center",
+                    render: (f) => (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditing(f);
+                        }}
+                        aria-label={`Éditer ${f.nom}`}
+                        className="w-9 h-9 rounded-full inline-flex items-center justify-center"
+                        style={{
+                          background: "var(--surface-2)",
+                          color: "var(--text-primary)",
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    ),
+                  },
+                ]}
+              />
+            </div>
+
+            {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ────────────── */}
+            <ul className="space-y-3 lg:hidden">
             {filtered.map((f) => (
               <motion.li
                 key={f.id}
@@ -349,7 +592,8 @@ function FournisseursPanel() {
                 </div>
               </motion.li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
 
       <EditDrawer

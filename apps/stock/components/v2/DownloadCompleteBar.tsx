@@ -36,7 +36,7 @@ export function DownloadCompleteBar({
           transition={{ type: "spring", damping: 28, stiffness: 280 }}
           role="status"
           aria-live="polite"
-          className="fixed inset-x-0 z-[55] pointer-events-none px-3"
+          className="bar-desktop fixed inset-x-0 z-[55] pointer-events-none px-3"
           style={{
             bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
           }}

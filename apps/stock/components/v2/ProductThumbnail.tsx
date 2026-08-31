@@ -58,9 +58,16 @@ const TONE_BG: Record<TileTone, string> = {
   night: "#082A20",
 };
 
+/* Ces couleurs sont volontairement HORS thème : la vignette doit garder la
+   même apparence de jour comme de nuit (« un mur de livres reliés »). C'est
+   la seule entorse assumée à la règle « pas de hex en dur ».
+   31/08/2026 — l'or #C9A227 sur le sapin pâle #2A4F40 mesurait 3,79:1 au
+   pixel, sous le seuil de 4,5 pour les initiales de 12 px du tableau Stock.
+   L'or brillant #DDB31C sur le même fond mesure 4,60:1. Les trois autres
+   tons étaient déjà au-dessus (5,16 / 6,37 / 11,65). */
 const TONE_FG: Record<TileTone, string> = {
   sapin: "#C9A227",
-  "sapin-soft": "#C9A227",
+  "sapin-soft": "#DDB31C",
   cream: "#0E3B2E",
   night: "#C9A227",
 };

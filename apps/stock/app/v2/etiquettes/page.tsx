@@ -189,7 +189,7 @@ export default function V2EtiquettesPage() {
   }
 
   return (
-    <V2Shell>
+    <V2Shell layout="full">
       <PageAccentStripe accent="sapin" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -249,7 +249,7 @@ export default function V2EtiquettesPage() {
             compact
           />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
             {items.map((p, i) => {
               const n = copies[p.id] ?? 0;
               const prix = prixTtcOf(p);

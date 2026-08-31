@@ -988,7 +988,10 @@ body.theme-nuit {
   /* ── Texte cream désaturé (jamais blanc pur) ── */
   --text-primary: #f3f0e6; /* 14.8:1 AAA */
   --text-secondary: #a8b4ac; /* 8.2:1 */
-  --text-tertiary: #7c8a82; /* 4.7:1 */
+  /* 31/08/2026 — mesuré au pixel : 3,77:1 sur --surface-2 et 4,26:1 sur
+     une carte, sous le seuil AA de 4,5 pour du texte de 11 à 12 px.
+     Éclairci de #7c8a82 à #8e9b93 : 4,70 / 5,15 / 6,54 selon la surface. */
+  --text-tertiary: #8e9b93;
   --text-gold: #f2d469; /* 11.1:1 */
   --text-on-gold: #0a1f18;
   --text-on-dark: #f3f0e6;
@@ -1984,4 +1987,154 @@ body.theme-jour .h1-display em {
   main input[type="search"] {
     max-width: 460px;
   }
+}
+
+/* ══ PLANCHER TYPOGRAPHIQUE SUR ORDINATEUR ════════════════════════════
+   Relevé du 31/08/2026 : 358 textes en dur à 11 px ou moins (155 à 11 px,
+   87 à 10,5 px, 80 à 10 px, 20 à 9,5 px, 4 à 9 px), plus les 114 usages de
+   .label-caps qui est elle-même à 11 px. Ces tailles ont été réglées pour
+   un iPhone tenu à 30 cm. Le même écran regardé à 60 cm depuis un fauteuil
+   de bureau demande le double d'angle visuel.
+   On remonte le plancher de 1 à 2 px seulement — assez pour lire, trop peu
+   pour casser une mise en page. Aucun effet sous 1024 px : le terrain garde
+   ses tailles au millimètre près. */
+@media (min-width: 1024px) {
+  .text-\[9px\] { font-size: 11px; }
+  .text-\[9\.5px\] { font-size: 11px; }
+  .text-\[10px\] { font-size: 11.5px; }
+  .text-\[10\.5px\] { font-size: 12px; }
+  .text-\[11px\] { font-size: 12.5px; }
+  .text-\[11\.5px\] { font-size: 12.5px; }
+  .text-\[12px\] { font-size: 13px; }
+  .text-\[12\.5px\] { font-size: 13px; }
+  .label-caps { font-size: 12px; }
+  .section-eyebrow { font-size: 12px; }
+}
+
+/* ══ FEUILLES DU BAS → FENÊTRES CENTRÉES SUR ORDINATEUR ═══════════════
+   Relevé du 31/08/2026 : 18 feuilles montaient du bas de l'écran, plafonnées
+   à 460 px, ancrées au bord inférieur du viewport donc partiellement sous la
+   barre latérale. Au comptoir c'est le bon geste (le pouce la referme) ; sur
+   un poste fixe, c'est un objet qui vient de nulle part.
+   Centrage SANS transform : top/bottom à 0 + marges automatiques. Un
+   translate CSS entrerait en conflit avec l'animation d'entrée de
+   framer-motion, qui écrit son propre transform en style inline. */
+@media (min-width: 1024px) {
+  .sheet-desktop {
+    top: 0;
+    bottom: 0;
+    left: var(--aside-w);
+    margin-top: auto;
+    margin-bottom: auto;
+    height: fit-content;
+    max-height: 86vh;
+    max-width: 560px;
+    border-radius: 26px;
+    padding-bottom: 20px;
+  }
+  /* La poignée de glissement ne veut rien dire à la souris. */
+  .sheet-desktop .sheet-handle {
+    display: none;
+  }
+}
+
+/* ── Panneau de fenêtre : le fond était `bg-white` EN DUR ──────────────
+   Six fenêtres du parcours réception (confirmation, surplus, apprentissage
+   carton, création produit, signature du bon, édition de stock) peignaient
+   un fond blanc. En thème NUIT — le thème par défaut de l'app — le texte
+   `--text-primary` y vaut #f3f0e6 : crème sur blanc, 1,09:1. Le contenu
+   était invisible, sans qu'aucune erreur ne soit levée.
+   Ces fenêtres ne s'ouvrent que sur action : aucune capture de page ne
+   pouvait les voir. */
+.sheet-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+}
+@media (min-width: 1024px) {
+  .sheet-panel {
+    border-radius: 26px;
+    max-width: 560px;
+  }
+}
+
+/* ── Deux couples fond/texte qui ne s'inversaient pas avec le thème ────
+   Trouvés par la sonde de lisibilité le 31/08/2026, contrastes mesurés sur
+   les pixels rendus.
+
+   1. `.chip-or` remplace `bg-gold-soft text-primary-dark`. En thème jour,
+      --accent-gold-soft est un or pâle opaque : le vert sombre s'y lit très
+      bien. En nuit, ce même token devient un voile translucide à 12 % sur
+      fond abyssal — le vert sombre y tombait à 1,86:1 (« Particulier »,
+      « Prêtes au retrait »). Il faut l'or clair. */
+.chip-or {
+  background: var(--accent-gold-soft);
+  color: var(--primary-green-dark);
+}
+:root:not([data-theme="jour"]) .chip-or,
+[data-theme="nuit"] .chip-or,
+body.theme-nuit .chip-or {
+  color: var(--accent-gold-bright);
+}
+
+/*  2. `.btn-warning` remplace `bg-warning text-white`. En nuit, --warning est
+      un ambre CLAIR (#f2b43c) : le blanc y tombait à 1,85:1 et le libellé en
+      or à 1,08:1 — un avertissement illisible, sur le bouton de validation de
+      l'inventaire. Sur un fond ambre, le texte doit être sombre, quel que
+      soit le thème. */
+.btn-warning {
+  background: var(--warning);
+  color: var(--text-on-gold);
+}
+.btn-warning * {
+  color: inherit;
+}
+
+/* Variante « texte seul » du couple ci-dessus, pour les accents de colonne
+   (en-tête de file « Prêtes au retrait ») qui n'ont pas de fond propre. */
+.chip-or-text {
+  color: var(--primary-green-dark);
+}
+:root:not([data-theme="jour"]) .chip-or-text,
+[data-theme="nuit"] .chip-or-text,
+body.theme-nuit .chip-or-text {
+  color: var(--accent-gold-bright);
+}
+
+/* ── Badges Particulier / Pro / Traiteur ──────────────────────────────
+   Le badge « Particulier » portait `bg-cream text-primary-dark`. En thème
+   nuit, --bg-cream vaut #08130f, c'est-à-dire EXACTEMENT le fond de page :
+   le badge n'avait plus de fond, et son texte vert sombre tombait à 1,86:1.
+   Le badge « Pro » (or sur sapin) mesurait 3,82:1, sous le seuil.
+   Trois couples explicites, inversés par thème, plutôt que des classes
+   utilitaires dont la valeur change de sens d'un thème à l'autre. */
+.badge-client-particulier {
+  background: var(--bg-cream);
+  color: var(--primary-green-dark);
+}
+.badge-client-pro {
+  background: var(--primary-green);
+  color: var(--accent-gold-bright);
+}
+.badge-client-traiteur {
+  background: var(--accent-gold-soft);
+  color: var(--primary-green-dark);
+}
+:root:not([data-theme="jour"]) .badge-client-particulier,
+[data-theme="nuit"] .badge-client-particulier,
+body.theme-nuit .badge-client-particulier {
+  background: var(--surface-2);
+  color: var(--primary-green-light);
+}
+:root:not([data-theme="jour"]) .badge-client-pro,
+[data-theme="nuit"] .badge-client-pro,
+body.theme-nuit .badge-client-pro {
+  background: var(--primary-green-dark);
+  color: var(--accent-gold-bright);
+}
+:root:not([data-theme="jour"]) .badge-client-traiteur,
+[data-theme="nuit"] .badge-client-traiteur,
+body.theme-nuit .badge-client-traiteur {
+  background: var(--surface-2);
+  color: var(--warning);
 }

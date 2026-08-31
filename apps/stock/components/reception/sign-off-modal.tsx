@@ -101,14 +101,14 @@ export function SignOffModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center"
         >
           <motion.div
             initial={{ y: 80 }}
             animate={{ y: 0 }}
             exit={{ y: 80 }}
             transition={{ type: "spring", damping: 26, stiffness: 260 }}
-            className="bg-white w-full max-w-[460px] rounded-t-[28px] shadow-card-lg max-h-[92vh] overflow-y-auto"
+            className="sheet-panel w-full max-w-[460px] rounded-t-[28px] shadow-card-lg max-h-[92vh] overflow-y-auto"
           >
             {/* Header */}
             <div className="px-6 pt-6 pb-3 sticky top-0 bg-white border-b border-rule z-10">

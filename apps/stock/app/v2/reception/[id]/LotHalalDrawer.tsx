@@ -171,7 +171,7 @@ export function LotHalalDrawer({
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         transition={{ type: "spring", damping: 32, stiffness: 360 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col"
+        className="sheet-desktop fixed inset-x-0 bottom-0 z-50 flex flex-col"
         style={{
           maxHeight: "94vh",
           background: "var(--bg-cream)",

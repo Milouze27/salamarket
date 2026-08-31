@@ -26,7 +26,7 @@ export function ValidationFooter({
   onFinalize: () => void;
 }) {
   return (
-    <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+    <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
       <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
         {bdl.statut === "receptionnee" ? (
           <>

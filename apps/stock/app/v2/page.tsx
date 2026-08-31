@@ -96,7 +96,7 @@ export default function V2HomePage() {
   const intro = introForRole(role);
 
   return (
-    <V2Shell>
+    <V2Shell layout="wide">
       <header className="px-5 pt-7">
         <EditorialEyebrow
           num="01"

@@ -648,7 +648,7 @@ export default function BdlScanFirstPage() {
         )}
 
         {/* Liste compacte des lignes — verre, cascade, 2 colonnes sur desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
           {bdl.bons_de_livraison_lignes.map((l, i) => {
             const ecart = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
             const isRecu =
@@ -733,7 +733,7 @@ export default function BdlScanFirstPage() {
       </section>
 
       {/* ─── ACTIONS FLOTTANTES ───────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+      <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
           {/* ML-5 — Avertissement BLOQUANT certif halal fournisseur.
               Tant que le comptable n'a pas acquitté, la finalisation est

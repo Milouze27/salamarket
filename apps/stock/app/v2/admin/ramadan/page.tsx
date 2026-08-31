@@ -134,7 +134,7 @@ export default function RamadanModePage() {
   // ─── Hors saison : état calme ───────────────────────────────────
   if (!mode) {
     return (
-      <V2Shell hideNav>
+      <V2Shell hideNav layout="wide">
         <PageAccentStripe accent="sapin-or" />
         <header className="px-4 sm:px-5 pt-7">
           <BackButton href="/v2/admin" />
@@ -166,7 +166,7 @@ export default function RamadanModePage() {
   const ramp = mode.kind.startsWith("pre_");
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="wide">
       <PageAccentStripe accent="sapin-or" />
       <header className="px-4 sm:px-5 pt-7">
         <BackButton href="/v2/admin" />

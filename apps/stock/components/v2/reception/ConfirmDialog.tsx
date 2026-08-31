@@ -62,7 +62,7 @@ export function ConfirmDialog({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+          className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end lg:items-center justify-center"
           onClick={onCancel}
         >
           <motion.div
@@ -70,7 +70,7 @@ export function ConfirmDialog({
             animate={{ y: 0 }}
             exit={{ y: 60 }}
             transition={{ type: "spring", damping: 26, stiffness: 280 }}
-            className="bg-white w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
+            className="sheet-panel w-full max-w-[460px] rounded-t-[28px] p-6 pb-8 shadow-card-lg"
             onClick={(e) => e.stopPropagation()}
             role="alertdialog"
             aria-modal="true"

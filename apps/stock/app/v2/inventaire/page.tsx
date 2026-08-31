@@ -314,7 +314,7 @@ export default function V2InventairePage() {
               Compte physiquement, saisis la quantité, valide.
             </p>
           </div>
-          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
           {mine.map((r, i) => {
             const isMine = r.employe_assigne_id === employe?.id;
             const c = parseInt(counts[r.id] ?? "", 10);
@@ -412,7 +412,7 @@ export default function V2InventairePage() {
       )}
 
       {tab === "aujourdhui" && (
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+      <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
           {(() => {
             const { totalMine, compteCount, minePending, fillable } = cloture;
@@ -434,7 +434,7 @@ export default function V2InventairePage() {
                 onClick={validateAll}
                 disabled={submitting || nothingAssigned || !canValidate}
                 className={`w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 transition-colors active:scale-[0.99] ${
-                  noneFilled ? "bg-warning text-white" : "bg-primary text-white"
+                  noneFilled ? "btn-warning" : "bg-primary text-white"
                 }`}
               >
                 <div className="text-left">

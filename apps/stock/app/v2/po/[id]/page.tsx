@@ -388,7 +388,7 @@ export default function PoDetailPage() {
       {/* CTA bottom */}
       {isDraft && (
         <div
-          className="fixed inset-x-0 cta-above-nav z-30 px-4"
+          className="bar-desktop fixed inset-x-0 cta-above-nav z-30 px-4"
           style={{ background: "transparent" }}
         >
           <div

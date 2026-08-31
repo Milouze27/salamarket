@@ -208,9 +208,12 @@ export default function PointagePage() {
   }, [rows]);
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="full">
       <PageAccentStripe accent="sapin-or" />
-      <div className="mx-auto w-full max-w-3xl lg:max-w-5xl">
+      {/* 31/08/2026 — le plafond lg:max-w-5xl (1024 px) bridait la seule page
+        du projet qui portait déjà un vrai tableau. Le pointage a autant de
+        colonnes qu'il y a de jours travaillés : on lui rend la largeur. */}
+      <div className="mx-auto w-full max-w-3xl lg:max-w-none">
       <header className="px-4 sm:px-5 pt-7">
         <BackButton />
         <EditorialEyebrow num="01" label="RH" className="mt-3" />
@@ -299,7 +302,7 @@ export default function PointagePage() {
             description="Dès qu'un membre de l'équipe pointe son arrivée, il apparaît ici avec ses heures."
           />
         ) : (
-          <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          <ul className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
             {rows.map((p, i) => {
               const min = computeHeures(p);
               const enService = p.check_in && !p.check_out;
@@ -695,7 +698,7 @@ function EditDrawer({
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         transition={{ type: "spring", damping: 32, stiffness: 360 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col lg:mx-auto lg:max-w-lg"
+        className="sheet-desktop fixed inset-x-0 bottom-0 z-50 flex flex-col lg:mx-auto lg:max-w-lg"
         style={{
           maxHeight: "92vh",
           background: "var(--surface-1)",

@@ -487,7 +487,7 @@ export default function V2TransfertPage() {
         </section>
       )}
 
-      <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+      <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="sticky-action-inner pt-3 pb-3 pointer-events-auto">
           <button
             onClick={submit}

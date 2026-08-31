@@ -19,6 +19,7 @@ import {
   Truck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DataTable } from "@/components/v2/DataTable";
 import { supabase } from "@/lib/supabase";
 
 interface BdlRow {
@@ -49,6 +50,33 @@ function fmtDateTimeFr(iso: string | null) {
     minute: "2-digit",
     timeZone: "Europe/Paris",
   });
+}
+
+/** Totaux de lignes d'un BR — utilisés par la carte ET par le tableau. */
+function totauxBdl(r: BdlRow) {
+  const lignes = r.bons_de_livraison_lignes.length;
+  const attendu = r.bons_de_livraison_lignes.reduce(
+    (s, l) => s + l.quantite_attendue,
+    0,
+  );
+  const recu = r.bons_de_livraison_lignes.reduce(
+    (s, l) => s + l.quantite_recue,
+    0,
+  );
+  return { lignes, attendu, recu, ecart: recu - attendu };
+}
+
+/** ADM-04 : le BR est derrière un lien signé. On ouvre l'onglet AVANT
+ *  l'await (sinon le navigateur le compte comme pop-up), puis on y pose
+ *  l'URL signée générée côté serveur. */
+function ouvrirBrPdf(bdlId: string) {
+  const win = window.open("", "_blank", "noopener,noreferrer");
+  void import("@/lib/actions/doc-url")
+    .then((m) => m.signBonReceptionPdfUrl(bdlId))
+    .then((url) => {
+      if (win) win.location.href = url;
+    })
+    .catch(() => win?.close());
 }
 
 export function ReceptionsPanel() {
@@ -194,7 +222,192 @@ export function ReceptionsPanel() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2.5">
+        <>
+          {/* ── POSTE DE TRAVAIL (≥ lg) : tableau des BR ────────────────────
+            L'écart reçu/attendu est la colonne qui décide d'un litige : il
+            était noyé en bas de carte, il devient une colonne triable. */}
+          <div className="hidden lg:block">
+            <DataTable
+              rows={filtered}
+              getKey={(r) => r.id}
+              caption={`Bons de réception validés, ${filtered.length} lignes`}
+              defaultSort={{ key: "date", dir: "desc" }}
+              emptyLabel="Aucun BR sur cette période."
+              rowAccent={(r) => {
+                const { ecart } = totauxBdl(r);
+                if (ecart < 0) return "var(--danger)";
+                if (ecart > 0) return "var(--warning)";
+                return null;
+              }}
+              columns={[
+                {
+                  key: "numero",
+                  label: "N° BR",
+                  width: "148px",
+                  sort: (a, b) => a.numero_bdl.localeCompare(b.numero_bdl, "fr"),
+                  render: (r) => (
+                    <span
+                      className="mono text-[12.5px] font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {r.numero_bdl}
+                    </span>
+                  ),
+                },
+                {
+                  key: "numero_fourn",
+                  label: "N° fournisseur",
+                  width: "168px",
+                  xlOnly: true,
+                  render: (r) => (
+                    <span
+                      className="mono text-[12.5px]"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      {r.numero_bdl_fournisseur || "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "fournisseur",
+                  label: "Fournisseur",
+                  sort: (a, b) =>
+                    (a.fournisseurs?.nom ?? "").localeCompare(
+                      b.fournisseurs?.nom ?? "",
+                      "fr",
+                    ),
+                  render: (r) => (
+                    <span
+                      className="font-semibold truncate block"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {r.fournisseurs?.nom ?? "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "depot",
+                  label: "Dépôt",
+                  width: "132px",
+                  sort: (a, b) =>
+                    (a.depots?.nom ?? "").localeCompare(b.depots?.nom ?? "", "fr"),
+                  render: (r) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {r.depots?.nom ?? "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "date",
+                  label: "Réceptionné le",
+                  width: "168px",
+                  sort: (a, b) =>
+                    (a.receptionne_le ?? "").localeCompare(b.receptionne_le ?? ""),
+                  render: (r) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {fmtDateTimeFr(r.receptionne_le)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "statut",
+                  label: "Statut",
+                  width: "112px",
+                  render: () => (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-bold whitespace-nowrap"
+                      style={{
+                        background: "var(--success-soft)",
+                        color: "var(--success)",
+                      }}
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Validé
+                    </span>
+                  ),
+                },
+                {
+                  key: "lignes",
+                  label: "Lignes",
+                  width: "84px",
+                  align: "right",
+                  sort: (a, b) => totauxBdl(a).lignes - totauxBdl(b).lignes,
+                  render: (r) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {totauxBdl(r).lignes}
+                    </span>
+                  ),
+                },
+                {
+                  key: "quantites",
+                  label: "Reçu / attendu",
+                  width: "148px",
+                  align: "right",
+                  sort: (a, b) => totauxBdl(a).recu - totauxBdl(b).recu,
+                  render: (r) => {
+                    const t = totauxBdl(r);
+                    return (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        <b style={{ color: "var(--text-primary)" }}>{t.recu}</b>
+                        {" / "}
+                        {t.attendu}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "ecart",
+                  label: "Écart",
+                  width: "96px",
+                  align: "right",
+                  sort: (a, b) => totauxBdl(a).ecart - totauxBdl(b).ecart,
+                  render: (r) => {
+                    const { ecart } = totauxBdl(r);
+                    if (ecart === 0) {
+                      return (
+                        <span style={{ color: "var(--text-tertiary)" }}>0</span>
+                      );
+                    }
+                    return (
+                      <span
+                        className="font-bold"
+                        style={{
+                          color:
+                            ecart < 0 ? "var(--danger)" : "var(--warning)",
+                        }}
+                      >
+                        {ecart > 0 ? "+" : ""}
+                        {ecart}
+                      </span>
+                    );
+                  },
+                },
+                {
+                  key: "pdf",
+                  label: "",
+                  width: "124px",
+                  align: "right",
+                  render: (r) => (
+                    <button
+                      type="button"
+                      onClick={() => ouvrirBrPdf(r.id)}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold whitespace-nowrap"
+                      style={{
+                        background: "var(--primary-green)",
+                        color: "var(--text-on-dark)",
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      BR PDF
+                    </button>
+                  ),
+                },
+              ]}
+            />
+          </div>
+
+          {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ─────────────── */}
+          <div className="space-y-2.5 lg:hidden">
           {filtered.map((r, idx) => {
             const totalLignes = r.bons_de_livraison_lignes.length;
             const totalAttendu = r.bons_de_livraison_lignes.reduce(
@@ -234,22 +447,7 @@ export function ReceptionsPanel() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      // ADM-04 : route BR protégée par lien signé. On ouvre
-                      // l'onglet avant l'await (anti pop-up) puis on y pose
-                      // l'URL signée générée côté serveur.
-                      const win = window.open(
-                        "",
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                      void import("@/lib/actions/doc-url")
-                        .then((m) => m.signBonReceptionPdfUrl(r.id))
-                        .then((url) => {
-                          if (win) win.location.href = url;
-                        })
-                        .catch(() => win?.close());
-                    }}
+                    onClick={() => ouvrirBrPdf(r.id)}
                     className="bg-primary text-white rounded-full px-3.5 py-2 text-[11.5px] font-bold inline-flex items-center gap-1.5 shadow-card active:scale-[0.97] transition-transform shrink-0"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -313,7 +511,8 @@ export function ReceptionsPanel() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
     </>
   );

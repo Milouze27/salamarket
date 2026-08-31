@@ -241,7 +241,7 @@ export default function AssistantIAPage() {
       {/* Composer — ancré en bas, CONTENU (largeur alignée sur la colonne de
           chat). L'outer fixed est transparent : le bg/blur/bordure vit sur le
           bloc centré, plus de bande floutée pleine largeur (fix desktop). */}
-      <div className="fixed bottom-0 inset-x-0 z-30 pointer-events-none">
+      <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pointer-events-none">
         <div className="mx-auto w-full max-w-[460px] lg:max-w-[760px] px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 pointer-events-auto">
           {messages.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-hide">

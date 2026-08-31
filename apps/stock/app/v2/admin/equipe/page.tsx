@@ -251,7 +251,7 @@ export default function EquipePage() {
           />
         </div>
       ) : (
-        <section className="px-5 mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3 pb-28">
+        <section className="px-5 mt-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 pb-28">
           {employes.map((e, i) => (
             <div
               key={e.id}
@@ -331,7 +331,7 @@ export default function EquipePage() {
 
       {/* CTA créer — barre flottante */}
       {!loading && employes.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+        <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
           <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto">
             <button
               onClick={ouvrirCreation}

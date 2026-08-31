@@ -24,12 +24,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState as SharedEmptyState } from "@/components/shared/EmptyState";
+import { DataTable } from "@/components/v2/DataTable";
 import { CertHalalBadge } from "@/components/po/cert-halal-badge";
 import { PoDrawer } from "@/components/po/po-drawer";
 import { supabase } from "@/lib/supabase";
 import {
   certifAlerte,
   STATUT_LABELS,
+  type PoStatut,
   type PurchaseOrderWithJoin,
 } from "@/lib/types/po";
 
@@ -52,6 +54,47 @@ function dateFr(iso: string | null) {
     day: "numeric",
     month: "short",
   });
+}
+
+/** Même date, avec l'année : dans un tableau on compare des exercices. */
+function dateFrAn(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/** Pastille de statut du tableau — tokens uniquement, casse normale. */
+function statutStyle(statut: PoStatut): React.CSSProperties {
+  switch (statut) {
+    case "brouillon":
+      return {
+        background: "var(--accent-gold-soft)",
+        color: "var(--or-text)",
+      };
+    case "partiellement_recue":
+      return {
+        background: "var(--status-warning-bg)",
+        color: "var(--status-warning-text)",
+      };
+    case "recue":
+      return { background: "var(--success-soft)", color: "var(--success)" };
+    case "annulee":
+      return {
+        background: "var(--status-danger-bg)",
+        color: "var(--status-danger-text)",
+      };
+    default:
+      return {
+        background: "var(--surface-2)",
+        color: "var(--text-secondary)",
+        border: "1px solid var(--border-hairline)",
+      };
+  }
 }
 
 export function CommandesPanel() {
@@ -181,8 +224,9 @@ export function CommandesPanel() {
 
   return (
     <>
-      {/* KPI row */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      {/* KPI row — plafonné dès lg : trois compteurs étirés sur 1 600 px
+          perdent en lisibilité au lieu d'en gagner. */}
+      <div className="grid grid-cols-3 gap-3 mb-5 lg:max-w-[860px]">
         <KpiCard
           label="À valider"
           value={String(counts.a_valider)}
@@ -259,7 +303,200 @@ export function CommandesPanel() {
       ) : filtered.length === 0 ? (
         <EmptyState tab={tab} />
       ) : (
-        <ul className="space-y-3">
+        <>
+          {/* ── POSTE DE TRAVAIL (≥ lg) : tableau des bons de commande ─────
+            Numéro, montant et nombre de lignes se comparent en colonne ;
+            la carte les noyait dans trois blocs différents. */}
+          <div className="hidden lg:block">
+            <DataTable
+              rows={filtered}
+              getKey={(po) => po.id}
+              caption={`Bons de commande, ${filtered.length} lignes`}
+              defaultSort={{ key: "date", dir: "desc" }}
+              onRowClick={(po) => setDrawer(po)}
+              emptyLabel="Aucune commande dans cet état."
+              rowAccent={(po) => {
+                const a = certifAlerte(po.fournisseurs?.certif_expire_le);
+                return a === "expiree" || a === "manquante"
+                  ? "var(--danger)"
+                  : null;
+              }}
+              columns={[
+                {
+                  key: "numero",
+                  label: "N° commande",
+                  width: "136px",
+                  sort: (a, b) => a.numero_po.localeCompare(b.numero_po, "fr"),
+                  render: (po) => (
+                    <span
+                      className="mono text-[12.5px] font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {po.numero_po}
+                    </span>
+                  ),
+                },
+                {
+                  key: "fournisseur",
+                  label: "Fournisseur",
+                  sort: (a, b) =>
+                    (a.fournisseurs?.nom ?? "").localeCompare(
+                      b.fournisseurs?.nom ?? "",
+                      "fr",
+                    ),
+                  render: (po) => (
+                    <span
+                      className="font-semibold truncate block"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {po.fournisseurs?.nom ?? "Fournisseur"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "certif",
+                  label: "Certif halal",
+                  width: "182px",
+                  xlOnly: true,
+                  render: (po) => (
+                    <CertHalalBadge
+                      organisme={po.fournisseurs?.certif_organisme ?? null}
+                      numero={po.fournisseurs?.certif_numero}
+                      expireLe={po.fournisseurs?.certif_expire_le}
+                      size="sm"
+                    />
+                  ),
+                },
+                {
+                  key: "depot",
+                  label: "Dépôt",
+                  width: "128px",
+                  xlOnly: true,
+                  sort: (a, b) =>
+                    (a.depots?.nom ?? "").localeCompare(
+                      b.depots?.nom ?? "",
+                      "fr",
+                    ),
+                  render: (po) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {po.depots?.nom ?? "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "date",
+                  label: "Créée le",
+                  width: "136px",
+                  sort: (a, b) =>
+                    (a.date_creation ?? "").localeCompare(b.date_creation ?? ""),
+                  render: (po) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {dateFrAn(po.date_creation)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "livraison",
+                  label: "Livraison prévue",
+                  width: "156px",
+                  xlOnly: true,
+                  sort: (a, b) =>
+                    (a.date_livraison_prevue ?? "").localeCompare(
+                      b.date_livraison_prevue ?? "",
+                    ),
+                  render: (po) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {dateFrAn(po.date_livraison_prevue)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "statut",
+                  label: "Statut",
+                  width: "158px",
+                  sort: (a, b) => a.statut.localeCompare(b.statut),
+                  render: (po) => (
+                    <span
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-bold whitespace-nowrap"
+                      style={statutStyle(po.statut)}
+                    >
+                      {STATUT_LABELS[po.statut]}
+                    </span>
+                  ),
+                },
+                {
+                  key: "lignes",
+                  label: "Lignes",
+                  width: "82px",
+                  align: "right",
+                  sort: (a, b) =>
+                    (a.purchase_order_lignes?.length ?? 0) -
+                    (b.purchase_order_lignes?.length ?? 0),
+                  render: (po) => (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {po.purchase_order_lignes?.length ?? 0}
+                    </span>
+                  ),
+                },
+                {
+                  key: "montant",
+                  label: "Montant HT",
+                  width: "128px",
+                  align: "right",
+                  sort: (a, b) =>
+                    (Number(a.total_ht) || 0) - (Number(b.total_ht) || 0),
+                  render: (po) => (
+                    <span
+                      className="font-bold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {eur(po.total_ht ?? 0)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "action",
+                  label: "",
+                  width: "140px",
+                  align: "right",
+                  render: (po) => {
+                    const alerte = certifAlerte(
+                      po.fournisseurs?.certif_expire_le,
+                    );
+                    const blocked =
+                      alerte === "expiree" || alerte === "manquante";
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1 text-[12.5px] font-semibold whitespace-nowrap"
+                        style={{
+                          color: blocked
+                            ? "var(--danger)"
+                            : "var(--primary-green)",
+                        }}
+                      >
+                        {blocked ? (
+                          <>
+                            <ShieldAlert size={13} /> Envoi bloqué
+                          </>
+                        ) : po.statut === "brouillon" ? (
+                          <>
+                            Valider <ChevronRight size={13} />
+                          </>
+                        ) : (
+                          <>
+                            Voir <ChevronRight size={13} />
+                          </>
+                        )}
+                      </span>
+                    );
+                  },
+                },
+              ]}
+            />
+          </div>
+
+          {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ───────────── */}
+          <ul className="space-y-3 lg:hidden">
           {filtered.map((po, idx) => {
             const alerte = certifAlerte(po.fournisseurs?.certif_expire_le);
             const blocked = alerte === "expiree" || alerte === "manquante";
@@ -342,7 +579,8 @@ export function CommandesPanel() {
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </>
       )}
 
       <PoDrawer

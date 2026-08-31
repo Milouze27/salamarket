@@ -401,7 +401,7 @@ export default function CoupDeFeuPage() {
                             {prepares}/{totalLignes} préparés
                           </span>
                           {nbAPeser > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide bg-gold-soft text-primary-dark px-1.5 py-0.5 rounded-full">
+                            <span className="chip-or inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full">
                               <Scale className="w-2.5 h-2.5" aria-hidden />
                               {nbAPeser} à peser
                             </span>

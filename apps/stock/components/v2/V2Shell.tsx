@@ -416,6 +416,16 @@ function sheetGroupsFor(role: string, primaryHrefs: Set<string>): SheetGroup[] {
   ].filter((g) => g.items.length > 0);
 }
 
+/** Largeur de travail du contenu par famille de page, en pixels CSS.
+ *  Exposée en variable --main-w pour que les barres d'action collées
+ *  (position fixed, donc hors du flux) s'alignent sur la colonne. */
+const MAIN_W: Record<"flow" | "wide" | "full" | "form", string> = {
+  flow: "min(1280px, 100%)",
+  wide: "min(1760px, 100%)",
+  full: "100%",
+  form: "min(820px, 100%)",
+};
+
 export function V2Shell({
   children,
   hideNav = false,
@@ -440,11 +450,16 @@ export function V2Shell({
    * Largeur de travail du contenu sur ordinateur. Le châssis (en-tête, barres
    * d'action) occupe toujours la pleine largeur ; seul le contenu est cadré.
    *
-   *  - "flow"  (défaut) : colonne de lecture — flux d'action, formulaires.
+   *  - "flow"  (défaut) : colonne de lecture.
    *  - "wide"           : tableau de bord multi-colonnes.
    *  - "full"           : tableau de données, prend toute la largeur utile.
+   *  - "form"           : écran de saisie. Volontairement étroit : un bouton
+   *    « Scanner le produit » de 1 240 px de large (mesuré sur /v2/sortie à
+   *    1920 px) ne se lit ni ne se vise mieux qu'un bouton de 700 px, il se
+   *    lit moins bien. Sur un écran de saisie on ne remplit pas la largeur
+   *    pour la remplir.
    */
-  layout?: "flow" | "wide" | "full";
+  layout?: "flow" | "wide" | "full" | "form";
 }) {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -482,11 +497,15 @@ export function V2Shell({
         "--aside-w",
         mq.matches ? (asideCollapsed ? "76px" : "268px") : "0px",
       );
+      document.documentElement.style.setProperty(
+        "--main-w",
+        mq.matches ? MAIN_W[layout ?? (wide ? "wide" : "flow")] : "100%",
+      );
     };
     apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
-  }, [asideCollapsed]);
+  }, [asideCollapsed, layout, wide]);
 
   const toggleAside = () =>
     setAsideCollapsed((prev) => {
@@ -634,7 +653,7 @@ export function V2Shell({
   const containerClass =
     "mx-auto w-full max-w-[520px] sm:max-w-[820px] md:max-w-[1024px] lg:max-w-none min-h-[100dvh] relative";
 
-  const effectiveLayout: "flow" | "wide" | "full" =
+  const effectiveLayout: "flow" | "wide" | "full" | "form" =
     layout ?? (wide ? "wide" : "flow");
 
   // Largeur de travail du contenu. Sous lg, tout reste en colonne unique :
@@ -643,6 +662,7 @@ export function V2Shell({
     flow: "lg:max-w-[1080px] xl:max-w-[1200px] 2xl:max-w-[1280px]",
     wide: "lg:max-w-[1180px] xl:max-w-[1480px] 2xl:max-w-[1760px]",
     full: "lg:max-w-none",
+    form: "lg:max-w-[760px] xl:max-w-[820px]",
   }[effectiveLayout];
 
   return (

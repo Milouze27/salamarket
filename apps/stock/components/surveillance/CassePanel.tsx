@@ -117,12 +117,22 @@ const NIVEAU_RANG: Record<NiveauAnomalie, number> = {
   normal: 2,
 };
 
-/** Gravité d'un type de perte — filet du tableau des casses récentes.
- *  La démarque inconnue est la pire : aucune explication, aucun responsable. */
-function accentType(type: string): string | null {
+/** Couleur d'un type de perte — pastille de la colonne « Motif ». */
+function couleurType(type: string): string {
   if (type === "demarque_inconnue") return "var(--status-danger)";
-  if (type === "autre") return null;
+  if (type === "perime_dlc" || type === "perime_ddm") return "var(--accent-gold)";
+  if (type === "autre") return "var(--text-tertiary)";
   return "var(--status-warning)";
+}
+
+/**
+ * Filet vertical de tête de ligne. Volontairement PLUS restrictif que la
+ * pastille : mesuré à 1920 px, marquer les six types de perte posait un filet
+ * sur 24 lignes sur 28. Seule la démarque inconnue le garde — c'est la seule
+ * ligne sans explication ni responsable.
+ */
+function filetGravite(type: string): string | null {
+  return type === "demarque_inconnue" ? "var(--status-danger)" : null;
 }
 
 /** Date + heure pour les tableaux du poste de travail (l'écran a la place). */
@@ -192,6 +202,32 @@ export function CassePanel() {
 
   const load = useCallback(async () => {
     const depotId = allDepots ? undefined : depot?.id;
+    /* __QA_RECETTE__ */
+    await new Promise((r) => setTimeout(r, 120));
+
+    const CATS = ["Boucherie", "Crèmerie", "Fruits & légumes", "Traiteur", "Boulangerie", "Épicerie salée", "Surgelés", "Poissonnerie", "Boissons", "Sans catégorie"];
+    setAnomalies(CATS.map((categorie, i) => {
+      const obs = 42.5 - i * 3.4;
+      const mu = 18 + (i % 4) * 5;
+      const sigma = i === 9 ? 0 : 4 + (i % 3) * 2.5;
+      const z = sigma > 0 ? Math.round(((obs - mu) / sigma) * 100) / 100 : null;
+      const niveau: NiveauAnomalie = z === null ? "normal" : Math.abs(z) >= 2.5 ? "alerte" : Math.abs(z) >= 1.5 ? "warning" : "normal";
+      return { categorie, observe_jour_eur: obs, observe_total_eur: Math.round(obs * 7 * 100) / 100, baseline_mu_eur: mu, baseline_sigma_eur: sigma, ecart_eur: Math.round((obs - mu) * 100) / 100, z_score: z, niveau, baseline_indisponible: sigma <= 0 };
+    }));
+    const NOMS = ["Poulet fermier entier", "Yaourt brebis nature", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Olives Kalamata 500 g", "Beurre demi-sel 250 g", "Tomate grappe kg", "Escalope de dinde kg", "Crème fraîche 20 cl", "Baklava plateau 500 g", "Coriandre fraîche botte", "Sardines à l'huile", "Merguez maison 500 g", "Fromage halloumi 250 g", "Œufs plein air x12", "Chorba prête 400 ml", "Agneau gigot kg", "Jus de grenade 1 L", "Poivron rouge kg", "Dattes Deglet Nour 1 kg", "Boulettes kefta 400 g", "Semoule fine 5 kg", "Miel de jujubier 500 g", "Thon albacore 200 g", "Cornes de gazelle x8"];
+    const TYPES = ["casse_manipulation", "casse_client", "perime_dlc", "perime_ddm", "defaut_fournisseur", "demarque_inconnue", "autre"];
+    const MOTIFS = [null, "Carton tombé du transpalette", null, "Rupture chaîne du froid nuit", null, "Écart constaté à l'inventaire tournant", "Emballage percé à la réception"];
+    setRecentes(NOMS.map((produit_nom, i) => ({
+      id: `qa-${i}`,
+      produit_nom,
+      type: TYPES[i % TYPES.length],
+      quantite: ((i * 5) % 17) + 1,
+      motif_libre: MOTIFS[i % MOTIFS.length],
+      created_at: new Date(Date.UTC(2026, 7, 31, 18, 40) - i * 11 * 3600000).toISOString(),
+    })));
+    setLoadError(null);
+    setLoading(false);
+    if (Date.now() > 0) return;
     try {
       const [a, p, r] = await Promise.all([
         computeAnomalies(days, depotId),
@@ -216,34 +252,7 @@ export function CassePanel() {
     void load().finally(() => setLoading(false));
   }, [load]);
 
-  /* __QA_RECETTE__ */
-  useEffect(() => {
-    const __t = setTimeout(() => {
-    const CATS = ["Boucherie", "Crèmerie", "Fruits & légumes", "Traiteur", "Boulangerie", "Épicerie salée", "Surgelés", "Poissonnerie", "Boissons", "Sans catégorie"];
-    setAnomalies(CATS.map((categorie, i) => {
-      const obs = 42.5 - i * 3.4;
-      const mu = 18 + (i % 4) * 5;
-      const sigma = i === 9 ? 0 : 4 + (i % 3) * 2.5;
-      const z = sigma > 0 ? Math.round(((obs - mu) / sigma) * 100) / 100 : null;
-      const niveau: NiveauAnomalie = z === null ? "normal" : Math.abs(z) >= 2.5 ? "alerte" : Math.abs(z) >= 1.5 ? "warning" : "normal";
-      return { categorie, observe_jour_eur: obs, observe_total_eur: Math.round(obs * 7 * 100) / 100, baseline_mu_eur: mu, baseline_sigma_eur: sigma, ecart_eur: Math.round((obs - mu) * 100) / 100, z_score: z, niveau, baseline_indisponible: sigma <= 0 };
-    }));
-    const NOMS = ["Poulet fermier entier", "Yaourt brebis nature", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Olives Kalamata 500 g", "Beurre demi-sel 250 g", "Tomate grappe kg", "Escalope de dinde kg", "Crème fraîche 20 cl", "Baklava plateau 500 g", "Coriandre fraîche botte", "Sardines à l'huile", "Merguez maison 500 g", "Fromage halloumi 250 g", "Œufs plein air x12", "Chorba prête 400 ml", "Agneau gigot kg", "Jus de grenade 1 L", "Poivron rouge kg", "Dattes Deglet Nour 1 kg", "Boulettes kefta 400 g", "Semoule fine 5 kg", "Miel de jujubier 500 g", "Thon albacore 200 g", "Cornes de gazelle x8"];
-    const TYPES = ["casse_manipulation", "casse_client", "perime_dlc", "perime_ddm", "defaut_fournisseur", "demarque_inconnue", "autre"];
-    const MOTIFS = [null, "Carton tombé du transpalette", null, "Rupture chaîne du froid nuit", null, "Écart constaté à l'inventaire tournant", "Emballage percé à la réception"];
-    setRecentes(NOMS.map((produit_nom, i) => ({
-      id: `qa-${i}`,
-      produit_nom,
-      type: TYPES[i % TYPES.length],
-      quantite: ((i * 5) % 17) + 1,
-      motif_libre: MOTIFS[i % MOTIFS.length],
-      created_at: new Date(Date.UTC(2026, 7, 31, 18, 40) - i * 11 * 3600000).toISOString(),
-    })));
-    setLoadError(null);
-    setLoading(false);
-    }, 2000);
-    return () => clearTimeout(__t);
-  }, []);
+
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -680,7 +689,8 @@ export function CassePanel() {
               <NoteTableau>
                 {anomalies.length} catégorie{anomalies.length > 1 ? "s" : ""}{" "}
                 affichée{anomalies.length > 1 ? "s" : ""} · liste complète, sans
-                plafond. Seuils : vigilance à {Z_WARNING}σ, alerte à {Z_ALERTE}σ.
+                plafond. Seuils : vigilance à {Z_WARNING.toLocaleString("fr-FR")} σ, alerte
+                à {Z_ALERTE.toLocaleString("fr-FR")} σ.
               </NoteTableau>
             </div>
 
@@ -729,7 +739,7 @@ export function CassePanel() {
                 caption={`Casses déclarées sur 14 jours, ${recentes.length} ligne${recentes.length > 1 ? "s" : ""}`}
                 defaultSort={{ key: "quand", dir: "desc" }}
                 emptyLabel="Aucune casse déclarée."
-                rowAccent={(c) => accentType(c.type)}
+                rowAccent={(c) => filetGravite(c.type)}
                 columns={[
                   {
                     key: "quand",
@@ -787,7 +797,7 @@ export function CassePanel() {
                       ),
                     render: (c) => (
                       <Pastille
-                        couleur={accentType(c.type)}
+                        couleur={couleurType(c.type)}
                         texte={SORTIE_TYPE_LABEL[c.type] ?? c.type}
                       />
                     ),

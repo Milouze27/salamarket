@@ -60,9 +60,14 @@ export function EmptyState({
 }: EmptyStateProps) {
   const ctaClassName =
     "inline-flex items-center justify-center min-h-[44px] px-5 rounded-full text-[14px] font-bold active:scale-[0.98] transition-transform";
+  // 31/08/2026 — `--text-primary` sur `--primary-green` : en thème jour
+  // c'est du quasi-noir (#0f1a14) sur du sapin très sombre (#0e3b2e),
+  // mesuré à 1,43:1. Le bouton était illisible sur les 9 pages qui
+  // utilisent cet état vide. `--text-on-dark` est le token prévu pour un
+  // texte posé sur une surface sombre : 12,47:1 en jour, 5,74:1 en nuit.
   const ctaStyle = {
     background: "var(--primary-green)",
-    color: "var(--text-primary)",
+    color: "var(--text-on-dark)",
     boxShadow: "var(--glow-cta)",
   } as const;
 

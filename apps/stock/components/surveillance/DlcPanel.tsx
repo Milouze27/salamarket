@@ -95,7 +95,7 @@ const NIVEAU_STYLE: Record<
   },
 };
 
-/** Couleur de gravité d'un niveau, en token — sert au filet de ligne. */
+/** Couleur d'un niveau, en token — pastille de la colonne « Niveau ». */
 const NIVEAU_ACCENT: Record<Niveau, string> = {
   forcé: "var(--danger)",
   critique: "var(--danger)",
@@ -103,6 +103,18 @@ const NIVEAU_ACCENT: Record<Niveau, string> = {
   surveillance: "var(--accent-gold)",
   ok: "var(--success)",
 };
+
+/**
+ * Filet vertical de tête de ligne. Volontairement PLUS restrictif que la
+ * pastille : mesuré à 1920 px, marquer les cinq niveaux posait un filet sur
+ * les 33 lignes — un signal présent partout ne signale plus rien. Seuls les
+ * lots à traiter aujourd'hui (forcé, critique) et à J-2/J-3 en portent un.
+ */
+function filetGravite(n: Niveau): string | null {
+  if (n === "forcé" || n === "critique") return "var(--danger)";
+  if (n === "attention") return "var(--warning)";
+  return null;
+}
 
 /** Ordre de gravité décroissante — tri de la colonne « Niveau ». */
 const NIVEAU_RANG: Record<Niveau, number> = {
@@ -695,7 +707,7 @@ export function DlcPanel() {
                 caption={`Alertes DLC, ${alerts.length} lot${alerts.length > 1 ? "s" : ""}`}
                 defaultSort={{ key: "jours", dir: "asc" }}
                 emptyLabel="Aucune alerte DLC."
-                rowAccent={(a) => NIVEAU_ACCENT[a.niveau_alerte]}
+                rowAccent={(a) => filetGravite(a.niveau_alerte)}
                 columns={[
                   {
                     key: "niveau",

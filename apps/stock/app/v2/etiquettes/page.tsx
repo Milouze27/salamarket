@@ -406,7 +406,7 @@ function FormatTab({
           <span>{label}</span>
           <span
             className={`text-[10px] font-semibold ${
-              active ? "text-gold-bright" : "text-text-tertiary"
+              active ? "text-[color:var(--gold-ink)]" : "text-text-tertiary"
             }`}
           >
             {sub}

@@ -354,7 +354,7 @@ export default function CounterPage() {
           l'espace iPad paysage. Le cap est LEVÉ en `2xl` (≥1536px) → le mode
           TV/fullscreen (~1920px) reprend toute la largeur (pleine surface
           néon, inchangé). Le fond/vignette du <main> reste pleine page. */}
-      <header className="relative w-full md:max-w-[820px] md:mx-auto 2xl:max-w-none 2xl:mx-0 px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
+      <header className="relative w-full md:max-w-[820px] md:mx-auto lg:max-w-none lg:mx-0 px-8 lg:px-14 pt-8 lg:pt-12 pb-4 flex items-start justify-between gap-6">
         <div className="min-w-0">
           <p
             className="font-bold tracking-[0.32em] uppercase text-[var(--accent-gold-dim)]"
@@ -477,7 +477,7 @@ function CounterGrid({
     // L99-iPad : même cadrage que le header (820px centré ≥md, levé en 2xl
     // pour le mode TV/fullscreen). overflow badge + EmptyState restent dans ce
     // cadre, donc l'écran iPad paysage ne disperse plus les bornes au bord.
-    <section className="w-full md:max-w-[820px] md:mx-auto 2xl:max-w-none 2xl:mx-0 px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] relative">
+    <section className="w-full md:max-w-[820px] md:mx-auto lg:max-w-none lg:mx-0 px-8 lg:px-14 pb-8 lg:pb-12 h-[calc(100%-200px)] relative">
       {!loaded ? null : sorted.length === 0 ? (
         <EmptyState />
       ) : (

@@ -368,7 +368,7 @@ export default function V2SortiePage() {
     (type !== "autre" || motifLibre.trim().length > 0);
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="form">
       <PageAccentStripe accent="bordeaux" />
       <header className="px-5 pt-7">
         <BackButton />
@@ -677,7 +677,10 @@ export default function V2SortiePage() {
           <button
             onClick={submit}
             disabled={!canSubmit || submitting}
-            className="w-full bg-danger text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 press-btn"
+            /* 31/08/2026 — blanc sur --danger mesurait 3,94:1. --danger-ink est le
+              même rouge assombri d'un cran : 6,5:1, sans changer la couleur perçue. */
+            className="w-full text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 press-btn"
+            style={{ background: "var(--danger-ink)" }}
           >
             <div className="text-left">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/85">

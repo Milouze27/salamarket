@@ -297,7 +297,13 @@ export function ActivitePanel({
           operateur: nomEmploye(r.employe_id),
           detail: [
             r.fournisseur ?? null,
-            r.numero_bl ? `BL ${r.numero_bl}` : null,
+            // Le libellé « BL » n'est pas ajouté si le numéro le porte déjà :
+            // certains fournisseurs numérotent « BL-26-4100 ».
+            r.numero_bl
+              ? /^bl/i.test(r.numero_bl)
+                ? r.numero_bl
+                : `BL ${r.numero_bl}`
+              : null,
             r.reception_vide ? "réception vide" : null,
           ]
             .filter(Boolean)

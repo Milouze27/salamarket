@@ -165,7 +165,7 @@ function ImportPageInner() {
   const isCashmag = type === "cashmag";
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="form">
       <header className="px-5 pt-7">
         <BackButton />
         <p className="section-eyebrow mt-3">

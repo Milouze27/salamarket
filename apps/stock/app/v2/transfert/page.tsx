@@ -234,7 +234,7 @@ export default function V2TransfertPage() {
     !depasseStock;
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="form">
       <PageAccentStripe accent="or" />
       <header className="px-5 pt-7">
         <BackButton />

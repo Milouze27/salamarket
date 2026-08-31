@@ -133,7 +133,7 @@ export default function AssistantIAPage() {
   }
 
   return (
-    <V2Shell hideNav>
+    <V2Shell hideNav layout="form">
       <PageAccentStripe accent="sapin-or" />
       <header className="px-5 pt-7 pb-3 border-b border-rule">
         <BackButton />

@@ -1910,8 +1910,11 @@ body.theme-jour .h1-display em {
   --aside-w: 0px;
 }
 @media (min-width: 1024px) {
+  /* --main-w est posée par V2Shell selon la famille de page : la barre
+     d'action reprend exactement la largeur de la colonne au-dessus d'elle,
+     au lieu de s'étirer sur toute la fenêtre. */
   .sticky-action-inner {
-    max-width: 1080px;
+    max-width: var(--main-w, 1080px);
     padding-left: 24px;
     padding-right: 24px;
   }
@@ -1920,11 +1923,7 @@ body.theme-jour .h1-display em {
     left: var(--aside-w);
   }
 }
-@media (min-width: 1280px) {
-  .sticky-action-inner {
-    max-width: 1200px;
-  }
-}
+
 
 /* ══ LOT 1 — EN-TÊTE DE PAGE SUR ORDINATEUR ═══════════════════════════
    Le motif `<header className="px-5 pt-7">` + grand titre est copié 25 fois.

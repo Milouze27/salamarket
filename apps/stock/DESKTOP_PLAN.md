@@ -89,3 +89,96 @@ sonde a comparé deux fonds. Non retenu.
 2. Le téléphone est re-mesuré à chaque lot (390 px) : toute régression bloque.
 3. Pas de nouvelle couleur, pas de nouvelle police, pas d'effet supplémentaire.
 4. Toute page qui gagne un tableau garde une vue en cartes sous 1024 px.
+
+---
+
+## Ce qui a été fait, et ce qui a été mesuré (31/08/2026)
+
+### Le chiffre d'ensemble, à 1920 px
+
+Deux relevés faits dans les mêmes conditions, par le même banc étalonné, sur
+les **40 pages** de l'application : à gauche l'arbre au commit `1e44c5a`
+(avant chantier) servi sur le port 3211, à droite la branche
+`desktop-fullwidth` servie sur le port 3210.
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Remplissage moyen de la largeur utile | **55 %** | **69 %** |
+| Vide moyen à droite du contenu | **523 px** | **392 px** |
+| Pages avec une barre latérale de navigation | **14 / 40** | **38 / 40** |
+| Pages qui débordent hors de l'écran | 0 | 0 |
+
+Moyennes calculées sur les 24 pages retenues : sont écartées les 14 pages qui
+**redirigent** ailleurs (elles mesureraient la page d'arrivée) et les 2 écrans
+de borne qui n'ont presque pas de texte. Les deux seules pages sans barre
+latérale après travaux sont l'écran mural et l'écran de comptoir : ce sont des
+bornes, la navigation y est volontairement absente.
+
+**Six pages « reculent » et c'est voulu ou expliqué.** Sortie, transfert et
+assistant passent en colonne de saisie étroite (820 px) : un bouton de 1 240 px
+ne se vise pas mieux qu'un bouton de 700 px. Fournisseurs, lots et rapport
+mensuel affichent en local leur état vide ou leur chargement, faute de base de
+données : leur pourcentage mesure du vide, pas une régression — vérifié à
+l'image.
+
+### Lisibilité des couleurs
+
+Sonde de contraste sur 24 pages, dans les deux thèmes, seuils WCAG AA
+(4,5:1 en texte courant, 3:1 en grand). Étalonnée en rouge avant chaque
+passage sur quatre paires de référence, dont un dégradé qu'elle doit refuser
+de juger.
+
+| Thème | Avant | Après |
+|---|---|---|
+| Jour | 5 règles fautives | **0** |
+| Nuit | 9 règles fautives | **0** |
+
+Défauts corrigés à la source, jamais au cas par cas : bouton d'état vide à
+1,43:1 (9 pages), or vif sur crème à 1,86:1, ambre d'alerte sur son propre
+voile à 2,90:1, pastille « En cours » à 1,30:1 (22 emplois), pastille neutre
+sans surface (20 emplois), sapin en texte sur le fond de nuit à 2,89:1
+(530 emplois potentiels), bouton rouge dont l'encre ne suivait pas le thème.
+
+### Ce qui a été substitué au plan initial
+
+- **LOT 1 (composant d'en-tête unique)** : remplacé par une règle CSS au-delà
+  de 1024 px qui réduit les titres géants et resserre les en-têtes. Le
+  résultat mesuré est le même ; le refactor de 25 fichiers aurait coûté un
+  risque de régression sans contrepartie.
+- **Relevés à 1024 et 1440 px** : faits par les équipes sur leur périmètre,
+  pas en balayage complet des 40 pages. Le serveur de développement se fige
+  après avoir compilé les 40 routes, et trois séries complètes ont été perdues
+  avant qu'un banc reprenable et un garde de serveur ne soient écrits.
+
+### Portes de vérification passées
+
+- `npx tsc --noEmit` : 0 erreur.
+- `npx next build` dans un arbre séparé : « Compiled successfully », 54 pages
+  générées.
+- Aucune couleur en dur ajoutée dans un composant ; les seuls hex du chantier
+  sont dans `globals.css`, chacun avec la mesure qui le justifie.
+- Téléphone à 390 px : comparaison boîte à boîte ou fichier à fichier sur les
+  sept pages les plus retouchées — aucun élément peint déplacé.
+
+### Instruments, et ce qu'ils ont failli faire dire
+
+Les bancs vivent dans `.qa-desktop/` (hors dépôt). Cinq pièges rencontrés,
+tous corrigés dans les sondes :
+
+1. `scrollWidth > clientWidth` ne voit **rien** : `body` est en
+   `overflow-x: clip`. Un tableau poussait la page 34 px hors de l'écran sans
+   la moindre trace. On mesure désormais les bords droits réels.
+2. Le **Service Worker** sert sa page d'accueil en cache pour toutes les
+   adresses après un redémarrage : sept pages différentes ont rendu des
+   chiffres identiques au pixel, avec la bonne adresse dans la barre. Les
+   sondes bloquent maintenant le Service Worker, et un garde-fou refuse un
+   relevé où deux pages distinctes ont la même empreinte de contenu.
+3. Le serveur de développement **se fige sans erreur** : la page reste sur son
+   spinner et un banc y lit « 0 texte ». Avant de consigner un écran vide, la
+   sonde vérifie que le serveur répond et remesure.
+4. Un fond peint par un **dégradé** a une couleur de fond transparente : la
+   sonde de contraste traversait et attribuait au texte le fond du body. C'est
+   ainsi que le héros du cockpit, sapin sombre, a été déclaré « texte blanc
+   sur crème ».
+5. `max-w-[26ch]` posé sur un conteneur se calcule sur **sa** police, pas sur
+   celle du titre qu'il contient : 26ch valaient 208 px au lieu de 520.

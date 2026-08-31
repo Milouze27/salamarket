@@ -2295,3 +2295,49 @@ body.theme-nuit .bg-cream.text-text-tertiary {
   --text-on-gradient-70: rgba(255, 255, 255, 0.7);
   --border-on-gradient: rgba(255, 255, 255, 0.15);
 }
+
+/* ── Vert sapin en texte : illisible sur le fond de nuit ──────────────
+   31/08/2026 — `text-primary` (le sapin #1b6a4a) posé sur le fond de page
+   de nuit (#08130f) mesure 2,89:1. La classe est employée 530 fois : sept
+   textes le déclenchent aujourd'hui (« Tout voir », « Retour »,
+   « Étiquettes », « Activité 24h », « Importer », « Assistant Salam »,
+   une flèche) sur six pages, et n'importe quel nouvel emploi le
+   redéclencherait. On corrige donc la classe, pas les emplois.
+   Le vert clair de nuit sur ce même fond mesure 8,35:1.
+
+   ⚠ Pourquoi c'est sans danger ici, alors qu'une règle globale sur
+   `.text-gold` avait dû être RETIRÉE : cet or-là vivait sur des fonds
+   clairs ET sombres, l'éclaircir réparait les uns en cassant les autres.
+   Le thème NUIT, lui, n'a aucune surface claire — `bg-white` y est déjà
+   remappé sur surface-1 et `bg-cream` y vaut le fond de page. Éclaircir
+   ne peut donc qu'améliorer. Vérifié en re-mesurant les deux thèmes. */
+:root:not([data-theme="jour"]) .text-primary,
+[data-theme="nuit"] .text-primary,
+body.theme-nuit .text-primary {
+  color: var(--primary-green-light);
+}
+
+/* ── Bouton d'action rouge : l'encre suit le thème ────────────────────
+   31/08/2026 — un bouton rouge plein porte du blanc en thème jour
+   (--danger-ink, rouge sombre : 6,5:1). En thème nuit, --danger est un
+   corail CLAIR, fait pour être vu sur du sombre : le blanc y tombe à
+   2,71:1. Le fond et l'encre doivent donc s'échanger avec le thème,
+   exactement comme .btn-warning. Le corail avec une encre très sombre
+   mesure 6,9:1. */
+:root {
+  --btn-danger-bg: var(--danger-ink);
+  --btn-danger-ink: #ffffff;
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --btn-danger-bg: var(--danger);
+  --btn-danger-ink: #0a1410;
+}
+.btn-danger {
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-ink);
+}
+.btn-danger * {
+  color: inherit;
+}

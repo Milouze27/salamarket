@@ -677,13 +677,14 @@ export default function V2SortiePage() {
           <button
             onClick={submit}
             disabled={!canSubmit || submitting}
-            /* 31/08/2026 — blanc sur --danger mesurait 3,94:1. --danger-ink est le
-              même rouge assombri d'un cran : 6,5:1, sans changer la couleur perçue. */
-            className="w-full text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 press-btn"
-            style={{ background: "var(--danger-ink)" }}
+            /* 31/08/2026 — le blanc sur --danger mesurait 3,94:1 en jour et
+              2,71:1 en nuit. .btn-danger échange fond ET encre avec le thème :
+              rouge sombre + blanc le jour (6,5:1), corail + encre très sombre
+              la nuit (6,9:1). */
+            className="btn-danger w-full rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50 press-btn"
           >
             <div className="text-left">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/85">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] opacity-85">
                 {submitting ? "Validation…" : "Déclarer la sortie"}
               </p>
               <p className="text-[15px] font-extrabold mt-0.5">

@@ -2246,3 +2246,35 @@ body.theme-nuit {
    les 96 px qui empêchent la barre de recouvrir la dernière ligne.
    La neutralisation reste donc page par page (`lg:!pb-10`), là où la
    barre est effectivement masquée. */
+
+/* ── Pastilles d'état : deux couples fond/texte qui ne s'inversaient pas ──
+   31/08/2026, mesuré au calcul de luminance relative.
+
+   1) `bg-gold-soft text-primary-dark` — 22 emplois (badge « En cours » d'un
+      bon de livraison, rôles admin/manager de l'équipe, tuiles de réception,
+      page introuvable…). En thème JOUR c'est du sapin très sombre sur un
+      crème opaque : parfaitement lisible. En thème NUIT, `--accent-gold-soft`
+      devient un voile or à 12 % — soit rgb(45,59,36) au-dessus d'une carte —
+      et `--primary-green-dark` devient #134a36 : le texte tombe à **1,17:1**,
+      c'est-à-dire invisible. Et la nuit est le thème PAR DÉFAUT.
+      On ne touche qu'au TEXTE, et seulement quand les deux classes sont
+      portées par le même élément : le fond est alors connu, il n'y a pas
+      d'effet de bord possible. L'or vif sur ce même voile mesure 5,98:1.
+
+   2) `bg-cream text-text-tertiary` — 20 emplois (pastille « Prévue » et
+      autres états neutres). Le texte reste lisible de nuit (6,4:1), mais
+      `--bg-cream` y vaut #08130f, c'est-à-dire EXACTEMENT le fond de page :
+      la pastille n'a plus de surface, elle disparaît en tant qu'objet. On
+      lui rend un fond, sans toucher au texte.
+
+   Aucun de ces deux correctifs ne modifie le thème jour. */
+:root:not([data-theme="jour"]) .bg-gold-soft.text-primary-dark,
+[data-theme="nuit"] .bg-gold-soft.text-primary-dark,
+body.theme-nuit .bg-gold-soft.text-primary-dark {
+  color: var(--accent-gold-bright);
+}
+:root:not([data-theme="jour"]) .bg-cream.text-text-tertiary,
+[data-theme="nuit"] .bg-cream.text-text-tertiary,
+body.theme-nuit .bg-cream.text-text-tertiary {
+  background-color: var(--surface-2);
+}

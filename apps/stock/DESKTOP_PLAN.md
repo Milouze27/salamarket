@@ -103,8 +103,8 @@ les **40 pages** de l'application : à gauche l'arbre au commit `1e44c5a`
 
 | Mesure | Avant | Après |
 |---|---|---|
-| Remplissage moyen de la largeur utile | **55 %** | **69 %** |
-| Vide moyen à droite du contenu | **523 px** | **392 px** |
+| Remplissage moyen de la largeur utile | **55 %** | **70 %** |
+| Vide moyen à droite du contenu | **523 px** | **379 px** |
 | Pages avec une barre latérale de navigation | **14 / 40** | **38 / 40** |
 | Pages qui débordent hors de l'écran | 0 | 0 |
 
@@ -114,12 +114,11 @@ de borne qui n'ont presque pas de texte. Les deux seules pages sans barre
 latérale après travaux sont l'écran mural et l'écran de comptoir : ce sont des
 bornes, la navigation y est volontairement absente.
 
-**Six pages « reculent » et c'est voulu ou expliqué.** Sortie, transfert et
+**Cinq pages « reculent » et c'est voulu ou expliqué.** Sortie, transfert et
 assistant passent en colonne de saisie étroite (820 px) : un bouton de 1 240 px
-ne se vise pas mieux qu'un bouton de 700 px. Fournisseurs, lots et rapport
-mensuel affichent en local leur état vide ou leur chargement, faute de base de
-données : leur pourcentage mesure du vide, pas une régression — vérifié à
-l'image.
+ne se vise pas mieux qu'un bouton de 700 px. Fournisseurs et lots affichent en
+local leur état vide, faute de base de données : leur pourcentage mesure du
+vide, pas une régression — vérifié à l'image.
 
 ### Lisibilité des couleurs
 

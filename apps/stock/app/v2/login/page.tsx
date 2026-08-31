@@ -227,7 +227,11 @@ export default function V2LoginPage() {
           </div>
         </div>
 
-        <div className="relative max-w-[26ch]">
+        {/* 31/08/2026 — la largeur était donnée en `ch` SUR LE CONTENEUR : l'unité
+            se calcule sur la police du conteneur (16 px), pas sur celle du titre
+            (40 px). 26ch valaient 208 px, et le titre se cassait en quatre lignes
+            au lieu des deux voulues par le <br />. Mesuré au DOM, corrigé en px. */}
+        <div className="relative max-w-[540px]">
           <p
             className="text-[40px] font-bold leading-[1.08] tracking-[-0.02em]"
             style={{ color: "var(--text-primary)" }}
@@ -241,7 +245,7 @@ export default function V2LoginPage() {
             .
           </p>
           <p
-            className="text-[15px] mt-4 leading-relaxed"
+            className="text-[15px] mt-4 leading-relaxed max-w-[42ch]"
             style={{ color: "var(--text-secondary)" }}
           >
             Les trois dépôts au même endroit. Chaque mouvement de marchandise

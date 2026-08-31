@@ -61,7 +61,7 @@ export function HeroKpi({
 
   return (
     <div
-      className="relative overflow-hidden rounded-[28px] p-6 sm:p-7"
+      className="relative overflow-hidden rounded-[28px] p-6 sm:p-7 lg:px-9 lg:py-8"
       style={{
         background: "var(--hero-gradient)",
         boxShadow:
@@ -91,7 +91,13 @@ export function HeroKpi({
         }}
       />
 
-      <div className="relative z-10 flex flex-col gap-5">
+      {/* DESKTOP 31/08/2026 — en colonne unique, ce bandeau mesurait 1 620 px
+          de large pour trois lignes de texte alignées à gauche : un slab vert
+          aux trois quarts vide. À partir de lg, l'identité tient la gauche et
+          le chiffre du jour la droite, sur une seule rangée. Sous lg, rien ne
+          bouge : l'ordre et les écarts sont identiques. */}
+      <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+        <div className="flex flex-col gap-5 min-w-0">
         {/* Eyebrow hijri */}
         <div className="flex items-center gap-2 flex-wrap">
           <Sparkles
@@ -122,10 +128,13 @@ export function HeroKpi({
           </h1>
         </div>
 
+        </div>
+
+        <div className="flex flex-col gap-5 lg:items-end lg:shrink-0">
         {/* Big number CA — or-bright + bignum-glow : brille comme un cours
             de bourse (DARK-05). Graisse -1 cran (extrabold→bold) car le gras
             irradie en dark. */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 lg:items-end">
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">
             CA hier
           </p>
@@ -150,7 +159,7 @@ export function HeroKpi({
         </div>
 
         {/* Pills : delta N-1, target, tickets */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           {deltaN1Pct !== null && (
             <span
               className="rise-in inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold tabular"
@@ -195,6 +204,7 @@ export function HeroKpi({
               {nbTickets}
             </span>
           )}
+        </div>
         </div>
       </div>
     </div>

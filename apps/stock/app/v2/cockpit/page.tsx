@@ -265,7 +265,7 @@ export default function CockpitPage() {
     <V2Shell wide>
       <PageAccentStripe accent="sapin-or" />
 
-      <div className="px-4 sm:px-5 md:px-8 pt-3 pb-2 flex items-center justify-between gap-3 max-w-7xl mx-auto w-full">
+      <div className="px-4 sm:px-5 md:px-8 pt-3 pb-2 flex items-center justify-between gap-3 max-w-7xl 2xl:max-w-none mx-auto w-full">
         <div className="flex flex-col">
           <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--accent-gold-dim)]">
             {cockpitMoment}
@@ -293,7 +293,7 @@ export default function CockpitPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: [0.22, 0.61, 0.36, 1] }}
-        className="px-4 sm:px-5 md:px-8 flex flex-col gap-4 max-w-7xl mx-auto w-full"
+        className="px-4 sm:px-5 md:px-8 flex flex-col gap-4 max-w-7xl 2xl:max-w-none mx-auto w-full"
       >
         {/* ZONE 0 — Brief du matin (MYTH-02 copilote). En HAUT, avant les KPI :
             les 3 actions calculées pendant la nuit, deep-linkées. On masque
@@ -333,7 +333,7 @@ export default function CockpitPage() {
 
         {/* Grille responsive des autres cards — empilées sur mobile,
             2 cols sur tablette, 3 cols sur desktop. BUG-006 fix. */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {/* ZONE 2 — Calendrier hijri */}
           <div className="rise-in" style={{ ["--i" as string]: 0 }}>
           <RamadanCard

@@ -49,3 +49,6 @@ coverage/
 .claude/
 *.sbkeys.txt
 sbkeys.txt
+
+# Banc de recette desktop (local, jamais commité)
+.qa-desktop/

@@ -659,9 +659,16 @@ function Stat({
           </span>
         )}
       </p>
+      {/* 31/08/2026 — `text-gold-bright` posait l'or vif sur la carte crème du
+        thème jour : 1,86:1 mesuré sur trois montants. --gold-ink vaut l'or
+        sombre en jour et l'or vif en nuit ; le chiffre reste lisible des deux
+        côtés sans changer d'intention. */}
       <p
-        className={`text-[15px] font-extrabold mt-1 tracking-tight ${gold ? "text-gold-bright" : "text-text-primary"}`}
-        style={{ fontVariantNumeric: "tabular-nums" }}
+        className="text-[15px] font-extrabold mt-1 tracking-tight"
+        style={{
+          fontVariantNumeric: "tabular-nums",
+          color: gold ? "var(--gold-ink)" : "var(--text-primary)",
+        }}
       >
         {value}
       </p>

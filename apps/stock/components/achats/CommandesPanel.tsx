@@ -307,7 +307,12 @@ export function CommandesPanel() {
           {/* ── POSTE DE TRAVAIL (≥ lg) : tableau des bons de commande ─────
             Numéro, montant et nombre de lignes se comparent en colonne ;
             la carte les noyait dans trois blocs différents. */}
-          <div className="hidden lg:block">
+          {/* contain:inline-size — sans lui, la largeur minimale du tableau
+            remonte jusqu'au <main> (élément flex à min-width:auto dans
+            V2Shell) et pousse toute la page hors de l'écran, sans barre de
+            défilement puisque body est en overflow-x:clip. Avec, le tableau
+            défile DANS son cadre, comme prévu par DataTable. */}
+          <div className="hidden lg:block" style={{ contain: "inline-size" }}>
             <DataTable
               rows={filtered}
               getKey={(po) => po.id}
@@ -386,26 +391,32 @@ export function CommandesPanel() {
                 {
                   key: "date",
                   label: "Créée le",
-                  width: "136px",
+                  width: "150px",
                   sort: (a, b) =>
                     (a.date_creation ?? "").localeCompare(b.date_creation ?? ""),
                   render: (po) => (
-                    <span style={{ color: "var(--text-secondary)" }}>
+                    <span
+                      className="whitespace-nowrap"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {dateFrAn(po.date_creation)}
                     </span>
                   ),
                 },
                 {
                   key: "livraison",
-                  label: "Livraison prévue",
-                  width: "156px",
+                  label: "Livraison",
+                  width: "132px",
                   xlOnly: true,
                   sort: (a, b) =>
                     (a.date_livraison_prevue ?? "").localeCompare(
                       b.date_livraison_prevue ?? "",
                     ),
                   render: (po) => (
-                    <span style={{ color: "var(--text-secondary)" }}>
+                    <span
+                      className="whitespace-nowrap"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
                       {dateFrAn(po.date_livraison_prevue)}
                     </span>
                   ),

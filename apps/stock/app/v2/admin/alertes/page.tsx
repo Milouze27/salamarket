@@ -468,15 +468,8 @@ function AlertesPanel() {
     setLoading(true);
     const sb = supabase();
     if (!sb) {
-      // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-      const noms = ["Coca Zero 33cl", "Poulet fermier 1,2 kg", "Dattes Deglet Nour 500 g", "Huile d'olive 1 L", "Semoule fine 5 kg", "Merguez artisanale 1 kg", "Yaourt nature x8", "Thé à la menthe 200 g", "Riz basmati 2 kg", "Miel d'oranger 250 g", "Amandes 500 g", "Pain pita x6"];
-      setSorties(noms.map((n, i) => ({ id: "s" + i, type: i % 3 === 0 ? "casse" : i % 3 === 1 ? "perime" : "don_association", motif_libre: i % 2 ? "Carton écrasé en réserve" : null, quantite: 1 + (i % 7), photo_url: "", ia_coherence_score: 0.12 + (i * 0.07), ia_coherence_notes: "La photo montre " + (1 + (i % 3)) + " unité(s) alors que la sortie en déclare " + (1 + (i % 7)) + ".", created_at: new Date(Date.now() - i * 5400000).toISOString(), produits: { nom: n }, employes: { prenom: ["Otmane", "Yacine", "Sofia", "Karim"][i % 4], nom: ["Jamal", "Bencheikh", "Roux", "Amrani"][i % 4] }, depots: { nom: i % 2 ? "Particulier" : "Réserve Papus" } })) as SortieSuspecte[]);
-      setSurplus(noms.slice(0, 9).map((n, i) => ({ id: "u" + i, bdl_id: "b" + i, code_barre_scanne: "540123400" + (1000 + i), produit_id: "p" + i, quantite_surplus: 2 + (i % 9), signale_par: null, signale_le: new Date(Date.now() - i * 9000000).toISOString(), statut: (i % 3 === 0 ? "en_attente" : i % 3 === 1 ? "accepte" : "refuse") as AlerteSurplus["statut"], decideur: null, decide_le: i % 3 === 0 ? null : new Date(Date.now() - i * 3600000).toISOString(), photo_preuve_url: null, notes: null, produits: { id: "p" + i, nom: n, ean: "540123400" + (1000 + i) }, bons_de_livraison: { id: "b" + i, numero_bdl: "BDL-2026-0" + (120 + i), fournisseurs: { id: "f" + (i % 3), nom: ["Sodiaal Sud", "Halal Distrib 31", "Maghreb Import"][i % 3] } } })) as AlerteSurplus[]);
-      setDemarque(noms.slice(0, 6).map((n, i) => ({ produit: n, ean: "540123400" + (2000 + i), entrees: 40 + i * 3, ventes: 22 + i, sorties_tracees: 2 + i, stock_theorique: 16 + i, stock_physique: 16 + i - (2 + i), ecart: -(2 + i), valeur: (2 + i) * 3.4 })));
-      setSortiesError(false);
       setLoading(false);
       return;
-      // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
     }
     // 1. Sorties suspectes (score IA < 0.7)
     // NB : on NE joint PAS `employes` directement — anon n'a plus SELECT sur

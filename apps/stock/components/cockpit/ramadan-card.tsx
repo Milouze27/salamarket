@@ -66,7 +66,8 @@ const IMPACT_STYLES: Record<
     label: "Impact fort",
   },
   critique: {
-    style: { background: "var(--danger-soft)", color: "var(--danger)" },
+    // 31/08/2026 — rouge sur son propre voile : 3,60:1 en thème jour.
+    style: { background: "var(--danger-soft)", color: "var(--danger-ink)" },
     label: "Impact critique",
   },
 };
@@ -105,7 +106,7 @@ export function RamadanCard({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Moon
-              className="w-4 h-4 text-[var(--accent-gold-bright)]"
+              className="w-4 h-4 text-[color:var(--gold-ink)]"
               strokeWidth={2.4}
             />
             <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--accent-gold-dim)]">
@@ -126,7 +127,10 @@ export function RamadanCard({
         <div className="flex items-end gap-3 flex-wrap">
           {joursJusqua !== null && !enCours && (
             <p
-              className="text-[56px] sm:text-[64px] font-extrabold leading-none tracking-tight text-[var(--accent-gold-bright)] tabular"
+              /* 31/08/2026 — l'or vif mesurait 1,86:1 sur la carte crème du
+                 thème jour. --gold-ink vaut l'or sombre en jour et l'or vif
+                 en nuit : le compte à rebours reste lisible des deux côtés. */
+              className="text-[56px] sm:text-[64px] font-extrabold leading-none tracking-tight text-[color:var(--gold-ink)] tabular"
               style={{ textShadow: "var(--bignum-glow)" }}
             >
               {joursJusqua === 0 ? "J" : `J-${joursJusqua}`}
@@ -134,7 +138,7 @@ export function RamadanCard({
           )}
           {enCours && (
             <p
-              className="text-[36px] sm:text-[40px] font-extrabold leading-none tracking-tight text-[var(--accent-gold-bright)]"
+              className="text-[36px] sm:text-[40px] font-extrabold leading-none tracking-tight text-[color:var(--gold-ink)]"
               style={{ textShadow: "var(--bignum-glow)" }}
             >
               En cours
@@ -165,7 +169,7 @@ export function RamadanCard({
             }}
           >
             <TrendingUp
-              className="w-4 h-4 shrink-0 text-[var(--accent-gold-bright)]"
+              className="w-4 h-4 shrink-0 text-[color:var(--gold-ink)]"
               strokeWidth={2.6}
             />
             <div className="flex-1 min-w-0">

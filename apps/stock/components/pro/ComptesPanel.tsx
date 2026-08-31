@@ -73,28 +73,6 @@ function Pastille({ couleur, texte }: { couleur: string; texte: string }) {
   );
 }
 
-// ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-const DEMO_COMPTES: ComptePro[] = Array.from({ length: 14 }, (_, i) => ({
-  id: "c" + i,
-  raison_sociale: ["Restaurant Al Bahdja", "Traiteur Nour", "École Ibn Sina", "Boucherie du Mirail", "Snack Le Cèdre", "Pâtisserie Zohra", "Cantine Les Oliviers", "Épicerie Salam Rangueil", "Hôtel Le Capitole", "Cafétéria Papus", "Association Espoir 31", "Food-truck Chorba", "Boulangerie Aïcha", "Maison de retraite Bellevue"][i],
-  siret: "8027738120" + (100 + i),
-  forme_juridique: i % 2 ? "SARL" : "SAS",
-  tva_intracom: "FR" + (40 + i) + "802773812",
-  adresse_facturation: (2 + i) + " rue de la Faourette, 31100 Toulouse",
-  adresse_livraison: null,
-  delegue_nom: ["Ahmed Nasri", "Otmane Jamal", "Sofia Roux", "Karim Amrani", "Leïla Ben Salah"][i % 5],
-  delegue_telephone: "06 12 34 " + (10 + i) + " " + (40 + i),
-  delegue_email: "contact" + i + "@exemple.fr",
-  conditions_paiement: (["comptant", "30_jours", "45_jours_fin_mois"] as const)[i % 3],
-  encours_max: 1500 + i * 400,
-  encours_actuel: i % 4 === 0 ? 2200 + i * 500 : 300 + i * 180,
-  statut: (["en_validation", "actif", "actif", "suspendu", "actif", "archive"] as const)[i % 6],
-  notes_interne: null,
-  valide_at: null,
-  created_at: new Date(Date.now() - i * 86400000).toISOString(),
-}));
-// ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
-
 export function ComptesPanel() {
   const employe = useV2((s) => s.currentEmploye);
   const [comptes, setComptes] = useState<ComptePro[]>([]);
@@ -105,10 +83,7 @@ export function ComptesPanel() {
 
   async function reload() {
     setLoading(true);
-    const d = await fetchComptesPro();
-    // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-    setComptes(d.length ? d : DEMO_COMPTES);
-    // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
+    setComptes(await fetchComptesPro());
     setLoading(false);
   }
 

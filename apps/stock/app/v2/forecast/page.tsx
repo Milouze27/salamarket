@@ -566,7 +566,12 @@ export default function ForecastPage() {
               Les cartes montraient 4 lignes par écran à 1920 et obligeaient à
               comparer de mémoire. Le tableau aligne stock, consommation,
               couverture et date de rupture sur une même colonne. */}
-            <div className="hidden lg:block">
+            {/* contain:inline-size — sans lui, la largeur minimale du tableau
+              remonte jusqu'au <main> (élément flex à min-width:auto dans
+              V2Shell) et pousse toute la page hors de l'écran, sans barre de
+              défilement puisque body est en overflow-x:clip. Avec, le tableau
+              défile DANS son cadre, comme prévu par DataTable. */}
+            <div className="hidden lg:block" style={{ contain: "inline-size" }}>
               <DataTable
                 rows={filteredRows}
                 getKey={(r) => `${r.produit_id}-${r.depot_id}`}
@@ -655,7 +660,7 @@ export default function ForecastPage() {
                   },
                   {
                     key: "conso",
-                    label: "Conso./jour",
+                    label: "Conso./j",
                     width: "140px",
                     align: "right",
                     sort: (a, b) => a.velocity_adj - b.velocity_adj,
@@ -727,13 +732,13 @@ export default function ForecastPage() {
                         <button
                           type="button"
                           onClick={() => void handleDraftPO(r)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12.5px] font-bold whitespace-nowrap"
+                          title={rec.rationale}
+                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold whitespace-nowrap"
                           style={{
                             background: "var(--primary-green)",
                             color: "var(--text-on-dark)",
                           }}
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
                           Commander · {rec.qty} {rec.unit}
                         </button>
                       );

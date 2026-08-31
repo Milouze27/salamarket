@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -20,9 +21,11 @@ import {
 } from "lucide-react";
 import { Leaderboard } from "@/components/v2/Leaderboard";
 import { HeatmapVentes } from "@/components/v2/HeatmapVentes";
+import { DataTable } from "@/components/v2/DataTable";
 import {
   listDepots,
   listEmployes,
+  listProduitsNomsByIds,
   listReceptions,
   listSorties,
   listTransferts,
@@ -56,6 +59,83 @@ interface ActivityRow {
   item: any;
 }
 
+/** Plafond serveur, identique pour les trois sources (cf. load()). */
+const PLAFOND_PAR_SOURCE = 200;
+
+/** Libellé + couleur d'un type de mouvement, pour la pastille du tableau. */
+const MOUVEMENT: Record<
+  ActivityRow["type"],
+  { label: string; couleur: string }
+> = {
+  rec: { label: "Réception", couleur: "var(--success)" },
+  sor: { label: "Sortie", couleur: "var(--warning)" },
+  trf: { label: "Transfert", couleur: "var(--accent-gold)" },
+};
+
+/**
+ * Une ligne de journal aplatie pour le tableau du poste de travail : les trois
+ * sources (réception / sortie / transfert) n'ont pas les mêmes colonnes, on
+ * les ramène à un dénominateur commun UNE fois, plutôt qu'à chaque cellule.
+ *
+ * Ce que les tables ne portent PAS, et qui reste donc à « — » :
+ *   - une réception n'a pas de produit ni de quantité (ils vivent dans ses
+ *     lignes, `receptions_lignes`, non chargées ici) ;
+ *   - un transfert et une réception n'ont pas de score IA (propre aux sorties).
+ */
+interface LigneActivite {
+  cle: string;
+  type: ActivityRow["type"];
+  date: string;
+  produit: string | null;
+  quantite: number | null;
+  depot: string;
+  operateur: string;
+  detail: string | null;
+  scoreIa: number | null;
+  /** Filet de gravité : seulement ce qui mérite un coup d'œil. */
+  accent: string | null;
+  href: string;
+}
+
+/** Date + heure pour le tableau du poste de travail (l'écran a la place). */
+function dateHeureTableau(iso: string): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Statut lisible dans un tableau : pastille de couleur + libellé en clair. */
+function Pastille({ couleur, texte }: { couleur: string; texte: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        aria-hidden
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: couleur }}
+      />
+      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+        {texte}
+      </span>
+    </span>
+  );
+}
+
+/** Ce que le tableau NE montre pas : plafond serveur, colonnes absentes. */
+function NoteTableau({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-[12.5px] mt-2.5 px-3"
+      style={{ color: "var(--text-tertiary)" }}
+    >
+      {children}
+    </p>
+  );
+}
+
 export function ActivitePanel({
   onCount,
 }: {
@@ -67,7 +147,13 @@ export function ActivitePanel({
   const [sorties, setSorties] = useState<SortieStock[]>([]);
   const [transferts, setTransferts] = useState<TransfertInterDepot[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  // Les tables sorties/transferts ne portent qu'un produit_id : sans ce
+  // dictionnaire, la colonne « Produit » du tableau n'afficherait qu'un UUID.
+  const [produitNoms, setProduitNoms] = useState<Map<string, string>>(
+    () => new Map(),
+  );
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   // V8 — agrégats activité (leaderboard préparateurs + heatmap ventes).
   // Chargés via le snapshot cockpit ; résilients (échec → cartes masquées).
   const [snap, setSnap] = useState<CockpitSnapshot | null>(null);
@@ -75,6 +161,48 @@ export function ActivitePanel({
   useEffect(() => {
     void load();
     void loadSnap();
+  }, []);
+
+  /* __QA_RECETTE__ */
+  useEffect(() => {
+    const __t = setTimeout(() => {
+    const ds: Depot[] = [
+      { id: "d1", nom: "Particulier", type: "point_vente", adresse: null, is_active: true, created_at: "" },
+      { id: "d2", nom: "Réserve Papus", type: "entrepot", adresse: null, is_active: true, created_at: "" },
+      { id: "d3", nom: "Labo traiteur", type: "entrepot", adresse: null, is_active: true, created_at: "" },
+    ];
+    const es: Employe[] = [
+      { id: "e1", nom: "Nasri", prenom: "Ahmed", role: "admin", depot_principal_id: "d1", is_active: true, pin_code: "1" },
+      { id: "e2", nom: "Jamal", prenom: "Otmane", role: "manager", depot_principal_id: "d1", is_active: true, pin_code: "2" },
+      { id: "e3", nom: "Belhamiti", prenom: "Mohamed", role: "preparation", depot_principal_id: "d2", is_active: true, pin_code: "3" },
+    ];
+    const NOMS = ["Poulet fermier entier", "Yaourt brebis nature", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Olives Kalamata 500 g", "Beurre demi-sel 250 g", "Tomate grappe kg", "Escalope de dinde kg", "Crème fraîche 20 cl"];
+    const T0 = Date.UTC(2026, 7, 31, 19, 5);
+    const rec: Reception[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `r${i}`, depot_id: ds[i % 3].id, employe_id: es[i % 3].id,
+      fournisseur: ["Metro Toulouse", "Halal Prim", "Boulangerie Zitoun", "Laiterie du Sud"][i % 4],
+      numero_bl: `BL-26-${4100 + i * 3}`, photo_url: "", statut: "validee", reception_vide: i === 4,
+      created_at: new Date(T0 - i * 7 * 3600000).toISOString(),
+    })) as Reception[];
+    const sor: SortieStock[] = Array.from({ length: 14 }, (_, i) => ({
+      id: `s${i}`, depot_id: ds[i % 3].id, employe_id: es[(i + 1) % 3].id, produit_id: `p${i % NOMS.length}`,
+      type: (["casse_manipulation", "perime_dlc", "demarque_inconnue", "casse_client", "defaut_fournisseur"] as SortieType[])[i % 5],
+      motif_libre: i % 3 === 0 ? "Carton tombé du transpalette" : null,
+      quantite: ((i * 3) % 11) + 1, photo_url: "",
+      ia_coherence_score: i % 4 === 0 ? 0.38 + i * 0.01 : 0.82,
+      ia_coherence_notes: null,
+      created_at: new Date(T0 - (i * 5 + 2) * 3600000).toISOString(),
+    })) as SortieStock[];
+    const trf: TransfertInterDepot[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `t${i}`, depot_source_id: ds[i % 3].id, depot_destination_id: ds[(i + 1) % 3].id,
+      produit_id: `p${(i + 3) % NOMS.length}`, quantite: ((i * 4) % 9) + 1, employe_id: es[i % 3].id,
+      photo_url: null, created_at: new Date(T0 - (i * 9 + 4) * 3600000).toISOString(),
+    }));
+    setDepots(ds); setEmployes(es); setReceptions(rec); setSorties(sor); setTransferts(trf);
+    setProduitNoms(new Map(NOMS.map((n, i) => [`p${i}`, n])));
+    setLoading(false);
+    }, 2000);
+    return () => clearTimeout(__t);
   }, []);
 
   async function loadSnap() {
@@ -96,13 +224,30 @@ export function ActivitePanel({
     const allRec: Reception[] = [];
     const allSor: SortieStock[] = [];
     for (const d of ds) {
-      allRec.push(...(await listReceptions({ depotId: d.id, limit: 200 })));
-      allSor.push(...(await listSorties({ depotId: d.id, limit: 200 })));
+      allRec.push(
+        ...(await listReceptions({ depotId: d.id, limit: PLAFOND_PAR_SOURCE })),
+      );
+      allSor.push(
+        ...(await listSorties({ depotId: d.id, limit: PLAFOND_PAR_SOURCE })),
+      );
     }
+    const allTrf = await listTransferts({ limit: PLAFOND_PAR_SOURCE });
     setReceptions(allRec);
     setSorties(allSor);
-    setTransferts(await listTransferts({ limit: 200 }));
+    setTransferts(allTrf);
     setLoading(false);
+
+    // Noms de produits en UNE requête groupée, après l'affichage : la colonne
+    // se remplit dès qu'elle arrive, et un échec ne casse jamais le journal.
+    try {
+      const noms = await listProduitsNomsByIds([
+        ...allSor.map((s) => s.produit_id),
+        ...allTrf.map((t) => t.produit_id),
+      ]);
+      setProduitNoms(new Map([...noms].map(([id, p]) => [id, p.nom])));
+    } catch {
+      /* le libellé produit ne casse JAMAIS la page activité */
+    }
   }
 
   const merged = useMemo<ActivityRow[]>(() => {
@@ -127,6 +272,78 @@ export function ActivitePanel({
   useEffect(() => {
     onCount?.(counts.all);
   }, [counts.all, onCount]);
+
+  // Journal aplati pour le tableau du poste de travail (≥ lg).
+  const lignes = useMemo<LigneActivite[]>(() => {
+    const nomDepot = (id: string | null | undefined) =>
+      depots.find((d) => d.id === id)?.nom ?? "—";
+    const nomEmploye = (id: string | null | undefined) => {
+      const e = employes.find((x) => x.id === id);
+      return e ? `${e.prenom ?? ""} ${e.nom}`.trim() : "—";
+    };
+    const nomProduit = (id: string | null | undefined) =>
+      (id ? produitNoms.get(id) : null) ?? null;
+
+    return merged.map((row, i) => {
+      if (row.type === "rec") {
+        const r = row.item as Reception;
+        return {
+          cle: `rec-${r.id ?? i}`,
+          type: "rec" as const,
+          date: row.date,
+          produit: null,
+          quantite: null,
+          depot: nomDepot(r.depot_id),
+          operateur: nomEmploye(r.employe_id),
+          detail: [
+            r.fournisseur ?? null,
+            r.numero_bl ? `BL ${r.numero_bl}` : null,
+            r.reception_vide ? "réception vide" : null,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          scoreIa: null,
+          // Une livraison arrivée vide est une anomalie, pas une routine.
+          accent: r.reception_vide ? "var(--warning)" : null,
+          href: "/v2/reception",
+        };
+      }
+      if (row.type === "sor") {
+        const s = row.item as SortieStock;
+        const suspecte =
+          s.ia_coherence_score !== null && s.ia_coherence_score < 0.6;
+        return {
+          cle: `sor-${s.id ?? i}`,
+          type: "sor" as const,
+          date: row.date,
+          produit: nomProduit(s.produit_id),
+          quantite: s.quantite,
+          depot: nomDepot(s.depot_id),
+          operateur: nomEmploye(s.employe_id),
+          detail: [SORTIE_LABEL[s.type] ?? s.type, s.motif_libre ?? null]
+            .filter(Boolean)
+            .join(" · "),
+          scoreIa: s.ia_coherence_score,
+          accent: suspecte ? "var(--danger)" : null,
+          href: suspecte ? `/v2/admin/alertes?sortie=${s.id}` : "/v2/admin/alertes",
+        };
+      }
+      const t = row.item as TransfertInterDepot;
+      return {
+        cle: `trf-${t.id ?? i}`,
+        type: "trf" as const,
+        date: row.date,
+        produit: nomProduit(t.produit_id),
+        quantite: t.quantite,
+        depot: `${nomDepot(t.depot_source_id)} → ${nomDepot(t.depot_destination_id)}`,
+        operateur: nomEmploye(t.employe_id),
+        detail: null,
+        scoreIa: null,
+        accent: null,
+        href: "/v2/transfert",
+      };
+    });
+  }, [merged, depots, employes, produitNoms]);
 
   // Group by day
   const grouped = useMemo(() => {
@@ -193,6 +410,178 @@ export function ActivitePanel({
         </div>
       ) : (
         <section className="px-4 sm:px-5 mt-5 pb-nav-stack space-y-5">
+          {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────────
+            La vignette portait le mouvement, l'opérateur et l'heure sur deux
+            lignes, et regroupait par jour parce qu'un téléphone n'a pas la
+            place d'une date complète. Le tableau porte la date entière, le
+            produit, la quantité, le dépôt et le score IA sur une ligne : plus
+            besoin d'en-têtes de jour. */}
+          <div className="hidden lg:block">
+            <DataTable<LigneActivite>
+              rows={lignes}
+              getKey={(l) => l.cle}
+              caption={`Journal d'activité, ${lignes.length} mouvement${lignes.length > 1 ? "s" : ""}`}
+              defaultSort={{ key: "quand", dir: "desc" }}
+              emptyLabel="Aucun mouvement à afficher."
+              onRowClick={(l) => router.push(l.href)}
+              rowAccent={(l) => l.accent}
+              columns={[
+                {
+                  key: "quand",
+                  label: "Horodatage",
+                  width: "165px",
+                  sort: (a, b) => a.date.localeCompare(b.date),
+                  render: (l) => (
+                    <span
+                      className="tabular-nums"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {dateHeureTableau(l.date)}
+                    </span>
+                  ),
+                },
+                {
+                  key: "mouvement",
+                  label: "Mouvement",
+                  width: "142px",
+                  sort: (a, b) =>
+                    MOUVEMENT[a.type].label.localeCompare(
+                      MOUVEMENT[b.type].label,
+                      "fr",
+                    ),
+                  render: (l) => (
+                    <Pastille
+                      couleur={MOUVEMENT[l.type].couleur}
+                      texte={MOUVEMENT[l.type].label}
+                    />
+                  ),
+                },
+                {
+                  key: "produit",
+                  label: "Produit",
+                  width: "250px",
+                  sort: (a, b) =>
+                    (a.produit ?? "").localeCompare(b.produit ?? "", "fr"),
+                  render: (l) => (
+                    <span
+                      className="font-semibold truncate block"
+                      style={{
+                        color: l.produit
+                          ? "var(--text-primary)"
+                          : "var(--text-tertiary)",
+                      }}
+                      title={
+                        l.produit ??
+                        (l.type === "rec"
+                          ? "Une réception porte ses produits dans ses lignes de bon de livraison"
+                          : undefined)
+                      }
+                    >
+                      {l.produit ?? "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "quantite",
+                  label: "Quantité",
+                  width: "104px",
+                  align: "right",
+                  sort: (a, b) => (a.quantite ?? -1) - (b.quantite ?? -1),
+                  render: (l) => (
+                    <span
+                      className="font-bold"
+                      style={{
+                        color:
+                          l.quantite == null
+                            ? "var(--text-tertiary)"
+                            : "var(--text-primary)",
+                      }}
+                    >
+                      {l.quantite ?? "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "depot",
+                  label: "Dépôt",
+                  width: "210px",
+                  sort: (a, b) => a.depot.localeCompare(b.depot, "fr"),
+                  render: (l) => (
+                    <span
+                      className="truncate block"
+                      style={{ color: "var(--text-secondary)" }}
+                      title={l.depot}
+                    >
+                      {l.depot}
+                    </span>
+                  ),
+                },
+                {
+                  key: "operateur",
+                  label: "Opérateur",
+                  width: "170px",
+                  sort: (a, b) => a.operateur.localeCompare(b.operateur, "fr"),
+                  render: (l) => (
+                    <span
+                      className="truncate block"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {l.operateur}
+                    </span>
+                  ),
+                },
+                {
+                  key: "detail",
+                  label: "Détail",
+                  xlOnly: true,
+                  render: (l) => (
+                    <span
+                      className="truncate block"
+                      style={{ color: "var(--text-tertiary)" }}
+                      title={l.detail ?? undefined}
+                    >
+                      {l.detail && l.detail.length > 0 ? l.detail : "—"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "ia",
+                  label: "Score IA",
+                  width: "104px",
+                  align: "right",
+                  xlOnly: true,
+                  sort: (a, b) => (a.scoreIa ?? 2) - (b.scoreIa ?? 2),
+                  render: (l) =>
+                    l.scoreIa === null ? (
+                      <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                    ) : (
+                      <span
+                        className="font-bold"
+                        style={{
+                          color:
+                            l.scoreIa < 0.6
+                              ? "var(--danger)"
+                              : "var(--text-secondary)",
+                        }}
+                      >
+                        {Math.round(l.scoreIa * 100)} %
+                      </span>
+                    ),
+                },
+              ]}
+            />
+            <NoteTableau>
+              {lignes.length} mouvement{lignes.length > 1 ? "s" : ""} affiché
+              {lignes.length > 1 ? "s" : ""} · la requête plafonne à{" "}
+              {PLAFOND_PAR_SOURCE} réceptions et {PLAFOND_PAR_SOURCE} sorties par
+              dépôt, plus {PLAFOND_PAR_SOURCE} transferts. Une réception n&apos;a
+              ni produit ni quantité propres : ils vivent dans ses lignes de bon
+              de livraison, non chargées ici.
+            </NoteTableau>
+          </div>
+
+          {/* ── TERRAIN (< lg) : journal groupé par jour, inchangé ───────── */}
+          <div className="lg:hidden space-y-5">
           {grouped.map(([day, rows], gi) => (
             <div
               key={day}
@@ -209,6 +598,7 @@ export function ActivitePanel({
               </div>
             </div>
           ))}
+          </div>
         </section>
       )}
     </>
@@ -232,7 +622,10 @@ function FilterPill({
       className={`inline-flex items-center gap-1.5 px-4 py-2.5 min-h-[40px] rounded-full text-[12.5px] font-bold whitespace-nowrap border transition-colors active:scale-[0.98] ${
         active
           ? "bg-primary text-white border-primary"
-          : "bg-white text-text-primary border-rule"
+          : // Pas de `bg-white` : en thème nuit (le défaut), le fond blanc
+            // restait blanc sous un `text-text-primary` devenu clair — pastille
+            // illisible. Le token suit le thème.
+            "bg-[var(--surface-1)] text-text-primary border-rule"
       }`}
     >
       {icon}

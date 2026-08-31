@@ -107,297 +107,6 @@ function cmpDate(a: string | null, b: string | null): number {
   return a < b ? -1 : 1;
 }
 
-const QA_LOTS = [
-  {
-    "id": "LOT-2608-101",
-    "produit_id": "prd-000",
-    "abattoir_nom": "Abattoir Sud-Ouest",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2026-06-30",
-    "date_abattage": "2026-08-02",
-    "date_reception": "2026-08-05",
-    "dlc": "2026-09-03",
-    "quantite_recue": 61.0,
-    "unite": "kg",
-    "created_at": "2026-08-05T08:00:00Z",
-    "produits": {
-      "id": "prd-000",
-      "nom": "Agneau entier halal",
-      "marque": "Bergerie du Sud"
-    },
-    "fournisseurs": {
-      "id": "frn-0",
-      "nom": "Sodrune Distribution"
-    }
-  },
-  {
-    "id": "LOT-2608-102",
-    "produit_id": "prd-001",
-    "abattoir_nom": "Halal Meat Rotterdam",
-    "abattoir_pays": "NL",
-    "certifier_id": "HMC",
-    "certifier_name": "Halal Monitoring",
-    "certifier_valid_until": "2026-09-12",
-    "date_abattage": "2026-08-03",
-    "date_reception": "2026-08-06",
-    "dlc": "2026-09-04",
-    "quantite_recue": 30.5,
-    "unite": "kg",
-    "created_at": "2026-08-06T08:00:00Z",
-    "produits": {
-      "id": "prd-001",
-      "nom": "Merguez artisanales 1kg",
-      "marque": "Salam Cuisine"
-    },
-    "fournisseurs": {
-      "id": "frn-1",
-      "nom": "Halal Import SARL"
-    }
-  },
-  {
-    "id": "LOT-2608-103",
-    "produit_id": "prd-002",
-    "abattoir_nom": "Abattoir de Castres",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2027-04-30",
-    "date_abattage": "2026-08-04",
-    "date_reception": "2026-08-07",
-    "dlc": "2026-09-05",
-    "quantite_recue": 118.6,
-    "unite": "u",
-    "created_at": "2026-08-07T08:00:00Z",
-    "produits": {
-      "id": "prd-002",
-      "nom": "Poulet fermier PAC",
-      "marque": "Doux Halal"
-    },
-    "fournisseurs": {
-      "id": "frn-2",
-      "nom": "Boucherie Centrale"
-    }
-  },
-  {
-    "id": "LOT-2608-104",
-    "produit_id": "prd-003",
-    "abattoir_nom": "Carne Halal Zaragoza",
-    "abattoir_pays": "ES",
-    "certifier_id": "MCI",
-    "certifier_name": "Mosquee de Lyon",
-    "certifier_valid_until": null,
-    "date_abattage": "2026-08-05",
-    "date_reception": "2026-08-08",
-    "dlc": "2026-09-06",
-    "quantite_recue": 16.7,
-    "unite": "u",
-    "created_at": "2026-08-08T08:00:00Z",
-    "produits": {
-      "id": "prd-003",
-      "nom": "Cordon bleu volaille halal x4",
-      "marque": "Doux Halal"
-    },
-    "fournisseurs": {
-      "id": "frn-3",
-      "nom": "Atlas Food"
-    }
-  },
-  {
-    "id": "LOT-2608-105",
-    "produit_id": "prd-004",
-    "abattoir_nom": "Abattoir Sud-Ouest",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2026-09-25",
-    "date_abattage": "2026-08-06",
-    "date_reception": "2026-08-09",
-    "dlc": "2026-09-07",
-    "quantite_recue": 98.3,
-    "unite": "kg",
-    "created_at": "2026-08-09T08:00:00Z",
-    "produits": {
-      "id": "prd-004",
-      "nom": "Escalope de dinde 500g",
-      "marque": "Isla Delice"
-    },
-    "fournisseurs": {
-      "id": "frn-0",
-      "nom": "Sodrune Distribution"
-    }
-  },
-  {
-    "id": "LOT-2608-106",
-    "produit_id": "prd-005",
-    "abattoir_nom": "Halal Meat Rotterdam",
-    "abattoir_pays": "NL",
-    "certifier_id": "HMC",
-    "certifier_name": "Halal Monitoring",
-    "certifier_valid_until": "2027-01-15",
-    "date_abattage": "2026-08-07",
-    "date_reception": "2026-08-10",
-    "dlc": "2026-09-08",
-    "quantite_recue": 68.4,
-    "unite": "u",
-    "created_at": "2026-08-10T08:00:00Z",
-    "produits": {
-      "id": "prd-005",
-      "nom": "Brochettes boeuf marinees",
-      "marque": "Salam Cuisine"
-    },
-    "fournisseurs": {
-      "id": "frn-1",
-      "nom": "Halal Import SARL"
-    }
-  },
-  {
-    "id": "LOT-2608-107",
-    "produit_id": "prd-006",
-    "abattoir_nom": "Abattoir de Castres",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2026-06-30",
-    "date_abattage": "2026-08-08",
-    "date_reception": "2026-08-11",
-    "dlc": "2026-09-09",
-    "quantite_recue": 14.2,
-    "unite": "kg",
-    "created_at": "2026-08-11T08:00:00Z",
-    "produits": {
-      "id": "prd-006",
-      "nom": "Cotelettes d'agneau 800g",
-      "marque": "Bergerie du Sud"
-    },
-    "fournisseurs": {
-      "id": "frn-2",
-      "nom": "Boucherie Centrale"
-    }
-  },
-  {
-    "id": "LOT-2608-108",
-    "produit_id": "prd-007",
-    "abattoir_nom": "Carne Halal Zaragoza",
-    "abattoir_pays": "ES",
-    "certifier_id": "HMC",
-    "certifier_name": "Halal Monitoring",
-    "certifier_valid_until": "2026-09-12",
-    "date_abattage": "2026-08-09",
-    "date_reception": "2026-08-12",
-    "dlc": "2026-09-10",
-    "quantite_recue": 93.3,
-    "unite": "u",
-    "created_at": "2026-08-12T08:00:00Z",
-    "produits": {
-      "id": "prd-007",
-      "nom": "Viande hachee 5% 350g",
-      "marque": "Isla Delice"
-    },
-    "fournisseurs": {
-      "id": "frn-3",
-      "nom": "Atlas Food"
-    }
-  },
-  {
-    "id": "LOT-2608-109",
-    "produit_id": "prd-008",
-    "abattoir_nom": "Abattoir Sud-Ouest",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2027-04-30",
-    "date_abattage": "2026-08-10",
-    "date_reception": "2026-08-13",
-    "dlc": "2026-09-11",
-    "quantite_recue": 10.6,
-    "unite": "u",
-    "created_at": "2026-08-13T08:00:00Z",
-    "produits": {
-      "id": "prd-008",
-      "nom": "Saucisses de volaille x6",
-      "marque": "Doux Halal"
-    },
-    "fournisseurs": {
-      "id": "frn-0",
-      "nom": "Sodrune Distribution"
-    }
-  },
-  {
-    "id": "LOT-2608-110",
-    "produit_id": "prd-009",
-    "abattoir_nom": "Halal Meat Rotterdam",
-    "abattoir_pays": "NL",
-    "certifier_id": "MCI",
-    "certifier_name": "Mosquee de Lyon",
-    "certifier_valid_until": null,
-    "date_abattage": "2026-08-11",
-    "date_reception": "2026-08-14",
-    "dlc": "2026-09-12",
-    "quantite_recue": 80.3,
-    "unite": "kg",
-    "created_at": "2026-08-14T08:00:00Z",
-    "produits": {
-      "id": "prd-009",
-      "nom": "Gigot d'agneau desosse",
-      "marque": "Bergerie du Sud"
-    },
-    "fournisseurs": {
-      "id": "frn-1",
-      "nom": "Halal Import SARL"
-    }
-  },
-  {
-    "id": "LOT-2608-111",
-    "produit_id": "prd-010",
-    "abattoir_nom": "Abattoir de Castres",
-    "abattoir_pays": "FR",
-    "certifier_id": "AVS",
-    "certifier_name": "A Votre Service",
-    "certifier_valid_until": "2026-09-25",
-    "date_abattage": "2026-08-12",
-    "date_reception": "2026-08-15",
-    "dlc": "2026-09-13",
-    "quantite_recue": 16.3,
-    "unite": "kg",
-    "created_at": "2026-08-15T08:00:00Z",
-    "produits": {
-      "id": "prd-010",
-      "nom": "Boeuf bourguignon 1kg",
-      "marque": "Salam Cuisine"
-    },
-    "fournisseurs": {
-      "id": "frn-2",
-      "nom": "Boucherie Centrale"
-    }
-  },
-  {
-    "id": "LOT-2608-112",
-    "produit_id": "prd-011",
-    "abattoir_nom": "Carne Halal Zaragoza",
-    "abattoir_pays": "ES",
-    "certifier_id": "HMC",
-    "certifier_name": "Halal Monitoring",
-    "certifier_valid_until": "2027-01-15",
-    "date_abattage": "2026-08-13",
-    "date_reception": "2026-08-16",
-    "dlc": "2026-09-14",
-    "quantite_recue": 20.0,
-    "unite": "kg",
-    "created_at": "2026-08-16T08:00:00Z",
-    "produits": {
-      "id": "prd-011",
-      "nom": "Filet de poulet 1kg",
-      "marque": "Doux Halal"
-    },
-    "fournisseurs": {
-      "id": "frn-3",
-      "nom": "Atlas Food"
-    }
-  }
-] as unknown as LotRow[]; // TEMP QA
-
 export default function V2LotsListPage() {
   const router = useRouter();
   const [list, setList] = useState<LotRow[]>([]);
@@ -409,8 +118,9 @@ export default function V2LotsListPage() {
     setError(false);
     const sb = supabase();
     if (!sb) {
-      setList(QA_LOTS); // TEMP QA
+      setError(true);
       setLoading(false);
+      toast.error("Connexion Supabase indisponible");
       return;
     }
     const { data, error: err } = await sb
@@ -529,7 +239,7 @@ export default function V2LotsListPage() {
               tableau est trié par urgence, et un filet rouge (expiré) ou
               orange (moins de 30 jours) marque la ligne en tête. Les cartes
               restent la vue du terrain, sous 1024 px. */}
-            <section className="hidden lg:block">
+            <section className="hidden lg:block 2xl:max-w-[1400px]">
               <DataTable
                 rows={list}
                 getKey={(l) => l.id}
@@ -600,31 +310,6 @@ export default function V2LotsListPage() {
                         style={{ color: "var(--text-secondary)" }}
                       >
                         {l.fournisseurs?.nom || "—"}
-                      </span>
-                    ),
-                  },
-                  {
-                    key: "abattoir",
-                    label: "Abattoir",
-                    width: "150px",
-                    xlOnly: true,
-                    sort: (a, b) =>
-                      (a.abattoir_nom ?? "").localeCompare(
-                        b.abattoir_nom ?? "",
-                        "fr",
-                      ),
-                    render: (l) => (
-                      <span
-                        className="block truncate"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {l.abattoir_nom || "—"}
-                        {l.abattoir_pays && l.abattoir_pays !== "FR" && (
-                          <span style={{ color: "var(--text-tertiary)" }}>
-                            {" · "}
-                            {l.abattoir_pays}
-                          </span>
-                        )}
                       </span>
                     ),
                   },
@@ -868,7 +553,7 @@ function CertifBadge({
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-        style={{ background: "var(--danger-soft)", color: "var(--danger)" }}
+        style={{ background: "var(--danger-soft)", color: "var(--danger-ink)" }}
       >
         <ShieldAlert size={11} />
         Expiré
@@ -879,7 +564,7 @@ function CertifBadge({
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold shrink-0"
-        style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
+        style={{ background: "var(--warning-soft)", color: "var(--warning-ink)" }}
       >
         <ShieldAlert size={11} />
         Bientôt
@@ -917,9 +602,12 @@ function StatPill({
   tone: "success" | "warning" | "danger" | "neutral";
 }) {
   const tones = {
+    // 31/08/2026 — les *-ink sont l'encre de texte : en thème jour, l'ambre
+    // et le rouge d'alerte posés sur leur propre voile tombaient à 2,90 et
+    // 3,60:1. Les fonds, eux, ne changent pas.
     success: { bg: "var(--success-soft)", color: "var(--success)" },
-    warning: { bg: "var(--warning-soft)", color: "var(--warning)" },
-    danger: { bg: "var(--danger-soft)", color: "var(--danger)" },
+    warning: { bg: "var(--warning-soft)", color: "var(--warning-ink)" },
+    danger: { bg: "var(--danger-soft)", color: "var(--danger-ink)" },
     neutral: { bg: "var(--bg-cream)", color: "var(--text-secondary)" },
   } as const;
   const t = tones[tone];

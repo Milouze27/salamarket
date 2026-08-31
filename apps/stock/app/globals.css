@@ -1701,8 +1701,13 @@ body.theme-nuit .cmdk-item[data-selected="true"] .text-text-primary {
   backdrop-filter: blur(18px) saturate(150%);
   --text-on-dark: #10231b;
   --text-on-dark-muted: #3f5a4d;
-  --accent-gold-bright: #8b6f0e;
-  --accent-gold-dim: #8b6f0e;
+  /* 31/08/2026 — ces deux valeurs étaient figées à #8b6f0e, l'ancienne
+     valeur de --or-text, mesurée à 4,48:1 sur crème. La carte héros les
+     hérite localement : « Aujourd'hui · CA commandé » et « Action
+     principale » y restaient sous le seuil malgré la correction du token.
+     On pointe désormais sur le token, corrigé à 4,7:1. */
+  --accent-gold-bright: var(--or-text);
+  --accent-gold-dim: var(--or-text);
 }
 /* Le glow radial sombre de .hero-action-card::after n'a plus lieu d'être en jour. */
 [data-theme="jour"] .hero-action-card::after { opacity: 0; }
@@ -2137,4 +2142,92 @@ body.theme-nuit .badge-client-pro {
 body.theme-nuit .badge-client-traiteur {
   background: var(--surface-2);
   color: var(--warning);
+}
+
+/* ── Ambre lisible sur fond ambre pâle ────────────────────────────────
+   `text-warning` sur `bg-warning-soft` mesurait 2,90:1 en thème jour
+   (#d97706 sur #fef3e2). L'ambre d'alerte est fait pour être vu SUR une
+   surface neutre, pas sur son propre voile. */
+:root {
+  --warning-text: #8a4b04;
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --warning-text: var(--warning);
+}
+.on-warning-soft {
+  background: var(--warning-soft);
+  color: var(--warning-text);
+}
+
+/* ── Ambre et rouge d'alerte : encre de texte distincte du fond ────────
+   `text-warning` et `text-danger` servent au TEXTE ; `bg-warning` /
+   `bg-danger` servent au fond. Mais un seul token portait les deux rôles.
+   Mesuré en thème jour sur fond crème : l'ambre #d97706 tombe à 2,97:1
+   (« En préparation », « 0 réf en DLC courte ») et le rouge #e5483d à
+   3,68:1 (« À préparer », « Bas », « Impact critique »).
+   On ne touche pas aux tokens — les FONDS d'alerte restent identiques —
+   on donne juste au texte son encre. En thème nuit, les couleurs vives sur
+   fond sombre passent déjà largement : l'encre y reste le token. */
+:root {
+  --warning-ink: #8a4b04;
+  --danger-ink: #b3271c;
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --warning-ink: var(--warning);
+  --danger-ink: var(--danger);
+}
+.text-warning {
+  color: var(--warning-ink);
+}
+.text-danger {
+  color: var(--danger-ink);
+}
+
+/* Même correction pour la syntaxe arbitraire de Tailwind : plusieurs pages
+   écrivent `text-[var(--warning)]` ou `text-[color:var(--danger)]` au lieu
+   de la classe utilitaire. Ces textes tombaient à 2,90 et 3,60:1 en jour. */
+.text-\[var\(--warning\)\],
+.text-\[color\:var\(--warning\)\] {
+  color: var(--warning-ink);
+}
+.text-\[var\(--danger\)\],
+.text-\[color\:var\(--danger\)\] {
+  color: var(--danger-ink);
+}
+
+/* ── L'or vif est une couleur de FOND, pas d'encre, en thème jour ──────
+   --accent-gold (#c9a227) et --accent-gold-bright (#ddb31c) sont calibrés
+   pour être posés sur du sapin sombre. Sur le crème du thème jour ils
+   tombent à 2,26:1 et 1,86:1 — mesuré sur « J-161 » en 64 px et sur les
+   montants du cockpit. On ne peut pas assombrir les tokens : ils servent
+   aussi de fond au bouton or, dont le texte sombre perdrait son contraste.
+   D'où une encre dédiée, appliquée aux seules classes de TEXTE. */
+:root {
+  --gold-ink: var(--or-text);
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --gold-ink: var(--accent-gold-bright);
+}
+/* ⚠ NE PAS redéfinir globalement .text-gold : mesuré le 31/08/2026, une
+   règle globale répare les textes posés sur crème mais CASSE ceux posés sur
+   sapin sombre (« Back-office » tombé de 8,1 à 3,04:1, le libellé du bouton
+   d'inventaire à 1,59:1). Le CSS ne connaît pas le fond de son élément :
+   --gold-ink doit être demandée explicitement, là où le fond est clair. */
+
+/* Encre sur le voile or (--accent-gold-soft). En thème jour ce voile est un
+   crème opaque (#f4e9c4) : l'or sombre y mesure 4,18:1, sous le seuil de
+   4,5 pour un badge de 11,5 px. Il faut descendre d'un cran. */
+:root {
+  --on-gold-soft-ink: #6d5509;
+}
+:root:not([data-theme="jour"]),
+[data-theme="nuit"],
+body.theme-nuit {
+  --on-gold-soft-ink: var(--accent-gold-bright);
 }

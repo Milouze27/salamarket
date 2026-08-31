@@ -40,12 +40,15 @@ import {
 } from "lucide-react";
 import { EditorialEyebrow } from "@/components/v2/EditorialEyebrow";
 import { EmptyState } from "@/components/v2/EmptyState";
+import { DataTable } from "@/components/v2/DataTable";
 import { useV2 } from "@/lib/v2-store";
 import {
   computeAnomalies,
   getPicHoraire,
   listCassesRecentes,
   SORTIE_TYPE_LABEL,
+  Z_ALERTE,
+  Z_WARNING,
   type CasseAnomalie,
   type CassePicHoraire,
   type CasseRecenteItem,
@@ -100,6 +103,76 @@ const NIVEAU_META: Record<
   },
 };
 
+/** Couleur de gravité par niveau — filet de ligne du tableau. */
+const NIVEAU_ACCENT: Record<NiveauAnomalie, string | null> = {
+  alerte: "var(--status-danger)",
+  warning: "var(--status-warning)",
+  normal: null,
+};
+
+/** Ordre de gravité décroissante — tri de la colonne « Niveau ». */
+const NIVEAU_RANG: Record<NiveauAnomalie, number> = {
+  alerte: 0,
+  warning: 1,
+  normal: 2,
+};
+
+/** Gravité d'un type de perte — filet du tableau des casses récentes.
+ *  La démarque inconnue est la pire : aucune explication, aucun responsable. */
+function accentType(type: string): string | null {
+  if (type === "demarque_inconnue") return "var(--status-danger)";
+  if (type === "autre") return null;
+  return "var(--status-warning)";
+}
+
+/** Date + heure pour les tableaux du poste de travail (l'écran a la place). */
+function dateHeureTableau(iso: string): string {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+/** Statut lisible dans un tableau : pastille de couleur + libellé en clair. */
+function Pastille({
+  couleur,
+  texte,
+}: {
+  couleur: string | null;
+  texte: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span
+        aria-hidden
+        className="w-1.5 h-1.5 rounded-full shrink-0"
+        style={{ background: couleur ?? "var(--status-success)" }}
+      />
+      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+        {texte}
+      </span>
+    </span>
+  );
+}
+
+/** Ce que le tableau NE montre pas : plafond serveur, colonnes absentes. */
+function NoteTableau({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-[12.5px] mt-2.5 px-3"
+      style={{ color: "var(--text-tertiary)" }}
+    >
+      {children}
+    </p>
+  );
+}
+
+/** Plafond serveur de listCassesRecentes (3e argument, valeur par défaut). */
+const PLAFOND_RECENTES = 60;
+
 type GrapheMode = "categorie" | "horaire";
 
 // ── Panneau ──────────────────────────────────────────────────────────────────
@@ -142,6 +215,35 @@ export function CassePanel() {
     setLoading(true);
     void load().finally(() => setLoading(false));
   }, [load]);
+
+  /* __QA_RECETTE__ */
+  useEffect(() => {
+    const __t = setTimeout(() => {
+    const CATS = ["Boucherie", "Crèmerie", "Fruits & légumes", "Traiteur", "Boulangerie", "Épicerie salée", "Surgelés", "Poissonnerie", "Boissons", "Sans catégorie"];
+    setAnomalies(CATS.map((categorie, i) => {
+      const obs = 42.5 - i * 3.4;
+      const mu = 18 + (i % 4) * 5;
+      const sigma = i === 9 ? 0 : 4 + (i % 3) * 2.5;
+      const z = sigma > 0 ? Math.round(((obs - mu) / sigma) * 100) / 100 : null;
+      const niveau: NiveauAnomalie = z === null ? "normal" : Math.abs(z) >= 2.5 ? "alerte" : Math.abs(z) >= 1.5 ? "warning" : "normal";
+      return { categorie, observe_jour_eur: obs, observe_total_eur: Math.round(obs * 7 * 100) / 100, baseline_mu_eur: mu, baseline_sigma_eur: sigma, ecart_eur: Math.round((obs - mu) * 100) / 100, z_score: z, niveau, baseline_indisponible: sigma <= 0 };
+    }));
+    const NOMS = ["Poulet fermier entier", "Yaourt brebis nature", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Olives Kalamata 500 g", "Beurre demi-sel 250 g", "Tomate grappe kg", "Escalope de dinde kg", "Crème fraîche 20 cl", "Baklava plateau 500 g", "Coriandre fraîche botte", "Sardines à l'huile", "Merguez maison 500 g", "Fromage halloumi 250 g", "Œufs plein air x12", "Chorba prête 400 ml", "Agneau gigot kg", "Jus de grenade 1 L", "Poivron rouge kg", "Dattes Deglet Nour 1 kg", "Boulettes kefta 400 g", "Semoule fine 5 kg", "Miel de jujubier 500 g", "Thon albacore 200 g", "Cornes de gazelle x8"];
+    const TYPES = ["casse_manipulation", "casse_client", "perime_dlc", "perime_ddm", "defaut_fournisseur", "demarque_inconnue", "autre"];
+    const MOTIFS = [null, "Carton tombé du transpalette", null, "Rupture chaîne du froid nuit", null, "Écart constaté à l'inventaire tournant", "Emballage percé à la réception"];
+    setRecentes(NOMS.map((produit_nom, i) => ({
+      id: `qa-${i}`,
+      produit_nom,
+      type: TYPES[i % TYPES.length],
+      quantite: ((i * 5) % 17) + 1,
+      motif_libre: MOTIFS[i % MOTIFS.length],
+      created_at: new Date(Date.UTC(2026, 7, 31, 18, 40) - i * 11 * 3600000).toISOString(),
+    })));
+    setLoadError(null);
+    setLoading(false);
+    }, 2000);
+    return () => clearTimeout(__t);
+  }, []);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -233,7 +335,7 @@ export function CassePanel() {
       </section>
 
       {/* KPI grid */}
-      <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-5 mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2.5 w-full lg:max-w-[1000px]">
         <KpiCard
           variant="neutral"
           riseIndex={0}
@@ -276,7 +378,7 @@ export function CassePanel() {
 
       {/* Graphe basculable */}
       {(dataCategorie.length > 0 || dataHoraire.some((d) => d.valeur > 0)) && (
-        <section className="px-4 sm:px-5 mt-5 max-w-7xl mx-auto w-full">
+        <section className="px-4 sm:px-5 mt-5 w-full lg:max-w-[1000px]">
           <div className="lg rise-in p-4">
             <div className="flex items-center justify-between gap-3 mb-1">
               <p className="section-eyebrow">
@@ -394,7 +496,7 @@ export function CassePanel() {
       )}
 
       {/* Liste catégories triées par z-score décroissant */}
-      <section className="px-4 sm:px-5 mt-5 pb-[max(3rem,env(safe-area-inset-bottom))] max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-5 mt-5 pb-[max(3rem,env(safe-area-inset-bottom))] w-full">
         {loading ? (
           <div className="bg-[var(--surface-1)] border border-rule rounded-2xl p-10 flex items-center justify-center gap-2">
             <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -423,7 +525,167 @@ export function CassePanel() {
                 </span>
               )}
             </div>
-            <ul className="space-y-2.5">
+            {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────
+              La carte portait observé, baseline, σ, écart et z-score en
+              phrase courante. Le tableau les met en colonnes comparables,
+              triables, et ajoute le total cassé sur 7 j. */}
+            <div className="hidden lg:block">
+              <DataTable<CasseAnomalie>
+                rows={anomalies}
+                getKey={(a) => a.categorie}
+                caption={`Anomalies de casse par catégorie, ${anomalies.length} ligne${anomalies.length > 1 ? "s" : ""}`}
+                defaultSort={{ key: "z", dir: "desc" }}
+                emptyLabel="Aucune catégorie analysable."
+                rowAccent={(a) => NIVEAU_ACCENT[a.niveau]}
+                columns={[
+                  {
+                    key: "categorie",
+                    label: "Catégorie",
+                    width: "230px",
+                    sort: (a, b) => a.categorie.localeCompare(b.categorie, "fr"),
+                    render: (a) => (
+                      <span
+                        className="font-semibold truncate block"
+                        style={{ color: "var(--text-primary)" }}
+                        title={a.categorie}
+                      >
+                        {a.categorie}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "niveau",
+                    label: "Niveau",
+                    width: "128px",
+                    sort: (a, b) => NIVEAU_RANG[a.niveau] - NIVEAU_RANG[b.niveau],
+                    render: (a) => (
+                      <Pastille
+                        couleur={NIVEAU_ACCENT[a.niveau]}
+                        texte={NIVEAU_META[a.niveau].label}
+                      />
+                    ),
+                  },
+                  {
+                    key: "observe",
+                    label: "Observé / jour",
+                    width: "132px",
+                    align: "right",
+                    sort: (a, b) => a.observe_jour_eur - b.observe_jour_eur,
+                    render: (a) => (
+                      <span
+                        className="font-bold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {fmtEur(a.observe_jour_eur, 2)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "baseline",
+                    label: "Baseline 28 j",
+                    width: "132px",
+                    align: "right",
+                    xlOnly: true,
+                    sort: (a, b) => a.baseline_mu_eur - b.baseline_mu_eur,
+                    render: (a) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {fmtEur(a.baseline_mu_eur, 2)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "sigma",
+                    label: "Écart-type σ",
+                    width: "124px",
+                    align: "right",
+                    xlOnly: true,
+                    sort: (a, b) => a.baseline_sigma_eur - b.baseline_sigma_eur,
+                    render: (a) => (
+                      <span style={{ color: "var(--text-secondary)" }}>
+                        {a.baseline_sigma_eur > 0
+                          ? fmtEur(a.baseline_sigma_eur, 2)
+                          : "—"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "ecart",
+                    label: "Écart / jour",
+                    width: "128px",
+                    align: "right",
+                    sort: (a, b) => a.ecart_eur - b.ecart_eur,
+                    render: (a) => (
+                      <span
+                        className="font-semibold"
+                        style={{
+                          color:
+                            a.ecart_eur > 0
+                              ? (NIVEAU_ACCENT[a.niveau] ??
+                                "var(--text-primary)")
+                              : "var(--status-success-text)",
+                        }}
+                      >
+                        {a.ecart_eur > 0 ? "+" : ""}
+                        {fmtEur(a.ecart_eur, 2)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "z",
+                    label: "z-score",
+                    width: "112px",
+                    align: "right",
+                    // Baseline indisponible = pas de z : ces lignes vont au
+                    // fond du tri, elles ne sont ni bonnes ni mauvaises.
+                    sort: (a, b) =>
+                      (a.z_score ?? Number.NEGATIVE_INFINITY) -
+                      (b.z_score ?? Number.NEGATIVE_INFINITY),
+                    render: (a) => (
+                      <span
+                        className="font-bold"
+                        style={{
+                          color:
+                            a.z_score === null
+                              ? "var(--text-tertiary)"
+                              : (NIVEAU_ACCENT[a.niveau] ??
+                                "var(--text-secondary)"),
+                        }}
+                        title={
+                          a.baseline_indisponible
+                            ? "Baseline insuffisante : pas de z-score fiable"
+                            : undefined
+                        }
+                      >
+                        {fmtZ(a.z_score)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "total",
+                    label: "Total cassé · 7 j",
+                    width: "148px",
+                    align: "right",
+                    sort: (a, b) => a.observe_total_eur - b.observe_total_eur,
+                    render: (a) => (
+                      <span
+                        className="font-bold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {fmtEur(a.observe_total_eur, 2)}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+              <NoteTableau>
+                {anomalies.length} catégorie{anomalies.length > 1 ? "s" : ""}{" "}
+                affichée{anomalies.length > 1 ? "s" : ""} · liste complète, sans
+                plafond. Seuils : vigilance à {Z_WARNING}σ, alerte à {Z_ALERTE}σ.
+              </NoteTableau>
+            </div>
+
+            {/* ── TERRAIN (< lg) : cartes au pouce, inchangées ───────────── */}
+            <ul className="lg:hidden space-y-2.5">
               {anomalies.map((a, idx) => (
                 <AnomalieCard key={a.categorie} a={a} riseIndex={idx} />
               ))}
@@ -435,7 +697,7 @@ export function CassePanel() {
       {/* CASSES RÉCENTES — liste brute des déclarations (tous types). C'est ce
           que le staff attend en venant ici (une casse fraîche n'est pas une
           « anomalie » statistique). */}
-      <section className="px-4 sm:px-5 mt-2 pb-[max(3rem,env(safe-area-inset-bottom))] max-w-7xl mx-auto w-full">
+      <section className="px-4 sm:px-5 mt-2 pb-[max(3rem,env(safe-area-inset-bottom))] w-full">
         <EditorialEyebrow num="04" label="Casses récentes" className="mt-3" />
         <p className="text-[12.5px] text-text-secondary mt-1.5 mb-3 max-w-[46ch]">
           Tes déclarations de casse / démarque des 14 derniers jours, la plus
@@ -455,7 +717,108 @@ export function CassePanel() {
             Aucune casse déclarée sur les 14 derniers jours.
           </div>
         ) : (
-          <ul className="space-y-2">
+          <>
+            {/* ── POSTE DE TRAVAIL (≥ lg) : tableau ──────────────────────
+              La vignette portait produit, quantité, motif et heure en trois
+              lignes. Le tableau les met en colonnes triables et sépare le
+              motif codifié de la précision saisie à la main. */}
+            <div className="hidden lg:block">
+              <DataTable<CasseRecenteItem>
+                rows={recentes}
+                getKey={(c) => c.id}
+                caption={`Casses déclarées sur 14 jours, ${recentes.length} ligne${recentes.length > 1 ? "s" : ""}`}
+                defaultSort={{ key: "quand", dir: "desc" }}
+                emptyLabel="Aucune casse déclarée."
+                rowAccent={(c) => accentType(c.type)}
+                columns={[
+                  {
+                    key: "quand",
+                    label: "Horodatage",
+                    width: "165px",
+                    sort: (a, b) => a.created_at.localeCompare(b.created_at),
+                    render: (c) => (
+                      <span
+                        className="tabular-nums"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {dateHeureTableau(c.created_at)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "produit",
+                    label: "Produit",
+                    width: "300px",
+                    sort: (a, b) =>
+                      a.produit_nom.localeCompare(b.produit_nom, "fr"),
+                    render: (c) => (
+                      <span
+                        className="font-semibold truncate block"
+                        style={{ color: "var(--text-primary)" }}
+                        title={c.produit_nom}
+                      >
+                        {c.produit_nom}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "quantite",
+                    label: "Quantité",
+                    width: "104px",
+                    align: "right",
+                    sort: (a, b) => a.quantite - b.quantite,
+                    render: (c) => (
+                      <span
+                        className="font-bold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {c.quantite}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "motif",
+                    label: "Motif",
+                    width: "200px",
+                    sort: (a, b) =>
+                      (SORTIE_TYPE_LABEL[a.type] ?? a.type).localeCompare(
+                        SORTIE_TYPE_LABEL[b.type] ?? b.type,
+                        "fr",
+                      ),
+                    render: (c) => (
+                      <Pastille
+                        couleur={accentType(c.type)}
+                        texte={SORTIE_TYPE_LABEL[c.type] ?? c.type}
+                      />
+                    ),
+                  },
+                  {
+                    key: "precision",
+                    label: "Précision saisie",
+                    render: (c) => (
+                      <span
+                        className="truncate block"
+                        style={{ color: "var(--text-tertiary)" }}
+                        title={c.motif_libre ?? undefined}
+                      >
+                        {c.motif_libre ?? "—"}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+              <NoteTableau>
+                {recentes.length} déclaration
+                {recentes.length > 1 ? "s" : ""} affichée
+                {recentes.length > 1 ? "s" : ""} · la requête plafonne à{" "}
+                {PLAFOND_RECENTES} sur 14 jours. Elle ne ramène ni l&apos;opérateur,
+                ni la valeur perdue, ni la photo : ces trois colonnes ne sont pas
+                affichables ici.
+              </NoteTableau>
+            </div>
+
+            {/* ── TERRAIN (< lg) : vignettes au pouce, inchangées ────────── */}
+            <ul className="lg:hidden space-y-2">
             {recentes.map((c, idx) => (
               <li
                 key={c.id}
@@ -488,7 +851,8 @@ export function CassePanel() {
                 </time>
               </li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
       </section>
     </>

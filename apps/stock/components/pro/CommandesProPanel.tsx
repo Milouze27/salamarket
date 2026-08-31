@@ -124,38 +124,6 @@ function libelleAction(suivant: CommandeProStatut): string {
   }
 }
 
-// ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-const DEMO_CLIENTS = ["Restaurant Al Bahdja", "Traiteur Nour", "École Ibn Sina", "Boucherie du Mirail", "Snack Le Cèdre", "Pâtisserie Zohra", "Cantine Les Oliviers", "Épicerie Salam Rangueil"];
-const DEMO_COMMANDES: CommandePro[] = Array.from({ length: 18 }, (_, i) => {
-  const ht = 120 + i * 87.4;
-  return {
-    id: "k" + i,
-    compte_pro_id: "c" + (i % 8),
-    numero_commande: "CP-2026-" + (1200 + i),
-    date_commande: new Date(Date.now() - i * 86400000).toISOString(),
-    date_livraison_souhaitee: new Date(Date.now() + (5 - i) * 86400000).toISOString(),
-    type_recuperation: (i % 3 === 0 ? "retrait_pro" : "livraison") as CommandePro["type_recuperation"],
-    statut: (["a_valider", "validee", "en_preparation", "expediee", "livree", "facturee", "payee", "a_valider", "annulee"] as const)[i % 9],
-    validee_at: null,
-    montant_ht: ht,
-    montant_tva: ht * 0.055,
-    montant_ttc: ht * 1.055,
-    mode_paiement: null,
-    facture_numero: i % 9 >= 5 ? "F-2026-0" + (310 + i) : null,
-    date_echeance: new Date(Date.now() + (12 - i * 3) * 86400000).toISOString().slice(0, 10),
-    date_paiement: i % 9 === 6 ? new Date(Date.now() - i * 3600000).toISOString() : null,
-    notes_client: null,
-    notes_interne: null,
-    comptes_pro: {
-      id: "c" + (i % 8),
-      raison_sociale: DEMO_CLIENTS[i % 8],
-      conditions_paiement: (["comptant", "30_jours", "45_jours_fin_mois"] as const)[i % 3],
-      delegue_nom: ["Ahmed Nasri", "Otmane Jamal", "Sofia Roux", "Karim Amrani"][i % 4],
-    },
-  };
-});
-// ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
-
 export function CommandesProPanel() {
   const employe = useV2((s) => s.currentEmploye);
   const isManager = employe?.role === "manager" || employe?.role === "admin";
@@ -167,10 +135,7 @@ export function CommandesProPanel() {
 
   async function reload() {
     setLoading(true);
-    const d = await fetchCommandesPro();
-    // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-    setCommandes(d.length ? d : DEMO_COMMANDES);
-    // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
+    setCommandes(await fetchCommandesPro());
     setLoading(false);
   }
 

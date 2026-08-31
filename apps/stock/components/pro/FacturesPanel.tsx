@@ -92,51 +92,7 @@ export function FacturesPanel() {
 
   async function reload() {
     setLoading(true);
-    const reel = await fetchCommandesPro();
-    // ▼▼▼ RECETTE TEMPORAIRE — À RETIRER ▼▼▼
-    const all = reel.length
-      ? reel
-      : (Array.from({ length: 16 }, (_, i) => {
-          const ht = 210 + i * 133.7;
-          return {
-            id: "f" + i,
-            compte_pro_id: "c" + (i % 8),
-            numero_commande: "CP-2026-" + (1400 + i),
-            date_commande: new Date(Date.now() - (i + 20) * 86400000).toISOString(),
-            date_livraison_souhaitee: null,
-            type_recuperation: "livraison",
-            statut: i % 3 === 0 ? "payee" : "facturee",
-            validee_at: null,
-            montant_ht: ht,
-            montant_tva: ht * 0.055,
-            montant_ttc: ht * 1.055,
-            mode_paiement: null,
-            facture_numero: "F-2026-0" + (500 + i),
-            date_echeance: new Date(Date.now() + (9 - i * 3) * 86400000)
-              .toISOString()
-              .slice(0, 10),
-            date_paiement:
-              i % 3 === 0 ? new Date(Date.now() - i * 7200000).toISOString() : null,
-            notes_client: null,
-            notes_interne: null,
-            comptes_pro: {
-              id: "c" + (i % 8),
-              raison_sociale: [
-                "Restaurant Al Bahdja",
-                "Traiteur Nour",
-                "École Ibn Sina",
-                "Boucherie du Mirail",
-                "Snack Le Cèdre",
-                "Pâtisserie Zohra",
-                "Cantine Les Oliviers",
-                "Épicerie Salam Rangueil",
-              ][i % 8],
-              conditions_paiement: (["comptant", "30_jours", "45_jours_fin_mois"] as const)[i % 3],
-              delegue_nom: "Ahmed Nasri",
-            },
-          };
-        }) as CommandePro[]);
-    // ▲▲▲ RECETTE TEMPORAIRE ▲▲▲
+    const all = await fetchCommandesPro();
     // Une facture existe dès le statut facturee (ou payee).
     setFactures(
       all.filter((c) => c.statut === "facturee" || c.statut === "payee"),

@@ -366,7 +366,12 @@ function FournisseursPanel() {
               Une carte par fournisseur ne portait que le nom, l'email et le
               certif. Le tableau ajoute le délai, le nombre de références et la
               dernière commande — les trois chiffres qui servent à décider. */}
-            <div className="hidden lg:block">
+            {/* contain:inline-size — sans lui, la largeur minimale du tableau
+              remonte jusqu'au <main> (élément flex à min-width:auto dans
+              V2Shell) et pousse toute la page hors de l'écran, sans barre de
+              défilement puisque body est en overflow-x:clip. Avec, le tableau
+              défile DANS son cadre, comme prévu par DataTable. */}
+            <div className="hidden lg:block" style={{ contain: "inline-size" }}>
               <DataTable
                 rows={filtered}
                 getKey={(f) => f.id}
@@ -485,7 +490,10 @@ function FournisseursPanel() {
                         derniereCommande.get(b.id) ?? "",
                       ),
                     render: (f) => (
-                      <span style={{ color: "var(--text-secondary)" }}>
+                      <span
+                        className="whitespace-nowrap"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
                         {dateCourteFr(derniereCommande.get(f.id) ?? null)}
                       </span>
                     ),

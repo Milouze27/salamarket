@@ -40,11 +40,9 @@ export default function StockSansEanPage() {
     if (!selectedDepotId) return;
     setLoading(true);
     void listProduitsInDepot(selectedDepotId).then((all) => {
-      const noEan = all.map((p, i) =>
-        i % 2
-          ? { ...p, ean: null, quantite: i === 3 ? 0 : p.quantite }
-          : { ...p, ean: "INT-" + String(1000 + i) }
-      ); // TEMP QA
+      const noEan = all.filter(
+        (p) => !p.ean || p.ean.trim() === "" || /^[A-Z]{2,}-/.test(p.ean)
+      );
       setItems(noEan);
       setLoading(false);
     });

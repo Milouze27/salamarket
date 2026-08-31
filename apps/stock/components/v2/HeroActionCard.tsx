@@ -56,7 +56,7 @@ export function HeroActionCard({
           )}
           {badge && (
             <span
-              className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--accent-gold-bright)] px-2.5 py-1 rounded-full border border-[color:var(--border-premium)]"
+              className="text-[10px] font-bold uppercase tracking-[0.14em] text-[color:var(--on-gold-soft-ink)] px-2.5 py-1 rounded-full border border-[color:var(--border-premium)]"
               style={{ background: "var(--accent-gold-soft)" }}
             >
               {badge}

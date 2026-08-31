@@ -691,7 +691,7 @@ export function V2Shell({
                   <p className="text-[14px] font-extrabold tracking-tight truncate" style={{ color: "var(--text-primary)" }}>
                     {employe.prenom}
                   </p>
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] truncate" style={{ color: "var(--accent-gold)" }}>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] truncate" style={{ color: "var(--accent-gold-dim)" }}>
                     {/* EMP-01 — libellé FR unique via roleLabel (bannit l'enum
                       brut 'preparation' et les rendus incohérents). */}
                     {roleLabel(employe.role)}
@@ -763,7 +763,7 @@ export function V2Shell({
               </span>
             </div>
             {mode === "local" && process.env.NODE_ENV === "development" && (
-              <div className="mt-2 rounded-full bg-warning-soft text-warning text-[10px] font-bold uppercase tracking-wider text-center py-1.5">
+              <div className="on-warning-soft mt-2 rounded-full text-[10px] font-bold uppercase tracking-wider text-center py-1.5">
                 MODE DÉMO LOCAL · Supabase non connecté
               </div>
             )}

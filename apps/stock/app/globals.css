@@ -2223,3 +2223,26 @@ body.theme-nuit {
 body.theme-nuit {
   --on-gold-soft-ink: var(--accent-gold-bright);
 }
+
+/* ── Voile blanc de surbrillance, en jeton ────────────────────────────
+   31/08/2026 — les pastilles d'icône posées sur un fond sapin utilisent
+   `bg-white/15` écrit en dur dans le composant. Le filet de rattrapage
+   ci-dessus laisse volontairement les blancs de FAIBLE opacité tels quels
+   (un voile blanc sur du sombre est déjà correct de nuit) : la valeur est
+   donc juste, mais elle n'avait pas de nom. Ce jeton lui en donne un, à
+   valeur strictement identique — aucun pixel ne change. */
+:root {
+  --overlay-white-15: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Réserve de barre d'action sur grand écran : pourquoi il n'y a pas
+   de règle générale ───────────────────────────────────────────────────
+   `--cta-height` (96 px) réserve la place d'une barre d'action collée en
+   bas. On pourrait être tenté de l'annuler au-delà de 1024 px, puisque
+   beaucoup de pages masquent leur barre en desktop (`lg:hidden`) et
+   remontent les boutons dans la colonne de travail. Ce serait FAUX : une
+   dizaine de pages GARDENT leur barre sur ordinateur (classe
+   `.bar-desktop`, alignée sur la colonne de contenu), et perdraient alors
+   les 96 px qui empêchent la barre de recouvrir la dernière ligne.
+   La neutralisation reste donc page par page (`lg:!pb-10`), là où la
+   barre est effectivement masquée. */

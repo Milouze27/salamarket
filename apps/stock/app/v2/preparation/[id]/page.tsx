@@ -569,7 +569,12 @@ export default function V2PreparationDetailPage() {
   }
 
   return (
-    <V2Shell hideNav>
+    // layout="wide" : la page est un poste de préparation à deux volets
+    // (scanner + avancement à gauche, liste de collecte à droite). En "flow"
+    // le contenu plafonne à 1 280 px et la colonne de collecte retombe sous
+    // 900 px à 1920 ; "form" (820 px) est fait pour une saisie unique, pas
+    // pour une liste de picking.
+    <V2Shell hideNav layout="wide">
       <header className="px-5 pt-7">
         <BackButton />
         <p className="label-caps text-primary mt-3">Préparation</p>
@@ -580,36 +585,61 @@ export default function V2PreparationDetailPage() {
         </p>
       </header>
 
-      <section className="px-5 mt-4">
-        <button
-          onClick={() => setScannerOpen(true)}
-          className="tap w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
-        >
-          <ScanBarcode className="w-5 h-5" />
-          <span className="font-bold">Scanner le produit collecté</span>
-        </button>
-      </section>
+      {/* POSTE DE PRÉPARATION — à partir de 1024 px : scanner, ordre conseillé
+          et bouton de finalisation à gauche ; la liste de collecte à droite.
+          Sous 1024 px le conteneur n'est pas une grille et les blocs
+          s'empilent exactement comme avant (scanner, ordre, liste). */}
+      <div className="lg:grid lg:items-start lg:gap-x-6 lg:px-5 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div data-poste="action">
+          <section className="px-5 mt-4 lg:px-0">
+            <button
+              onClick={() => setScannerOpen(true)}
+              className="tap w-full bg-primary text-white rounded-2xl py-4 flex items-center justify-center gap-2"
+            >
+              <ScanBarcode className="w-5 h-5" />
+              <span className="font-bold">Scanner le produit collecté</span>
+            </button>
+          </section>
 
-      {pickingOrder.length > 1 && (
-        <section className="px-5 mt-4">
-          <div className="lg rise-in flex items-start gap-2.5 rounded-2xl px-3.5 py-3">
-            <span className="shrink-0 mt-0.5 text-primary" aria-hidden>
-              <Route className="w-4 h-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="label-caps text-text-tertiary">Ordre conseillé</p>
-              <p className="text-[13px] leading-snug text-text-secondary mt-0.5">
-                {pickingOrder.join(", ")}.
-              </p>
-            </div>
+          {pickingOrder.length > 1 && (
+            <section className="px-5 mt-4 lg:px-0">
+              <div className="lg rise-in flex items-start gap-2.5 rounded-2xl px-3.5 py-3">
+                <span className="shrink-0 mt-0.5 text-primary" aria-hidden>
+                  <Route className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="label-caps text-text-tertiary">
+                    Ordre conseillé
+                  </p>
+                  <p className="text-[13px] leading-snug text-text-secondary mt-0.5">
+                    {pickingOrder.join(", ")}.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Le même bouton que la barre collée, posé dans la colonne de
+              travail. Mesuré le 31/08/2026 à 1920 px : la barre était centrée
+              sur la fenêtre ENTIÈRE (elle n'avait pas la classe bar-desktop),
+              donc décalée de 134 px vers la gauche sous la barre latérale. */}
+          <div className="hidden lg:block mt-5 pb-10">
+            <BoutonFinaliser
+              isStripeFlow={isStripeFlow}
+              sumReelEur={sumReelEur}
+              prepCount={prepCount}
+              totalCount={totalCount}
+              onFinalize={finalize}
+            />
           </div>
-        </section>
-      )}
+        </div>
 
+        <div data-poste="contexte">
       {/* pb-cta-only : la dernière ligne scrollable ne doit jamais passer
           sous le CTA fixe (cta-height + safe-bottom + respiration). hideNav
-          ici => pas de nav-height à compter. */}
-      <section className="px-5 mt-5 space-y-4 pb-cta-only">
+          ici => pas de nav-height à compter. Sur ordinateur le CTA n'est plus
+          collé en bas : la réserve n'a plus de raison d'être. */}
+      <section className="px-5 mt-5 space-y-4 pb-cta-only lg:px-0 lg:!pb-10">
         {groupedByZone.length === 0 && (
           <div className="lg rise-in rounded-2xl px-4 py-8 text-center">
             <p className="text-sm font-bold text-text-primary">
@@ -626,7 +656,11 @@ export default function V2PreparationDetailPage() {
               {ZONE_LABEL[group.zone]} · {group.items.length} produit
               {group.items.length > 1 ? "s" : ""}
             </p>
-            <div className="grid gap-2 lg:grid-cols-2 items-start">
+            {/* La colonne de collecte est déjà une des deux colonnes du poste :
+                on ne la redivise en deux qu'à 1536 px, où elle dépasse 1 200 px.
+                À 1440 elle vaut 788 px — deux cartes de 390 px y écraseraient
+                la ligne de pesée. */}
+            <div className="grid gap-2 2xl:grid-cols-2 items-start">
               {group.items.map((l, i) => {
                 const cold = COLD_CATEGORIES.has(l.produit?.categorie ?? "");
                 const done = l.statut_preparation !== "en_attente";
@@ -748,38 +782,23 @@ export default function V2PreparationDetailPage() {
           </div>
         ))}
       </section>
+        </div>
+      </div>
 
       {/* CTA fixe ancré AU-DESSUS du safe-area iPad (home-indicator/notch) :
           cta-above-safe => bottom: var(--safe-bottom). Sans ça le bouton
-          était coupé sous le home-indicator en PWA plein écran. */}
-      <div className="fixed cta-above-safe inset-x-0 z-30 pointer-events-none">
+          était coupé sous le home-indicator en PWA plein écran.
+          bar-desktop : la barre se décale de la barre latérale ; lg:hidden :
+          sur ordinateur c'est la colonne de travail qui porte le bouton. */}
+      <div className="bar-desktop lg:hidden fixed cta-above-safe inset-x-0 z-30 pointer-events-none">
         <div className="mx-auto max-w-[680px] px-4 pt-3 pb-4 pointer-events-auto">
-          <button
-            onClick={finalize}
-            disabled={totalCount === 0 || prepCount < totalCount}
-            className="tap w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
-          >
-            <div className="text-left">
-              <p
-                className="text-[10px] font-bold uppercase tracking-[0.14em]"
-                style={{ color: "var(--accent-gold-bright)" }}
-              >
-                {isStripeFlow ? "Finaliser & capturer" : "Marquer prêt"}
-              </p>
-              <p className="text-[15px] font-extrabold mt-0.5">
-                {isStripeFlow
-                  ? `${sumReelEur.toFixed(2)} €`
-                  : `${prepCount}/${totalCount} préparés`}
-              </p>
-            </div>
-            <span className="bg-white/15 backdrop-blur-sm rounded-full p-2.5">
-              {isStripeFlow ? (
-                <CreditCard className="w-5 h-5" />
-              ) : (
-                <ShoppingBag className="w-5 h-5" />
-              )}
-            </span>
-          </button>
+          <BoutonFinaliser
+            isStripeFlow={isStripeFlow}
+            sumReelEur={sumReelEur}
+            prepCount={prepCount}
+            totalCount={totalCount}
+            onFinalize={finalize}
+          />
         </div>
       </div>
 
@@ -799,6 +818,55 @@ export default function V2PreparationDetailPage() {
         }}
       />
     </V2Shell>
+  );
+}
+
+/**
+ * Bouton de finalisation, rendu à deux endroits selon la taille d'écran :
+ * barre collée en bas au téléphone, colonne de travail sur ordinateur.
+ * Un seul jeu de libellés et de gardes, aucune duplication.
+ */
+function BoutonFinaliser({
+  isStripeFlow,
+  sumReelEur,
+  prepCount,
+  totalCount,
+  onFinalize,
+}: {
+  isStripeFlow: boolean;
+  sumReelEur: number;
+  prepCount: number;
+  totalCount: number;
+  onFinalize: () => void;
+}) {
+  return (
+    <button
+      onClick={onFinalize}
+      disabled={totalCount === 0 || prepCount < totalCount}
+      className="tap w-full bg-primary text-white rounded-[22px] px-5 py-4 flex items-center justify-between shadow-card-lg disabled:opacity-50"
+    >
+      <div className="text-left">
+        <p
+          className="text-[10px] font-bold uppercase tracking-[0.14em]"
+          style={{ color: "var(--accent-gold-bright)" }}
+        >
+          {isStripeFlow ? "Finaliser & capturer" : "Marquer prêt"}
+        </p>
+        <p className="text-[15px] font-extrabold mt-0.5">
+          {isStripeFlow
+            ? `${sumReelEur.toFixed(2)} €`
+            : `${prepCount}/${totalCount} préparés`}
+        </p>
+      </div>
+      <span className="backdrop-blur-sm rounded-full p-2.5"
+              style={{ background: "var(--overlay-white-15)" }}>
+        {isStripeFlow ? (
+          <CreditCard className="w-5 h-5" />
+        ) : (
+          <ShoppingBag className="w-5 h-5" />
+        )}
+      </span>
+    </button>
   );
 }
 

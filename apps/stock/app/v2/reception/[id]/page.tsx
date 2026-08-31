@@ -9,8 +9,11 @@ import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { BarcodeScanner } from "@/components/reception/BarcodeScanner";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
 import { ReceptionHeader } from "@/components/v2/reception/ReceptionHeader";
-import { LigneList } from "@/components/v2/reception/LigneList";
-import { ValidationFooter } from "@/components/v2/reception/ValidationFooter";
+import { LigneList, PhotosBloc } from "@/components/v2/reception/LigneList";
+import {
+  ValidationActions,
+  ValidationFooter,
+} from "@/components/v2/reception/ValidationFooter";
 import { CartonLearnModal } from "@/components/v2/reception/CartonLearnModal";
 import { SurplusModal } from "@/components/v2/reception/SurplusModal";
 import { CreateProductModal } from "@/components/v2/reception/CreateProductModal";
@@ -858,7 +861,11 @@ export default function BdlReceptionPage() {
   }
 
   return (
-    <V2Shell hideNav>
+    // layout="wide" : la page tient deux volets (poste de travail + tableau
+    // des lignes). En "flow" le contenu plafonne à 1 280 px, ce qui laisse au
+    // tableau moins de 800 px une fois la colonne d'action posée ; "full"
+    // n'aurait aucune limite de lecture pour un en-tête et deux photos.
+    <V2Shell hideNav layout="wide">
       <PageAccentStripe accent="sapin" />
 
       {/* Header — sticky désactivé pour éviter collision avec V2Shell
@@ -878,16 +885,50 @@ export default function BdlReceptionPage() {
         onCancelEditNumFourn={() => setEditingNumFourn(false)}
       />
 
-      {/* Liste des lignes attendues + zone photos */}
-      <LigneList
-        bdl={bdl}
-        onOpenPhotoSlot={(slot) => {
-          setPhotoSlot(slot);
-          setPhotoOpen(true);
-        }}
-      />
+      {/* POSTE DE TRAVAIL — à partir de 1024 px, action à gauche, contexte à
+          droite. La grille place explicitement ses trois blocs, ce qui permet
+          de garder l'ORDRE DU DOM du téléphone (lignes, puis photos, puis
+          actions) tout en montrant les photos et les boutons à gauche du
+          tableau sur ordinateur. Sous 1024 px le conteneur n'est pas une
+          grille : les blocs s'empilent exactement comme avant. */}
+      {/* La 3e rangée en 1fr absorbe le surplus de hauteur du tableau : sans
+          elle, l'écart était réparti entre les deux rangées de gauche et
+          creusait 220 px de vide entre les photos et les boutons (vu à
+          l'image, 1440 px). */}
+      <div className="lg:grid lg:items-start lg:gap-x-2 lg:grid-rows-[auto_auto_1fr] lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
+        <div
+          data-poste="contexte"
+          className="lg:col-start-2 lg:row-start-1 lg:row-span-3"
+        >
+          <LigneList bdl={bdl} />
+        </div>
 
-      {/* Floating actions — diffèrent selon le statut */}
+        <div data-poste="action" className="lg:col-start-1 lg:row-start-1">
+          <PhotosBloc
+            bdl={bdl}
+            onOpenPhotoSlot={(slot) => {
+              setPhotoSlot(slot);
+              setPhotoOpen(true);
+            }}
+          />
+        </div>
+
+        {/* Les mêmes boutons que la barre du bas, posés dans la colonne de
+            travail. Sur un poste fixe la barre collée flottait au milieu de
+            l'écran par-dessus la liste (mesuré le 31/08/2026). */}
+        <div className="hidden lg:block lg:col-start-1 lg:row-start-2 px-5 mt-5 pb-10">
+          <ValidationActions
+            bdl={bdl}
+            progression={progression}
+            allRecu={allRecu}
+            submitting={submitting}
+            onScan={() => setScannerOpen(true)}
+            onFinalize={() => void finalize()}
+          />
+        </div>
+      </div>
+
+      {/* Barre d'action collée — forme téléphone (retirée à partir de lg). */}
       <ValidationFooter
         bdl={bdl}
         progression={progression}

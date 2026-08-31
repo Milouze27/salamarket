@@ -38,6 +38,28 @@ export interface Column<T> {
   align?: "left" | "right" | "center";
   /** Masque la colonne sous 1280px (colonnes de confort). */
   xlOnly?: boolean;
+  /**
+   * Palier de disparition, plus fin que `xlOnly` : "xl" = masquée sous
+   * 1280 px, "2xl" = masquée sous 1536 px. Sert à hiérarchiser les colonnes
+   * quand il y en a trop pour un écran de portable : les moins utiles
+   * partent les premières, au lieu de comprimer toutes les autres.
+   * `xlOnly` reste accepté et équivaut à `hideBelow: "xl"`.
+   */
+  hideBelow?: "xl" | "2xl";
+  /**
+   * Interdit le retour à la ligne dans la cellule. À réserver aux libellés
+   * courts et indivisibles (un état, un code) : sur un nom de produit long,
+   * cela pousse la largeur minimale du tableau au lieu de l'ajuster.
+   */
+  nowrap?: boolean;
+}
+
+/** Classes de masquage responsive d'une colonne. */
+function masque<T>(col: Column<T>): string {
+  const palier = col.hideBelow ?? (col.xlOnly ? "xl" : null);
+  if (palier === "2xl") return "hidden 2xl:table-cell";
+  if (palier === "xl") return "hidden xl:table-cell";
+  return "";
 }
 
 export function DataTable<T>({
@@ -114,9 +136,7 @@ export function DataTable<T>({
                     borderBottom: "1px solid var(--border-medium)",
                     textAlign: col.align ?? "left",
                   }}
-                  className={`sticky top-0 z-10 py-2.5 px-3 text-[12px] font-semibold whitespace-nowrap bg-[color:var(--surface-1)] ${
-                    col.xlOnly ? "hidden xl:table-cell" : ""
-                  }`}
+                  className={`sticky top-0 z-10 py-2.5 px-3 text-[12px] font-semibold whitespace-nowrap bg-[color:var(--surface-1)] ${masque(col)}`}
                   aria-sort={
                     active ? (dir === "asc" ? "ascending" : "descending") : undefined
                   }
@@ -182,7 +202,7 @@ export function DataTable<T>({
                     style={{ textAlign: col.align ?? "left" }}
                     className={`py-2.5 px-3 text-[13.5px] align-middle ${
                       col.align === "right" ? "tabular-nums" : ""
-                    } ${col.xlOnly ? "hidden xl:table-cell" : ""}`}
+                    } ${col.nowrap ? "whitespace-nowrap" : ""} ${masque(col)}`}
                   >
                     {col.render(row)}
                   </td>

@@ -49,6 +49,7 @@ import {
 import { toast } from "sonner";
 import { V2Shell } from "@/components/v2/V2Shell";
 import { BackButton } from "@/components/v2/BackButton";
+import { DataTable } from "@/components/v2/DataTable";
 import { PageAccentStripe } from "@/components/v2/PageAccentStripe";
 import { PhotoCapture } from "@/components/reception/PhotoCapture";
 import {
@@ -465,8 +466,29 @@ export default function BdlScanFirstPage() {
   const fournisseurNom = bdl.fournisseurs?.nom ?? "Fournisseur";
   const isClos = bdl.statut === "receptionnee";
 
+  // Un seul jeu de props pour les deux rendus des actions (barre du bas au
+  // téléphone, colonne de travail sur ordinateur).
+  const actionsProps: ActionsScanFirstProps = {
+    bdl,
+    isClos,
+    preambleOk,
+    certifBloquant,
+    certifEtat,
+    certifExpireLe,
+    certifAck,
+    onToggleCertifAck: () => setCertifAck((v) => !v),
+    progression,
+    finalizeResult,
+    onOpenScanner: () => setScannerOpen(true),
+    onOpenSignOff: () => setSignOffOpen(true),
+  };
+
   return (
-    <V2Shell hideNav>
+    // layout="wide" : deux volets (préambule + actions à gauche, tableau des
+    // lignes à droite). En "flow" le contenu plafonne à 1 280 px et le tableau
+    // retombe sous 800 px ; "full" laisserait les deux cadres photo s'étirer
+    // sans limite de lecture.
+    <V2Shell hideNav layout="wide">
       <PageAccentStripe accent="sapin" />
 
       {/* ─── HEADER STICKY ─────────────────────────────────────── */}
@@ -548,8 +570,12 @@ export default function BdlScanFirstPage() {
         </div>
       </header>
 
-      {/* ─── PRÉAMBULE : photos + température ─────────────────── */}
-      <section className="px-5 mt-4 pb-[200px]">
+      {/* ─── POSTE DE TRAVAIL ────────────────────────────────────
+          À partir de 1024 px : préambule + actions à gauche, lignes du bon à
+          droite. Sous 1024 px la section n'est pas une grille, les deux blocs
+          s'empilent dans l'ordre d'origine (préambule, puis lignes). */}
+      <section className="px-5 mt-4 pb-[200px] lg:pb-10 lg:grid lg:items-start lg:gap-x-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,460px)_minmax(0,1fr)]">
+        <div data-poste="action">
         {!isClos && (
           <>
             <p className="label-caps text-text-tertiary mb-2">
@@ -568,7 +594,7 @@ export default function BdlScanFirstPage() {
                   <span
                     className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
                       photosOk
-                        ? "bg-white border-success/40"
+                        ? "bg-[color:var(--surface-1)] border-success/40"
                         : "bg-[var(--surface-2)] border-rule"
                     }`}
                   >
@@ -641,14 +667,144 @@ export default function BdlScanFirstPage() {
               />
             </div>
 
-            <p className="label-caps text-text-tertiary mt-6 mb-2">
-              Lignes attendues ({bdl.bons_de_livraison_lignes.length})
-            </p>
           </>
         )}
 
-        {/* Liste compacte des lignes — verre, cascade, 2 colonnes sur desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
+          {/* Les mêmes boutons que la barre du bas, posés dans la colonne de
+              travail sur ordinateur. Mesuré le 31/08/2026 à 1440 px : la barre
+              collée flottait par-dessus les cadres photo, au milieu de la page. */}
+          <div className="hidden lg:block mt-5 space-y-2.5">
+            <ActionsScanFirst {...actionsProps} />
+          </div>
+        </div>
+
+        <div data-poste="contexte">
+        {!isClos && (
+            <p className="label-caps text-text-tertiary mt-6 mb-2 lg:mt-0">
+              Lignes attendues ({bdl.bons_de_livraison_lignes.length})
+            </p>
+        )}
+
+        {/* Poste de travail — tableau à partir de 1024 px. La liste est
+            strictement tabulaire (produit, cartons, attendu, reçu, écart) et
+            ne contient aucun contrôle de saisie : c'est le cas d'usage de
+            <DataTable>. Les cartes restent la forme du terrain. */}
+        <div className="hidden lg:block">
+          <DataTable
+            rows={bdl.bons_de_livraison_lignes}
+            getKey={(l) => l.id}
+            caption={`Lignes du bon de livraison ${bdl.numero_bdl}, ${bdl.bons_de_livraison_lignes.length} références`}
+            rowAccent={(l) => {
+              const e = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
+              if (e > 0) return "var(--warning)";
+              if (e < 0) return "var(--danger)";
+              return null;
+            }}
+            columns={[
+              {
+                key: "produit",
+                label: "Produit",
+                sort: (a, b) =>
+                  (a.produits?.nom ?? "").localeCompare(
+                    b.produits?.nom ?? "",
+                    "fr",
+                  ),
+                render: (l) => (
+                  <span
+                    className="font-semibold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {l.produits?.nom ?? "Produit (sans nom)"}
+                  </span>
+                ),
+              },
+              {
+                key: "ean",
+                label: "Code-barres",
+                width: "142px",
+                xlOnly: true,
+                render: (l) => (
+                  <span
+                    className="mono text-[12px]"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    {l.code_barre_attendu ?? l.produits?.ean ?? "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "cartons",
+                label: "Cartons",
+                width: "82px",
+                align: "right",
+                xlOnly: true,
+                sort: (a, b) => a.nb_cartons_scannes - b.nb_cartons_scannes,
+                render: (l) => (
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {l.nb_cartons_scannes > 0 ? l.nb_cartons_scannes : "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "attendu",
+                label: "Attendu",
+                width: "78px",
+                align: "right",
+                sort: (a, b) => a.quantite_attendue - b.quantite_attendue,
+                render: (l) => (
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {l.quantite_attendue}
+                  </span>
+                ),
+              },
+              {
+                key: "recu",
+                label: "Reçu",
+                width: "78px",
+                align: "right",
+                sort: (a, b) => a.quantite_recue - b.quantite_recue,
+                render: (l) => (
+                  <span
+                    className="font-bold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {l.quantite_recue}
+                  </span>
+                ),
+              },
+              {
+                key: "ecart",
+                label: "Écart",
+                width: "78px",
+                align: "right",
+                sort: (a, b) =>
+                  (a.ecart_qte ?? a.quantite_recue - a.quantite_attendue) -
+                  (b.ecart_qte ?? b.quantite_recue - b.quantite_attendue),
+                render: (l) => {
+                  const e = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
+                  if (e === 0)
+                    return (
+                      <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                    );
+                  return (
+                    <span
+                      className="font-bold"
+                      style={{
+                        color: e > 0 ? "var(--warning)" : "var(--danger)",
+                      }}
+                    >
+                      {e > 0 ? "+" : ""}
+                      {e}
+                    </span>
+                  );
+                },
+              },
+            ]}
+          />
+        </div>
+
+        {/* Liste compacte des lignes — verre, cascade (forme terrain). */}
+        <div className="grid grid-cols-1 gap-2.5 lg:hidden">
           {bdl.bons_de_livraison_lignes.map((l, i) => {
             const ecart = l.ecart_qte ?? l.quantite_recue - l.quantite_attendue;
             const isRecu =
@@ -730,12 +886,107 @@ export default function BdlScanFirstPage() {
             );
           })}
         </div>
+        </div>
       </section>
 
-      {/* ─── ACTIONS FLOTTANTES ───────────────────────────────── */}
-      <div className="bar-desktop fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
+      {/* ─── BARRE D'ACTION COLLÉE — forme téléphone (retirée ≥ 1024 px) ── */}
+      <div className="bar-desktop lg:hidden fixed bottom-0 inset-x-0 z-30 pb-safe pointer-events-none">
         <div className="mx-auto max-w-[460px] px-4 pt-3 pb-3 pointer-events-auto space-y-2.5">
-          {/* ML-5 — Avertissement BLOQUANT certif halal fournisseur.
+          <ActionsScanFirst {...actionsProps} />
+        </div>
+      </div>
+
+      {/* ─── OVERLAYS ─────────────────────────────────────────── */}
+      <ScannerOverlay
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleScan}
+        progression={progression}
+        contextLabel={`${fournisseurNom} · ${bdl.numero_bdl}`}
+      />
+
+      <PhotoCapture
+        open={photoOpen}
+        onClose={() => {
+          setPhotoOpen(false);
+          setPhotoSlot(null);
+        }}
+        onCapture={(d) => void handlePhotoCapture(d)}
+      />
+
+      <SignOffModal
+        open={signOffOpen}
+        onClose={() => setSignOffOpen(false)}
+        onConfirm={handleFinalize}
+        submitting={submitting}
+        fournisseurNom={fournisseurNom}
+        numeroBdl={bdl.numero_bdl}
+        temperature={bdl.temperature_reception_c}
+        seuilMax={seuilTemp}
+        photosOk={photosOk}
+        progressionScanned={progression.scanned}
+        progressionTotal={progression.total}
+        ecartTotalEur={Number(bdl.ecart_valeur_eur ?? 0)}
+        ecartValeurAttendueEur={valeurAttendueEur}
+        ecartLignes={ecartLignes}
+      />
+
+      {/* Dialog de confirmation maison — remplace window.confirm (EMP-07) */}
+      <ConfirmDialog
+        request={confirmRequest}
+        onConfirm={onConfirmDialog}
+        onCancel={onCancelDialog}
+      />
+    </V2Shell>
+  );
+}
+
+/**
+ * Les actions de la page scan-first, rendues à deux endroits selon la taille
+ * d'écran : dans la barre collée en bas au téléphone, dans la colonne de
+ * travail sur ordinateur. Un seul jeu de boutons, aucune duplication de code.
+ */
+interface ActionsScanFirstProps {
+  bdl: BdlDetail;
+  isClos: boolean;
+  preambleOk: boolean;
+  certifBloquant: boolean;
+  certifEtat: ReturnType<typeof certifAlerte>;
+  certifExpireLe: string | null;
+  certifAck: boolean;
+  onToggleCertifAck: () => void;
+  progression: { scanned: number; total: number };
+  finalizeResult: {
+    pdf_url: string;
+    push_sent: boolean;
+    prix_changes: Array<{
+      produit: string;
+      ancien_cout: number;
+      nouveau_cout: number;
+      variation_pct: number;
+    }>;
+  } | null;
+  onOpenScanner: () => void;
+  onOpenSignOff: () => void;
+}
+
+function ActionsScanFirst({
+  bdl,
+  isClos,
+  preambleOk,
+  certifBloquant,
+  certifEtat,
+  certifExpireLe,
+  certifAck,
+  onToggleCertifAck,
+  progression,
+  finalizeResult,
+  onOpenScanner,
+  onOpenSignOff,
+}: ActionsScanFirstProps) {
+  return (
+    <>
+      {/* ML-5 — Avertissement BLOQUANT certif halal fournisseur.
               Tant que le comptable n'a pas acquitté, la finalisation est
               désactivée. La marchandise est comptée physiquement, mais le
               risque halal est tracé et reconnu explicitement. */}
@@ -760,11 +1011,11 @@ export default function BdlScanFirstPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setCertifAck((v) => !v)}
+                onClick={onToggleCertifAck}
                 className={`tap w-full rounded-2xl py-3 px-3 min-h-[44px] text-[12.5px] font-bold transition-colors ${
                   certifAck
                     ? "bg-danger text-white"
-                    : "bg-white border border-danger/50 text-danger"
+                    : "bg-[color:var(--surface-1)] border border-danger/50 text-danger"
                 }`}
               >
                 {certifAck
@@ -850,7 +1101,7 @@ export default function BdlScanFirstPage() {
           ) : (
             <>
               <button
-                onClick={() => setScannerOpen(true)}
+                onClick={onOpenScanner}
                 disabled={!preambleOk}
                 className="w-full bg-primary text-white rounded-[22px] py-4 px-5 flex items-center justify-between shadow-card-lg active:scale-[0.99] disabled:opacity-40 disabled:active:scale-100"
               >
@@ -873,7 +1124,7 @@ export default function BdlScanFirstPage() {
               </button>
 
               <button
-                onClick={() => setSignOffOpen(true)}
+                onClick={onOpenSignOff}
                 disabled={!preambleOk || (certifBloquant && !certifAck)}
                 className={`tap w-full rounded-[20px] py-3.5 px-4 min-h-[44px] flex items-center justify-between transition-colors disabled:opacity-40 ${
                   preambleOk && !(certifBloquant && !certifAck)
@@ -897,50 +1148,6 @@ export default function BdlScanFirstPage() {
               </button>
             </>
           )}
-        </div>
-      </div>
-
-      {/* ─── OVERLAYS ─────────────────────────────────────────── */}
-      <ScannerOverlay
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={handleScan}
-        progression={progression}
-        contextLabel={`${fournisseurNom} · ${bdl.numero_bdl}`}
-      />
-
-      <PhotoCapture
-        open={photoOpen}
-        onClose={() => {
-          setPhotoOpen(false);
-          setPhotoSlot(null);
-        }}
-        onCapture={(d) => void handlePhotoCapture(d)}
-      />
-
-      <SignOffModal
-        open={signOffOpen}
-        onClose={() => setSignOffOpen(false)}
-        onConfirm={handleFinalize}
-        submitting={submitting}
-        fournisseurNom={fournisseurNom}
-        numeroBdl={bdl.numero_bdl}
-        temperature={bdl.temperature_reception_c}
-        seuilMax={seuilTemp}
-        photosOk={photosOk}
-        progressionScanned={progression.scanned}
-        progressionTotal={progression.total}
-        ecartTotalEur={Number(bdl.ecart_valeur_eur ?? 0)}
-        ecartValeurAttendueEur={valeurAttendueEur}
-        ecartLignes={ecartLignes}
-      />
-
-      {/* Dialog de confirmation maison — remplace window.confirm (EMP-07) */}
-      <ConfirmDialog
-        request={confirmRequest}
-        onConfirm={onConfirmDialog}
-        onCancel={onCancelDialog}
-      />
-    </V2Shell>
+    </>
   );
 }

@@ -650,8 +650,14 @@ export function V2Shell({
   // CONTENU qui porte la largeur de lecture, via mainWidthClass. Avant, le
   // conteneur plafonnait à 1200/1340 px sans palier 2xl : à 1920 px il restait
   // 601 px de vide à droite en moyenne, en-tête compris.
+  // min-w-0 : sans lui, la largeur MINIMALE d'un tableau large remonte
+  // jusqu'à cet enfant flex et pousse toute la page hors de l'écran — en
+  // silence, car body est en overflow-x:clip (donc aucune barre de défilement,
+  // et scrollWidth reste égal à clientWidth : les sondes ne voient rien).
+  // Mesuré le 31/08/2026 : à 1440 px, main allait de 268 à 1474 px et la
+  // dernière colonne du tableau fournisseurs était coupée sans trace.
   const containerClass =
-    "mx-auto w-full max-w-[520px] sm:max-w-[820px] md:max-w-[1024px] lg:max-w-none min-h-[100dvh] relative";
+    "mx-auto w-full min-w-0 max-w-[520px] sm:max-w-[820px] md:max-w-[1024px] lg:max-w-none min-h-[100dvh] relative";
 
   const effectiveLayout: "flow" | "wide" | "full" | "form" =
     layout ?? (wide ? "wide" : "flow");

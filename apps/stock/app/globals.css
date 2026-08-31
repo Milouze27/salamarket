@@ -2146,18 +2146,11 @@ body.theme-nuit .badge-client-traiteur {
 /* ── Ambre lisible sur fond ambre pâle ────────────────────────────────
    `text-warning` sur `bg-warning-soft` mesurait 2,90:1 en thème jour
    (#d97706 sur #fef3e2). L'ambre d'alerte est fait pour être vu SUR une
-   surface neutre, pas sur son propre voile. */
-:root {
-  --warning-text: #8a4b04;
-}
-:root:not([data-theme="jour"]),
-[data-theme="nuit"],
-body.theme-nuit {
-  --warning-text: var(--warning);
-}
+   surface neutre, pas sur son propre voile. --warning-ink est définie plus
+   bas, avec son homologue rouge. */
 .on-warning-soft {
   background: var(--warning-soft);
-  color: var(--warning-text);
+  color: var(--warning-ink);
 }
 
 /* ── Ambre et rouge d'alerte : encre de texte distincte du fond ────────

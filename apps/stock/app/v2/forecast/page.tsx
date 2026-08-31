@@ -566,12 +566,7 @@ export default function ForecastPage() {
               Les cartes montraient 4 lignes par écran à 1920 et obligeaient à
               comparer de mémoire. Le tableau aligne stock, consommation,
               couverture et date de rupture sur une même colonne. */}
-            {/* contain:inline-size — sans lui, la largeur minimale du tableau
-              remonte jusqu'au <main> (élément flex à min-width:auto dans
-              V2Shell) et pousse toute la page hors de l'écran, sans barre de
-              défilement puisque body est en overflow-x:clip. Avec, le tableau
-              défile DANS son cadre, comme prévu par DataTable. */}
-            <div className="hidden lg:block" style={{ contain: "inline-size" }}>
+            <div className="hidden lg:block">
               <DataTable
                 rows={filteredRows}
                 getKey={(r) => `${r.produit_id}-${r.depot_id}`}

@@ -227,12 +227,7 @@ export function ReceptionsPanel() {
           {/* ── POSTE DE TRAVAIL (≥ lg) : tableau des BR ────────────────────
             L'écart reçu/attendu est la colonne qui décide d'un litige : il
             était noyé en bas de carte, il devient une colonne triable. */}
-          {/* contain:inline-size — sans lui, la largeur minimale du tableau
-            remonte jusqu'au <main> (élément flex à min-width:auto dans
-            V2Shell) et pousse toute la page hors de l'écran, sans barre de
-            défilement puisque body est en overflow-x:clip. Avec, le tableau
-            défile DANS son cadre, comme prévu par DataTable. */}
-          <div className="hidden lg:block" style={{ contain: "inline-size" }}>
+          <div className="hidden lg:block">
             <DataTable
               rows={filtered}
               getKey={(r) => r.id}

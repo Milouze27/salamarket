@@ -163,48 +163,6 @@ export function ActivitePanel({
     void loadSnap();
   }, []);
 
-  /* __QA_RECETTE__ */
-  useEffect(() => {
-    const __t = setTimeout(() => {
-    const ds: Depot[] = [
-      { id: "d1", nom: "Particulier", type: "point_vente", adresse: null, is_active: true, created_at: "" },
-      { id: "d2", nom: "Réserve Papus", type: "entrepot", adresse: null, is_active: true, created_at: "" },
-      { id: "d3", nom: "Labo traiteur", type: "entrepot", adresse: null, is_active: true, created_at: "" },
-    ];
-    const es: Employe[] = [
-      { id: "e1", nom: "Nasri", prenom: "Ahmed", role: "admin", depot_principal_id: "d1", is_active: true, pin_code: "1" },
-      { id: "e2", nom: "Jamal", prenom: "Otmane", role: "manager", depot_principal_id: "d1", is_active: true, pin_code: "2" },
-      { id: "e3", nom: "Belhamiti", prenom: "Mohamed", role: "preparation", depot_principal_id: "d2", is_active: true, pin_code: "3" },
-    ];
-    const NOMS = ["Poulet fermier entier", "Yaourt brebis nature", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Olives Kalamata 500 g", "Beurre demi-sel 250 g", "Tomate grappe kg", "Escalope de dinde kg", "Crème fraîche 20 cl"];
-    const T0 = Date.UTC(2026, 7, 31, 19, 5);
-    const rec: Reception[] = Array.from({ length: 10 }, (_, i) => ({
-      id: `r${i}`, depot_id: ds[i % 3].id, employe_id: es[i % 3].id,
-      fournisseur: ["Metro Toulouse", "Halal Prim", "Boulangerie Zitoun", "Laiterie du Sud"][i % 4],
-      numero_bl: `BL-26-${4100 + i * 3}`, photo_url: "", statut: "validee", reception_vide: i === 4,
-      created_at: new Date(T0 - i * 7 * 3600000).toISOString(),
-    })) as Reception[];
-    const sor: SortieStock[] = Array.from({ length: 14 }, (_, i) => ({
-      id: `s${i}`, depot_id: ds[i % 3].id, employe_id: es[(i + 1) % 3].id, produit_id: `p${i % NOMS.length}`,
-      type: (["casse_manipulation", "perime_dlc", "demarque_inconnue", "casse_client", "defaut_fournisseur"] as SortieType[])[i % 5],
-      motif_libre: i % 3 === 0 ? "Carton tombé du transpalette" : null,
-      quantite: ((i * 3) % 11) + 1, photo_url: "",
-      ia_coherence_score: i % 4 === 0 ? 0.38 + i * 0.01 : 0.82,
-      ia_coherence_notes: null,
-      created_at: new Date(T0 - (i * 5 + 2) * 3600000).toISOString(),
-    })) as SortieStock[];
-    const trf: TransfertInterDepot[] = Array.from({ length: 8 }, (_, i) => ({
-      id: `t${i}`, depot_source_id: ds[i % 3].id, depot_destination_id: ds[(i + 1) % 3].id,
-      produit_id: `p${(i + 3) % NOMS.length}`, quantite: ((i * 4) % 9) + 1, employe_id: es[i % 3].id,
-      photo_url: null, created_at: new Date(T0 - (i * 9 + 4) * 3600000).toISOString(),
-    }));
-    setDepots(ds); setEmployes(es); setReceptions(rec); setSorties(sor); setTransferts(trf);
-    setProduitNoms(new Map(NOMS.map((n, i) => [`p${i}`, n])));
-    setLoading(false);
-    }, 2000);
-    return () => clearTimeout(__t);
-  }, []);
-
   async function loadSnap() {
     try {
       const { loadCockpitSnapshot } = await import("@/lib/actions/cockpit");

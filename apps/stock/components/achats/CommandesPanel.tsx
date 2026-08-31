@@ -307,12 +307,7 @@ export function CommandesPanel() {
           {/* ── POSTE DE TRAVAIL (≥ lg) : tableau des bons de commande ─────
             Numéro, montant et nombre de lignes se comparent en colonne ;
             la carte les noyait dans trois blocs différents. */}
-          {/* contain:inline-size — sans lui, la largeur minimale du tableau
-            remonte jusqu'au <main> (élément flex à min-width:auto dans
-            V2Shell) et pousse toute la page hors de l'écran, sans barre de
-            défilement puisque body est en overflow-x:clip. Avec, le tableau
-            défile DANS son cadre, comme prévu par DataTable. */}
-          <div className="hidden lg:block" style={{ contain: "inline-size" }}>
+          <div className="hidden lg:block">
             <DataTable
               rows={filtered}
               getKey={(po) => po.id}

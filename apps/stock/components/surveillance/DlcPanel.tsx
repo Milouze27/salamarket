@@ -248,32 +248,6 @@ export function DlcPanel() {
     void load();
   }, []);
 
-  /* __QA_RECETTE__ */
-  useEffect(() => {
-    const NOMS = ["Poulet fermier entier", "Merguez maison 500 g", "Yaourt brebis nature", "Dattes Deglet Nour 1 kg", "Msemen surgelé x6", "Steak haché 15% MG", "Lait ribot 1 L", "Feta AOP 200 g", "Pain pita complet", "Harissa artisanale 90 g", "Olives Kalamata 500 g", "Semoule fine 5 kg", "Beurre demi-sel 250 g", "Miel de jujubier 500 g", "Thon albacore 200 g", "Fromage halloumi 250 g", "Coriandre fraîche botte", "Poivron rouge kg", "Agneau gigot kg", "Boulettes kefta 400 g", "Crème fraîche 20 cl", "Jus de grenade 1 L", "Amandes émondées 500 g", "Cornes de gazelle x8", "Tomate grappe kg", "Escalope de dinde kg", "Concentré de tomate", "Pois chiches secs 1 kg", "Zaatar libanais 100 g", "Chorba prête 400 ml", "Baklava plateau 500 g", "Sardines à l'huile", "Œufs plein air x12"];
-    const CATS = ["Boucherie", "Crèmerie", "Épicerie salée", "Traiteur", "Fruits & légumes", "Boulangerie"];
-    const N: Niveau[] = ["forcé", "critique", "attention", "surveillance"];
-    const rows: DlcAlert[] = NOMS.map((nom, i) => {
-      const j = i - 3;
-      const niveau: Niveau = j < 0 ? "forcé" : j <= 1 ? "critique" : j <= 3 ? "attention" : N[3];
-      const d = new Date(Date.UTC(2026, 7, 31) + j * 86400000);
-      return {
-        lot_id: `LOT-2608-${String(1200 + i * 7)}`,
-        produit_id: `p-${i}`,
-        produit_nom: nom,
-        produit_categorie: CATS[i % CATS.length],
-        dlc: d.toISOString().slice(0, 10),
-        jours_restants: j,
-        niveau_alerte: niveau,
-        remise_suggeree_pct: normalizeRemiseDlc(niveau, 0),
-        quantite_recue: ((i * 13) % 47) + 2,
-        unite: i % 3 === 0 ? "kg" : "u",
-      };
-    });
-    setAlerts(rows);
-    setLoading(false);
-  }, []);
-
   const kpi = useMemo(() => {
     const groups = { forcé: 0, critique: 0, attention: 0, surveillance: 0 };
     let valeurRemise = 0;
